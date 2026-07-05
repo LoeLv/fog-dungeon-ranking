@@ -473,6 +473,59 @@
         .stars.readonly label { cursor: default; pointer-events: none; }
         .rating-area .rating-text { font-size: 0.8rem; color: var(--text-muted); }
 
+        .clear-panel {
+            margin-bottom: 20px;
+            padding: 16px 18px;
+            border-radius: var(--radius-sm);
+            border: 1px solid rgba(200,160,80,0.14);
+            background:
+                linear-gradient(135deg, rgba(184,134,11,0.10), rgba(255,255,255,0.02)),
+                rgba(0,0,0,0.22);
+        }
+        .clear-panel-head {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+            flex-wrap: wrap;
+            margin-bottom: 10px;
+        }
+        .clear-panel-title {
+            font-weight: 700;
+            color: var(--text-bright);
+            letter-spacing: 0.04em;
+        }
+        .clear-rate-big {
+            font-family: var(--font-display);
+            color: var(--gold-light);
+            font-size: 1.4rem;
+            text-shadow: 0 0 14px rgba(200,160,80,0.25);
+        }
+        .clear-progress {
+            height: 8px;
+            border-radius: 999px;
+            overflow: hidden;
+            background: rgba(255,255,255,0.06);
+            border: 1px solid rgba(255,255,255,0.06);
+        }
+        .clear-progress-fill {
+            height: 100%;
+            width: 0%;
+            max-width: 100%;
+            background: linear-gradient(90deg, #d8b763, #7fd8be);
+            box-shadow: 0 0 18px rgba(127,216,190,0.35);
+        }
+        .clear-panel-foot {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 10px;
+            flex-wrap: wrap;
+            margin-top: 12px;
+            color: var(--text-muted);
+            font-size: 0.8rem;
+        }
+
         /* 评论 */
         .comments-section { margin-top: 20px; }
         .comment-form {
@@ -512,7 +565,7 @@
         }
         .modal {
             background: var(--bg-card); border: 1px solid var(--border);
-            border-radius: var(--radius); max-width: 560px; width: 100%;
+            border-radius: var(--radius); max-width: 760px; width: 100%;
             padding: 32px 28px; box-shadow: 0 20px 60px rgba(0,0,0,0.8);
             animation: slideUp 0.3s ease; max-height: 90vh; overflow-y: auto;
             position: relative;
@@ -560,6 +613,47 @@
         .form-group input:focus, .form-group textarea:focus, .form-group select:focus {
             outline: none; border-color: var(--gold-dark); box-shadow: 0 0 0 4px rgba(184,134,11,0.06);
         }
+        .form-grid {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 14px;
+        }
+        .form-grid.compact {
+            grid-template-columns: 1.2fr 0.9fr 0.9fr;
+        }
+        .form-span { grid-column: 1 / -1; }
+        .number-pair {
+            display: grid;
+            grid-template-columns: 1fr auto 1fr;
+            align-items: center;
+            gap: 8px;
+        }
+        .number-pair span {
+            color: var(--text-muted);
+            font-size: 0.82rem;
+        }
+        .metric-strip {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-top: 10px;
+        }
+        .metric-pill {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            padding: 5px 10px;
+            border-radius: 999px;
+            background: rgba(255,255,255,0.035);
+            border: 1px solid rgba(255,255,255,0.08);
+            color: var(--text);
+            font-size: 0.75rem;
+            white-space: nowrap;
+        }
+        .metric-pill strong {
+            color: var(--text-bright);
+            font-weight: 700;
+        }
         .form-actions { display: flex; gap: 12px; justify-content: flex-end; flex-wrap: wrap; margin-top: 24px; }
 
         .toast {
@@ -585,6 +679,8 @@
             .header { align-items: flex-start; }
             .header-actions { width: 100%; justify-content: flex-start; }
             .role-guide { grid-template-columns: 1fr; }
+            .form-grid, .form-grid.compact { grid-template-columns: 1fr; }
+            .form-span { grid-column: auto; }
             .controls { align-items: stretch; }
             .search-input { max-width: none; width: 100%; }
         }
@@ -654,11 +750,17 @@
             <button class="close-btn" style="position:absolute;top:16px;right:20px;" onclick="closeSubmitModal()">✕</button>
             <h2>📜 提交新副本</h2>
             <form id="submitForm" onsubmit="submitDungeon(event)">
-                <div class="form-group"><label>副本真名 *</label><input type="text" id="dungeonName" placeholder="为你的试炼命名..." required maxlength="60"></div>
-                <div class="form-group"><label>创作者署名 *</label><input type="text" id="dungeonCreator" placeholder="你的神名或代号..." required maxlength="30"></div>
+                <div class="form-grid">
+                    <div class="form-group"><label>副本名字 *</label><input type="text" id="dungeonName" placeholder="为你的试炼命名..." required maxlength="60"></div>
+                    <div class="form-group"><label>作者名字 *</label><input type="text" id="dungeonCreator" placeholder="你的神名或代号..." required maxlength="30"></div>
+                </div>
+                <div class="form-grid compact">
+                    <div class="form-group"><label>副本类型</label><select id="dungeonType"><option value="战斗">⚔️ 战斗</option><option value="解谜">🧩 解谜</option><option value="生存">🔥 生存</option><option value="叙事">📖 叙事</option><option value="探索">🗺️ 探索</option><option value="社交">🕯️ 社交</option><option value="综合" selected>🌀 综合</option><option value="其他">❓ 其他</option></select></div>
+                    <div class="form-group"><label>固定人数 *</label><input type="number" id="participantCount" min="1" max="99" value="6" required></div>
+                    <div class="form-group"><label>当前周目 *</label><input type="number" id="runCount" min="1" max="999" value="1" required></div>
+                </div>
                 <div class="form-group"><label>难度位阶</label><select id="dungeonDifficulty"><option value="凡尘">凡尘 —— 凡人皆可入场</option><option value="觉醒">觉醒 —— 灵性初开者</option><option value="超凡" selected>超凡 —— 非凡者方可挑战</option><option value="神话">神话 —— 半神领域</option><option value="愚者">愚者 —— 唯有愚行可通神</option></select></div>
-                <div class="form-group"><label>试炼类型</label><select id="dungeonType"><option value="战斗">⚔️ 战斗</option><option value="解谜">🧩 解谜</option><option value="生存">🔥 生存</option><option value="叙事">📖 叙事</option><option value="综合">🌀 综合</option><option value="其他">❓ 其他</option></select></div>
-                <div class="form-group"><label>副本描述 *</label><textarea id="dungeonDesc" placeholder="描述你的副本世界、规则与神祇的意图..." required maxlength="1500"></textarea></div>
+                <div class="form-group"><label>副本简介 *</label><textarea id="dungeonDesc" placeholder="描述副本背景、主要机制、胜负条件或特别之处..." required maxlength="1500"></textarea></div>
                 <div class="form-actions"><button type="button" class="btn btn-outline" onclick="closeSubmitModal()">取消</button><button type="submit" class="btn btn-primary">✨ 献上祭品</button></div>
             </form>
         </div>
@@ -707,7 +809,7 @@
             const inviteButton = document.getElementById('inviteButton');
             const submitButton = document.getElementById('submitEntryButton');
             if (roleBadge) {
-                roleBadge.textContent = role ? `${ROLE_LABELS[role]}权限` : '访客只读';
+                roleBadge.textContent = role ? `${inviteSession?.name || ROLE_LABELS[role]} · ${ROLE_LABELS[role]}权限` : '访客只读';
                 roleBadge.classList.toggle('active', !!role);
             }
             if (inviteButton) inviteButton.textContent = role ? '🔑 切换邀请' : '🔑 输入邀请';
@@ -737,8 +839,8 @@
             const result = await response.json().catch(() => ({}));
             if (!response.ok) return { data: null, error: { message: result.error || '请求失败' } };
             const role = normalizeRole(result.role);
-            if (role && inviteCode) saveInviteSession({ role, code: inviteCode });
-            return { data: result.data ?? null, error: null, role };
+            if (role && inviteCode) saveInviteSession({ role, code: inviteCode, name: result.name || result.label || ROLE_LABELS[role] });
+            return { data: result.data ?? null, error: null, role, name: result.name };
         }
 
         async function fetchDungeons() {
@@ -757,7 +859,7 @@
         async function addDungeon(dungeonData) {
             if (USE_LOCAL_FALLBACK) {
                 const dungeons = getLocalData('dungeons', []);
-                const newDungeon = { id: 'local_' + Date.now() + '_' + Math.random().toString(36).substr(2,6), ...dungeonData, avg_rating:0, rating_count:0, comment_count:0, created_at: new Date().toISOString() };
+                const newDungeon = { id: 'local_' + Date.now() + '_' + Math.random().toString(36).substr(2,6), ...dungeonData, clear_count:0, clear_rate:0, avg_rating:0, rating_count:0, comment_count:0, created_at: new Date().toISOString() };
                 dungeons.push(newDungeon); setLocalData('dungeons', dungeons); return { data: [newDungeon], error: null };
             }
             return invokeDungeonAction('submitDungeon', dungeonData);
@@ -799,6 +901,40 @@
             return invokeDungeonAction('deleteDungeon', { dungeonId });
         }
 
+        async function markDungeonCleared(dungeonId) {
+            if (USE_LOCAL_FALLBACK) {
+                const cleared = getLocalData('cleared', {});
+                const dungeons = getLocalData('dungeons', []);
+                const d = dungeons.find(d => d.id === dungeonId);
+                if (!d) return { error: { message: '副本未找到' } };
+                const run = Number(d.run_count || d.runCount || 1);
+                const key = `${dungeonId}:${run}`;
+                if (cleared[key]) return { error: { message: '你已经登记过本周目通过了' } };
+                cleared[key] = true;
+                d.clear_count = Number(d.clear_count || d.clearCount || 0) + 1;
+                const slots = Number(d.participant_count || d.participantCount || 1) * run;
+                d.clear_rate = slots > 0 ? Math.round((d.clear_count / slots) * 1000) / 10 : 0;
+                setLocalData('cleared', cleared);
+                setLocalData('dungeons', dungeons);
+                return { data: [{}], error: null };
+            }
+            return invokeDungeonAction('markCleared', { dungeonId });
+        }
+
+        async function advanceDungeonRun(dungeonId) {
+            if (USE_LOCAL_FALLBACK) {
+                const dungeons = getLocalData('dungeons', []);
+                const d = dungeons.find(d => d.id === dungeonId);
+                if (!d) return { error: { message: '副本未找到' } };
+                d.run_count = Number(d.run_count || d.runCount || 1) + 1;
+                const slots = Number(d.participant_count || d.participantCount || 1) * d.run_count;
+                d.clear_rate = slots > 0 ? Math.round((Number(d.clear_count || 0) / slots) * 1000) / 10 : 0;
+                setLocalData('dungeons', dungeons);
+                return { data: [d], error: null };
+            }
+            return invokeDungeonAction('advanceRun', { dungeonId });
+        }
+
         function hasRatedLocal(id) { return !!getLocalData('rated', {})[id]; }
         async function checkHasRated(id) { return USE_LOCAL_FALLBACK ? hasRatedLocal(id) : !!getLocalData('rated_supabase', {})[id]; }
         function markAsRated(id) { const key = USE_LOCAL_FALLBACK ? 'rated' : 'rated_supabase'; const r = getLocalData(key, {}); r[id]=true; setLocalData(key, r); }
@@ -814,7 +950,7 @@
                 listEl.innerHTML = '<div class="empty-state"><div style="font-size:3rem;">⚠️</div><p>副本加载失败，请刷新页面再试。</p></div>';
                 return;
             }
-            if (searchQuery.trim()) { const q = searchQuery.trim().toLowerCase(); dungeons = dungeons.filter(d => (d.name||'').toLowerCase().includes(q) || (d.creator||'').toLowerCase().includes(q) || (d.description||'').toLowerCase().includes(q)); }
+            if (searchQuery.trim()) { const q = searchQuery.trim().toLowerCase(); dungeons = dungeons.filter(d => (d.name||'').toLowerCase().includes(q) || (d.creator||'').toLowerCase().includes(q) || (d.type||'').toLowerCase().includes(q) || (d.description||'').toLowerCase().includes(q)); }
             if (currentSort === 'rating') dungeons.sort((a,b) => (b.avg_rating||0)-(a.avg_rating||0));
             else if (currentSort === 'newest') dungeons.sort((a,b) => new Date(b.created_at) - new Date(a.created_at));
             else if (currentSort === 'comments') dungeons.sort((a,b) => (b.comment_count||0)-(a.comment_count||0));
@@ -831,8 +967,13 @@
                                 <span>👤 ${escapeHtml(d.creator||'匿名')}</span>
                                 <span class="tag ${getDiffClass(d.difficulty)}">${escapeHtml(d.difficulty||'超凡')}</span>
                                 <span class="tag type-tag">${escapeHtml(d.type||'综合')}</span>
-                                <span>💬 ${d.comment_count||0}</span>
                                 <span style="font-size:0.7rem;">🕐 ${formatDate(d.created_at)}</span>
+                            </div>
+                            <div class="metric-strip">
+                                <span class="metric-pill">👥 <strong>${formatParticipants(d)}</strong></span>
+                                <span class="metric-pill">🔁 <strong>${formatRunCount(d)}</strong></span>
+                                <span class="metric-pill">🎯 <strong>${formatClearRate(d)}</strong></span>
+                                <span class="metric-pill">💬 <strong>${d.comment_count||0}</strong></span>
                             </div>
                         </div>
                         <div class="rating-badge"><span class="star">⭐</span> ${d.avg_rating ? d.avg_rating.toFixed(1) : '—'} <span style="font-weight:400;font-size:0.7rem;color:var(--text-muted);">(${d.rating_count||0})</span></div>
@@ -843,6 +984,38 @@
         }
 
         function getDiffClass(d) { const m={'凡尘':'difficulty-mortal','觉醒':'difficulty-awakened','超凡':'difficulty-transcendent','神话':'difficulty-mythic','愚者':'difficulty-fool'}; return m[d]||'difficulty-mortal'; }
+        function formatParticipants(d) {
+            const count = Number(d.participant_count || d.participantCount);
+            return Number.isFinite(count) && count > 0 ? `${count}人固定` : '人数未定';
+        }
+        function getParticipantCount(d) {
+            const count = Number(d.participant_count || d.participantCount);
+            return Number.isFinite(count) && count > 0 ? count : 0;
+        }
+        function getRunCount(d) {
+            const count = Number(d.run_count || d.runCount);
+            return Number.isFinite(count) && count > 0 ? count : 1;
+        }
+        function getClearCount(d) {
+            const count = Number(d.clear_count || d.clearCount);
+            return Number.isFinite(count) && count >= 0 ? count : 0;
+        }
+        function getTotalSlots(d) {
+            return getParticipantCount(d) * getRunCount(d);
+        }
+        function formatRunCount(d) {
+            return `第${getRunCount(d)}周目`;
+        }
+        function formatClearRate(d) {
+            const stored = Number(d.clear_rate ?? d.clearRate);
+            const slots = getTotalSlots(d);
+            const value = Number.isFinite(stored) ? stored : (slots > 0 ? (getClearCount(d) / slots) * 100 : 0);
+            return `${Number.isInteger(value) ? value : value.toFixed(1)}%`;
+        }
+        function formatClearSlots(d) {
+            const slots = getTotalSlots(d);
+            return `${getClearCount(d)} / ${slots || '未定'}`;
+        }
         function formatDate(iso) { if(!iso)return'未知'; const d=new Date(iso),n=new Date(),diff=Math.floor((n-d)/86400000); if(diff===0)return'今天'; if(diff===1)return'昨天'; if(diff<7)return`${diff}天前`; if(diff<30)return`${Math.floor(diff/7)}周前`; return d.toLocaleDateString('zh-CN'); }
         function escapeHtml(s) { const d=document.createElement('div'); d.textContent=s||''; return d.innerHTML; }
 
@@ -857,17 +1030,40 @@
             const ratingText = rated ? '✅ 你已经献上评价' : (locked ? '🔑 输入邀请码后可评分' : '👆 点击星星赐福');
             const commentLockedAttrs = locked ? 'disabled' : '';
             const commentPlaceholder = locked ? '输入玩家或作者邀请码后可评论' : '写下你的评论...';
+            const runCount = getRunCount(d);
+            const clearLocalKey = `${id}:${runCount}:${inviteSession?.code || 'guest'}`;
+            const clearDone = !!getLocalData('cleared_supabase', {})[clearLocalKey];
+            const clearAction = locked
+                ? `openInviteModal('输入玩家或作者邀请码后可登记通关。')`
+                : (clearDone ? '' : `markClearedUI('${escapeHtml(id)}')`);
+            const clearButtonText = locked ? '输入邀请' : (clearDone ? '本周目已登记' : '我已通过本周目');
+            const clearRateNumber = Number.parseFloat(formatClearRate(d)) || 0;
             document.getElementById('detailContent').innerHTML = `
                 <h2>${escapeHtml(d.name)}</h2>
                 <div class="detail-meta">
                     <span>👤 ${escapeHtml(d.creator)}</span>
                     <span class="tag ${getDiffClass(d.difficulty)}">${escapeHtml(d.difficulty)}</span>
                     <span class="tag type-tag">${escapeHtml(d.type)}</span>
+                    <span>👥 ${formatParticipants(d)}</span>
+                    <span>🔁 ${formatRunCount(d)}</span>
+                    <span>🎯 通过率 ${formatClearRate(d)}</span>
                     <span>⭐ ${(d.avg_rating||0).toFixed(1)} (${d.rating_count||0}人)</span>
                     <span>💬 ${comments.length} 评论</span>
+                    ${canUseRole(['author','admin']) ? `<button class="btn btn-outline btn-xs" onclick="advanceRunUI('${escapeHtml(id)}')">开启下一周目</button>` : ''}
                     ${isAdmin() ? `<button class="btn btn-danger btn-xs" onclick="deleteDungeon('${escapeHtml(id)}')">删除副本</button>` : ''}
                 </div>
                 <div class="detail-desc">${escapeHtml(d.description||'（无描述）')}</div>
+                <div class="clear-panel">
+                    <div class="clear-panel-head">
+                        <span class="clear-panel-title">🎯 通关记录 · ${formatRunCount(d)}</span>
+                        <span class="clear-rate-big">${formatClearRate(d)}</span>
+                    </div>
+                    <div class="clear-progress"><div class="clear-progress-fill" style="width:${Math.max(0, Math.min(100, clearRateNumber))}%"></div></div>
+                    <div class="clear-panel-foot">
+                        <span>已通过 ${formatClearSlots(d)} 人次</span>
+                        <button class="btn btn-primary btn-sm" ${clearDone?'disabled':''} onclick="${clearAction}">${clearButtonText}</button>
+                    </div>
+                </div>
                 <div class="rating-area">
                     <span style="font-weight:600;font-size:0.85rem;">⚡ 你的神眷：</span>
                     <div class="stars ${ratingLocked?'readonly':''}" id="starRating">
@@ -878,7 +1074,7 @@
                 <div class="comments-section">
                     <div class="section-title">💬 众声回响 (${comments.length})</div>
                     <div class="comment-form">
-                        <input type="text" id="commentAuthorInput" placeholder="你的署名" maxlength="20" ${commentLockedAttrs}>
+                        <input type="text" id="commentAuthorInput" placeholder="你的署名" maxlength="20" value="${locked?'':escapeHtml(inviteSession?.name || '')}" ${commentLockedAttrs}>
                         <input type="text" id="commentContentInput" placeholder="${commentPlaceholder}" maxlength="300" style="flex:2;" ${commentLockedAttrs}>
                         <button class="btn btn-primary btn-sm" onclick="${locked?`openInviteModal('输入玩家或作者邀请码后可评论。')`:`submitComment('${escapeHtml(id)}')`}">${locked?'输入邀请':'发布'}</button>
                     </div>
@@ -911,14 +1107,14 @@
             if (!code) { showToast('请输入邀请码'); return; }
             btn.disabled = true;
             btn.textContent = '验证中...';
-            const { error, role } = USE_LOCAL_FALLBACK ? { error: null, role: 'author' } : await invokeDungeonAction('verifyInvite', {}, code);
+            const { error, role, name } = USE_LOCAL_FALLBACK ? { error: null, role: 'author', name: '本地作者' } : await invokeDungeonAction('verifyInvite', {}, code);
             btn.disabled = false;
             btn.textContent = '进入圣殿';
             if (error || !role) { showToast(`❌ ${error?.message || '邀请码无效'}`); return; }
-            saveInviteSession({ role, code });
+            saveInviteSession({ role, code, name: name || ROLE_LABELS[role] });
             input.value = '';
             closeInviteModal();
-            showToast(`✅ 已获得${ROLE_LABELS[role]}权限`);
+            showToast(`✅ 已获得${name || ROLE_LABELS[role]}的${ROLE_LABELS[role]}权限`);
             if (currentDetailId) await openDetail(currentDetailId);
         }
 
@@ -954,10 +1150,37 @@
             await renderDungeonList();
         }
 
+        async function markClearedUI(id){
+            if(!requireInvite(['player','author','admin'], '输入玩家或作者邀请码后可登记通关。')) return;
+            const {error}=await markDungeonCleared(id);
+            if(error){ showToast(`❌ ${error.message || '登记失败'}`); return; }
+            const dungeons = await fetchDungeons();
+            const d = dungeons.find(d => d.id === id);
+            const key = `${id}:${getRunCount(d || {})}:${inviteSession?.code || 'guest'}`;
+            const cleared = getLocalData('cleared_supabase', {});
+            cleared[key] = true;
+            setLocalData('cleared_supabase', cleared);
+            showToast('🎯 已记录本周目通关');
+            if(currentDetailId===id) await openDetail(id);
+            await renderDungeonList();
+        }
+
+        async function advanceRunUI(id){
+            if(!requireInvite(['author','admin'], '只有作者或馆主可以开启下一周目。')) return;
+            if(!confirm('确定开启下一周目吗？通关率会按新的总参与人次重新计算。')) return;
+            const {error}=await advanceDungeonRun(id);
+            if(error){ showToast(`❌ ${error.message || '开启失败'}`); return; }
+            showToast('🔁 已开启下一周目');
+            if(currentDetailId===id) await openDetail(id);
+            await renderDungeonList();
+        }
+
         function openSubmitModal(){
             if(!requireInvite(['author','admin'], '只有作者邀请码可以投稿副本。')) return;
             document.getElementById('submitModalOverlay').style.display='flex';
             document.body.style.overflow='hidden';
+            const creatorInput = document.getElementById('dungeonCreator');
+            if (creatorInput && !creatorInput.value && inviteSession?.name && !inviteSession.name.includes('共享')) creatorInput.value = inviteSession.name;
             document.getElementById('dungeonName').focus();
         }
 
@@ -970,12 +1193,16 @@
             const creator=document.getElementById('dungeonCreator').value.trim();
             const difficulty=document.getElementById('dungeonDifficulty').value;
             const type=document.getElementById('dungeonType').value;
+            const participantCount=Number(document.getElementById('participantCount').value);
+            const runCount=Number(document.getElementById('runCount').value);
             const desc=document.getElementById('dungeonDesc').value.trim();
             if(!name||!creator||!desc){showToast('请填写所有必填项');return;}
+            if(!Number.isInteger(participantCount)||participantCount<1||participantCount>99){showToast('请检查固定人数');return;}
+            if(!Number.isInteger(runCount)||runCount<1||runCount>999){showToast('请检查当前周目');return;}
             const btn=e.target.querySelector('button[type="submit"]');
             btn.disabled=true;
             btn.textContent='献上中...';
-            const {error}=await addDungeon({name,creator,difficulty,type,description:desc});
+            const {error}=await addDungeon({name,creator,difficulty,type,participantCount,runCount,description:desc});
             btn.disabled=false;
             btn.textContent='✨ 献上祭品';
             if(error){showToast(`❌ ${error.message || '失败'}`);return;}
@@ -1003,11 +1230,11 @@
             await renderDungeonList();
             if(USE_LOCAL_FALLBACK && getLocalData('dungeons',[]).length===0){
                 const samples = [
-                    { id:'s1',name:'深渊回廊',creator:'灰袍叙事者',difficulty:'神话',type:'叙事',description:'在无尽深渊边缘，一座古老回廊静静等待。封印着陨落神祇的记忆碎片，踏入者将直面内心最深的恐惧……',avg_rating:4.7,rating_count:23,comment_count:8,created_at:new Date(Date.now()-7*86400000).toISOString()},
-                    { id:'s2',name:'愚者之塔',creator:'星辰旅人',difficulty:'愚者',type:'解谜',description:'倒悬于天空的巨塔，每一层都蕴含悖论与谜题。唯有拥抱荒诞之人，方能窥见塔顶的真相。',avg_rating:4.9,rating_count:41,comment_count:15,created_at:new Date(Date.now()-3*86400000).toISOString()},
-                    { id:'s3',name:'血色竞技场',creator:'铁腕判官',difficulty:'超凡',type:'战斗',description:'上古诸神取乐的竞技场，回响着古老战吼。策略与力量并重，每一战都可能揭开神戏一角。',avg_rating:4.3,rating_count:17,comment_count:5,created_at:new Date(Date.now()-14*86400000).toISOString()},
-                    { id:'s4',name:'雾隐村',creator:'迷雾行者',difficulty:'觉醒',type:'生存',description:'永远被浓雾笼罩的村庄，平静生活之下，每个夜晚雾中都会出现不可名状之物。',avg_rating:4.1,rating_count:12,comment_count:4,created_at:new Date(Date.now()-5*86400000).toISOString()},
-                    { id:'s5',name:'诸神棋盘',creator:'执棋人',difficulty:'神话',type:'综合',description:'整个副本就是一张巨大的棋盘，参与者成为诸神的棋子。每一步都可能改变命运。',avg_rating:4.6,rating_count:30,comment_count:11,created_at:new Date(Date.now()-10*86400000).toISOString()}
+                    { id:'s1',name:'深渊回廊',creator:'灰袍叙事者',difficulty:'神话',type:'叙事',description:'在无尽深渊边缘，一座古老回廊静静等待。封印着陨落神祇的记忆碎片，踏入者将直面内心最深的恐惧……',participant_count:6,run_count:2,clear_count:6,clear_rate:50,avg_rating:4.7,rating_count:23,comment_count:8,created_at:new Date(Date.now()-7*86400000).toISOString()},
+                    { id:'s2',name:'愚者之塔',creator:'星辰旅人',difficulty:'愚者',type:'解谜',description:'倒悬于天空的巨塔，每一层都蕴含悖论与谜题。唯有拥抱荒诞之人，方能窥见塔顶的真相。',participant_count:4,run_count:3,clear_count:9,clear_rate:75,avg_rating:4.9,rating_count:41,comment_count:15,created_at:new Date(Date.now()-3*86400000).toISOString()},
+                    { id:'s3',name:'血色竞技场',creator:'铁腕判官',difficulty:'超凡',type:'战斗',description:'上古诸神取乐的竞技场，回响着古老战吼。策略与力量并重，每一战都可能揭开神戏一角。',participant_count:8,run_count:1,clear_count:3,clear_rate:37.5,avg_rating:4.3,rating_count:17,comment_count:5,created_at:new Date(Date.now()-14*86400000).toISOString()},
+                    { id:'s4',name:'雾隐村',creator:'迷雾行者',difficulty:'觉醒',type:'生存',description:'永远被浓雾笼罩的村庄，平静生活之下，每个夜晚雾中都会出现不可名状之物。',participant_count:5,run_count:2,clear_count:4,clear_rate:40,avg_rating:4.1,rating_count:12,comment_count:4,created_at:new Date(Date.now()-5*86400000).toISOString()},
+                    { id:'s5',name:'诸神棋盘',creator:'执棋人',difficulty:'神话',type:'综合',description:'整个副本就是一张巨大的棋盘，参与者成为诸神的棋子。每一步都可能改变命运。',participant_count:6,run_count:4,clear_count:18,clear_rate:75,avg_rating:4.6,rating_count:30,comment_count:11,created_at:new Date(Date.now()-10*86400000).toISOString()}
                 ];
                 setLocalData('dungeons',samples);
                 setLocalData('comments',[{id:'c1',dungeon_id:'s1',author:'探索者A',content:'氛围太棒了，跑完回味了好几天。',created_at:new Date(Date.now()-6*86400000).toISOString()},{id:'c2',dungeon_id:'s2',author:'逻辑粉碎机',content:'完全颠覆了我的思维，愚者神太有趣了',created_at:new Date(Date.now()-2*86400000).toISOString()}]);

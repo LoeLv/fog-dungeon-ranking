@@ -30,7 +30,40 @@ DUNGEON_ADMIN_CODE=你的馆主邀请码
 馆主：投稿、评分、评论、删除副本
 ```
 
-## 3. 锁住公开写入
+这三条共享码可以作为应急码。正式发给群友时，推荐使用 `invite_codes` 表里的每人独立邀请码。
+
+## 3. 启用每人一个邀请码
+
+先在 `SQL Editor` 执行：
+
+```text
+supabase/per_person_invites_migration.sql
+```
+
+再在本地生成邀请：
+
+```text
+node scripts/generate_invites.js --players 80 --authors 10
+```
+
+生成结果会放在 `private_invites/`：
+
+```text
+invite_codes_时间.csv  发给群友的明文邀请码
+invite_codes_时间.sql  粘贴进 Supabase SQL Editor 的哈希导入脚本
+```
+
+不要把 `private_invites/` 里的文件上传到 GitHub。
+
+通关率不是作者手填。副本保存固定人数和当前周目，玩家点击“我已通过本周目”后生成通过记录：
+
+```text
+通关率 = 已通过人次 / (固定人数 × 当前周目) × 100%
+```
+
+例如 6 人副本，第 2 周目时有 6 人登记通过，通关率就是 `6 / (6 × 2) = 50%`。
+
+## 4. 锁住公开写入
 
 确认函数部署成功后，在 `SQL Editor` 执行：
 

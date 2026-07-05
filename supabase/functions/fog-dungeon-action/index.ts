@@ -14,6 +14,13 @@ type RequestBody = {
   payload?: Record<string, unknown>;
 };
 
+type InviteIdentity = {
+  role: InviteRole;
+  codeHash: string;
+  displayName: string;
+  inviteId?: string;
+};
+
 const roleLabels: Record<InviteRole, string> = {
   player: "玩家",
   author: "作者",
@@ -35,22 +42,91 @@ function isUuid(value: string) {
   return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value);
 }
 
-function getInviteRole(inviteCode: unknown): InviteRole | null {
+async function sha256Hex(value: string) {
+  const bytes = new TextEncoder().encode(value);
+  const hashBuffer = await crypto.subtle.digest("SHA-256", bytes);
+  return [...new Uint8Array(hashBuffer)]
+    .map((byte) => byte.toString(16).padStart(2, "0"))
+    .join("");
+}
+
+async function getInviteIdentity(
+  supabase: ReturnType<typeof createClient>,
+  inviteCode: unknown,
+): Promise<InviteIdentity | null> {
   const code = cleanText(inviteCode, 200);
   if (!code) return null;
+  const codeHash = await sha256Hex(code);
+
+  const { data } = await supabase
+    .from("invite_codes")
+    .select("id, role, display_name, is_active")
+    .eq("code_hash", codeHash)
+    .maybeSingle();
+
+  const roleFromTable = data?.role as InviteRole | undefined;
+  if (data?.is_active && roleFromTable && ["player", "author", "admin"].includes(roleFromTable)) {
+    await supabase
+      .from("invite_codes")
+      .update({ last_used_at: new Date().toISOString() })
+      .eq("id", data.id);
+    return {
+      role: roleFromTable,
+      codeHash,
+      displayName: cleanText(data.display_name, 40) || roleLabels[roleFromTable],
+      inviteId: data.id,
+    };
+  }
 
   const adminCode = Deno.env.get("DUNGEON_ADMIN_CODE")?.trim();
   const authorCode = Deno.env.get("DUNGEON_AUTHOR_CODE")?.trim();
   const playerCode = Deno.env.get("DUNGEON_PLAYER_CODE")?.trim();
 
-  if (adminCode && code === adminCode) return "admin";
-  if (authorCode && code === authorCode) return "author";
-  if (playerCode && code === playerCode) return "player";
+  if (adminCode && code === adminCode) return { role: "admin", codeHash, displayName: "共享馆主码" };
+  if (authorCode && code === authorCode) return { role: "author", codeHash, displayName: "共享作者码" };
+  if (playerCode && code === playerCode) return { role: "player", codeHash, displayName: "共享玩家码" };
   return null;
 }
 
 function hasRole(role: InviteRole, allowed: InviteRole[]) {
   return allowed.includes(role);
+}
+
+function isMissingInviteColumn(error: { code?: string; message?: string } | null) {
+  return error?.code === "42703" || error?.message?.includes("invite_code_hash");
+}
+
+async function recalculateClearStats(
+  supabase: ReturnType<typeof createClient>,
+  dungeonId: string,
+) {
+  const { data: dungeon, error: dungeonError } = await supabase
+    .from("dungeons")
+    .select("participant_count, run_count")
+    .eq("id", dungeonId)
+    .single();
+  if (dungeonError) return { error: dungeonError };
+
+  const { count, error: countError } = await supabase
+    .from("clear_records")
+    .select("id", { count: "exact", head: true })
+    .eq("dungeon_id", dungeonId);
+  if (countError) return { error: countError };
+
+  const participantCount = Number(dungeon.participant_count) || 0;
+  const runCount = Number(dungeon.run_count) || 1;
+  const clearCount = count ?? 0;
+  const totalSlots = participantCount * runCount;
+  const clearRate = totalSlots > 0 ? Math.round((clearCount / totalSlots) * 10000) / 100 : 0;
+
+  const { data, error } = await supabase
+    .from("dungeons")
+    .update({ clear_count: clearCount, clear_rate: clearRate })
+    .eq("id", dungeonId)
+    .select()
+    .single();
+
+  return { data, error };
 }
 
 Deno.serve(async (req) => {
@@ -68,18 +144,19 @@ Deno.serve(async (req) => {
     return json({ error: "请求格式不正确" }, 400);
   }
 
-  const role = getInviteRole(body.inviteCode);
-  if (!role) return json({ error: "邀请码无效或已过期" }, 401);
-
   const action = cleanText(body.action, 40);
   const payload = body.payload ?? {};
   const supabase = createClient(supabaseUrl, serviceRoleKey, {
     auth: { persistSession: false },
   });
 
+  const identity = await getInviteIdentity(supabase, body.inviteCode);
+  if (!identity) return json({ error: "邀请码无效或已过期" }, 401);
+  const role = identity.role;
+
   try {
     if (action === "verifyInvite") {
-      return json({ role, label: roleLabels[role] });
+      return json({ role, label: roleLabels[role], name: identity.displayName });
     }
 
     if (action === "submitDungeon") {
@@ -90,15 +167,103 @@ Deno.serve(async (req) => {
       const description = cleanText(payload.description, 1800);
       const difficulty = cleanText(payload.difficulty, 20) || "超凡";
       const type = cleanText(payload.type, 20) || "综合";
+      const participantCount = Number(payload.participantCount ?? payload.participant_count);
+      const runCount = Number(payload.runCount ?? payload.run_count ?? 1);
       if (!name || !creator || !description) return json({ error: "请填写完整副本信息" }, 400);
+      if (
+        !Number.isInteger(participantCount) ||
+        participantCount < 1 ||
+        participantCount > 99
+      ) {
+        return json({ error: "固定人数不正确" }, 400);
+      }
+      if (!Number.isInteger(runCount) || runCount < 1 || runCount > 999) return json({ error: "当前周目不正确" }, 400);
 
       const { data, error } = await supabase
         .from("dungeons")
-        .insert({ name, creator, difficulty, type, description })
+        .insert({
+          name,
+          creator,
+          difficulty,
+          type,
+          description,
+          participant_count: participantCount,
+          run_count: runCount,
+          clear_count: 0,
+          clear_rate: 0,
+          invite_code_hash: identity.codeHash,
+          invite_name: identity.displayName,
+        })
         .select()
         .single();
+      if (isMissingInviteColumn(error)) {
+        const retry = await supabase
+          .from("dungeons")
+          .insert({ name, creator, difficulty, type, description })
+          .select()
+          .single();
+        if (retry.error) return json({ error: retry.error.message }, 400);
+        return json({ role, name: identity.displayName, data: retry.data });
+      }
       if (error) return json({ error: error.message }, 400);
-      return json({ role, data });
+      return json({ role, name: identity.displayName, data });
+    }
+
+    if (action === "markCleared") {
+      if (!hasRole(role, ["player", "author", "admin"])) return json({ error: "需要玩家或作者邀请码" }, 403);
+
+      const dungeonId = cleanText(payload.dungeonId, 80);
+      if (!isUuid(dungeonId)) return json({ error: "副本 ID 不正确" }, 400);
+
+      const { data: dungeon, error: dungeonError } = await supabase
+        .from("dungeons")
+        .select("run_count")
+        .eq("id", dungeonId)
+        .single();
+      if (dungeonError) return json({ error: dungeonError.message }, 400);
+      const runNumber = Number(dungeon.run_count) || 1;
+
+      const { data: clearRecord, error } = await supabase
+        .from("clear_records")
+        .insert({
+          dungeon_id: dungeonId,
+          run_number: runNumber,
+          invite_code_hash: identity.codeHash,
+          invite_name: identity.displayName,
+        })
+        .select()
+        .single();
+      if (error?.code === "23505") return json({ error: "你已经登记过本周目通过了" }, 409);
+      if (error) return json({ error: error.message }, 400);
+
+      const stats = await recalculateClearStats(supabase, dungeonId);
+      if (stats.error) return json({ error: stats.error.message }, 400);
+      return json({ role, name: identity.displayName, data: { clearRecord, dungeon: stats.data } });
+    }
+
+    if (action === "advanceRun") {
+      if (!hasRole(role, ["author", "admin"])) return json({ error: "需要作者邀请码" }, 403);
+
+      const dungeonId = cleanText(payload.dungeonId, 80);
+      if (!isUuid(dungeonId)) return json({ error: "副本 ID 不正确" }, 400);
+
+      const { data: dungeon, error } = await supabase
+        .from("dungeons")
+        .select("run_count")
+        .eq("id", dungeonId)
+        .single();
+      if (error) return json({ error: error.message }, 400);
+
+      const nextRun = (Number(dungeon.run_count) || 1) + 1;
+      const { error: updateError } = await supabase
+        .from("dungeons")
+        .update({ run_count: nextRun })
+        .eq("id", dungeonId);
+      if (updateError) return json({ error: updateError.message }, 400);
+
+      const stats = await recalculateClearStats(supabase, dungeonId);
+      if (stats.error) return json({ error: stats.error.message }, 400);
+      return json({ role, name: identity.displayName, data: stats.data });
     }
 
     if (action === "addRating") {
@@ -112,28 +277,58 @@ Deno.serve(async (req) => {
 
       const { data, error } = await supabase
         .from("ratings")
-        .insert({ dungeon_id: dungeonId, rating })
+        .insert({
+          dungeon_id: dungeonId,
+          rating,
+          invite_code_hash: identity.codeHash,
+          invite_name: identity.displayName,
+        })
         .select()
         .single();
+      if (error?.code === "23505") return json({ error: "你已经评价过这个副本了" }, 409);
+      if (isMissingInviteColumn(error)) {
+        const retry = await supabase
+          .from("ratings")
+          .insert({ dungeon_id: dungeonId, rating })
+          .select()
+          .single();
+        if (retry.error) return json({ error: retry.error.message }, 400);
+        return json({ role, name: identity.displayName, data: retry.data });
+      }
       if (error) return json({ error: error.message }, 400);
-      return json({ role, data });
+      return json({ role, name: identity.displayName, data });
     }
 
     if (action === "addComment") {
       if (!hasRole(role, ["player", "author", "admin"])) return json({ error: "需要玩家或作者邀请码" }, 403);
 
       const dungeonId = cleanText(payload.dungeonId, 80);
-      const author = cleanText(payload.author, 40) || "匿名探索者";
+      const author = cleanText(payload.author, 40) || identity.displayName || "匿名探索者";
       const content = cleanText(payload.content, 500);
       if (!isUuid(dungeonId) || !content) return json({ error: "评论参数不正确" }, 400);
 
       const { data, error } = await supabase
         .from("comments")
-        .insert({ dungeon_id: dungeonId, author, content })
+        .insert({
+          dungeon_id: dungeonId,
+          author,
+          content,
+          invite_code_hash: identity.codeHash,
+          invite_name: identity.displayName,
+        })
         .select()
         .single();
+      if (isMissingInviteColumn(error)) {
+        const retry = await supabase
+          .from("comments")
+          .insert({ dungeon_id: dungeonId, author, content })
+          .select()
+          .single();
+        if (retry.error) return json({ error: retry.error.message }, 400);
+        return json({ role, name: identity.displayName, data: retry.data });
+      }
       if (error) return json({ error: error.message }, 400);
-      return json({ role, data });
+      return json({ role, name: identity.displayName, data });
     }
 
     if (action === "deleteDungeon") {
@@ -144,7 +339,7 @@ Deno.serve(async (req) => {
 
       const { error } = await supabase.from("dungeons").delete().eq("id", dungeonId);
       if (error) return json({ error: error.message }, 400);
-      return json({ role, data: { id: dungeonId } });
+      return json({ role, name: identity.displayName, data: { id: dungeonId } });
     }
 
     return json({ error: "未知操作" }, 400);

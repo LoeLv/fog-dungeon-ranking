@@ -8,6 +8,8 @@ alter table public.comments alter column author set default '匿名探索者';
 alter table public.dungeons enable row level security;
 alter table public.ratings enable row level security;
 alter table public.comments enable row level security;
+alter table public.clear_records enable row level security;
+alter table public.invite_codes enable row level security;
 
 drop policy if exists "Public dungeon submit" on public.dungeons;
 drop policy if exists "Public rating submit" on public.ratings;
@@ -37,6 +39,8 @@ using (true);
 revoke insert, update, delete on public.dungeons from anon, authenticated;
 revoke insert, update, delete on public.ratings from anon, authenticated;
 revoke insert, update, delete on public.comments from anon, authenticated;
+revoke all on public.clear_records from anon, authenticated;
+revoke all on public.invite_codes from anon, authenticated;
 
 grant usage on schema public to anon, authenticated;
 grant select on public.dungeons to anon, authenticated;
@@ -47,3 +51,5 @@ grant usage on schema public to service_role;
 grant select, insert, update, delete on public.dungeons to service_role;
 grant select, insert, update, delete on public.ratings to service_role;
 grant select, insert, update, delete on public.comments to service_role;
+grant select, insert, update, delete on public.clear_records to service_role;
+grant select, insert, update, delete on public.invite_codes to service_role;

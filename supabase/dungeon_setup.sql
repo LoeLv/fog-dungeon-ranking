@@ -5,6 +5,12 @@ create table if not exists public.dungeons (
   difficulty text not null default '超凡',
   type text not null default '综合',
   description text not null check (char_length(trim(description)) between 1 and 1800),
+  participant_count integer not null default 1 check (participant_count >= 1),
+  run_count integer not null default 1 check (run_count >= 1),
+  clear_count integer not null default 0 check (clear_count >= 0),
+  clear_rate numeric(5, 2) not null default 0 check (clear_rate >= 0 and clear_rate <= 100),
+  invite_code_hash text,
+  invite_name text,
   avg_rating numeric(3, 1) not null default 0 check (avg_rating >= 0 and avg_rating <= 5),
   rating_count integer not null default 0 check (rating_count >= 0),
   comment_count integer not null default 0 check (comment_count >= 0),
@@ -15,6 +21,8 @@ create table if not exists public.ratings (
   id uuid primary key default gen_random_uuid(),
   dungeon_id uuid not null references public.dungeons(id) on delete cascade,
   rating integer not null check (rating between 1 and 5),
+  invite_code_hash text,
+  invite_name text,
   created_at timestamptz not null default now()
 );
 
@@ -23,17 +31,48 @@ create table if not exists public.comments (
   dungeon_id uuid not null references public.dungeons(id) on delete cascade,
   author text not null default '匿名探索者' check (char_length(trim(author)) between 1 and 40),
   content text not null check (char_length(trim(content)) between 1 and 500),
+  invite_code_hash text,
+  invite_name text,
   created_at timestamptz not null default now()
+);
+
+create table if not exists public.clear_records (
+  id uuid primary key default gen_random_uuid(),
+  dungeon_id uuid not null references public.dungeons(id) on delete cascade,
+  run_number integer not null check (run_number >= 1),
+  invite_code_hash text not null,
+  invite_name text,
+  created_at timestamptz not null default now()
+);
+
+create table if not exists public.invite_codes (
+  id uuid primary key default gen_random_uuid(),
+  code_hash text not null unique check (char_length(code_hash) = 64),
+  display_name text not null check (char_length(trim(display_name)) between 1 and 40),
+  role text not null check (role in ('player', 'author', 'admin')),
+  is_active boolean not null default true,
+  note text,
+  created_at timestamptz not null default now(),
+  last_used_at timestamptz
 );
 
 create index if not exists dungeons_created_at_idx on public.dungeons(created_at desc);
 create index if not exists dungeons_rating_idx on public.dungeons(avg_rating desc, created_at desc);
 create index if not exists ratings_dungeon_id_idx on public.ratings(dungeon_id);
+create unique index if not exists ratings_one_per_invite_code_idx
+  on public.ratings(dungeon_id, invite_code_hash)
+  where invite_code_hash is not null;
 create index if not exists comments_dungeon_id_idx on public.comments(dungeon_id, created_at desc);
+create index if not exists clear_records_dungeon_id_idx on public.clear_records(dungeon_id, run_number);
+create unique index if not exists clear_records_one_per_invite_run_idx
+  on public.clear_records(dungeon_id, run_number, invite_code_hash);
+create index if not exists invite_codes_role_idx on public.invite_codes(role, is_active);
 
 alter table public.dungeons enable row level security;
 alter table public.ratings enable row level security;
 alter table public.comments enable row level security;
+alter table public.clear_records enable row level security;
+alter table public.invite_codes enable row level security;
 
 drop policy if exists "Public dungeon read" on public.dungeons;
 drop policy if exists "Public dungeon submit" on public.dungeons;
@@ -125,3 +164,5 @@ grant usage on schema public to service_role;
 grant select, insert, update, delete on public.dungeons to service_role;
 grant select, insert, update, delete on public.ratings to service_role;
 grant select, insert, update, delete on public.comments to service_role;
+grant select, insert, update, delete on public.clear_records to service_role;
+grant select, insert, update, delete on public.invite_codes to service_role;
