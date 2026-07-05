@@ -567,9 +567,9 @@
 
     <script>
         // ==================== SUPABASE 配置 ====================
-        const SUPABASE_URL = 'https://your-project-id.supabase.co';
-        const SUPABASE_ANON_KEY = 'your-anon-key-here';
-        const supabase = window.supabase?.createClient ? supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY) : null;
+        const SUPABASE_URL = 'https://trosjcbvfhnfkelflijc.supabase.co';
+        const SUPABASE_ANON_KEY = 'sb_publishable_sZYKAIzDJJYQgzC2Buzhyw_art6KnAS';
+        const supabase = window.supabase?.createClient ? window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY) : null;
         const USE_LOCAL_FALLBACK = !supabase || SUPABASE_URL.includes('your-project-id');
         if (USE_LOCAL_FALLBACK) {
             console.warn('⚠️ Supabase 未配置，使用本地存储模式。替换 SUPABASE_URL 和 SUPABASE_ANON_KEY 以启用在线功能。');
