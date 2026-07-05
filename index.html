@@ -1,0 +1,736 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>诸神愚戏 · 副本排行榜</title>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2">
+    </script>
+    <style>
+        :root {
+            --bg: #0b0b10;
+            --bg-card: #12121f;
+            --bg-card-hover: #1a1a2c;
+            --gold: #c5a668;
+            --gold-light: #e7cf8a;
+            --gold-dark: #7a5d2e;
+            --text: #c5c5d2;
+            --text-muted: #7a7a8c;
+            --text-bright: #eaeaf2;
+            --border: #222233;
+            --accent: #a67c2e;
+            --danger: #8b3a3a;
+            --star-color: #e2b04a;
+            --difficulty-mortal: #6b9e6b;
+            --difficulty-awakened: #5b8abf;
+            --difficulty-transcendent: #a06cd5;
+            --difficulty-mythic: #e07b39;
+            --difficulty-fool: #d4d4d4;
+            --radius: 12px;
+            --radius-sm: 8px;
+            --shadow: 0 4px 24px rgba(0, 0, 0, 0.5);
+            --transition: 0.2s ease;
+            --font-display: 'Cinzel', 'Georgia', 'Noto Serif SC', serif;
+            --font-body: 'Inter', 'PingFang SC', 'Microsoft YaHei', sans-serif;
+            --bg-pattern: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.015'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background: var(--bg);
+            background-image: var(--bg-pattern), radial-gradient(ellipse at 20% 10%, rgba(180, 130, 50, 0.05) 0%, transparent 60%), radial-gradient(ellipse at 80% 90%, rgba(160, 100, 180, 0.03) 0%, transparent 60%);
+            color: var(--text);
+            font-family: var(--font-body);
+            min-height: 100vh;
+            line-height: 1.6;
+            backdrop-filter: blur(1px);
+        }
+
+        /* ========== 顶部导航 ========== */
+        .header {
+            background: rgba(14, 14, 24, 0.9);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border-bottom: 1px solid var(--border);
+            padding: 14px 28px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 12px;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            box-shadow: 0 4px 30px rgba(0, 0, 0, 0.6);
+        }
+        .header .logo {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            font-family: var(--font-display);
+            font-size: 1.6rem;
+            color: var(--gold-light);
+            letter-spacing: 0.06em;
+            user-select: none;
+            white-space: nowrap;
+            text-shadow: 0 0 20px rgba(200, 160, 80, 0.3);
+        }
+        .header .logo .icon {
+            font-size: 2rem;
+            filter: drop-shadow(0 0 8px rgba(200, 160, 80, 0.5));
+        }
+        .header .logo .sub {
+            font-size: 0.65rem;
+            color: var(--text-muted);
+            letter-spacing: 0.15em;
+            display: block;
+            line-height: 1;
+            font-family: var(--font-body);
+            text-transform: uppercase;
+        }
+        .btn {
+            padding: 10px 22px;
+            border-radius: 30px;
+            cursor: pointer;
+            font-size: 0.9rem;
+            font-weight: 600;
+            letter-spacing: 0.05em;
+            transition: all var(--transition);
+            border: 1px solid transparent;
+            font-family: var(--font-body);
+            white-space: nowrap;
+            position: relative;
+            overflow: hidden;
+        }
+        .btn-primary {
+            background: linear-gradient(135deg, #b8860b 0%, #8b6914 100%);
+            color: #f5f0e6;
+            border-color: #c9a96e;
+            box-shadow: 0 0 20px rgba(184, 134, 11, 0.3);
+            text-shadow: 0 1px 2px rgba(0,0,0,0.3);
+        }
+        .btn-primary:hover {
+            box-shadow: 0 0 35px rgba(200, 150, 20, 0.5);
+            transform: translateY(-2px);
+        }
+        .btn-outline {
+            background: transparent;
+            color: var(--gold-light);
+            border-color: var(--gold-dark);
+        }
+        .btn-outline:hover {
+            background: rgba(184, 134, 11, 0.1);
+            border-color: var(--gold-light);
+        }
+        .btn-sm {
+            padding: 6px 16px;
+            font-size: 0.8rem;
+            border-radius: 20px;
+        }
+        .btn-xs {
+            padding: 4px 12px;
+            font-size: 0.7rem;
+            border-radius: 16px;
+        }
+
+        /* ========== 主容器 ========== */
+        .container {
+            max-width: 960px;
+            margin: 0 auto;
+            padding: 28px 20px 70px;
+        }
+
+        /* ========== 控制栏 ========== */
+        .controls {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 12px;
+            align-items: center;
+            margin-bottom: 28px;
+            background: rgba(255,255,255,0.02);
+            padding: 16px;
+            border-radius: var(--radius);
+            border: 1px solid rgba(255,255,255,0.04);
+            backdrop-filter: blur(10px);
+        }
+        .controls .sort-group {
+            display: flex;
+            gap: 6px;
+            flex-wrap: wrap;
+        }
+        .controls .sort-btn {
+            padding: 8px 18px;
+            border-radius: 25px;
+            cursor: pointer;
+            font-size: 0.82rem;
+            font-weight: 500;
+            background: rgba(255,255,255,0.03);
+            color: var(--text-muted);
+            border: 1px solid var(--border);
+            transition: all var(--transition);
+            font-family: var(--font-body);
+            white-space: nowrap;
+            backdrop-filter: blur(5px);
+        }
+        .controls .sort-btn.active {
+            background: rgba(184, 134, 11, 0.2);
+            color: var(--gold-light);
+            border-color: var(--gold-dark);
+            box-shadow: 0 0 15px rgba(180, 130, 50, 0.2);
+        }
+        .controls .sort-btn:hover {
+            border-color: var(--text-muted);
+            color: var(--text-bright);
+        }
+        .search-input {
+            padding: 10px 18px;
+            border-radius: 30px;
+            border: 1px solid var(--border);
+            background: rgba(10,10,20,0.6);
+            color: var(--text-bright);
+            font-size: 0.85rem;
+            font-family: var(--font-body);
+            min-width: 200px;
+            flex: 1;
+            max-width: 300px;
+            transition: all var(--transition);
+            backdrop-filter: blur(5px);
+        }
+        .search-input:focus {
+            outline: none;
+            border-color: var(--gold-dark);
+            box-shadow: 0 0 0 4px rgba(184, 134, 11, 0.08);
+        }
+
+        /* ========== 副本卡片列表 ========== */
+        .dungeon-list {
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+        .dungeon-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 20px 24px;
+            cursor: pointer;
+            transition: all var(--transition);
+            position: relative;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+            backdrop-filter: blur(5px);
+            background-image: linear-gradient(135deg, rgba(255,255,255,0.02) 0%, transparent 50%);
+        }
+        .dungeon-card:hover {
+            background: var(--bg-card-hover);
+            border-color: #3a3a4a;
+            transform: translateY(-3px);
+            box-shadow: 0 12px 40px rgba(0, 0, 0, 0.6), 0 0 30px rgba(180, 130, 50, 0.1);
+        }
+        .dungeon-card::before {
+            content: '';
+            position: absolute;
+            left: 0;
+            top: 0;
+            bottom: 0;
+            width: 3px;
+            background: linear-gradient(180deg, var(--gold-dark), transparent);
+            border-radius: 3px 0 0 3px;
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+        .dungeon-card:hover::before {
+            opacity: 1;
+        }
+        .dungeon-card .card-header {
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            gap: 12px;
+            flex-wrap: wrap;
+        }
+        .dungeon-card .card-title {
+            font-family: var(--font-display);
+            font-size: 1.25rem;
+            color: var(--text-bright);
+            letter-spacing: 0.04em;
+            flex: 1;
+            min-width: 200px;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.5);
+        }
+        .dungeon-card .card-meta {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            align-items: center;
+            font-size: 0.78rem;
+            color: var(--text-muted);
+            margin-top: 4px;
+        }
+        .dungeon-card .rating-badge {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            background: rgba(226, 176, 74, 0.12);
+            padding: 6px 14px;
+            border-radius: 20px;
+            font-weight: 700;
+            color: var(--star-color);
+            font-size: 0.95rem;
+            white-space: nowrap;
+            flex-shrink: 0;
+            border: 1px solid rgba(226, 176, 74, 0.3);
+        }
+        .dungeon-card .card-desc {
+            margin-top: 10px;
+            font-size: 0.85rem;
+            color: var(--text-muted);
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+            line-height: 1.5;
+            font-style: italic;
+        }
+        .tag {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 0.72rem;
+            font-weight: 600;
+            letter-spacing: 0.05em;
+            white-space: nowrap;
+            background: rgba(255, 255, 255, 0.03);
+            color: var(--text-muted);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            text-transform: uppercase;
+        }
+        .tag.difficulty-mortal { color: #7fb07f; border-color: rgba(127, 176, 127, 0.3); background: rgba(127, 176, 127, 0.08); }
+        .tag.difficulty-awakened { color: #6a9fd8; border-color: rgba(106, 159, 216, 0.3); background: rgba(106, 159, 216, 0.08); }
+        .tag.difficulty-transcendent { color: #b57edc; border-color: rgba(181, 126, 220, 0.3); background: rgba(181, 126, 220, 0.08); }
+        .tag.difficulty-mythic { color: #e78c45; border-color: rgba(231, 140, 69, 0.3); background: rgba(231, 140, 69, 0.08); }
+        .tag.difficulty-fool { color: #e0e0e0; border-color: rgba(224, 224, 224, 0.3); background: rgba(224, 224, 224, 0.08); }
+        .tag.type-tag { background: rgba(200, 160, 80, 0.1); color: var(--gold-light); border-color: rgba(200, 160, 80, 0.3); }
+
+        /* ========== 详情面板 ========== */
+        .detail-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.75);
+            z-index: 200;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+            animation: fadeIn 0.3s ease;
+        }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        .detail-panel {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            max-width: 680px;
+            width: 100%;
+            max-height: 85vh;
+            overflow-y: auto;
+            padding: 32px 28px;
+            position: relative;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.8), 0 0 40px rgba(180, 130, 50, 0.15);
+            animation: slideUp 0.3s ease;
+            background-image: linear-gradient(180deg, rgba(255,255,255,0.02) 0%, transparent 30%);
+        }
+        @keyframes slideUp { from { transform: translateY(40px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+        .detail-panel .close-btn {
+            position: absolute;
+            top: 16px;
+            right: 20px;
+            background: none;
+            border: none;
+            color: var(--text-muted);
+            font-size: 1.8rem;
+            cursor: pointer;
+            padding: 4px 10px;
+            border-radius: 8px;
+            transition: all var(--transition);
+            line-height: 1;
+        }
+        .detail-panel .close-btn:hover { color: var(--text-bright); background: rgba(255, 255, 255, 0.05); }
+        .detail-panel h2 {
+            font-family: var(--font-display);
+            font-size: 1.7rem;
+            color: var(--text-bright);
+            letter-spacing: 0.05em;
+            margin-bottom: 8px;
+            padding-right: 50px;
+            text-shadow: 0 0 10px rgba(200,160,80,0.2);
+        }
+        .detail-panel .detail-meta {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            margin-bottom: 18px;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            align-items: center;
+            border-bottom: 1px solid rgba(255,255,255,0.05);
+            padding-bottom: 14px;
+        }
+        .detail-panel .detail-desc {
+            background: rgba(0,0,0,0.3);
+            border-radius: var(--radius-sm);
+            padding: 18px 20px;
+            margin-bottom: 24px;
+            font-size: 0.9rem;
+            color: var(--text);
+            line-height: 1.8;
+            white-space: pre-wrap;
+            border: 1px solid rgba(255,255,255,0.05);
+            font-style: italic;
+        }
+        .detail-panel .section-title {
+            font-weight: 700;
+            font-size: 0.9rem;
+            color: var(--text-bright);
+            letter-spacing: 0.06em;
+            margin-bottom: 12px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            text-transform: uppercase;
+        }
+
+        /* 评分 */
+        .rating-area {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            flex-wrap: wrap;
+            margin-bottom: 24px;
+            padding: 14px 18px;
+            background: rgba(255,255,255,0.02);
+            border-radius: var(--radius-sm);
+            border: 1px solid rgba(255,255,255,0.04);
+        }
+        .stars { display: flex; gap: 4px; direction: rtl; }
+        .stars input { display: none; }
+        .stars label {
+            font-size: 2rem;
+            cursor: pointer;
+            color: #2a2a3a;
+            transition: all 0.2s ease;
+            user-select: none;
+            text-shadow: 0 0 8px transparent;
+        }
+        .stars label:hover,
+        .stars label:hover ~ label,
+        .stars input:checked ~ label {
+            color: var(--star-color);
+            text-shadow: 0 0 15px rgba(240, 185, 11, 0.7);
+            transform: scale(1.1);
+        }
+        .stars.readonly label { cursor: default; pointer-events: none; }
+        .rating-area .rating-text { font-size: 0.8rem; color: var(--text-muted); }
+
+        /* 评论 */
+        .comments-section { margin-top: 20px; }
+        .comment-form {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 18px;
+            flex-wrap: wrap;
+        }
+        .comment-form input {
+            flex: 1;
+            min-width: 120px;
+            padding: 10px 16px;
+            border-radius: 25px;
+            border: 1px solid var(--border);
+            background: rgba(0,0,0,0.4);
+            color: var(--text-bright);
+            font-size: 0.85rem;
+            font-family: var(--font-body);
+            transition: all var(--transition);
+        }
+        .comment-form input:focus { outline: none; border-color: var(--gold-dark); }
+        .comment-item {
+            padding: 12px 16px;
+            border-bottom: 1px solid rgba(255,255,255,0.03);
+            font-size: 0.85rem;
+        }
+        .comment-item:last-child { border-bottom: none; }
+        .comment-item .comment-author { font-weight: 600; color: var(--gold-light); font-size: 0.8rem; }
+        .comment-item .comment-time { font-size: 0.7rem; color: var(--text-muted); margin-left: 10px; }
+        .comment-item .comment-content { margin-top: 6px; color: var(--text); }
+
+        /* 弹窗 */
+        .modal-overlay {
+            position: fixed; inset: 0; background: rgba(0,0,0,0.8); z-index: 300;
+            display: flex; align-items: center; justify-content: center; padding: 20px;
+            animation: fadeIn 0.3s ease;
+        }
+        .modal {
+            background: var(--bg-card); border: 1px solid var(--border);
+            border-radius: var(--radius); max-width: 560px; width: 100%;
+            padding: 32px 28px; box-shadow: 0 20px 60px rgba(0,0,0,0.8);
+            animation: slideUp 0.3s ease; max-height: 90vh; overflow-y: auto;
+            position: relative;
+        }
+        .modal h2 { font-family: var(--font-display); font-size: 1.5rem; color: var(--text-bright); margin-bottom: 24px; }
+        .form-group { margin-bottom: 16px; }
+        .form-group label { display: block; font-size: 0.8rem; font-weight: 600; color: var(--text-muted); margin-bottom: 6px; letter-spacing: 0.04em; text-transform: uppercase; }
+        .form-group input, .form-group textarea, .form-group select {
+            width: 100%; padding: 12px 16px; border-radius: var(--radius-sm);
+            border: 1px solid var(--border); background: rgba(0,0,0,0.4);
+            color: var(--text-bright); font-size: 0.9rem; font-family: var(--font-body);
+            transition: all var(--transition); resize: vertical;
+        }
+        .form-group textarea { min-height: 100px; }
+        .form-group input:focus, .form-group textarea:focus, .form-group select:focus {
+            outline: none; border-color: var(--gold-dark); box-shadow: 0 0 0 4px rgba(184,134,11,0.06);
+        }
+        .form-actions { display: flex; gap: 12px; justify-content: flex-end; flex-wrap: wrap; margin-top: 24px; }
+
+        .toast {
+            position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%);
+            background: #1c1c2e; color: var(--text-bright); padding: 14px 28px;
+            border-radius: 30px; font-size: 0.9rem; z-index: 999;
+            border: 1px solid var(--border); box-shadow: 0 10px 30px rgba(0,0,0,0.7);
+            animation: toastIn 0.3s ease, toastOut 0.3s ease 2.8s forwards;
+            pointer-events: none;
+        }
+        @keyframes toastIn { from { opacity:0; transform: translateX(-50%) translateY(20px); } to { opacity:1; transform: translateX(-50%) translateY(0); } }
+        @keyframes toastOut { from { opacity:1; transform: translateX(-50%) translateY(0); } to { opacity:0; transform: translateX(-50%) translateY(20px); } }
+
+        .loading { text-align: center; padding: 50px; color: var(--text-muted); }
+        .spinner {
+            display: inline-block; width: 30px; height: 30px;
+            border: 3px solid rgba(255,255,255,0.1); border-top-color: var(--gold-light);
+            border-radius: 50%; animation: spin 0.8s linear infinite; margin-bottom: 12px;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        .empty-state { text-align: center; padding: 60px 20px; color: var(--text-muted); }
+    </style>
+</head>
+<body>
+    <header class="header">
+        <div class="logo">
+            <span class="icon">♟️</span>
+            <span>诸神愚戏<span class="sub">Folly of the Gods · 副本圣殿</span></span>
+        </div>
+        <button class="btn btn-primary" onclick="openSubmitModal()">📜 献上你的副本</button>
+    </header>
+
+    <div class="container">
+        <div class="controls">
+            <div class="sort-group">
+                <button class="sort-btn active" data-sort="rating" onclick="setSort('rating', this)">⭐ 神眷评分</button>
+                <button class="sort-btn" data-sort="newest" onclick="setSort('newest', this)">🕐 最新降临</button>
+                <button class="sort-btn" data-sort="comments" onclick="setSort('comments', this)">💬 众声回响</button>
+            </div>
+            <input type="text" class="search-input" placeholder="🔍 搜索副本、作者或神谕..." oninput="debounceSearch()" id="searchInput">
+        </div>
+
+        <div class="dungeon-list" id="dungeonList">
+            <div class="loading"><div class="spinner"></div><br>正在从诸神的棋盘中加载副本...</div>
+        </div>
+    </div>
+
+    <!-- 详情弹窗 -->
+    <div class="detail-overlay" id="detailOverlay" style="display:none;" onclick="closeDetail(event)">
+        <div class="detail-panel" id="detailPanel" onclick="event.stopPropagation()">
+            <button class="close-btn" onclick="closeDetail()">✕</button>
+            <div id="detailContent"></div>
+        </div>
+    </div>
+
+    <!-- 提交弹窗 -->
+    <div class="modal-overlay" id="submitModalOverlay" style="display:none;" onclick="closeSubmitModal(event)">
+        <div class="modal" id="submitModal" onclick="event.stopPropagation()">
+            <button class="close-btn" style="position:absolute;top:16px;right:20px;" onclick="closeSubmitModal()">✕</button>
+            <h2>📜 提交新副本</h2>
+            <form id="submitForm" onsubmit="submitDungeon(event)">
+                <div class="form-group"><label>副本真名 *</label><input type="text" id="dungeonName" placeholder="为你的试炼命名..." required maxlength="60"></div>
+                <div class="form-group"><label>创作者署名 *</label><input type="text" id="dungeonCreator" placeholder="你的神名或代号..." required maxlength="30"></div>
+                <div class="form-group"><label>难度位阶</label><select id="dungeonDifficulty"><option value="凡尘">凡尘 —— 凡人皆可入场</option><option value="觉醒">觉醒 —— 灵性初开者</option><option value="超凡" selected>超凡 —— 非凡者方可挑战</option><option value="神话">神话 —— 半神领域</option><option value="愚者">愚者 —— 唯有愚行可通神</option></select></div>
+                <div class="form-group"><label>试炼类型</label><select id="dungeonType"><option value="战斗">⚔️ 战斗</option><option value="解谜">🧩 解谜</option><option value="生存">🔥 生存</option><option value="叙事">📖 叙事</option><option value="综合">🌀 综合</option><option value="其他">❓ 其他</option></select></div>
+                <div class="form-group"><label>副本描述 *</label><textarea id="dungeonDesc" placeholder="描述你的副本世界、规则与神祇的意图..." required maxlength="1500"></textarea></div>
+                <div class="form-actions"><button type="button" class="btn btn-outline" onclick="closeSubmitModal()">取消</button><button type="submit" class="btn btn-primary">✨ 献上祭品</button></div>
+            </form>
+        </div>
+    </div>
+
+    <div id="toastContainer"></div>
+
+    <script>
+        // ==================== SUPABASE 配置 ====================
+        const SUPABASE_URL = 'https://your-project-id.supabase.co';
+        const SUPABASE_ANON_KEY = 'your-anon-key-here';
+        const supabase = window.supabase?.createClient ? supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY) : null;
+        const USE_LOCAL_FALLBACK = !supabase || SUPABASE_URL.includes('your-project-id');
+        if (USE_LOCAL_FALLBACK) {
+            console.warn('⚠️ Supabase 未配置，使用本地存储模式。替换 SUPABASE_URL 和 SUPABASE_ANON_KEY 以启用在线功能。');
+        }
+
+        function getLocalData(key, defaultValue) { try { const raw = localStorage.getItem('fog_' + key); return raw ? JSON.parse(raw) : defaultValue; } catch { return defaultValue; } }
+        function setLocalData(key, value) { try { localStorage.setItem('fog_' + key, JSON.stringify(value)); } catch {} }
+
+        let currentSort = 'rating', searchQuery = '', searchTimeout = null, currentDetailId = null;
+
+        async function fetchDungeons() {
+            if (USE_LOCAL_FALLBACK) return getLocalData('dungeons', []);
+            const { data, error } = await supabase.from('dungeons').select('*').order('avg_rating', { ascending: false }).order('created_at', { ascending: false });
+            if (error) { showToast('❌ 获取数据失败'); return []; }
+            return data || [];
+        }
+
+        async function fetchComments(dungeonId) {
+            if (USE_LOCAL_FALLBACK) { const all = getLocalData('comments', []); return all.filter(c => c.dungeon_id === dungeonId).sort((a,b) => new Date(b.created_at) - new Date(a.created_at)); }
+            const { data, error } = await supabase.from('comments').select('*').eq('dungeon_id', dungeonId).order('created_at', { ascending: false });
+            return error ? [] : data || [];
+        }
+
+        async function addDungeon(dungeonData) {
+            if (USE_LOCAL_FALLBACK) {
+                const dungeons = getLocalData('dungeons', []);
+                const newDungeon = { id: 'local_' + Date.now() + '_' + Math.random().toString(36).substr(2,6), ...dungeonData, avg_rating:0, rating_count:0, comment_count:0, created_at: new Date().toISOString() };
+                dungeons.push(newDungeon); setLocalData('dungeons', dungeons); return { data: [newDungeon], error: null };
+            }
+            const { data, error } = await supabase.from('dungeons').insert([dungeonData]).select();
+            return { data, error };
+        }
+
+        async function addRating(dungeonId, ratingValue) {
+            if (USE_LOCAL_FALLBACK) {
+                const rated = getLocalData('rated', {});
+                if (rated[dungeonId]) return { error: { message: '你已经评过分了' } };
+                rated[dungeonId] = ratingValue; setLocalData('rated', rated);
+                const dungeons = getLocalData('dungeons', []);
+                const d = dungeons.find(d => d.id === dungeonId);
+                if (d) { const total = d.avg_rating * d.rating_count + ratingValue; d.rating_count += 1; d.avg_rating = Math.round((total / d.rating_count)*10)/10; setLocalData('dungeons', dungeons); }
+                return { data: [{}], error: null };
+            }
+            const { data, error } = await supabase.from('ratings').insert([{ dungeon_id: dungeonId, rating: ratingValue }]).select();
+            return { data, error };
+        }
+
+        async function addComment(dungeonId, author, content) {
+            if (USE_LOCAL_FALLBACK) {
+                const comments = getLocalData('comments', []);
+                const newComment = { id: 'c_'+Date.now(), dungeon_id: dungeonId, author: author.trim()||'匿名探索者', content: content.trim(), created_at: new Date().toISOString() };
+                comments.push(newComment); setLocalData('comments', comments);
+                const dungeons = getLocalData('dungeons', []); const d = dungeons.find(d=>d.id===dungeonId);
+                if(d) { d.comment_count = (d.comment_count||0)+1; setLocalData('dungeons', dungeons); }
+                return { data: [newComment], error: null };
+            }
+            const { data, error } = await supabase.from('comments').insert([{ dungeon_id: dungeonId, author: author.trim()||'匿名探索者', content: content.trim() }]).select();
+            return { data, error };
+        }
+
+        function hasRatedLocal(id) { return !!getLocalData('rated', {})[id]; }
+        async function checkHasRated(id) { return USE_LOCAL_FALLBACK ? hasRatedLocal(id) : !!getLocalData('rated_supabase', {})[id]; }
+        function markAsRated(id) { const key = USE_LOCAL_FALLBACK ? 'rated' : 'rated_supabase'; const r = getLocalData(key, {}); r[id]=true; setLocalData(key, r); }
+
+        async function renderDungeonList() {
+            const listEl = document.getElementById('dungeonList');
+            listEl.innerHTML = '<div class="loading"><div class="spinner"></div><br>正在从诸神的棋盘中加载副本...</div>';
+            let dungeons = await fetchDungeons();
+            if (searchQuery.trim()) { const q = searchQuery.trim().toLowerCase(); dungeons = dungeons.filter(d => (d.name||'').toLowerCase().includes(q) || (d.creator||'').toLowerCase().includes(q) || (d.description||'').toLowerCase().includes(q)); }
+            if (currentSort === 'rating') dungeons.sort((a,b) => (b.avg_rating||0)-(a.avg_rating||0));
+            else if (currentSort === 'newest') dungeons.sort((a,b) => new Date(b.created_at) - new Date(a.created_at));
+            else if (currentSort === 'comments') dungeons.sort((a,b) => (b.comment_count||0)-(a.comment_count||0));
+            if (!dungeons.length) { listEl.innerHTML = `<div class="empty-state"><div style="font-size:3rem;">♟️</div><p>${searchQuery ? '没有匹配的副本，试试其他神谕关键词。' : '排行榜上空无一物……<br>成为第一个献上副本的探索者吧！'}</p></div>`; return; }
+            listEl.innerHTML = dungeons.map((d,i) => {
+                const rank = currentSort==='rating' && i<3 ? ['🥇','🥈','🥉'][i] : `#${i+1}`;
+                return `
+                <div class="dungeon-card" onclick="openDetail('${escapeHtml(d.id)}')">
+                    <div class="card-header">
+                        <div>
+                            <span style="font-size:1.1rem;margin-right:8px;">${rank}</span>
+                            <span class="card-title">${escapeHtml(d.name||'未命名')}</span>
+                            <div class="card-meta">
+                                <span>👤 ${escapeHtml(d.creator||'匿名')}</span>
+                                <span class="tag ${getDiffClass(d.difficulty)}">${escapeHtml(d.difficulty||'超凡')}</span>
+                                <span class="tag type-tag">${escapeHtml(d.type||'综合')}</span>
+                                <span>💬 ${d.comment_count||0}</span>
+                                <span style="font-size:0.7rem;">🕐 ${formatDate(d.created_at)}</span>
+                            </div>
+                        </div>
+                        <div class="rating-badge"><span class="star">⭐</span> ${d.avg_rating ? d.avg_rating.toFixed(1) : '—'} <span style="font-weight:400;font-size:0.7rem;color:var(--text-muted);">(${d.rating_count||0})</span></div>
+                    </div>
+                    ${d.description ? `<div class="card-desc">“${escapeHtml(d.description).substring(0,140)}${d.description.length>140?'…':''}”</div>` : ''}
+                </div>`;
+            }).join('');
+        }
+
+        function getDiffClass(d) { const m={'凡尘':'difficulty-mortal','觉醒':'difficulty-awakened','超凡':'difficulty-transcendent','神话':'difficulty-mythic','愚者':'difficulty-fool'}; return m[d]||'difficulty-mortal'; }
+        function formatDate(iso) { if(!iso)return'未知'; const d=new Date(iso),n=new Date(),diff=Math.floor((n-d)/86400000); if(diff===0)return'今天'; if(diff===1)return'昨天'; if(diff<7)return`${diff}天前`; if(diff<30)return`${Math.floor(diff/7)}周前`; return d.toLocaleDateString('zh-CN'); }
+        function escapeHtml(s) { const d=document.createElement('div'); d.textContent=s||''; return d.innerHTML; }
+
+        async function openDetail(id) {
+            currentDetailId = id;
+            const dungeons = await fetchDungeons(); const d = dungeons.find(d=>d.id===id);
+            if(!d){showToast('副本未找到');return;}
+            const comments = await fetchComments(id);
+            const rated = await checkHasRated(id);
+            document.getElementById('detailContent').innerHTML = `
+                <h2>${escapeHtml(d.name)}</h2>
+                <div class="detail-meta">
+                    <span>👤 ${escapeHtml(d.creator)}</span>
+                    <span class="tag ${getDiffClass(d.difficulty)}">${escapeHtml(d.difficulty)}</span>
+                    <span class="tag type-tag">${escapeHtml(d.type)}</span>
+                    <span>⭐ ${(d.avg_rating||0).toFixed(1)} (${d.rating_count||0}人)</span>
+                    <span>💬 ${comments.length} 评论</span>
+                </div>
+                <div class="detail-desc">${escapeHtml(d.description||'（无描述）')}</div>
+                <div class="rating-area">
+                    <span style="font-weight:600;font-size:0.85rem;">⚡ 你的神眷：</span>
+                    <div class="stars ${rated?'readonly':''}" id="starRating">
+                        ${[5,4,3,2,1].map(v=>`<input type="radio" name="rating" value="${v}" id="star${v}" ${rated?'disabled':''}><label for="star${v}" onclick="${rated?'':`rateDungeon('${escapeHtml(id)}',${v})`}">★</label>`).join('')}
+                    </div>
+                    <span class="rating-text">${rated?'✅ 你已经献上评价':'👆 点击星星赐福'}</span>
+                </div>
+                <div class="comments-section">
+                    <div class="section-title">💬 众声回响 (${comments.length})</div>
+                    <div class="comment-form">
+                        <input type="text" id="commentAuthorInput" placeholder="你的署名" maxlength="20">
+                        <input type="text" id="commentContentInput" placeholder="写下你的评论..." maxlength="300" style="flex:2;">
+                        <button class="btn btn-primary btn-sm" onclick="submitComment('${escapeHtml(id)}')">发布</button>
+                    </div>
+                    <div id="commentsList">${comments.length===0?'<div class="no-comments">尚无评论，成为第一个留下印记的探索者。</div>':comments.map(c=>`<div class="comment-item"><span class="comment-author">${escapeHtml(c.author||'匿名')}</span><span class="comment-time">${formatDate(c.created_at)}</span><div class="comment-content">${escapeHtml(c.content)}</div></div>`).join('')}</div>
+                </div>`;
+            document.getElementById('detailOverlay').style.display='flex'; document.body.style.overflow='hidden';
+        }
+
+        function closeDetail(e){ if(e && e.target!==document.getElementById('detailOverlay')) return; document.getElementById('detailOverlay').style.display='none'; document.body.style.overflow=''; currentDetailId=null; }
+        async function rateDungeon(id, val){ const {error}=await addRating(id,val); if(error){ showToast(error.message?.includes('已经')?'⚠️ 你已经评价过了':'❌ 评分失败'); return; } markAsRated(id); showToast('⭐ 神眷已降临'); if(currentDetailId===id) await openDetail(id); await renderDungeonList(); }
+        async function submitComment(id){ const a=document.getElementById('commentAuthorInput')?.value.trim(); const c=document.getElementById('commentContentInput')?.value.trim(); if(!c){showToast('请输入评论');return;} const {error}=await addComment(id,a,c); if(error){showToast('❌ 评论失败');return;} showToast('💬 评论已发布'); if(document.getElementById('commentContentInput')) document.getElementById('commentContentInput').value=''; if(currentDetailId===id) await openDetail(id); await renderDungeonList(); }
+        function openSubmitModal(){ document.getElementById('submitModalOverlay').style.display='flex'; document.body.style.overflow='hidden'; document.getElementById('dungeonName').focus(); }
+        function closeSubmitModal(e){ if(e && e.target!==document.getElementById('submitModalOverlay')) return; document.getElementById('submitModalOverlay').style.display='none'; document.body.style.overflow=''; document.getElementById('submitForm').reset(); }
+        async function submitDungeon(e){ e.preventDefault(); const name=document.getElementById('dungeonName').value.trim(); const creator=document.getElementById('dungeonCreator').value.trim(); const difficulty=document.getElementById('dungeonDifficulty').value; const type=document.getElementById('dungeonType').value; const desc=document.getElementById('dungeonDesc').value.trim(); if(!name||!creator||!desc){showToast('请填写所有必填项');return;} const btn=e.target.querySelector('button[type="submit"]'); btn.disabled=true; btn.textContent='献上中...'; const {error}=await addDungeon({name,creator,difficulty,type,description:desc,avg_rating:0,rating_count:0,comment_count:0}); btn.disabled=false; btn.textContent='✨ 献上祭品'; if(error){showToast('❌ 失败');return;} showToast('🎉 副本已降临！'); closeSubmitModal(); await renderDungeonList(); }
+        function setSort(sort,btn){ currentSort=sort; document.querySelectorAll('.sort-btn').forEach(b=>b.classList.remove('active')); btn.classList.add('active'); renderDungeonList(); }
+        function debounceSearch(){ clearTimeout(searchTimeout); searchTimeout=setTimeout(()=>{ searchQuery=document.getElementById('searchInput').value; renderDungeonList(); },350); }
+        function showToast(msg){ const c=document.getElementById('toastContainer'); const t=document.createElement('div'); t.className='toast'; t.textContent=msg; c.appendChild(t); setTimeout(()=>{if(t.parentNode)t.remove();},3200); }
+        document.addEventListener('keydown',e=>{ if(e.key==='Escape'){ if(document.getElementById('detailOverlay').style.display==='flex') closeDetail(); else if(document.getElementById('submitModalOverlay').style.display==='flex') closeSubmitModal(); } });
+
+        (async function init(){
+            await renderDungeonList();
+            if(USE_LOCAL_FALLBACK && getLocalData('dungeons',[]).length===0){
+                const samples = [
+                    { id:'s1',name:'深渊回廊',creator:'灰袍叙事者',difficulty:'神话',type:'叙事',description:'在无尽深渊边缘，一座古老回廊静静等待。封印着陨落神祇的记忆碎片，踏入者将直面内心最深的恐惧……',avg_rating:4.7,rating_count:23,comment_count:8,created_at:new Date(Date.now()-7*86400000).toISOString()},
+                    { id:'s2',name:'愚者之塔',creator:'星辰旅人',difficulty:'愚者',type:'解谜',description:'倒悬于天空的巨塔，每一层都蕴含悖论与谜题。唯有拥抱荒诞之人，方能窥见塔顶的真相。',avg_rating:4.9,rating_count:41,comment_count:15,created_at:new Date(Date.now()-3*86400000).toISOString()},
+                    { id:'s3',name:'血色竞技场',creator:'铁腕判官',difficulty:'超凡',type:'战斗',description:'上古诸神取乐的竞技场，回响着古老战吼。策略与力量并重，每一战都可能揭开神戏一角。',avg_rating:4.3,rating_count:17,comment_count:5,created_at:new Date(Date.now()-14*86400000).toISOString()},
+                    { id:'s4',name:'雾隐村',creator:'迷雾行者',difficulty:'觉醒',type:'生存',description:'永远被浓雾笼罩的村庄，平静生活之下，每个夜晚雾中都会出现不可名状之物。',avg_rating:4.1,rating_count:12,comment_count:4,created_at:new Date(Date.now()-5*86400000).toISOString()},
+                    { id:'s5',name:'诸神棋盘',creator:'执棋人',difficulty:'神话',type:'综合',description:'整个副本就是一张巨大的棋盘，参与者成为诸神的棋子。每一步都可能改变命运。',avg_rating:4.6,rating_count:30,comment_count:11,created_at:new Date(Date.now()-10*86400000).toISOString()}
+                ];
+                setLocalData('dungeons',samples);
+                setLocalData('comments',[{id:'c1',dungeon_id:'s1',author:'探索者A',content:'氛围太棒了，跑完回味了好几天。',created_at:new Date(Date.now()-6*86400000).toISOString()},{id:'c2',dungeon_id:'s2',author:'逻辑粉碎机',content:'完全颠覆了我的思维，愚者神太有趣了',created_at:new Date(Date.now()-2*86400000).toISOString()}]);
+                await renderDungeonList();
+            }
+        })();
+    </script>
+</body>
+</html>
