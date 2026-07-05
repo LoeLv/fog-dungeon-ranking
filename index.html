@@ -93,6 +93,29 @@
             font-family: var(--font-body);
             text-transform: uppercase;
         }
+        .header-actions {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            flex-wrap: wrap;
+            justify-content: flex-end;
+        }
+        .role-badge {
+            padding: 7px 12px;
+            border-radius: 999px;
+            border: 1px solid rgba(255,255,255,0.08);
+            background: rgba(255,255,255,0.03);
+            color: var(--text-muted);
+            font-size: 0.78rem;
+            font-weight: 600;
+            letter-spacing: 0.04em;
+            white-space: nowrap;
+        }
+        .role-badge.active {
+            color: var(--gold-light);
+            border-color: rgba(200, 160, 80, 0.35);
+            background: rgba(184, 134, 11, 0.12);
+        }
         .btn {
             padding: 10px 22px;
             border-radius: 30px;
@@ -126,6 +149,21 @@
         .btn-outline:hover {
             background: rgba(184, 134, 11, 0.1);
             border-color: var(--gold-light);
+        }
+        .btn-danger {
+            background: rgba(139, 58, 58, 0.18);
+            color: #ffb7b0;
+            border-color: rgba(190, 70, 60, 0.45);
+        }
+        .btn-danger:hover {
+            background: rgba(170, 64, 52, 0.25);
+            border-color: #d56f63;
+        }
+        .btn:disabled {
+            opacity: 0.55;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
         }
         .btn-sm {
             padding: 6px 16px;
@@ -480,6 +518,36 @@
             position: relative;
         }
         .modal h2 { font-family: var(--font-display); font-size: 1.5rem; color: var(--text-bright); margin-bottom: 24px; }
+        .modal-note {
+            color: var(--text-muted);
+            margin: -12px 0 20px;
+            font-size: 0.9rem;
+        }
+        .role-guide {
+            display: grid;
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+            gap: 10px;
+            margin: 16px 0 6px;
+        }
+        .role-card {
+            border: 1px solid rgba(255,255,255,0.07);
+            border-radius: var(--radius-sm);
+            background: rgba(255,255,255,0.025);
+            padding: 12px;
+            min-height: 84px;
+        }
+        .role-card strong {
+            display: block;
+            color: var(--text-bright);
+            margin-bottom: 4px;
+            font-size: 0.9rem;
+        }
+        .role-card span {
+            display: block;
+            color: var(--text-muted);
+            font-size: 0.76rem;
+            line-height: 1.5;
+        }
         .form-group { margin-bottom: 16px; }
         .form-group label { display: block; font-size: 0.8rem; font-weight: 600; color: var(--text-muted); margin-bottom: 6px; letter-spacing: 0.04em; text-transform: uppercase; }
         .form-group input, .form-group textarea, .form-group select {
@@ -513,6 +581,13 @@
         }
         @keyframes spin { to { transform: rotate(360deg); } }
         .empty-state { text-align: center; padding: 60px 20px; color: var(--text-muted); }
+        @media (max-width: 720px) {
+            .header { align-items: flex-start; }
+            .header-actions { width: 100%; justify-content: flex-start; }
+            .role-guide { grid-template-columns: 1fr; }
+            .controls { align-items: stretch; }
+            .search-input { max-width: none; width: 100%; }
+        }
     </style>
 </head>
 <body>
@@ -521,7 +596,11 @@
             <span class="icon">♟️</span>
             <span>诸神愚戏<span class="sub">Folly of the Gods · 副本圣殿</span></span>
         </div>
-        <button class="btn btn-primary" onclick="openSubmitModal()">📜 献上你的副本</button>
+        <div class="header-actions">
+            <div class="role-badge" id="roleBadge">访客只读</div>
+            <button class="btn btn-outline" id="inviteButton" onclick="openInviteModal()">🔑 输入邀请</button>
+            <button class="btn btn-primary" id="submitEntryButton" onclick="openSubmitModal()">📜 献上你的副本</button>
+        </div>
     </header>
 
     <div class="container">
@@ -547,6 +626,28 @@
         </div>
     </div>
 
+    <!-- 邀请弹窗 -->
+    <div class="modal-overlay" id="inviteModalOverlay" style="display:none;" onclick="closeInviteModal(event)">
+        <div class="modal" id="inviteModal" onclick="event.stopPropagation()">
+            <button class="close-btn" style="position:absolute;top:16px;right:20px;" onclick="closeInviteModal()">✕</button>
+            <h2>🔑 邀请权限</h2>
+            <p class="modal-note" id="inviteHint">输入群内邀请码后，才能参与评分、评论或投稿。</p>
+            <div class="form-group">
+                <label>邀请码</label>
+                <input type="password" id="inviteCodeInput" placeholder="输入玩家或作者邀请码" autocomplete="off">
+            </div>
+            <div class="role-guide">
+                <div class="role-card"><strong>玩家</strong><span>评分、评论，不能投稿。</span></div>
+                <div class="role-card"><strong>作者</strong><span>投稿、评分、评论。</span></div>
+                <div class="role-card"><strong>馆主</strong><span>管理与删除副本。</span></div>
+            </div>
+            <div class="form-actions">
+                <button type="button" class="btn btn-outline" onclick="clearInviteSession()">退出身份</button>
+                <button type="button" class="btn btn-primary" id="inviteSubmitButton" onclick="submitInviteCode()">进入圣殿</button>
+            </div>
+        </div>
+    </div>
+
     <!-- 提交弹窗 -->
     <div class="modal-overlay" id="submitModalOverlay" style="display:none;" onclick="closeSubmitModal(event)">
         <div class="modal" id="submitModal" onclick="event.stopPropagation()">
@@ -569,6 +670,7 @@
         // ==================== SUPABASE 配置 ====================
         const SUPABASE_URL = 'https://trosjcbvfhnfkelflijc.supabase.co';
         const SUPABASE_ANON_KEY = 'sb_publishable_sZYKAIzDJJYQgzC2Buzhyw_art6KnAS';
+        const DUNGEON_ACTION_URL = `${SUPABASE_URL}/functions/v1/fog-dungeon-action`;
         const supabaseClient = window.supabase?.createClient ? window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY) : null;
         const USE_LOCAL_FALLBACK = !supabaseClient || SUPABASE_URL.includes('your-project-id');
         if (USE_LOCAL_FALLBACK) {
@@ -578,7 +680,66 @@
         function getLocalData(key, defaultValue) { try { const raw = localStorage.getItem('fog_' + key); return raw ? JSON.parse(raw) : defaultValue; } catch { return defaultValue; } }
         function setLocalData(key, value) { try { localStorage.setItem('fog_' + key, JSON.stringify(value)); } catch {} }
 
+        const INVITE_STORAGE_KEY = 'invite_session_v1';
+        const ROLE_LABELS = { player: '玩家', author: '作者', admin: '馆主' };
+        let inviteSession = getLocalData(INVITE_STORAGE_KEY, null);
         let currentSort = 'rating', searchQuery = '', searchTimeout = null, currentDetailId = null;
+
+        function getInviteRole() { return inviteSession?.role || null; }
+        function canUseRole(roles) { return roles.includes(getInviteRole()); }
+        function canInteract() { return canUseRole(['player', 'author', 'admin']); }
+        function canSubmit() { return canUseRole(['author', 'admin']); }
+        function isAdmin() { return getInviteRole() === 'admin'; }
+
+        function normalizeRole(role) {
+            return ['player', 'author', 'admin'].includes(role) ? role : null;
+        }
+
+        function saveInviteSession(session) {
+            inviteSession = session;
+            setLocalData(INVITE_STORAGE_KEY, inviteSession);
+            updateInviteUI();
+        }
+
+        function updateInviteUI() {
+            const role = getInviteRole();
+            const roleBadge = document.getElementById('roleBadge');
+            const inviteButton = document.getElementById('inviteButton');
+            const submitButton = document.getElementById('submitEntryButton');
+            if (roleBadge) {
+                roleBadge.textContent = role ? `${ROLE_LABELS[role]}权限` : '访客只读';
+                roleBadge.classList.toggle('active', !!role);
+            }
+            if (inviteButton) inviteButton.textContent = role ? '🔑 切换邀请' : '🔑 输入邀请';
+            if (submitButton) submitButton.title = canSubmit() ? '提交新副本' : '需要作者邀请码';
+        }
+
+        function requireInvite(roles, message) {
+            if (USE_LOCAL_FALLBACK || canUseRole(roles)) return true;
+            openInviteModal(message || '请先输入邀请码。');
+            return false;
+        }
+
+        async function invokeDungeonAction(action, payload = {}, codeOverride = null) {
+            const inviteCode = codeOverride ?? inviteSession?.code;
+            if (!USE_LOCAL_FALLBACK && !inviteCode) {
+                return { data: null, error: { message: '请先输入邀请码' } };
+            }
+            const response = await fetch(DUNGEON_ACTION_URL, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'apikey': SUPABASE_ANON_KEY,
+                    'Authorization': `Bearer ${SUPABASE_ANON_KEY}`
+                },
+                body: JSON.stringify({ action, inviteCode, payload })
+            });
+            const result = await response.json().catch(() => ({}));
+            if (!response.ok) return { data: null, error: { message: result.error || '请求失败' } };
+            const role = normalizeRole(result.role);
+            if (role && inviteCode) saveInviteSession({ role, code: inviteCode });
+            return { data: result.data ?? null, error: null, role };
+        }
 
         async function fetchDungeons() {
             if (USE_LOCAL_FALLBACK) return getLocalData('dungeons', []);
@@ -599,8 +760,7 @@
                 const newDungeon = { id: 'local_' + Date.now() + '_' + Math.random().toString(36).substr(2,6), ...dungeonData, avg_rating:0, rating_count:0, comment_count:0, created_at: new Date().toISOString() };
                 dungeons.push(newDungeon); setLocalData('dungeons', dungeons); return { data: [newDungeon], error: null };
             }
-            const { data, error } = await supabaseClient.from('dungeons').insert([dungeonData]).select();
-            return { data, error };
+            return invokeDungeonAction('submitDungeon', dungeonData);
         }
 
         async function addRating(dungeonId, ratingValue) {
@@ -613,8 +773,7 @@
                 if (d) { const total = d.avg_rating * d.rating_count + ratingValue; d.rating_count += 1; d.avg_rating = Math.round((total / d.rating_count)*10)/10; setLocalData('dungeons', dungeons); }
                 return { data: [{}], error: null };
             }
-            const { data, error } = await supabaseClient.from('ratings').insert([{ dungeon_id: dungeonId, rating: ratingValue }]).select();
-            return { data, error };
+            return invokeDungeonAction('addRating', { dungeonId, rating: ratingValue });
         }
 
         async function addComment(dungeonId, author, content) {
@@ -626,8 +785,18 @@
                 if(d) { d.comment_count = (d.comment_count||0)+1; setLocalData('dungeons', dungeons); }
                 return { data: [newComment], error: null };
             }
-            const { data, error } = await supabaseClient.from('comments').insert([{ dungeon_id: dungeonId, author: author.trim()||'匿名探索者', content: content.trim() }]).select();
-            return { data, error };
+            return invokeDungeonAction('addComment', { dungeonId, author: author.trim()||'匿名探索者', content: content.trim() });
+        }
+
+        async function removeDungeon(dungeonId) {
+            if (USE_LOCAL_FALLBACK) {
+                const dungeons = getLocalData('dungeons', []).filter(d => d.id !== dungeonId);
+                const comments = getLocalData('comments', []).filter(c => c.dungeon_id !== dungeonId);
+                setLocalData('dungeons', dungeons);
+                setLocalData('comments', comments);
+                return { data: [{}], error: null };
+            }
+            return invokeDungeonAction('deleteDungeon', { dungeonId });
         }
 
         function hasRatedLocal(id) { return !!getLocalData('rated', {})[id]; }
@@ -683,6 +852,11 @@
             if(!d){showToast('副本未找到');return;}
             const comments = await fetchComments(id);
             const rated = await checkHasRated(id);
+            const locked = !canInteract();
+            const ratingLocked = rated || locked;
+            const ratingText = rated ? '✅ 你已经献上评价' : (locked ? '🔑 输入邀请码后可评分' : '👆 点击星星赐福');
+            const commentLockedAttrs = locked ? 'disabled' : '';
+            const commentPlaceholder = locked ? '输入玩家或作者邀请码后可评论' : '写下你的评论...';
             document.getElementById('detailContent').innerHTML = `
                 <h2>${escapeHtml(d.name)}</h2>
                 <div class="detail-meta">
@@ -691,21 +865,22 @@
                     <span class="tag type-tag">${escapeHtml(d.type)}</span>
                     <span>⭐ ${(d.avg_rating||0).toFixed(1)} (${d.rating_count||0}人)</span>
                     <span>💬 ${comments.length} 评论</span>
+                    ${isAdmin() ? `<button class="btn btn-danger btn-xs" onclick="deleteDungeon('${escapeHtml(id)}')">删除副本</button>` : ''}
                 </div>
                 <div class="detail-desc">${escapeHtml(d.description||'（无描述）')}</div>
                 <div class="rating-area">
                     <span style="font-weight:600;font-size:0.85rem;">⚡ 你的神眷：</span>
-                    <div class="stars ${rated?'readonly':''}" id="starRating">
-                        ${[5,4,3,2,1].map(v=>`<input type="radio" name="rating" value="${v}" id="star${v}" ${rated?'disabled':''}><label for="star${v}" onclick="${rated?'':`rateDungeon('${escapeHtml(id)}',${v})`}">★</label>`).join('')}
+                    <div class="stars ${ratingLocked?'readonly':''}" id="starRating">
+                        ${[5,4,3,2,1].map(v=>`<input type="radio" name="rating" value="${v}" id="star${v}" ${ratingLocked?'disabled':''}><label for="star${v}" onclick="${ratingLocked?'':`rateDungeon('${escapeHtml(id)}',${v})`}">★</label>`).join('')}
                     </div>
-                    <span class="rating-text">${rated?'✅ 你已经献上评价':'👆 点击星星赐福'}</span>
+                    <span class="rating-text">${ratingText}</span>
                 </div>
                 <div class="comments-section">
                     <div class="section-title">💬 众声回响 (${comments.length})</div>
                     <div class="comment-form">
-                        <input type="text" id="commentAuthorInput" placeholder="你的署名" maxlength="20">
-                        <input type="text" id="commentContentInput" placeholder="写下你的评论..." maxlength="300" style="flex:2;">
-                        <button class="btn btn-primary btn-sm" onclick="submitComment('${escapeHtml(id)}')">发布</button>
+                        <input type="text" id="commentAuthorInput" placeholder="你的署名" maxlength="20" ${commentLockedAttrs}>
+                        <input type="text" id="commentContentInput" placeholder="${commentPlaceholder}" maxlength="300" style="flex:2;" ${commentLockedAttrs}>
+                        <button class="btn btn-primary btn-sm" onclick="${locked?`openInviteModal('输入玩家或作者邀请码后可评论。')`:`submitComment('${escapeHtml(id)}')`}">${locked?'输入邀请':'发布'}</button>
                     </div>
                     <div id="commentsList">${comments.length===0?'<div class="no-comments">尚无评论，成为第一个留下印记的探索者。</div>':comments.map(c=>`<div class="comment-item"><span class="comment-author">${escapeHtml(c.author||'匿名')}</span><span class="comment-time">${formatDate(c.created_at)}</span><div class="comment-content">${escapeHtml(c.content)}</div></div>`).join('')}</div>
                 </div>`;
@@ -713,17 +888,118 @@
         }
 
         function closeDetail(e){ if(e && e.target!==document.getElementById('detailOverlay')) return; document.getElementById('detailOverlay').style.display='none'; document.body.style.overflow=''; currentDetailId=null; }
-        async function rateDungeon(id, val){ const {error}=await addRating(id,val); if(error){ showToast(error.message?.includes('已经')?'⚠️ 你已经评价过了':'❌ 评分失败'); return; } markAsRated(id); showToast('⭐ 神眷已降临'); if(currentDetailId===id) await openDetail(id); await renderDungeonList(); }
-        async function submitComment(id){ const a=document.getElementById('commentAuthorInput')?.value.trim(); const c=document.getElementById('commentContentInput')?.value.trim(); if(!c){showToast('请输入评论');return;} const {error}=await addComment(id,a,c); if(error){showToast('❌ 评论失败');return;} showToast('💬 评论已发布'); if(document.getElementById('commentContentInput')) document.getElementById('commentContentInput').value=''; if(currentDetailId===id) await openDetail(id); await renderDungeonList(); }
-        function openSubmitModal(){ document.getElementById('submitModalOverlay').style.display='flex'; document.body.style.overflow='hidden'; document.getElementById('dungeonName').focus(); }
+
+        function openInviteModal(message) {
+            const overlay = document.getElementById('inviteModalOverlay');
+            const hint = document.getElementById('inviteHint');
+            if (hint) hint.textContent = message || '输入群内邀请码后，才能参与评分、评论或投稿。';
+            overlay.style.display='flex';
+            document.body.style.overflow='hidden';
+            setTimeout(() => document.getElementById('inviteCodeInput')?.focus(), 50);
+        }
+
+        function closeInviteModal(e) {
+            if(e && e.target!==document.getElementById('inviteModalOverlay')) return;
+            document.getElementById('inviteModalOverlay').style.display='none';
+            document.body.style.overflow='';
+        }
+
+        async function submitInviteCode() {
+            const input = document.getElementById('inviteCodeInput');
+            const btn = document.getElementById('inviteSubmitButton');
+            const code = input?.value.trim();
+            if (!code) { showToast('请输入邀请码'); return; }
+            btn.disabled = true;
+            btn.textContent = '验证中...';
+            const { error, role } = USE_LOCAL_FALLBACK ? { error: null, role: 'author' } : await invokeDungeonAction('verifyInvite', {}, code);
+            btn.disabled = false;
+            btn.textContent = '进入圣殿';
+            if (error || !role) { showToast(`❌ ${error?.message || '邀请码无效'}`); return; }
+            saveInviteSession({ role, code });
+            input.value = '';
+            closeInviteModal();
+            showToast(`✅ 已获得${ROLE_LABELS[role]}权限`);
+            if (currentDetailId) await openDetail(currentDetailId);
+        }
+
+        function clearInviteSession() {
+            inviteSession = null;
+            localStorage.removeItem('fog_' + INVITE_STORAGE_KEY);
+            updateInviteUI();
+            closeInviteModal();
+            showToast('已退出邀请身份');
+            if (currentDetailId) openDetail(currentDetailId);
+        }
+
+        async function rateDungeon(id, val){
+            if(!requireInvite(['player','author','admin'], '输入玩家或作者邀请码后可评分。')) return;
+            const {error}=await addRating(id,val);
+            if(error){ showToast(error.message?.includes('已经')?'⚠️ 你已经评价过了':`❌ ${error.message || '评分失败'}`); return; }
+            markAsRated(id);
+            showToast('⭐ 神眷已降临');
+            if(currentDetailId===id) await openDetail(id);
+            await renderDungeonList();
+        }
+
+        async function submitComment(id){
+            if(!requireInvite(['player','author','admin'], '输入玩家或作者邀请码后可评论。')) return;
+            const a=document.getElementById('commentAuthorInput')?.value.trim();
+            const c=document.getElementById('commentContentInput')?.value.trim();
+            if(!c){showToast('请输入评论');return;}
+            const {error}=await addComment(id,a,c);
+            if(error){showToast(`❌ ${error.message || '评论失败'}`);return;}
+            showToast('💬 评论已发布');
+            if(document.getElementById('commentContentInput')) document.getElementById('commentContentInput').value='';
+            if(currentDetailId===id) await openDetail(id);
+            await renderDungeonList();
+        }
+
+        function openSubmitModal(){
+            if(!requireInvite(['author','admin'], '只有作者邀请码可以投稿副本。')) return;
+            document.getElementById('submitModalOverlay').style.display='flex';
+            document.body.style.overflow='hidden';
+            document.getElementById('dungeonName').focus();
+        }
+
         function closeSubmitModal(e){ if(e && e.target!==document.getElementById('submitModalOverlay')) return; document.getElementById('submitModalOverlay').style.display='none'; document.body.style.overflow=''; document.getElementById('submitForm').reset(); }
-        async function submitDungeon(e){ e.preventDefault(); const name=document.getElementById('dungeonName').value.trim(); const creator=document.getElementById('dungeonCreator').value.trim(); const difficulty=document.getElementById('dungeonDifficulty').value; const type=document.getElementById('dungeonType').value; const desc=document.getElementById('dungeonDesc').value.trim(); if(!name||!creator||!desc){showToast('请填写所有必填项');return;} const btn=e.target.querySelector('button[type="submit"]'); btn.disabled=true; btn.textContent='献上中...'; const {error}=await addDungeon({name,creator,difficulty,type,description:desc,avg_rating:0,rating_count:0,comment_count:0}); btn.disabled=false; btn.textContent='✨ 献上祭品'; if(error){showToast('❌ 失败');return;} showToast('🎉 副本已降临！'); closeSubmitModal(); await renderDungeonList(); }
+
+        async function submitDungeon(e){
+            e.preventDefault();
+            if(!requireInvite(['author','admin'], '只有作者邀请码可以投稿副本。')) return;
+            const name=document.getElementById('dungeonName').value.trim();
+            const creator=document.getElementById('dungeonCreator').value.trim();
+            const difficulty=document.getElementById('dungeonDifficulty').value;
+            const type=document.getElementById('dungeonType').value;
+            const desc=document.getElementById('dungeonDesc').value.trim();
+            if(!name||!creator||!desc){showToast('请填写所有必填项');return;}
+            const btn=e.target.querySelector('button[type="submit"]');
+            btn.disabled=true;
+            btn.textContent='献上中...';
+            const {error}=await addDungeon({name,creator,difficulty,type,description:desc});
+            btn.disabled=false;
+            btn.textContent='✨ 献上祭品';
+            if(error){showToast(`❌ ${error.message || '失败'}`);return;}
+            showToast('🎉 副本已降临！');
+            closeSubmitModal();
+            await renderDungeonList();
+        }
+
+        async function deleteDungeon(id) {
+            if(!requireInvite(['admin'], '只有馆主邀请码可以删除副本。')) return;
+            if(!confirm('确定删除这条副本吗？评分和评论会一起消失。')) return;
+            const { error } = await removeDungeon(id);
+            if(error){ showToast(`❌ ${error.message || '删除失败'}`); return; }
+            showToast('🗑️ 副本已删除');
+            closeDetail();
+            await renderDungeonList();
+        }
         function setSort(sort,btn){ currentSort=sort; document.querySelectorAll('.sort-btn').forEach(b=>b.classList.remove('active')); btn.classList.add('active'); renderDungeonList(); }
         function debounceSearch(){ clearTimeout(searchTimeout); searchTimeout=setTimeout(()=>{ searchQuery=document.getElementById('searchInput').value; renderDungeonList(); },350); }
         function showToast(msg){ const c=document.getElementById('toastContainer'); const t=document.createElement('div'); t.className='toast'; t.textContent=msg; c.appendChild(t); setTimeout(()=>{if(t.parentNode)t.remove();},3200); }
-        document.addEventListener('keydown',e=>{ if(e.key==='Escape'){ if(document.getElementById('detailOverlay').style.display==='flex') closeDetail(); else if(document.getElementById('submitModalOverlay').style.display==='flex') closeSubmitModal(); } });
+        document.addEventListener('keydown',e=>{ if(e.key==='Escape'){ if(document.getElementById('inviteModalOverlay').style.display==='flex') closeInviteModal(); else if(document.getElementById('detailOverlay').style.display==='flex') closeDetail(); else if(document.getElementById('submitModalOverlay').style.display==='flex') closeSubmitModal(); } if(e.key==='Enter' && document.activeElement?.id === 'inviteCodeInput') submitInviteCode(); });
 
         (async function init(){
+            updateInviteUI();
             await renderDungeonList();
             if(USE_LOCAL_FALLBACK && getLocalData('dungeons',[]).length===0){
                 const samples = [

@@ -48,35 +48,17 @@ for select
 to anon, authenticated
 using (true);
 
-create policy "Public dungeon submit"
-on public.dungeons
-for insert
-to anon, authenticated
-with check (true);
-
 create policy "Public rating read"
 on public.ratings
 for select
 to anon, authenticated
 using (true);
 
-create policy "Public rating submit"
-on public.ratings
-for insert
-to anon, authenticated
-with check (rating between 1 and 5);
-
 create policy "Public comment read"
 on public.comments
 for select
 to anon, authenticated
 using (true);
-
-create policy "Public comment submit"
-on public.comments
-for insert
-to anon, authenticated
-with check (char_length(trim(content)) between 1 and 500);
 
 create or replace function public.recalculate_dungeon_rating()
 returns trigger
@@ -136,6 +118,10 @@ after insert or update or delete on public.comments
 for each row execute function public.recalculate_dungeon_comments();
 
 grant usage on schema public to anon, authenticated;
-grant select, insert on public.dungeons to anon, authenticated;
-grant select, insert on public.ratings to anon, authenticated;
-grant select, insert on public.comments to anon, authenticated;
+grant select on public.dungeons to anon, authenticated;
+grant select on public.ratings to anon, authenticated;
+grant select on public.comments to anon, authenticated;
+grant usage on schema public to service_role;
+grant select, insert, update, delete on public.dungeons to service_role;
+grant select, insert, update, delete on public.ratings to service_role;
+grant select, insert, update, delete on public.comments to service_role;
