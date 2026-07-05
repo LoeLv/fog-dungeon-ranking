@@ -569,8 +569,8 @@
         // ==================== SUPABASE 配置 ====================
         const SUPABASE_URL = 'https://trosjcbvfhnfkelflijc.supabase.co';
         const SUPABASE_ANON_KEY = 'sb_publishable_sZYKAIzDJJYQgzC2Buzhyw_art6KnAS';
-        const supabase = window.supabase?.createClient ? window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY) : null;
-        const USE_LOCAL_FALLBACK = !supabase || SUPABASE_URL.includes('your-project-id');
+        const supabaseClient = window.supabase?.createClient ? window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY) : null;
+        const USE_LOCAL_FALLBACK = !supabaseClient || SUPABASE_URL.includes('your-project-id');
         if (USE_LOCAL_FALLBACK) {
             console.warn('⚠️ Supabase 未配置，使用本地存储模式。替换 SUPABASE_URL 和 SUPABASE_ANON_KEY 以启用在线功能。');
         }
@@ -582,14 +582,14 @@
 
         async function fetchDungeons() {
             if (USE_LOCAL_FALLBACK) return getLocalData('dungeons', []);
-            const { data, error } = await supabase.from('dungeons').select('*').order('avg_rating', { ascending: false }).order('created_at', { ascending: false });
+            const { data, error } = await supabaseClient.from('dungeons').select('*').order('avg_rating', { ascending: false }).order('created_at', { ascending: false });
             if (error) { showToast('❌ 获取数据失败'); return []; }
             return data || [];
         }
 
         async function fetchComments(dungeonId) {
             if (USE_LOCAL_FALLBACK) { const all = getLocalData('comments', []); return all.filter(c => c.dungeon_id === dungeonId).sort((a,b) => new Date(b.created_at) - new Date(a.created_at)); }
-            const { data, error } = await supabase.from('comments').select('*').eq('dungeon_id', dungeonId).order('created_at', { ascending: false });
+            const { data, error } = await supabaseClient.from('comments').select('*').eq('dungeon_id', dungeonId).order('created_at', { ascending: false });
             return error ? [] : data || [];
         }
 
@@ -599,7 +599,7 @@
                 const newDungeon = { id: 'local_' + Date.now() + '_' + Math.random().toString(36).substr(2,6), ...dungeonData, avg_rating:0, rating_count:0, comment_count:0, created_at: new Date().toISOString() };
                 dungeons.push(newDungeon); setLocalData('dungeons', dungeons); return { data: [newDungeon], error: null };
             }
-            const { data, error } = await supabase.from('dungeons').insert([dungeonData]).select();
+            const { data, error } = await supabaseClient.from('dungeons').insert([dungeonData]).select();
             return { data, error };
         }
 
@@ -613,7 +613,7 @@
                 if (d) { const total = d.avg_rating * d.rating_count + ratingValue; d.rating_count += 1; d.avg_rating = Math.round((total / d.rating_count)*10)/10; setLocalData('dungeons', dungeons); }
                 return { data: [{}], error: null };
             }
-            const { data, error } = await supabase.from('ratings').insert([{ dungeon_id: dungeonId, rating: ratingValue }]).select();
+            const { data, error } = await supabaseClient.from('ratings').insert([{ dungeon_id: dungeonId, rating: ratingValue }]).select();
             return { data, error };
         }
 
@@ -626,7 +626,7 @@
                 if(d) { d.comment_count = (d.comment_count||0)+1; setLocalData('dungeons', dungeons); }
                 return { data: [newComment], error: null };
             }
-            const { data, error } = await supabase.from('comments').insert([{ dungeon_id: dungeonId, author: author.trim()||'匿名探索者', content: content.trim() }]).select();
+            const { data, error } = await supabaseClient.from('comments').insert([{ dungeon_id: dungeonId, author: author.trim()||'匿名探索者', content: content.trim() }]).select();
             return { data, error };
         }
 
@@ -637,7 +637,14 @@
         async function renderDungeonList() {
             const listEl = document.getElementById('dungeonList');
             listEl.innerHTML = '<div class="loading"><div class="spinner"></div><br>正在从诸神的棋盘中加载副本...</div>';
-            let dungeons = await fetchDungeons();
+            let dungeons = [];
+            try {
+                dungeons = await fetchDungeons();
+            } catch (error) {
+                console.error('加载副本失败:', error);
+                listEl.innerHTML = '<div class="empty-state"><div style="font-size:3rem;">⚠️</div><p>副本加载失败，请刷新页面再试。</p></div>';
+                return;
+            }
             if (searchQuery.trim()) { const q = searchQuery.trim().toLowerCase(); dungeons = dungeons.filter(d => (d.name||'').toLowerCase().includes(q) || (d.creator||'').toLowerCase().includes(q) || (d.description||'').toLowerCase().includes(q)); }
             if (currentSort === 'rating') dungeons.sort((a,b) => (b.avg_rating||0)-(a.avg_rating||0));
             else if (currentSort === 'newest') dungeons.sort((a,b) => new Date(b.created_at) - new Date(a.created_at));
