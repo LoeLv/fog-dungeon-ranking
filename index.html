@@ -21,11 +21,16 @@
             --accent: #a67c2e;
             --danger: #8b3a3a;
             --star-color: #e2b04a;
-            --difficulty-mortal: #6b9e6b;
-            --difficulty-awakened: #5b8abf;
-            --difficulty-transcendent: #a06cd5;
-            --difficulty-mythic: #e07b39;
-            --difficulty-fool: #d4d4d4;
+            --path-life: #77c37b;
+            --path-fall: #a05064;
+            --path-civil: #d0aa55;
+            --path-chaos: #9a78e0;
+            --path-exist: #75bdd0;
+            --path-void: #d7d7e8;
+            --difficulty-newbie: #7bbf8c;
+            --difficulty-low: #69a9cf;
+            --difficulty-medium: #d0aa55;
+            --difficulty-high: #d76b4a;
             --radius: 12px;
             --radius-sm: 8px;
             --shadow: 0 4px 24px rgba(0, 0, 0, 0.5);
@@ -178,23 +183,28 @@
 
         /* ========== 主容器 ========== */
         .container {
-            max-width: 960px;
+            max-width: 1120px;
             margin: 0 auto;
             padding: 28px 20px 70px;
         }
 
         /* ========== 控制栏 ========== */
         .controls {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 12px;
-            align-items: center;
+            display: grid;
+            gap: 14px;
+            align-items: stretch;
             margin-bottom: 28px;
             background: rgba(255,255,255,0.02);
             padding: 16px;
             border-radius: var(--radius);
             border: 1px solid rgba(255,255,255,0.04);
             backdrop-filter: blur(10px);
+        }
+        .control-topline {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 12px;
+            align-items: center;
         }
         .controls .sort-group {
             display: flex;
@@ -243,6 +253,100 @@
             outline: none;
             border-color: var(--gold-dark);
             box-shadow: 0 0 0 4px rgba(184, 134, 11, 0.08);
+        }
+        .god-filter-panel {
+            position: relative;
+            display: grid;
+            gap: 12px;
+            padding: 14px;
+            border-radius: var(--radius-sm);
+            background: linear-gradient(135deg, rgba(255,255,255,0.035), rgba(255,255,255,0.01));
+            border: 1px solid rgba(255,255,255,0.06);
+            overflow: hidden;
+        }
+        .god-filter-panel::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background:
+                linear-gradient(90deg, rgba(255,255,255,0.035) 1px, transparent 1px),
+                linear-gradient(0deg, rgba(255,255,255,0.025) 1px, transparent 1px);
+            background-size: 34px 34px;
+            mask-image: linear-gradient(90deg, transparent, #000 15%, #000 85%, transparent);
+            pointer-events: none;
+        }
+        .filter-heading {
+            position: relative;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+            color: var(--text-bright);
+            font-size: 0.82rem;
+            letter-spacing: 0.12em;
+            text-transform: uppercase;
+        }
+        .filter-heading span:last-child {
+            color: var(--text-muted);
+            font-size: 0.72rem;
+            letter-spacing: 0.06em;
+            text-transform: none;
+        }
+        .god-filter-list {
+            position: relative;
+            display: grid;
+            gap: 10px;
+        }
+        .god-cluster {
+            display: grid;
+            grid-template-columns: 72px 1fr;
+            gap: 10px;
+            align-items: start;
+        }
+        .god-cluster-title {
+            padding-top: 7px;
+            color: var(--text-muted);
+            font-size: 0.72rem;
+            letter-spacing: 0.14em;
+            text-transform: uppercase;
+        }
+        .god-cluster-buttons, .difficulty-filter {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+        .god-button, .difficulty-filter-btn {
+            border: 1px solid rgba(255,255,255,0.08);
+            border-radius: 999px;
+            background: rgba(8,8,14,0.62);
+            color: var(--text);
+            padding: 7px 12px;
+            font-family: var(--font-body);
+            font-size: 0.76rem;
+            cursor: pointer;
+            transition: all var(--transition);
+            white-space: nowrap;
+        }
+        .god-button:hover, .difficulty-filter-btn:hover {
+            color: var(--text-bright);
+            border-color: rgba(255,255,255,0.18);
+            transform: translateY(-1px);
+        }
+        .god-button.active, .difficulty-filter-btn.active {
+            color: #08080d;
+            font-weight: 800;
+            border-color: rgba(255,255,255,0.2);
+            box-shadow: 0 0 18px rgba(200,160,80,0.18);
+        }
+        .god-button.path-life.active { background: var(--path-life); }
+        .god-button.path-fall.active { background: var(--path-fall); color: #fff4f7; }
+        .god-button.path-civil.active { background: var(--path-civil); }
+        .god-button.path-chaos.active { background: var(--path-chaos); color: #f7f0ff; }
+        .god-button.path-exist.active { background: var(--path-exist); }
+        .god-button.path-void.active { background: var(--path-void); }
+        .god-button.path-all.active, .difficulty-filter-btn.active { background: var(--gold-light); }
+        .difficulty-filter {
+            padding-top: 2px;
         }
 
         /* ========== 副本卡片列表 ========== */
@@ -347,12 +451,26 @@
             border: 1px solid rgba(255, 255, 255, 0.08);
             text-transform: uppercase;
         }
-        .tag.difficulty-mortal { color: #7fb07f; border-color: rgba(127, 176, 127, 0.3); background: rgba(127, 176, 127, 0.08); }
-        .tag.difficulty-awakened { color: #6a9fd8; border-color: rgba(106, 159, 216, 0.3); background: rgba(106, 159, 216, 0.08); }
-        .tag.difficulty-transcendent { color: #b57edc; border-color: rgba(181, 126, 220, 0.3); background: rgba(181, 126, 220, 0.08); }
-        .tag.difficulty-mythic { color: #e78c45; border-color: rgba(231, 140, 69, 0.3); background: rgba(231, 140, 69, 0.08); }
-        .tag.difficulty-fool { color: #e0e0e0; border-color: rgba(224, 224, 224, 0.3); background: rgba(224, 224, 224, 0.08); }
-        .tag.type-tag { background: rgba(200, 160, 80, 0.1); color: var(--gold-light); border-color: rgba(200, 160, 80, 0.3); }
+        .tag.difficulty-newbie { color: var(--difficulty-newbie); border-color: rgba(123, 191, 140, 0.35); background: rgba(123, 191, 140, 0.09); }
+        .tag.difficulty-low { color: var(--difficulty-low); border-color: rgba(105, 169, 207, 0.35); background: rgba(105, 169, 207, 0.09); }
+        .tag.difficulty-medium { color: var(--difficulty-medium); border-color: rgba(208, 170, 85, 0.35); background: rgba(208, 170, 85, 0.09); }
+        .tag.difficulty-high { color: var(--difficulty-high); border-color: rgba(215, 107, 74, 0.38); background: rgba(215, 107, 74, 0.1); }
+        .tag.god-tag {
+            color: var(--gold-light);
+            background: rgba(200, 160, 80, 0.1);
+            border-color: rgba(200, 160, 80, 0.3);
+        }
+        .tag.path-tag {
+            color: var(--text-muted);
+            background: rgba(255, 255, 255, 0.025);
+        }
+        .tag.path-life { color: var(--path-life); border-color: rgba(119, 195, 123, 0.34); background: rgba(119, 195, 123, 0.08); }
+        .tag.path-fall { color: var(--path-fall); border-color: rgba(160, 80, 100, 0.4); background: rgba(160, 80, 100, 0.1); }
+        .tag.path-civil { color: var(--path-civil); border-color: rgba(208, 170, 85, 0.38); background: rgba(208, 170, 85, 0.08); }
+        .tag.path-chaos { color: var(--path-chaos); border-color: rgba(154, 120, 224, 0.38); background: rgba(154, 120, 224, 0.09); }
+        .tag.path-exist { color: var(--path-exist); border-color: rgba(117, 189, 208, 0.38); background: rgba(117, 189, 208, 0.09); }
+        .tag.path-void { color: var(--path-void); border-color: rgba(215, 215, 232, 0.35); background: rgba(215, 215, 232, 0.08); }
+        .tag.path-unknown { color: var(--text-muted); border-color: rgba(255, 255, 255, 0.1); background: rgba(255, 255, 255, 0.035); }
 
         /* ========== 详情面板 ========== */
         .detail-overlay {
@@ -682,6 +800,10 @@
             .form-grid, .form-grid.compact { grid-template-columns: 1fr; }
             .form-span { grid-column: auto; }
             .controls { align-items: stretch; }
+            .control-topline { align-items: stretch; }
+            .controls .sort-group { width: 100%; }
+            .god-cluster { grid-template-columns: 1fr; gap: 4px; }
+            .god-cluster-title { padding-top: 0; }
             .search-input { max-width: none; width: 100%; }
         }
     </style>
@@ -701,12 +823,22 @@
 
     <div class="container">
         <div class="controls">
-            <div class="sort-group">
-                <button class="sort-btn active" data-sort="rating" onclick="setSort('rating', this)">⭐ 神眷评分</button>
-                <button class="sort-btn" data-sort="newest" onclick="setSort('newest', this)">🕐 最新降临</button>
-                <button class="sort-btn" data-sort="comments" onclick="setSort('comments', this)">💬 众声回响</button>
+            <div class="control-topline">
+                <div class="sort-group">
+                    <button class="sort-btn active" data-sort="rating" onclick="setSort('rating', this)">⭐ 神眷评分</button>
+                    <button class="sort-btn" data-sort="newest" onclick="setSort('newest', this)">🕐 最新降临</button>
+                    <button class="sort-btn" data-sort="comments" onclick="setSort('comments', this)">💬 众声回响</button>
+                </div>
+                <input type="text" class="search-input" placeholder="🔍 搜索副本、作者、神明或命途..." oninput="debounceSearch()" id="searchInput">
             </div>
-            <input type="text" class="search-input" placeholder="🔍 搜索副本、作者或神谕..." oninput="debounceSearch()" id="searchInput">
+            <div class="god-filter-panel" aria-label="神明分区筛选">
+                <div class="filter-heading">
+                    <span>✦ 神明分区</span>
+                    <span>按 16 位神明选择副本归属</span>
+                </div>
+                <div class="god-filter-list" id="godFilterList"></div>
+            </div>
+            <div class="difficulty-filter" id="difficultyFilterList" aria-label="难度标签筛选"></div>
         </div>
 
         <div class="dungeon-list" id="dungeonList">
@@ -755,11 +887,11 @@
                     <div class="form-group"><label>作者名字 *</label><input type="text" id="dungeonCreator" placeholder="你的神名或代号..." required maxlength="30"></div>
                 </div>
                 <div class="form-grid compact">
-                    <div class="form-group"><label>副本类型</label><select id="dungeonType"><option value="战斗">⚔️ 战斗</option><option value="解谜">🧩 解谜</option><option value="生存">🔥 生存</option><option value="叙事">📖 叙事</option><option value="探索">🗺️ 探索</option><option value="社交">🕯️ 社交</option><option value="综合" selected>🌀 综合</option><option value="其他">❓ 其他</option></select></div>
+                    <div class="form-group"><label>神明标签 *</label><select id="dungeonType" required><option value="记忆" selected>存在 · 记忆之神</option></select></div>
                     <div class="form-group"><label>固定人数 *</label><input type="number" id="participantCount" min="1" max="99" value="6" required></div>
                     <div class="form-group"><label>当前周目 *</label><input type="number" id="runCount" min="1" max="999" value="1" required></div>
                 </div>
-                <div class="form-group"><label>难度位阶</label><select id="dungeonDifficulty"><option value="凡尘">凡尘 —— 凡人皆可入场</option><option value="觉醒">觉醒 —— 灵性初开者</option><option value="超凡" selected>超凡 —— 非凡者方可挑战</option><option value="神话">神话 —— 半神领域</option><option value="愚者">愚者 —— 唯有愚行可通神</option></select></div>
+                <div class="form-group"><label>难度标签</label><select id="dungeonDifficulty"><option value="新手">新手本 —— 第一次入场也能跑</option><option value="低">低难 —— 轻量机制与短流程</option><option value="中" selected>中难 —— 标准挑战强度</option><option value="高">高难 —— 需要配合或硬核机制</option></select></div>
                 <div class="form-group"><label>副本简介 *</label><textarea id="dungeonDesc" placeholder="描述副本背景、主要机制、胜负条件或特别之处..." required maxlength="1500"></textarea></div>
                 <div class="form-actions"><button type="button" class="btn btn-outline" onclick="closeSubmitModal()">取消</button><button type="submit" class="btn btn-primary">✨ 献上祭品</button></div>
             </form>
@@ -784,8 +916,23 @@
 
         const INVITE_STORAGE_KEY = 'invite_session_v1';
         const ROLE_LABELS = { player: '玩家', author: '作者', admin: '馆主' };
+        const GOD_GROUPS = [
+            { path: '生命', className: 'path-life', gods: ['诞育', '繁荣', '死亡'] },
+            { path: '沉沦', className: 'path-fall', gods: ['污堕', '腐朽', '湮灭'] },
+            { path: '文明', className: 'path-civil', gods: ['秩序', '真理', '战争'] },
+            { path: '混沌', className: 'path-chaos', gods: ['混乱', '痴愚', '沉默'] },
+            { path: '存在', className: 'path-exist', gods: ['记忆', '时间'] },
+            { path: '虚无', className: 'path-void', gods: ['欺诈', '命运'] }
+        ];
+        const DIFFICULTY_OPTIONS = [
+            { value: '新手', label: '新手本' },
+            { value: '低', label: '低难' },
+            { value: '中', label: '中难' },
+            { value: '高', label: '高难' }
+        ];
+        const LEGACY_DIFFICULTY_MAP = { 凡尘: '新手', 觉醒: '低', 超凡: '中', 神话: '高', 愚者: '高' };
         let inviteSession = getLocalData(INVITE_STORAGE_KEY, null);
-        let currentSort = 'rating', searchQuery = '', searchTimeout = null, currentDetailId = null;
+        let currentSort = 'rating', searchQuery = '', selectedGod = 'all', selectedDifficulty = 'all', searchTimeout = null, currentDetailId = null;
 
         function getInviteRole() { return inviteSession?.role || null; }
         function canUseRole(roles) { return roles.includes(getInviteRole()); }
@@ -939,6 +1086,84 @@
         async function checkHasRated(id) { return USE_LOCAL_FALLBACK ? hasRatedLocal(id) : !!getLocalData('rated_supabase', {})[id]; }
         function markAsRated(id) { const key = USE_LOCAL_FALLBACK ? 'rated' : 'rated_supabase'; const r = getLocalData(key, {}); r[id]=true; setLocalData(key, r); }
 
+        function getAllGods() {
+            return GOD_GROUPS.flatMap(group => group.gods.map(god => ({ god, path: group.path, className: group.className })));
+        }
+
+        function cleanGodName(value) {
+            return String(value || '').replace(/之神$/u, '').trim();
+        }
+
+        function getGodInfo(value) {
+            const clean = cleanGodName(value);
+            const found = getAllGods().find(item => item.god === clean);
+            return found ? { ...found, known: true } : { god: clean || '未归档', path: '旧档案', className: 'path-unknown', known: false };
+        }
+
+        function formatGodName(value) {
+            const info = getGodInfo(value);
+            return info.known ? `${info.god}之神` : info.god;
+        }
+
+        function formatGodPath(value) {
+            return getGodInfo(value).path;
+        }
+
+        function getGodClass(value) {
+            return getGodInfo(value).className;
+        }
+
+        function normalizeDifficulty(value) {
+            const clean = String(value || '').replace(/难|本/g, '').trim();
+            return DIFFICULTY_OPTIONS.some(item => item.value === clean) ? clean : (LEGACY_DIFFICULTY_MAP[String(value || '').trim()] || '中');
+        }
+
+        function formatDifficulty(value) {
+            const normalized = normalizeDifficulty(value);
+            return DIFFICULTY_OPTIONS.find(item => item.value === normalized)?.label || '中难';
+        }
+
+        function renderGodFilters() {
+            const listEl = document.getElementById('godFilterList');
+            if (!listEl) return;
+            const allButton = `<div class="god-cluster"><div class="god-cluster-title">全部</div><div class="god-cluster-buttons"><button class="god-button path-all ${selectedGod === 'all' ? 'active' : ''}" onclick="setGodFilter('all')">全神席</button></div></div>`;
+            const groupHtml = GOD_GROUPS.map(group => `
+                <div class="god-cluster">
+                    <div class="god-cluster-title">${escapeHtml(group.path)}命途</div>
+                    <div class="god-cluster-buttons">
+                        ${group.gods.map(god => `<button class="god-button ${group.className} ${selectedGod === god ? 'active' : ''}" onclick="setGodFilter('${escapeHtml(god)}')">${escapeHtml(god)}之神</button>`).join('')}
+                    </div>
+                </div>
+            `).join('');
+            listEl.innerHTML = allButton + groupHtml;
+        }
+
+        function renderDifficultyFilters() {
+            const listEl = document.getElementById('difficultyFilterList');
+            if (!listEl) return;
+            listEl.innerHTML = `<button class="difficulty-filter-btn ${selectedDifficulty === 'all' ? 'active' : ''}" onclick="setDifficultyFilter('all')">全部难度</button>` +
+                DIFFICULTY_OPTIONS.map(item => `<button class="difficulty-filter-btn ${selectedDifficulty === item.value ? 'active' : ''}" onclick="setDifficultyFilter('${item.value}')">${item.label}</button>`).join('');
+        }
+
+        function populateGodSelect() {
+            const select = document.getElementById('dungeonType');
+            if (!select) return;
+            select.innerHTML = GOD_GROUPS.map(group => `<optgroup label="${escapeHtml(group.path)}命途">${group.gods.map(god => `<option value="${escapeHtml(god)}">${escapeHtml(group.path)} · ${escapeHtml(god)}之神</option>`).join('')}</optgroup>`).join('');
+            select.value = '记忆';
+        }
+
+        function setGodFilter(god) {
+            selectedGod = god;
+            renderGodFilters();
+            renderDungeonList();
+        }
+
+        function setDifficultyFilter(difficulty) {
+            selectedDifficulty = difficulty;
+            renderDifficultyFilters();
+            renderDungeonList();
+        }
+
         async function renderDungeonList() {
             const listEl = document.getElementById('dungeonList');
             listEl.innerHTML = '<div class="loading"><div class="spinner"></div><br>正在从诸神的棋盘中加载副本...</div>';
@@ -950,13 +1175,34 @@
                 listEl.innerHTML = '<div class="empty-state"><div style="font-size:3rem;">⚠️</div><p>副本加载失败，请刷新页面再试。</p></div>';
                 return;
             }
-            if (searchQuery.trim()) { const q = searchQuery.trim().toLowerCase(); dungeons = dungeons.filter(d => (d.name||'').toLowerCase().includes(q) || (d.creator||'').toLowerCase().includes(q) || (d.type||'').toLowerCase().includes(q) || (d.description||'').toLowerCase().includes(q)); }
+            if (searchQuery.trim()) {
+                const q = searchQuery.trim().toLowerCase();
+                dungeons = dungeons.filter(d => [
+                    d.name,
+                    d.creator,
+                    d.type,
+                    d.description,
+                    formatGodName(d.type),
+                    formatGodPath(d.type),
+                    formatDifficulty(d.difficulty)
+                ].some(value => String(value || '').toLowerCase().includes(q)));
+            }
+            if (selectedGod !== 'all') dungeons = dungeons.filter(d => getGodInfo(d.type).god === selectedGod);
+            if (selectedDifficulty !== 'all') dungeons = dungeons.filter(d => normalizeDifficulty(d.difficulty) === selectedDifficulty);
             if (currentSort === 'rating') dungeons.sort((a,b) => (b.avg_rating||0)-(a.avg_rating||0));
             else if (currentSort === 'newest') dungeons.sort((a,b) => new Date(b.created_at) - new Date(a.created_at));
             else if (currentSort === 'comments') dungeons.sort((a,b) => (b.comment_count||0)-(a.comment_count||0));
-            if (!dungeons.length) { listEl.innerHTML = `<div class="empty-state"><div style="font-size:3rem;">♟️</div><p>${searchQuery ? '没有匹配的副本，试试其他神谕关键词。' : '排行榜上空无一物……<br>成为第一个献上副本的探索者吧！'}</p></div>`; return; }
+            if (!dungeons.length) {
+                const filtered = searchQuery || selectedGod !== 'all' || selectedDifficulty !== 'all';
+                listEl.innerHTML = `<div class="empty-state"><div style="font-size:3rem;">♟️</div><p>${filtered ? '这个神席暂时没有匹配的副本，换个神明或难度试试。' : '排行榜上空无一物……<br>成为第一个献上副本的探索者吧！'}</p></div>`;
+                return;
+            }
             listEl.innerHTML = dungeons.map((d,i) => {
                 const rank = currentSort==='rating' && i<3 ? ['🥇','🥈','🥉'][i] : `#${i+1}`;
+                const godLabel = formatGodName(d.type);
+                const godPath = formatGodPath(d.type);
+                const godClass = getGodClass(d.type);
+                const difficultyLabel = formatDifficulty(d.difficulty);
                 return `
                 <div class="dungeon-card" onclick="openDetail('${escapeHtml(d.id)}')">
                     <div class="card-header">
@@ -965,8 +1211,9 @@
                             <span class="card-title">${escapeHtml(d.name||'未命名')}</span>
                             <div class="card-meta">
                                 <span>👤 ${escapeHtml(d.creator||'匿名')}</span>
-                                <span class="tag ${getDiffClass(d.difficulty)}">${escapeHtml(d.difficulty||'超凡')}</span>
-                                <span class="tag type-tag">${escapeHtml(d.type||'综合')}</span>
+                                <span class="tag god-tag ${godClass}">${escapeHtml(godLabel)}</span>
+                                <span class="tag path-tag ${godClass}">${escapeHtml(godPath)}命途</span>
+                                <span class="tag ${getDiffClass(d.difficulty)}">${escapeHtml(difficultyLabel)}</span>
                                 <span style="font-size:0.7rem;">🕐 ${formatDate(d.created_at)}</span>
                             </div>
                             <div class="metric-strip">
@@ -983,7 +1230,7 @@
             }).join('');
         }
 
-        function getDiffClass(d) { const m={'凡尘':'difficulty-mortal','觉醒':'difficulty-awakened','超凡':'difficulty-transcendent','神话':'difficulty-mythic','愚者':'difficulty-fool'}; return m[d]||'difficulty-mortal'; }
+        function getDiffClass(d) { const m={新手:'difficulty-newbie',低:'difficulty-low',中:'difficulty-medium',高:'difficulty-high'}; return m[normalizeDifficulty(d)]||'difficulty-medium'; }
         function formatParticipants(d) {
             const count = Number(d.participant_count || d.participantCount);
             return Number.isFinite(count) && count > 0 ? `${count}人固定` : '人数未定';
@@ -1038,12 +1285,17 @@
                 : (clearDone ? '' : `markClearedUI('${escapeHtml(id)}')`);
             const clearButtonText = locked ? '输入邀请' : (clearDone ? '本周目已登记' : '我已通过本周目');
             const clearRateNumber = Number.parseFloat(formatClearRate(d)) || 0;
+            const godLabel = formatGodName(d.type);
+            const godPath = formatGodPath(d.type);
+            const godClass = getGodClass(d.type);
+            const difficultyLabel = formatDifficulty(d.difficulty);
             document.getElementById('detailContent').innerHTML = `
                 <h2>${escapeHtml(d.name)}</h2>
                 <div class="detail-meta">
                     <span>👤 ${escapeHtml(d.creator)}</span>
-                    <span class="tag ${getDiffClass(d.difficulty)}">${escapeHtml(d.difficulty)}</span>
-                    <span class="tag type-tag">${escapeHtml(d.type)}</span>
+                    <span class="tag god-tag ${godClass}">${escapeHtml(godLabel)}</span>
+                    <span class="tag path-tag ${godClass}">${escapeHtml(godPath)}命途</span>
+                    <span class="tag ${getDiffClass(d.difficulty)}">${escapeHtml(difficultyLabel)}</span>
                     <span>👥 ${formatParticipants(d)}</span>
                     <span>🔁 ${formatRunCount(d)}</span>
                     <span>🎯 通过率 ${formatClearRate(d)}</span>
@@ -1184,7 +1436,20 @@
             document.getElementById('dungeonName').focus();
         }
 
-        function closeSubmitModal(e){ if(e && e.target!==document.getElementById('submitModalOverlay')) return; document.getElementById('submitModalOverlay').style.display='none'; document.body.style.overflow=''; document.getElementById('submitForm').reset(); }
+        function resetSubmitDefaults() {
+            const godSelect = document.getElementById('dungeonType');
+            const diffSelect = document.getElementById('dungeonDifficulty');
+            if (godSelect) godSelect.value = '记忆';
+            if (diffSelect) diffSelect.value = '中';
+        }
+
+        function closeSubmitModal(e){
+            if(e && e.target!==document.getElementById('submitModalOverlay')) return;
+            document.getElementById('submitModalOverlay').style.display='none';
+            document.body.style.overflow='';
+            document.getElementById('submitForm').reset();
+            resetSubmitDefaults();
+        }
 
         async function submitDungeon(e){
             e.preventDefault();
@@ -1226,15 +1491,18 @@
         document.addEventListener('keydown',e=>{ if(e.key==='Escape'){ if(document.getElementById('inviteModalOverlay').style.display==='flex') closeInviteModal(); else if(document.getElementById('detailOverlay').style.display==='flex') closeDetail(); else if(document.getElementById('submitModalOverlay').style.display==='flex') closeSubmitModal(); } if(e.key==='Enter' && document.activeElement?.id === 'inviteCodeInput') submitInviteCode(); });
 
         (async function init(){
+            populateGodSelect();
+            renderGodFilters();
+            renderDifficultyFilters();
             updateInviteUI();
             await renderDungeonList();
             if(USE_LOCAL_FALLBACK && getLocalData('dungeons',[]).length===0){
                 const samples = [
-                    { id:'s1',name:'深渊回廊',creator:'灰袍叙事者',difficulty:'神话',type:'叙事',description:'在无尽深渊边缘，一座古老回廊静静等待。封印着陨落神祇的记忆碎片，踏入者将直面内心最深的恐惧……',participant_count:6,run_count:2,clear_count:6,clear_rate:50,avg_rating:4.7,rating_count:23,comment_count:8,created_at:new Date(Date.now()-7*86400000).toISOString()},
-                    { id:'s2',name:'愚者之塔',creator:'星辰旅人',difficulty:'愚者',type:'解谜',description:'倒悬于天空的巨塔，每一层都蕴含悖论与谜题。唯有拥抱荒诞之人，方能窥见塔顶的真相。',participant_count:4,run_count:3,clear_count:9,clear_rate:75,avg_rating:4.9,rating_count:41,comment_count:15,created_at:new Date(Date.now()-3*86400000).toISOString()},
-                    { id:'s3',name:'血色竞技场',creator:'铁腕判官',difficulty:'超凡',type:'战斗',description:'上古诸神取乐的竞技场，回响着古老战吼。策略与力量并重，每一战都可能揭开神戏一角。',participant_count:8,run_count:1,clear_count:3,clear_rate:37.5,avg_rating:4.3,rating_count:17,comment_count:5,created_at:new Date(Date.now()-14*86400000).toISOString()},
-                    { id:'s4',name:'雾隐村',creator:'迷雾行者',difficulty:'觉醒',type:'生存',description:'永远被浓雾笼罩的村庄，平静生活之下，每个夜晚雾中都会出现不可名状之物。',participant_count:5,run_count:2,clear_count:4,clear_rate:40,avg_rating:4.1,rating_count:12,comment_count:4,created_at:new Date(Date.now()-5*86400000).toISOString()},
-                    { id:'s5',name:'诸神棋盘',creator:'执棋人',difficulty:'神话',type:'综合',description:'整个副本就是一张巨大的棋盘，参与者成为诸神的棋子。每一步都可能改变命运。',participant_count:6,run_count:4,clear_count:18,clear_rate:75,avg_rating:4.6,rating_count:30,comment_count:11,created_at:new Date(Date.now()-10*86400000).toISOString()}
+                    { id:'s1',name:'深渊回廊',creator:'灰袍叙事者',difficulty:'中',type:'记忆',description:'在无尽深渊边缘，一座古老回廊静静等待。封印着陨落神祇的记忆碎片，踏入者将直面内心最深的恐惧……',participant_count:6,run_count:2,clear_count:6,clear_rate:50,avg_rating:4.7,rating_count:23,comment_count:8,created_at:new Date(Date.now()-7*86400000).toISOString()},
+                    { id:'s2',name:'愚者之塔',creator:'星辰旅人',difficulty:'高',type:'痴愚',description:'倒悬于天空的巨塔，每一层都蕴含悖论与谜题。唯有拥抱荒诞之人，方能窥见塔顶的真相。',participant_count:4,run_count:3,clear_count:9,clear_rate:75,avg_rating:4.9,rating_count:41,comment_count:15,created_at:new Date(Date.now()-3*86400000).toISOString()},
+                    { id:'s3',name:'血色竞技场',creator:'铁腕判官',difficulty:'高',type:'战争',description:'上古诸神取乐的竞技场，回响着古老战吼。策略与力量并重，每一战都可能揭开神戏一角。',participant_count:8,run_count:1,clear_count:3,clear_rate:37.5,avg_rating:4.3,rating_count:17,comment_count:5,created_at:new Date(Date.now()-14*86400000).toISOString()},
+                    { id:'s4',name:'雾隐村',creator:'迷雾行者',difficulty:'低',type:'沉默',description:'永远被浓雾笼罩的村庄，平静生活之下，每个夜晚雾中都会出现不可名状之物。',participant_count:5,run_count:2,clear_count:4,clear_rate:40,avg_rating:4.1,rating_count:12,comment_count:4,created_at:new Date(Date.now()-5*86400000).toISOString()},
+                    { id:'s5',name:'诸神棋盘',creator:'执棋人',difficulty:'中',type:'命运',description:'整个副本就是一张巨大的棋盘，参与者成为诸神的棋子。每一步都可能改变命运。',participant_count:6,run_count:4,clear_count:18,clear_rate:75,avg_rating:4.6,rating_count:30,comment_count:11,created_at:new Date(Date.now()-10*86400000).toISOString()}
                 ];
                 setLocalData('dungeons',samples);
                 setLocalData('comments',[{id:'c1',dungeon_id:'s1',author:'探索者A',content:'氛围太棒了，跑完回味了好几天。',created_at:new Date(Date.now()-6*86400000).toISOString()},{id:'c2',dungeon_id:'s2',author:'逻辑粉碎机',content:'完全颠覆了我的思维，愚者神太有趣了',created_at:new Date(Date.now()-2*86400000).toISOString()}]);
