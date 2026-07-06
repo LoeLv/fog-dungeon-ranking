@@ -1210,7 +1210,7 @@
             display: flex;
             align-items: center;
             justify-content: center;
-            padding: 28px;
+            padding: 18px;
             animation: fadeIn 0.3s ease;
             backdrop-filter: blur(8px);
         }
@@ -1218,14 +1218,14 @@
         .detail-panel {
             background: var(--bg-card);
             border: 1px solid var(--border);
-            border-radius: var(--radius);
-            max-width: 1040px;
+            border-radius: 18px;
+            max-width: 1120px;
             width: 100%;
-            max-height: calc(100vh - 56px);
+            max-height: calc(100dvh - 36px);
             overflow: hidden;
             padding: 0;
             position: relative;
-            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.8), 0 0 40px rgba(180, 130, 50, 0.15);
+            box-shadow: 0 26px 74px rgba(0, 0, 0, 0.82), 0 0 44px rgba(180, 130, 50, 0.14);
             animation: slideUp 0.3s ease;
             background-image: linear-gradient(180deg, rgba(255,255,255,0.02) 0%, transparent 30%);
             display: flex;
@@ -1240,7 +1240,7 @@
             align-items: center;
             justify-content: space-between;
             gap: 12px;
-            padding: 14px 18px;
+            padding: 12px 16px;
             border-bottom: 1px solid rgba(255,255,255,0.08);
             background: rgba(16, 15, 27, 0.96);
             box-shadow: 0 12px 26px rgba(0, 0, 0, 0.28);
@@ -1286,20 +1286,103 @@
         .detail-content {
             min-height: 0;
             overflow-y: auto;
-            padding: 30px 34px 34px;
-            scrollbar-color: rgba(213, 178, 91, 0.55) rgba(255,255,255,0.05);
+            padding: 22px 26px 28px;
+            scrollbar-color: rgba(213, 178, 91, 0.35) rgba(255,255,255,0.035);
             scrollbar-width: thin;
         }
-        .detail-content::-webkit-scrollbar { width: 10px; }
+        .detail-content::-webkit-scrollbar { width: 6px; }
         .detail-content::-webkit-scrollbar-track { background: rgba(255,255,255,0.04); border-radius: 999px; }
-        .detail-content::-webkit-scrollbar-thumb { background: rgba(213, 178, 91, 0.5); border-radius: 999px; border: 2px solid rgba(16, 15, 27, 0.96); }
-        .detail-content::-webkit-scrollbar-thumb:hover { background: rgba(213, 178, 91, 0.78); }
+        .detail-content::-webkit-scrollbar-thumb { background: rgba(213, 178, 91, 0.36); border-radius: 999px; border: 1px solid rgba(16, 15, 27, 0.96); }
+        .detail-content::-webkit-scrollbar-thumb:hover { background: rgba(213, 178, 91, 0.62); }
+        .detail-hero {
+            position: relative;
+            overflow: hidden;
+            border-radius: 16px;
+            border: 1px solid rgba(255,255,255,0.075);
+            background:
+                radial-gradient(circle at 12% 18%, rgba(231,207,138,0.10), transparent 38%),
+                linear-gradient(135deg, rgba(255,255,255,0.045), rgba(255,255,255,0.015) 48%, rgba(0,0,0,0.20));
+            padding: 18px;
+            margin-bottom: 18px;
+            box-shadow: inset 0 1px 0 rgba(255,255,255,0.04);
+        }
+        .detail-hero.path-life { border-color: rgba(111,168,121,0.22); }
+        .detail-hero.path-exist { border-color: rgba(122,174,194,0.24); }
+        .detail-hero.path-civil { border-color: rgba(159,73,56,0.24); }
+        .detail-hero.path-void { border-color: rgba(211,175,97,0.28); }
+        .detail-hero.path-chaos { border-color: rgba(166,155,105,0.24); }
+        .detail-hero.path-fall { border-color: rgba(103,109,118,0.24); }
+        .detail-hero-main {
+            display: grid;
+            grid-template-columns: auto minmax(0, 1fr) auto;
+            gap: 14px;
+            align-items: center;
+        }
+        .detail-god-mark {
+            display: grid;
+            place-items: center;
+            width: 54px;
+            height: 54px;
+            border-radius: 16px;
+            border: 1px solid rgba(231,207,138,0.20);
+            background: rgba(0,0,0,0.24);
+            font-size: 1.6rem;
+            box-shadow: inset 0 0 24px rgba(0,0,0,0.32);
+        }
+        .detail-kicker {
+            color: var(--gold-light);
+            font-size: 0.68rem;
+            font-weight: 900;
+            letter-spacing: 0.18em;
+            text-transform: uppercase;
+            margin-bottom: 4px;
+        }
+        .detail-subtitle {
+            color: var(--text-muted);
+            font-size: 0.82rem;
+            line-height: 1.5;
+        }
+        .detail-score-card {
+            min-width: 148px;
+            padding: 12px 14px;
+            border-radius: 14px;
+            border: 1px solid rgba(231,207,138,0.22);
+            background: rgba(0,0,0,0.23);
+            text-align: right;
+        }
+        .detail-score-card span {
+            display: block;
+            color: var(--text-muted);
+            font-size: 0.66rem;
+            font-weight: 800;
+            letter-spacing: 0.12em;
+        }
+        .detail-score-card strong {
+            display: block;
+            color: var(--gold-light);
+            font-family: var(--font-display);
+            font-size: 1.45rem;
+            line-height: 1.15;
+            margin: 2px 0;
+        }
+        .detail-score-card small {
+            color: var(--text-muted);
+            font-size: 0.66rem;
+        }
+        .detail-pill-grid {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-top: 14px;
+            padding-top: 14px;
+            border-top: 1px solid rgba(255,255,255,0.06);
+        }
         .detail-panel h2 {
             font-family: var(--font-display);
-            font-size: 1.7rem;
+            font-size: 1.55rem;
             color: var(--text-bright);
             letter-spacing: 0.05em;
-            margin-bottom: 8px;
+            margin-bottom: 0;
             padding-right: 0;
             text-shadow: 0 0 10px rgba(200,160,80,0.2);
         }
@@ -1407,6 +1490,12 @@
                 radial-gradient(circle at 18% 20%, rgba(211,171,72,0.14), transparent 34%),
                 rgba(255,255,255,0.025);
         }
+        .judgement-area.is-rated {
+            border-color: rgba(119,195,123,0.24);
+            background:
+                radial-gradient(circle at 18% 20%, rgba(119,195,123,0.10), transparent 34%),
+                rgba(255,255,255,0.02);
+        }
         .judgement-area-title {
             display: flex;
             align-items: center;
@@ -1414,6 +1503,26 @@
             color: var(--text-bright);
             font-weight: 800;
             letter-spacing: 0.06em;
+        }
+        .judgement-area-main {
+            display: grid;
+            gap: 4px;
+            min-width: 210px;
+        }
+        .judgement-seal {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 34px;
+            padding: 0 14px;
+            border-radius: 999px;
+            border: 1px solid rgba(119,195,123,0.34);
+            color: var(--path-life);
+            background: rgba(119,195,123,0.08);
+            font-size: 0.78rem;
+            font-weight: 900;
+            letter-spacing: 0.06em;
+            white-space: nowrap;
         }
         .judgement-modal {
             max-width: 720px;
@@ -2297,6 +2406,24 @@
                 padding: 0 10px;
             }
             .detail-content { padding: 20px 16px 24px; }
+            .detail-hero { padding: 14px; }
+            .detail-hero-main {
+                grid-template-columns: auto minmax(0, 1fr);
+            }
+            .detail-score-card {
+                grid-column: 1 / -1;
+                text-align: left;
+                min-width: 0;
+            }
+            .detail-pill-grid {
+                gap: 6px;
+            }
+            .judgement-area {
+                align-items: flex-start;
+            }
+            .judgement-seal {
+                width: 100%;
+            }
             .detail-panel h2 { font-size: 1.35rem; }
             .identity-row { grid-template-columns: 1fr; }
             .comment-identity { width: 100%; }
@@ -2831,8 +2958,9 @@
         async function addRating(dungeonId, ratingValue) {
             if (USE_LOCAL_FALLBACK) {
                 const rated = getLocalData('rated', {});
-                if (rated[dungeonId]) return { error: { message: '你已经封存过神格评议了' } };
-                rated[dungeonId] = ratingValue; setLocalData('rated', rated);
+                const scoped = inviteScopedKey(dungeonId);
+                if (rated[scoped] || rated[dungeonId]) return { error: { message: '你已经封存过神格评议了' } };
+                rated[scoped] = ratingValue; rated[dungeonId] = ratingValue; setLocalData('rated', rated);
                 const dungeons = getLocalData('dungeons', []);
                 const d = dungeons.find(d => d.id === dungeonId);
                 if (d) { const total = d.avg_rating * d.rating_count + ratingValue; d.rating_count += 1; d.avg_rating = Math.round((total / d.rating_count)*10)/10; setLocalData('dungeons', dungeons); }
@@ -2941,17 +3069,46 @@
         }
 
         function inviteScopedKey(id) {
-            return `${id}:${inviteSession?.code || 'guest'}`;
+            const session = inviteSession || getLocalData(INVITE_STORAGE_KEY, null);
+            return `${id}:${session?.code || 'guest'}`;
         }
-        function hasRatedLocal(id) { return !!getLocalData('rated', {})[inviteScopedKey(id)]; }
+        async function sha256Hex(value) {
+            const bytes = new TextEncoder().encode(String(value || ''));
+            const hash = await globalThis.crypto.subtle.digest('SHA-256', bytes);
+            return [...new Uint8Array(hash)].map(byte => byte.toString(16).padStart(2, '0')).join('');
+        }
+        function hasRatedLocal(id) {
+            const scoped = inviteScopedKey(id);
+            return !!getLocalData('rated', {})[scoped] || !!getLocalData('rated', {})[id] || !!getLocalData('rated_supabase', {})[scoped];
+        }
         async function checkHasRated(id) {
             const key = USE_LOCAL_FALLBACK ? 'rated' : 'rated_supabase';
-            return !!getLocalData(key, {})[inviteScopedKey(id)];
+            const scoped = inviteScopedKey(id);
+            if (!!getLocalData(key, {})[scoped] || !!getLocalData('rated', {})[scoped] || !!getLocalData('rated', {})[id]) return true;
+            const session = inviteSession || getLocalData(INVITE_STORAGE_KEY, null);
+            if (USE_LOCAL_FALLBACK || !supabaseClient || !session?.code || !globalThis.crypto?.subtle) return false;
+            try {
+                const codeHash = await sha256Hex(session.code);
+                const { data, error } = await supabaseClient
+                    .from('ratings')
+                    .select('id')
+                    .eq('dungeon_id', id)
+                    .eq('invite_code_hash', codeHash)
+                    .limit(1);
+                if (!error && data?.length) {
+                    markAsRated(id);
+                    return true;
+                }
+            } catch (error) {
+                console.warn('判定状态读取失败:', error);
+            }
+            return false;
         }
         function markAsRated(id) {
             const key = USE_LOCAL_FALLBACK ? 'rated' : 'rated_supabase';
             const r = getLocalData(key, {});
             r[inviteScopedKey(id)] = true;
+            if (USE_LOCAL_FALLBACK) r[id] = true;
             setLocalData(key, r);
         }
 
@@ -3492,9 +3649,15 @@
             const godLabel = formatGodName(d.type);
             const godPath = formatGodPath(d.type);
             const godClass = getGodClass(d.type);
+            const godIcon = getGodIcon(d.type);
             const pathMeta = getPathMetaByGod(d.type);
             const difficultyLabel = formatDifficulty(d.difficulty);
             const activeCommentCount = comments.filter(c => !c.is_deleted).length;
+            const ratingScore = Number(d.avg_rating || 0);
+            const ratingValue = ratingScore ? ratingScore.toFixed(1) : '—';
+            const judgementControl = rated
+                ? '<span class="judgement-seal">已封存判定</span>'
+                : `<button class="btn btn-outline btn-sm" onclick="${locked ? `openInviteModal('验入局谕令后可为试炼降下神格判定。')` : `openRatingModal('${escapeHtml(id)}')`}">${locked ? '验入局谕令' : '降下你的判定'}</button>`;
             const pinnedNote = d.pinned_note || '';
             const canEditNote = canEditPinned(d);
             const pinnedNoteHtml = pinnedNote || canEditNote ? `
@@ -3514,20 +3677,32 @@
                         </div>` : ''}
                 </div>` : '';
             document.getElementById('detailContent').innerHTML = `
-                <h2>${escapeHtml(d.name)}</h2>
-                <div class="detail-meta">
-                    <span>🎭 试炼构筑者 ${escapeHtml(d.creator)}</span>
-                    <span class="tag god-tag ${godClass}">${escapeHtml(godLabel)}</span>
-                    <span class="tag path-tag ${godClass}">${escapeHtml(godPath)}命途</span>
-                    <span class="tag ${getDiffClass(d.difficulty)} ${godClass}-difficulty">${escapeHtml(difficultyLabel)}</span>
-                    ${isDivineTrial(d) ? '<span class="tag divine-tag">神级愚戏</span>' : ''}
-                    <span>👥 ${formatParticipants(d)}</span>
-                    <span>🎲 ${formatRunCount(d)}</span>
-                    <span>切片裂隙通关 ${formatClearRate(d)}</span>
-                    <span>🎲 神格判定 ${(d.avg_rating||0).toFixed(1)} · 评议人次 ${d.rating_count||0}</span>
-                    <span>💬 证言条数 ${activeCommentCount}</span>
-                    ${canUseRole(['author','admin']) ? `<button class="btn btn-outline btn-xs" onclick="advanceRunUI('${escapeHtml(id)}')">重掷下一局</button>` : ''}
-                    ${isAdmin() ? `<button class="btn btn-danger btn-xs" onclick="deleteDungeon('${escapeHtml(id)}')">封存试炼</button>` : ''}
+                <div class="detail-hero ${godClass}">
+                    <div class="detail-hero-main">
+                        <div class="detail-god-mark ${godClass}">${escapeHtml(godIcon)}</div>
+                        <div>
+                            <div class="detail-kicker">PRAYER TRIAL DOSSIER · 祈愿试炼档案</div>
+                            <h2>${escapeHtml(d.name)}</h2>
+                            <div class="detail-subtitle">${escapeHtml(godPath)}命途 · ${escapeHtml(godLabel)} · 筑戏人：${escapeHtml(d.creator)}</div>
+                        </div>
+                        <div class="detail-score-card">
+                            <span>神格判定</span>
+                            <strong>${ratingValue}</strong>
+                            <small>${escapeHtml(getRatingTier(ratingScore))} · 评议人次 ${Number(d.rating_count || 0)}</small>
+                        </div>
+                    </div>
+                    <div class="detail-pill-grid">
+                        <span class="tag god-tag ${godClass}">${escapeHtml(godLabel)}</span>
+                        <span class="tag path-tag ${godClass}">${escapeHtml(godPath)}命途</span>
+                        <span class="tag ${getDiffClass(d.difficulty)} ${godClass}-difficulty">${escapeHtml(difficultyLabel)}</span>
+                        ${isDivineTrial(d) ? '<span class="tag divine-tag">神级愚戏</span>' : ''}
+                        <span class="trial-data-pill">${formatParticipants(d)}</span>
+                        <span class="trial-data-pill">${formatRunCount(d)}</span>
+                        <span class="trial-data-pill">通关留存率：${formatClearRate(d)}</span>
+                        <span class="trial-data-pill">证言条数：${activeCommentCount}</span>
+                        ${canUseRole(['author','admin']) ? `<button class="btn btn-outline btn-xs" onclick="advanceRunUI('${escapeHtml(id)}')">重掷下一局</button>` : ''}
+                        ${isAdmin() ? `<button class="btn btn-danger btn-xs" onclick="deleteDungeon('${escapeHtml(id)}')">封存试炼</button>` : ''}
+                    </div>
                 </div>
                 ${pinnedNoteHtml}
                 <div class="path-dossier ${godClass}">
@@ -3551,10 +3726,12 @@
                         <button class="btn btn-primary btn-sm" ${clearDone?'disabled':''} onclick="${clearAction}">${clearButtonText}</button>
                     </div>
                 </div>
-                <div class="rating-area judgement-area">
-                    <span class="judgement-area-title">🎲 神格判定</span>
-                    <button class="btn btn-outline btn-sm" onclick="${locked ? `openInviteModal('验入局谕令后可为试炼降下神格判定。')` : (rated ? '' : `openRatingModal('${escapeHtml(id)}')`)}" ${rated ? 'disabled' : ''}>${rated ? '已封存神格评议' : (locked ? '验入局谕令' : '降下你的判定')}</button>
-                    <span class="rating-text">${ratingText}</span>
+                <div class="rating-area judgement-area ${rated ? 'is-rated' : ''}">
+                    <div class="judgement-area-main">
+                        <span class="judgement-area-title">🎲 神格判定</span>
+                        <span class="rating-text">${ratingText}</span>
+                    </div>
+                    ${judgementControl}
                 </div>
                 <div class="comments-section">
                     <div class="section-title">💬 试炼证言殿 (${activeCommentCount})</div>
@@ -3683,8 +3860,13 @@
             await renderDungeonList();
         }
 
-        function openRatingModal(id) {
+        async function openRatingModal(id) {
             if(!requireInvite(['player','author','admin'], '验入局谕令后可为试炼降下神格判定。')) return;
+            if (await checkHasRated(id)) {
+                showToast('你已经封存过这场试炼的神格评议。');
+                if (currentDetailId === id) await openDetail(id);
+                return;
+            }
             pendingRating = { dungeonId: id, value: 5 };
             renderRatingChoices();
             document.getElementById('ratingModalOverlay').style.display='flex';
@@ -3719,14 +3901,34 @@
         async function submitRatingJudgement() {
             if (!pendingRating.dungeonId || !pendingRating.value) { showToast('请选择神格判定'); return; }
             const { dungeonId, value } = pendingRating;
+            if (await checkHasRated(dungeonId)) {
+                closeRatingModal();
+                showToast('你已经封存过这场试炼的神格评议。');
+                if (currentDetailId === dungeonId) await openDetail(dungeonId);
+                return;
+            }
             closeRatingModal();
             await rateDungeon(dungeonId, value);
         }
 
         async function rateDungeon(id, val){
             if(!requireInvite(['player','author','admin'], '验入局谕令后可为试炼降下神格判定。')) return;
+            if (await checkHasRated(id)) {
+                showToast('你已经封存过这场试炼的神格评议。');
+                if(currentDetailId===id) await openDetail(id);
+                return;
+            }
             const {error}=await addRating(id,val);
-            if(error){ showToast(error.message?.includes('已经')?'⚠️ 你已经封存过神格评议了':`❌ ${error.message || '判定失败'}`); return; }
+            if(error){
+                if (error.message?.includes('已经')) {
+                    markAsRated(id);
+                    showToast('⚠️ 你已经封存过神格评议了');
+                    if(currentDetailId===id) await openDetail(id);
+                    return;
+                }
+                showToast(`❌ ${error.message || '判定失败'}`);
+                return;
+            }
             markAsRated(id);
             showToast('🎲 神格评议已封存');
             if(currentDetailId===id) await openDetail(id);
