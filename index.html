@@ -1278,6 +1278,10 @@
         if (USE_LOCAL_FALLBACK) {
             console.warn('⚠️ Supabase 未配置，使用本地存储模式。替换 SUPABASE_URL 和 SUPABASE_ANON_KEY 以启用在线功能。');
         }
+        if ('scrollRestoration' in history) history.scrollRestoration = 'manual';
+        window.addEventListener('pageshow', () => {
+            requestAnimationFrame(() => window.scrollTo(0, 0));
+        }, { once: true });
 
         function getLocalData(key, defaultValue) { try { const raw = localStorage.getItem('fog_' + key); return raw ? JSON.parse(raw) : defaultValue; } catch { return defaultValue; } }
         function setLocalData(key, value) { try { localStorage.setItem('fog_' + key, JSON.stringify(value)); } catch {} }
@@ -1579,9 +1583,20 @@
             return invokeDungeonAction('advanceRun', { dungeonId });
         }
 
-        function hasRatedLocal(id) { return !!getLocalData('rated', {})[id]; }
-        async function checkHasRated(id) { return USE_LOCAL_FALLBACK ? hasRatedLocal(id) : !!getLocalData('rated_supabase', {})[id]; }
-        function markAsRated(id) { const key = USE_LOCAL_FALLBACK ? 'rated' : 'rated_supabase'; const r = getLocalData(key, {}); r[id]=true; setLocalData(key, r); }
+        function inviteScopedKey(id) {
+            return `${id}:${inviteSession?.code || 'guest'}`;
+        }
+        function hasRatedLocal(id) { return !!getLocalData('rated', {})[inviteScopedKey(id)]; }
+        async function checkHasRated(id) {
+            const key = USE_LOCAL_FALLBACK ? 'rated' : 'rated_supabase';
+            return !!getLocalData(key, {})[inviteScopedKey(id)];
+        }
+        function markAsRated(id) {
+            const key = USE_LOCAL_FALLBACK ? 'rated' : 'rated_supabase';
+            const r = getLocalData(key, {});
+            r[inviteScopedKey(id)] = true;
+            setLocalData(key, r);
+        }
 
         function getAllGods() {
             return GOD_GROUPS.flatMap(group => group.gods.map(god => ({ god, path: group.path, className: group.className })));
@@ -2216,6 +2231,7 @@
                 await renderDungeonList();
                 await renderLatestComments();
             }
+            requestAnimationFrame(() => window.scrollTo(0, 0));
         })();
     </script>
 </body>
