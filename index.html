@@ -958,6 +958,56 @@
             opacity: 0.72;
             transform: translateX(2px);
         }
+        .dungeon-card[data-god] {
+            --god-primary: var(--gold-light);
+            --god-secondary: var(--path-exist);
+            --god-glow: rgba(231,207,138,0.16);
+            --god-dark: rgba(17,18,25,0.92);
+            border-color: color-mix(in srgb, var(--god-primary) 32%, rgba(255,255,255,0.08));
+            background:
+                radial-gradient(circle at 9% 12%, color-mix(in srgb, var(--god-primary) 16%, transparent), transparent 32%),
+                linear-gradient(112deg, color-mix(in srgb, var(--god-dark) 72%, transparent), rgba(12,13,20,0.92) 52%, rgba(5,6,10,0.80)),
+                repeating-linear-gradient(135deg, color-mix(in srgb, var(--god-secondary) 8%, transparent) 0 1px, transparent 1px 34px);
+            box-shadow:
+                0 16px 34px rgba(0,0,0,0.38),
+                inset 0 1px 0 rgba(255,255,255,0.035);
+        }
+        .dungeon-card[data-god]::before {
+            opacity: 0.72;
+            background: linear-gradient(180deg, var(--god-primary), color-mix(in srgb, var(--god-secondary) 42%, transparent), transparent);
+        }
+        .dungeon-card[data-god]::after {
+            background:
+                radial-gradient(circle at 82% 15%, color-mix(in srgb, var(--god-primary) 18%, transparent), transparent 28%),
+                radial-gradient(circle at 17% 82%, color-mix(in srgb, var(--god-secondary) 14%, transparent), transparent 26%),
+                repeating-linear-gradient(72deg, color-mix(in srgb, var(--god-primary) 8%, transparent) 0 1px, transparent 1px 26px);
+            opacity: 0.30;
+        }
+        .dungeon-card[data-god]:hover {
+            border-color: color-mix(in srgb, var(--god-primary) 68%, rgba(255,255,255,0.12));
+            box-shadow:
+                0 18px 48px rgba(0,0,0,0.58),
+                0 0 34px var(--god-glow),
+                inset 0 1px 0 rgba(255,255,255,0.05);
+        }
+        .dungeon-card[data-god]:hover::after {
+            opacity: 0.62;
+            transform: translateX(2px) scale(1.01);
+        }
+        .dungeon-card[data-god].divine-trial {
+            border-color: color-mix(in srgb, var(--god-primary) 68%, #8b2f30);
+        }
+        .dungeon-card[data-god].divine-trial::before {
+            width: 4px;
+            opacity: 0.98;
+        }
+        .dungeon-card[data-god].divine-trial .judgement-badge {
+            border-color: color-mix(in srgb, var(--god-primary) 58%, transparent);
+            background:
+                linear-gradient(135deg, color-mix(in srgb, var(--god-primary) 18%, transparent), rgba(139,47,48,0.14)),
+                rgba(0,0,0,0.20);
+            box-shadow: 0 0 22px var(--god-glow);
+        }
         .dungeon-card.path-void:hover .card-title::after {
             content: ' ◈';
             display: inline-block;
@@ -1049,6 +1099,17 @@
         .god-sigil svg * {
             vector-effect: non-scaling-stroke;
         }
+        .god-sigil[data-god] {
+            --sigil-hover: var(--god-primary);
+            color: var(--god-primary);
+            border-color: color-mix(in srgb, var(--god-primary) 34%, rgba(255,255,255,0.10));
+            background:
+                radial-gradient(circle at 34% 28%, var(--god-glow), transparent 44%),
+                linear-gradient(145deg, color-mix(in srgb, var(--god-dark) 68%, rgba(0,0,0,0.28)), rgba(0,0,0,0.18));
+            box-shadow:
+                inset 0 0 18px rgba(0,0,0,0.34),
+                0 0 16px color-mix(in srgb, var(--god-primary) 14%, transparent);
+        }
         .god-sigil-xs { width: 16px; height: 16px; }
         .god-sigil-sm { width: 20px; height: 20px; }
         .god-sigil-md { width: 24px; height: 24px; }
@@ -1133,12 +1194,12 @@
             font-family: var(--font-display);
             font-size: 1.34rem;
             color: transparent;
-            background: linear-gradient(180deg, #fff3c6, #c99d46 62%, #8a692d);
+            background: linear-gradient(180deg, #fff8de, var(--god-primary, #c99d46) 62%, color-mix(in srgb, var(--god-secondary, #8a692d) 76%, #20160a));
             -webkit-background-clip: text;
             background-clip: text;
             letter-spacing: 0.04em;
             flex: 1;
-            text-shadow: 0 2px 4px rgba(0,0,0,0.5);
+            text-shadow: 0 2px 4px rgba(0,0,0,0.5), 0 0 18px var(--god-glow, rgba(200,160,80,0.12));
         }
         .trial-number {
             color: var(--text-muted);
@@ -1169,11 +1230,11 @@
             padding: 8px 12px;
             border-radius: 14px;
             font-weight: 700;
-            color: var(--star-color);
+            color: var(--god-primary, var(--star-color));
             font-size: 0.86rem;
             white-space: nowrap;
             flex-shrink: 0;
-            border: 1px solid rgba(226, 176, 74, 0.3);
+            border: 1px solid color-mix(in srgb, var(--god-primary, rgb(226,176,74)) 38%, transparent);
         }
         .judgement-score {
             color: var(--gold-light);
@@ -1249,15 +1310,22 @@
             font-size: 0.72rem;
             font-weight: 700;
         }
+        .dungeon-card[data-god] .trial-data-pill,
+        .detail-panel[data-god] .trial-data-pill {
+            border-color: color-mix(in srgb, var(--god-primary) 14%, rgba(255,255,255,0.07));
+            background: color-mix(in srgb, var(--god-dark) 18%, rgba(0,0,0,0.18));
+        }
         .trial-data-pill strong {
             color: var(--text-bright);
         }
         .trial-oracle {
             margin-top: 12px;
             padding: 11px 12px;
-            border: 1px solid rgba(255,255,255,0.06);
+            border: 1px solid color-mix(in srgb, var(--god-primary, #fff) 22%, rgba(255,255,255,0.06));
             border-radius: 10px;
-            background: rgba(0,0,0,0.16);
+            background:
+                linear-gradient(90deg, color-mix(in srgb, var(--god-primary, #d5b25b) 8%, transparent), transparent 48%),
+                rgba(0,0,0,0.18);
             color: var(--text);
             font-size: 0.85rem;
             line-height: 1.5;
@@ -1269,7 +1337,7 @@
         .trial-oracle.path-chaos { background: rgba(166,155,105,0.045); }
         .trial-oracle.path-fall { background: rgba(103,109,118,0.045); }
         .trial-oracle b {
-            color: var(--gold-light);
+            color: var(--god-primary, var(--gold-light));
             letter-spacing: 0.06em;
             margin-right: 4px;
         }
@@ -1301,13 +1369,13 @@
             box-shadow: 0 0 18px rgba(231,207,138,0.12);
         }
         .tag.god-tag {
-            color: var(--gold-light);
-            background: rgba(200, 160, 80, 0.1);
-            border-color: rgba(200, 160, 80, 0.3);
+            color: var(--god-primary, var(--gold-light));
+            background: color-mix(in srgb, var(--god-primary, rgb(200,160,80)) 10%, transparent);
+            border-color: color-mix(in srgb, var(--god-primary, rgb(200,160,80)) 34%, transparent);
         }
         .tag.path-tag {
-            color: var(--text-muted);
-            background: rgba(255, 255, 255, 0.025);
+            color: var(--god-secondary, var(--text-muted));
+            background: color-mix(in srgb, var(--god-secondary, #fff) 7%, transparent);
         }
         .tag.path-life { color: var(--path-life); border-color: rgba(119, 195, 123, 0.34); background: rgba(119, 195, 123, 0.08); }
         .tag.path-fall { color: var(--path-fall); border-color: rgba(103,109,118,0.38); background: rgba(103,109,118,0.08); }
@@ -1324,8 +1392,7 @@
             width: 100vw;
             height: 100dvh;
             max-height: 100dvh;
-            overflow-x: hidden;
-            overflow-y: auto;
+            overflow: hidden;
             overscroll-behavior: contain;
             background:
                 radial-gradient(circle at 18% 10%, rgba(231,207,138,0.08), transparent 30%),
@@ -1333,8 +1400,9 @@
                 linear-gradient(180deg, #12141d, #08090d 42%, #06080b);
             background-color: #08090d;
             z-index: 200;
-            display: block;
-            padding: clamp(18px, 3dvh, 34px) clamp(18px, 4vw, 58px) clamp(56px, 8dvh, 96px);
+            display: grid;
+            place-items: center;
+            padding: clamp(14px, 3dvh, 28px);
             animation: fadeIn 0.3s ease;
             scrollbar-color: rgba(213, 178, 91, 0.34) rgba(255,255,255,0.035);
             scrollbar-width: thin;
@@ -1358,11 +1426,19 @@
         .detail-overlay.path-life::before { background: repeating-radial-gradient(circle at 35% 38%, rgba(111,168,121,0.10) 0 1px, transparent 1px 34px); }
         .detail-overlay.path-exist::before { background: repeating-radial-gradient(circle at 35% 38%, rgba(122,174,194,0.10) 0 1px, transparent 1px 34px); }
         .detail-overlay.path-void::before { background: repeating-radial-gradient(circle at 35% 38%, rgba(211,175,97,0.11) 0 1px, transparent 1px 32px); }
+        .detail-overlay[data-god]::before {
+            background:
+                repeating-radial-gradient(circle at 50% 18%, color-mix(in srgb, var(--god-primary) 10%, transparent) 0 1px, transparent 1px 40px),
+                repeating-linear-gradient(108deg, color-mix(in srgb, var(--god-secondary) 6%, transparent) 0 1px, transparent 1px 36px),
+                radial-gradient(circle at 82% 18%, var(--god-glow), transparent 24%),
+                linear-gradient(118deg, transparent 0 44%, color-mix(in srgb, var(--god-primary) 8%, transparent) 44.2%, transparent 45%);
+            opacity: 0.46;
+        }
         .detail-overlay[data-layout="anchored"] {
-            padding: clamp(18px, 3dvh, 34px) clamp(18px, 4vw, 58px) clamp(56px, 8dvh, 96px);
+            padding: clamp(14px, 3dvh, 28px);
         }
         .detail-overlay[data-layout="side"] {
-            padding: clamp(18px, 3dvh, 34px) clamp(18px, 4vw, 58px) clamp(56px, 8dvh, 96px);
+            padding: clamp(14px, 3dvh, 28px);
         }
         @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
         .detail-panel {
@@ -1372,9 +1448,9 @@
                 rgba(13, 14, 21, 0.90);
             border: 1px solid rgba(231,207,138,0.24);
             border-radius: 18px;
-            width: min(1180px, 100%);
-            max-height: none;
-            overflow: visible;
+            width: min(860px, calc(100vw - 28px));
+            max-height: min(88dvh, 900px);
+            overflow: hidden;
             padding: 0;
             position: relative;
             margin: 0 auto;
@@ -1384,13 +1460,23 @@
             flex-direction: column;
         }
         .detail-overlay[data-layout="anchored"] .detail-panel,
-        .detail-overlay[data-layout="side"] .detail-panel { width: min(1180px, 100%); }
+        .detail-overlay[data-layout="side"] .detail-panel { width: min(860px, calc(100vw - 28px)); }
         .detail-panel.path-life { border-color: rgba(111,168,121,0.34); box-shadow: 0 24px 80px rgba(0,0,0,0.58), 0 0 42px rgba(111,168,121,0.10); }
         .detail-panel.path-exist { border-color: rgba(122,174,194,0.34); box-shadow: 0 24px 80px rgba(0,0,0,0.58), 0 0 42px rgba(122,174,194,0.10); }
         .detail-panel.path-civil { border-color: rgba(159,73,56,0.34); box-shadow: 0 24px 80px rgba(0,0,0,0.58), 0 0 42px rgba(159,73,56,0.10); }
         .detail-panel.path-void { border-color: rgba(211,175,97,0.42); box-shadow: 0 24px 80px rgba(0,0,0,0.58), 0 0 52px rgba(211,175,97,0.12); }
         .detail-panel.path-chaos { border-color: rgba(166,155,105,0.34); box-shadow: 0 24px 80px rgba(0,0,0,0.58), 0 0 42px rgba(166,155,105,0.10); }
         .detail-panel.path-fall { border-color: rgba(103,109,118,0.34); box-shadow: 0 24px 80px rgba(0,0,0,0.58), 0 0 40px rgba(103,109,118,0.10); }
+        .detail-panel[data-god] {
+            border-color: color-mix(in srgb, var(--god-primary) 34%, rgba(255,255,255,0.08));
+            background:
+                radial-gradient(circle at 14% 8%, var(--god-glow), transparent 24%),
+                linear-gradient(180deg, color-mix(in srgb, var(--god-dark) 56%, rgba(255,255,255,0.035)), transparent 34%),
+                rgba(13,14,21,0.94);
+            box-shadow:
+                0 24px 86px rgba(0,0,0,0.62),
+                0 0 54px var(--god-glow);
+        }
         @keyframes slideUp { from { transform: translateY(40px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
         .detail-toolbar {
             position: sticky;
@@ -1460,10 +1546,18 @@
             display: none;
         }
         .detail-content {
-            flex: 0 0 auto;
+            flex: 1 1 auto;
             min-height: auto;
-            overflow: visible;
+            overflow-y: auto;
+            overscroll-behavior: contain;
             padding: clamp(20px, 2.4vw, 34px);
+        }
+        .detail-content::-webkit-scrollbar { width: 8px; }
+        .detail-content::-webkit-scrollbar-track { background: rgba(255,255,255,0.035); }
+        .detail-content::-webkit-scrollbar-thumb {
+            background: color-mix(in srgb, var(--god-primary, #d5b25b) 34%, rgba(255,255,255,0.12));
+            border-radius: 999px;
+            border: 2px solid rgba(9,10,14,0.84);
         }
         .detail-hero {
             position: relative;
@@ -1483,6 +1577,14 @@
         .detail-hero.path-void { border-color: rgba(211,175,97,0.28); }
         .detail-hero.path-chaos { border-color: rgba(166,155,105,0.24); }
         .detail-hero.path-fall { border-color: rgba(103,109,118,0.24); }
+        .detail-hero[data-god] {
+            border-color: color-mix(in srgb, var(--god-primary) 24%, rgba(255,255,255,0.08));
+            background:
+                radial-gradient(circle at 10% 20%, var(--god-glow), transparent 34%),
+                radial-gradient(circle at 88% 12%, color-mix(in srgb, var(--god-secondary) 14%, transparent), transparent 26%),
+                repeating-linear-gradient(135deg, color-mix(in srgb, var(--god-primary) 6%, transparent) 0 1px, transparent 1px 32px),
+                linear-gradient(135deg, rgba(255,255,255,0.045), rgba(255,255,255,0.015) 48%, rgba(0,0,0,0.22));
+        }
         .detail-hero-main {
             display: grid;
             grid-template-columns: auto minmax(0, 1fr) auto;
@@ -1567,6 +1669,18 @@
             font-size: 0.72rem;
             line-height: 1.4;
         }
+        .detail-footer-actions {
+            display: flex;
+            align-items: center;
+            justify-content: flex-end;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+        .detail-footer .btn-primary {
+            background:
+                linear-gradient(135deg, var(--god-primary, var(--gold-dark)), color-mix(in srgb, var(--god-secondary, var(--gold-light)) 58%, var(--god-primary, var(--gold-dark))));
+            box-shadow: 0 10px 24px var(--god-glow, rgba(213,178,91,0.18));
+        }
         .detail-leave-btn {
             white-space: nowrap;
         }
@@ -1611,6 +1725,12 @@
         }
         .path-dossier.path-life { border-color: rgba(119,195,123,0.24); background: var(--path-life-soft); }
         .path-dossier.path-fall { border-color: rgba(109,118,131,0.28); background: var(--path-fall-soft); }
+        .path-dossier[data-god] {
+            border-color: color-mix(in srgb, var(--god-primary) 26%, rgba(255,255,255,0.08));
+            background:
+                linear-gradient(120deg, color-mix(in srgb, var(--god-primary) 8%, transparent), transparent 42%),
+                rgba(255,255,255,0.025);
+        }
         .path-dossier.path-civil { border-color: rgba(208,170,85,0.26); background: var(--path-civil-soft); }
         .path-dossier.path-chaos { border-color: rgba(154,120,224,0.26); background: var(--path-chaos-soft); }
         .path-dossier.path-exist { border-color: rgba(117,189,208,0.26); background: var(--path-exist-soft); }
@@ -1632,6 +1752,132 @@
         }
         .path-dossier-body span {
             color: var(--text-muted);
+        }
+        .trial-entry-window {
+            position: relative;
+            overflow: hidden;
+            display: grid;
+            gap: 16px;
+            margin: 0 0 18px;
+            padding: 18px;
+            border-radius: 16px;
+            border: 1px solid color-mix(in srgb, var(--god-primary, #d5b25b) 28%, rgba(255,255,255,0.08));
+            background:
+                radial-gradient(circle at 10% 14%, var(--god-glow, rgba(213,178,91,0.13)), transparent 34%),
+                radial-gradient(circle at 92% 16%, color-mix(in srgb, var(--god-secondary, #7a8cff) 14%, transparent), transparent 26%),
+                linear-gradient(135deg, color-mix(in srgb, var(--god-dark, #14151f) 72%, transparent), rgba(5,6,10,0.54));
+            box-shadow:
+                inset 0 1px 0 rgba(255,255,255,0.04),
+                0 14px 38px rgba(0,0,0,0.24);
+        }
+        .trial-entry-window::after {
+            content: attr(data-motif);
+            position: absolute;
+            right: 18px;
+            bottom: 12px;
+            max-width: 42%;
+            color: color-mix(in srgb, var(--god-primary, #d5b25b) 12%, transparent);
+            font-family: var(--font-display);
+            font-size: clamp(1.6rem, 5vw, 4.2rem);
+            letter-spacing: 0.08em;
+            white-space: nowrap;
+            pointer-events: none;
+        }
+        .trial-entry-head {
+            position: relative;
+            z-index: 1;
+            display: grid;
+            grid-template-columns: auto minmax(0, 1fr) auto;
+            gap: 14px;
+            align-items: center;
+        }
+        .trial-entry-kicker {
+            color: var(--god-primary, var(--gold-light));
+            font-size: 0.7rem;
+            font-weight: 900;
+            letter-spacing: 0.16em;
+            text-transform: uppercase;
+        }
+        .trial-entry-head h3 {
+            margin: 3px 0 2px;
+            color: var(--text-bright);
+            font-family: var(--font-display);
+            font-size: 1.25rem;
+            letter-spacing: 0.06em;
+        }
+        .trial-entry-head p {
+            margin: 0;
+            color: var(--text-muted);
+            font-size: 0.78rem;
+        }
+        .trial-entry-score {
+            min-width: 118px;
+            padding: 10px 12px;
+            border-radius: 14px;
+            border: 1px solid color-mix(in srgb, var(--god-primary, #d5b25b) 26%, rgba(255,255,255,0.08));
+            background: rgba(0,0,0,0.24);
+            text-align: right;
+            box-shadow: inset 0 0 20px rgba(0,0,0,0.22);
+        }
+        .trial-entry-score span {
+            display: block;
+            color: var(--text-muted);
+            font-size: 0.62rem;
+            font-weight: 900;
+            letter-spacing: 0.12em;
+        }
+        .trial-entry-score strong {
+            display: block;
+            color: var(--god-primary, var(--gold-light));
+            font-family: var(--font-display);
+            font-size: 1.35rem;
+            line-height: 1.15;
+        }
+        .trial-entry-score small {
+            color: var(--text-muted);
+            font-size: 0.66rem;
+        }
+        .trial-entry-meta {
+            position: relative;
+            z-index: 1;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            padding-top: 12px;
+            border-top: 1px solid rgba(255,255,255,0.065);
+        }
+        .trial-entry-body {
+            position: relative;
+            z-index: 1;
+            display: grid;
+            gap: 10px;
+            padding: 14px 16px;
+            border-radius: 12px;
+            border: 1px solid rgba(255,255,255,0.06);
+            background: rgba(0,0,0,0.28);
+            color: var(--text);
+            line-height: 1.75;
+        }
+        .trial-entry-body strong {
+            color: var(--god-primary, var(--gold-light));
+            font-weight: 900;
+        }
+        .trial-entry-body p {
+            margin: 0;
+        }
+        .trial-entry-actions {
+            position: relative;
+            z-index: 1;
+            display: flex;
+            justify-content: flex-end;
+            gap: 10px;
+            flex-wrap: wrap;
+            padding-top: 2px;
+        }
+        .trial-entry-actions .btn-primary {
+            background:
+                linear-gradient(135deg, var(--god-primary, var(--gold-dark)), color-mix(in srgb, var(--god-secondary, var(--gold-light)) 58%, var(--god-primary, var(--gold-dark))));
+            box-shadow: 0 10px 24px var(--god-glow, rgba(213,178,91,0.18));
         }
         .detail-panel .section-title {
             font-weight: 700;
@@ -2229,6 +2475,13 @@
         .testimony-launch.path-life { border-color: rgba(111,168,121,0.26); }
         .testimony-launch.path-exist { border-color: rgba(122,174,194,0.26); }
         .testimony-launch.path-void { border-color: rgba(211,175,97,0.32); }
+        .testimony-launch[data-god] {
+            border-color: color-mix(in srgb, var(--god-primary) 26%, rgba(255,255,255,0.08));
+            background:
+                radial-gradient(circle at 10% 20%, var(--god-glow), transparent 34%),
+                linear-gradient(135deg, color-mix(in srgb, var(--god-primary) 7%, transparent), transparent 50%),
+                rgba(0,0,0,0.24);
+        }
         .testimony-launch-title {
             display: flex;
             align-items: center;
@@ -2280,6 +2533,16 @@
         .ritual-modal.path-life { border-color: rgba(111,168,121,0.34); box-shadow: 0 30px 80px rgba(0,0,0,0.82), 0 0 48px rgba(111,168,121,0.13); }
         .ritual-modal.path-exist { border-color: rgba(122,174,194,0.34); box-shadow: 0 30px 80px rgba(0,0,0,0.82), 0 0 48px rgba(122,174,194,0.13); }
         .ritual-modal.path-void { border-color: rgba(211,175,97,0.42); box-shadow: 0 30px 80px rgba(0,0,0,0.82), 0 0 54px rgba(211,175,97,0.16); }
+        .ritual-modal[data-god] {
+            border-color: color-mix(in srgb, var(--god-primary) 38%, rgba(255,255,255,0.08));
+            background:
+                radial-gradient(circle at 12% 12%, var(--god-glow), transparent 30%),
+                linear-gradient(180deg, color-mix(in srgb, var(--god-dark) 48%, rgba(255,255,255,0.035)), transparent 34%),
+                rgba(13,14,21,0.96);
+            box-shadow:
+                0 30px 80px rgba(0,0,0,0.82),
+                0 0 54px var(--god-glow);
+        }
         .ritual-modal-head {
             display: grid;
             grid-template-columns: auto 1fr auto;
@@ -2337,9 +2600,9 @@
         .ritual-record {
             padding: 16px;
             border-radius: 16px;
-            border: 1px solid rgba(231,207,138,0.18);
+            border: 1px solid color-mix(in srgb, var(--god-primary, #e7cf8a) 22%, rgba(255,255,255,0.08));
             background:
-                linear-gradient(135deg, rgba(231,207,138,0.08), transparent 48%),
+                linear-gradient(135deg, color-mix(in srgb, var(--god-primary, #e7cf8a) 8%, transparent), transparent 48%),
                 rgba(0,0,0,0.26);
         }
         .ritual-record strong {
@@ -2361,7 +2624,7 @@
             min-height: 150px;
             resize: vertical;
             border-radius: 16px;
-            border: 1px solid rgba(231,207,138,0.22);
+            border: 1px solid color-mix(in srgb, var(--god-primary, #e7cf8a) 24%, rgba(255,255,255,0.08));
             background:
                 linear-gradient(180deg, rgba(255,255,255,0.025), transparent),
                 rgba(0,0,0,0.42);
@@ -2374,8 +2637,10 @@
         }
         .ritual-input:focus {
             outline: none;
-            border-color: rgba(231,207,138,0.48);
-            box-shadow: 0 0 0 4px rgba(231,207,138,0.08), 0 0 24px rgba(231,207,138,0.08);
+            border-color: color-mix(in srgb, var(--god-primary, #e7cf8a) 48%, transparent);
+            box-shadow:
+                0 0 0 4px color-mix(in srgb, var(--god-primary, #e7cf8a) 10%, transparent),
+                0 0 24px color-mix(in srgb, var(--god-primary, #e7cf8a) 10%, transparent);
         }
         .ritual-actions {
             display: flex;
@@ -2742,11 +3007,11 @@
             .detail-overlay,
             .detail-overlay[data-layout="anchored"],
             .detail-overlay[data-layout="side"] {
-                padding: 10px 10px 42px;
+                padding: 10px;
             }
             .detail-panel {
                 width: min(100%, calc(100vw - 20px));
-                max-height: none;
+                max-height: calc(100dvh - 20px);
                 border-radius: 14px;
             }
             .detail-toolbar {
@@ -2766,11 +3031,28 @@
                 height: 34px;
                 font-size: 0.78rem;
             }
-            .detail-content { padding: 18px 14px 18px; overflow: visible; }
+            .detail-content { padding: 18px 14px 18px; overflow-y: auto; }
+            .trial-entry-head {
+                grid-template-columns: auto minmax(0, 1fr);
+            }
+            .trial-entry-score {
+                grid-column: 1 / -1;
+                justify-self: stretch;
+                text-align: left;
+            }
+            .trial-entry-actions .btn {
+                flex: 1 1 150px;
+            }
             .detail-footer {
                 align-items: stretch;
                 flex-direction: column;
                 padding: 10px 12px;
+            }
+            .detail-footer-actions {
+                justify-content: stretch;
+            }
+            .detail-footer-actions .btn {
+                flex: 1 1 150px;
             }
             .detail-leave-btn { width: 100%; }
             .detail-hero { padding: 14px; }
@@ -2999,7 +3281,7 @@
                 <button class="detail-close-icon" onclick="closeDetail()" title="关闭神谕窗口" aria-label="关闭神谕窗口">✕</button>
             </div>
             <div id="detailContent" class="detail-content"></div>
-            <div class="detail-footer">
+            <div class="detail-footer" id="detailFooter">
                 <span class="detail-footer-note">点击遮罩或按 ESC 也可暂离这场试炼。</span>
                 <button class="btn btn-outline btn-sm detail-leave-btn" onclick="closeDetail()">暂离神谕窗口</button>
             </div>
@@ -3167,14 +3449,16 @@
             死亡: '灵魂安眠，生命终焉',
             记忆: '昔我长铭，流光拓影',
             时间: '时光如隙，我亦如风',
-            秩序: '文明火起，秩序长存',
-            真理: '洞窥本质，行见真理',
-            战争: '何以求存，唯血与火',
+            秩序: '天地循规，万序恒定',
+            真理: '穷究本源，洞悉真相',
+            战争: '纷争不止，以战证道',
             欺诈: '悦如昨日，嗤笑今朝；不辨真伪，勿论虚实',
             命运: '命若繁星，望而不及；来途去路，尽皆命定',
             混乱: '虚构规律，寰宇笑谈',
             痴愚: '生命皆痴，文明皆愚',
-            腐朽: '众生应腐，万物将朽',
+            污堕: '纵情沉溺，自溺欢愉',
+            腐朽: '万物凋零，腐朽长存',
+            湮灭: '归于虚无，万事湮灭',
             沉默: '万物归寂，寰宇无音'
         };
         const GOD_ICONS = {
@@ -3194,6 +3478,248 @@
             腐朽: '朽',
             湮灭: '烬',
             沉默: '默'
+        };
+        const GOD_SKINS = {
+            欺诈: {
+                primary: '#d7a95f',
+                secondary: '#7b4fc8',
+                glow: 'rgba(215,169,95,0.22)',
+                dark: 'rgba(39,25,61,0.78)',
+                palette: '暗紫 / 暖鎏金',
+                motif: '假面弯月',
+                pattern: '谎言弯月、假面剪影',
+                particle: '金色碎面具',
+                oracle: '不辨真伪，勿论虚实。',
+                entryTitle: '进入愚戏',
+                entryHint: '你即将踏入欺诈之神的谎言切片。',
+                confirmText: '戴上面具',
+                cancelText: '暂不入局'
+            },
+            命运: {
+                primary: '#91a7ff',
+                secondary: '#8a5cff',
+                glow: 'rgba(138,92,255,0.22)',
+                dark: 'rgba(28,24,68,0.78)',
+                palette: '冷紫 / 星轨蓝',
+                motif: '星轨骰面',
+                pattern: '星盘、命运轨迹、环形刻度',
+                particle: '紫色骰子光点',
+                oracle: '命若繁星，望而不及。',
+                entryTitle: '骰定命运',
+                entryHint: '命运之神已记录你的入局。',
+                confirmText: '掷骰入局',
+                cancelText: '等待下一次星轨'
+            },
+            记忆: {
+                primary: '#9ec9dc',
+                secondary: '#d8dde7',
+                glow: 'rgba(158,201,220,0.20)',
+                dark: 'rgba(22,38,52,0.78)',
+                palette: '雾蓝 / 银白',
+                motif: '残页流光',
+                pattern: '书页折痕、记忆碎片、流光残影',
+                particle: '透明书页碎片',
+                oracle: '昔我长铭，流光拓影。',
+                entryTitle: '读取残页',
+                entryHint: '记忆之神将为你展开一段残留记录。',
+                confirmText: '敬献记忆',
+                cancelText: '封存残页'
+            },
+            时间: {
+                primary: '#9bc9ef',
+                secondary: '#cfd8e8',
+                glow: 'rgba(155,201,239,0.18)',
+                dark: 'rgba(18,38,58,0.78)',
+                palette: '冰蓝 / 冷银',
+                motif: '沙漏裂隙',
+                pattern: '沙粒轨迹、时间裂隙、流动线',
+                particle: '细沙光点',
+                oracle: '时光如隙，我亦如风。',
+                entryTitle: '时间回溯',
+                entryHint: '沙漏开始倒转，试炼即将重置。',
+                confirmText: '踏入时间裂隙',
+                cancelText: '等待钟鸣结束'
+            },
+            诞育: {
+                primary: '#81c487',
+                secondary: '#d8ad64',
+                glow: 'rgba(129,196,135,0.20)',
+                dark: 'rgba(24,53,37,0.78)',
+                palette: '苔青 / 琥珀',
+                motif: '嫩芽花苞',
+                pattern: '藤蔓、生命环、花苞纹理',
+                particle: '淡绿叶片',
+                oracle: '感孕生命，衍育自然。',
+                entryTitle: '进入诞育试炼',
+                entryHint: '诞育之神将观察你对生命的选择。',
+                confirmText: '接受生命试炼',
+                cancelText: '离开繁衍祭坛'
+            },
+            繁荣: {
+                primary: '#9ccd65',
+                secondary: '#e1c36d',
+                glow: 'rgba(156,205,101,0.18)',
+                dark: 'rgba(38,56,28,0.78)',
+                palette: '嫩草绿 / 浅金',
+                motif: '麦穗生长',
+                pattern: '生长螺旋、农田纹理、果实纹样',
+                particle: '叶片与金色碎光',
+                oracle: '万物滋生，亦繁亦荣。',
+                entryTitle: '丰收祭典',
+                entryHint: '繁荣之神将记录你的生长轨迹。',
+                confirmText: '播种试炼',
+                cancelText: '离开神殿'
+            },
+            死亡: {
+                primary: '#d76565',
+                secondary: '#9ea1ad',
+                glow: 'rgba(215,101,101,0.18)',
+                dark: 'rgba(42,31,35,0.82)',
+                palette: '暗灰 / 猩红',
+                motif: '安息骨纹',
+                pattern: '骨纹、安息之眼、死亡裂隙',
+                particle: '骨屑与暗红微光',
+                oracle: '灵魂安眠，生命终焉。',
+                entryTitle: '终焉之门',
+                entryHint: '死亡之神已看见你的结局。',
+                confirmText: '踏入终焉',
+                cancelText: '暂缓死亡'
+            },
+            污堕: {
+                primary: '#c65a88',
+                secondary: '#4a2d3a',
+                glow: 'rgba(198,90,136,0.20)',
+                dark: 'rgba(49,22,38,0.82)',
+                palette: '暗玫红 / 浊黑',
+                motif: '沉溺触环',
+                pattern: '沉溺环、黏液纹路、缠绕触须',
+                particle: '玫红雾状浊气',
+                oracle: '纵情沉溺，自溺欢愉。',
+                entryTitle: '进入沉溺环',
+                entryHint: '污堕之神将观察你的欲望边界。',
+                confirmText: '沉溺入局',
+                cancelText: '保持清醒'
+            },
+            腐朽: {
+                primary: '#a58a57',
+                secondary: '#707268',
+                glow: 'rgba(165,138,87,0.17)',
+                dark: 'rgba(47,42,31,0.82)',
+                palette: '土黄褐 / 暗灰',
+                motif: '枯木断面',
+                pattern: '枯木断面、碎屑裂纹、腐化纹理',
+                particle: '腐烂碎屑',
+                oracle: '万物凋零，腐朽长存。',
+                entryTitle: '腐朽降临',
+                entryHint: '腐朽之神将记录你的衰败过程。',
+                confirmText: '踏入腐朽殿堂',
+                cancelText: '保留最后完整之物'
+            },
+            湮灭: {
+                primary: '#b8bcc8',
+                secondary: '#555b65',
+                glow: 'rgba(184,188,200,0.14)',
+                dark: 'rgba(9,10,13,0.90)',
+                palette: '深墨黑 / 冷灰',
+                motif: '吞噬黑洞',
+                pattern: '黑洞、消散星尘、空白裂隙',
+                particle: '黑雾与碎星',
+                oracle: '归于虚无，万事湮灭。',
+                entryTitle: '进入湮灭裂隙',
+                entryHint: '湮灭之神将抹去你的存在痕迹。',
+                confirmText: '坠入虚无',
+                cancelText: '保留存在'
+            },
+            秩序: {
+                primary: '#c07855',
+                secondary: '#8a5c3a',
+                glow: 'rgba(192,120,85,0.18)',
+                dark: 'rgba(55,31,27,0.78)',
+                palette: '赭红 / 暗铜',
+                motif: '天平刻度',
+                pattern: '刻度、石碑、规整线框',
+                particle: '刻度光斑',
+                oracle: '天地循规，万序恒定。',
+                entryTitle: '秩序审判',
+                entryHint: '秩序之神将校准你的行为边界。',
+                confirmText: '接受审判',
+                cancelText: '退出法庭'
+            },
+            真理: {
+                primary: '#dce5e8',
+                secondary: '#b48d63',
+                glow: 'rgba(220,229,232,0.14)',
+                dark: 'rgba(35,39,43,0.78)',
+                palette: '银白 / 冷铜',
+                motif: '法典符眼',
+                pattern: '书页、符文眼、知识纹路',
+                particle: '书页碎片',
+                oracle: '穷究本源，洞悉真相。',
+                entryTitle: '翻开法典',
+                entryHint: '真理之神将展示被隐藏的答案。',
+                confirmText: '阅读真相',
+                cancelText: '合上书页'
+            },
+            战争: {
+                primary: '#e0644e',
+                secondary: '#5e4c45',
+                glow: 'rgba(224,100,78,0.20)',
+                dark: 'rgba(57,26,23,0.82)',
+                palette: '熔岩红 / 黑铁',
+                motif: '矛盾战痕',
+                pattern: '战痕、裂纹、破碎金属',
+                particle: '火星碎屑',
+                oracle: '纷争不止，以战证道。',
+                entryTitle: '战争启幕',
+                entryHint: '战争之神将记录你的牺牲与胜利。',
+                confirmText: '踏入战场',
+                cancelText: '撤出战火'
+            },
+            混乱: {
+                primary: '#c9b967',
+                secondary: '#d48b55',
+                glow: 'rgba(201,185,103,0.18)',
+                dark: 'rgba(55,49,31,0.78)',
+                palette: '雾黄 / 橘灰',
+                motif: '扭曲漩涡',
+                pattern: '无序线条、漩涡、碎光',
+                particle: '无序碎光',
+                oracle: '虚构规律，寰宇笑谈。',
+                entryTitle: '法则崩坏',
+                entryHint: '混乱之神将撕碎你认知中的规律。',
+                confirmText: '坠入混乱',
+                cancelText: '逃回秩序'
+            },
+            痴愚: {
+                primary: '#d2c785',
+                secondary: '#9e9aa4',
+                glow: 'rgba(210,199,133,0.16)',
+                dark: 'rgba(46,45,38,0.78)',
+                palette: '灰白 / 暗黄',
+                motif: '空洞斜眸',
+                pattern: '歪折线、荒诞符号、空洞眼纹',
+                particle: '细碎灰雾',
+                oracle: '生命皆痴，文明皆愚。',
+                entryTitle: '愚者入场',
+                entryHint: '痴愚之神已看见你的自以为是。',
+                confirmText: '扮演愚者',
+                cancelText: '假装清醒'
+            },
+            沉默: {
+                primary: '#aebbc8',
+                secondary: '#758897',
+                glow: 'rgba(174,187,200,0.14)',
+                dark: 'rgba(25,34,42,0.80)',
+                palette: '淡灰蓝 / 冷雾',
+                motif: '静音波纹',
+                pattern: '静音波纹、无声裂隙、灰雾',
+                particle: '无声尘粒',
+                oracle: '万物归寂，寰宇无音。',
+                entryTitle: '进入无声圣殿',
+                entryHint: '沉默之神将保留你的沉默。',
+                confirmText: '噤声入局',
+                cancelText: '打破沉默'
+            }
         };
         const SIGIL_STROKE = 'stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" fill="none"';
         const GOD_SIGILS = {
@@ -3625,6 +4151,39 @@
             return found ? { ...found, known: true } : { god: clean || '未归档', path: '旧档案', className: 'path-unknown', known: false };
         }
 
+        function getGodSkin(value) {
+            const info = getGodInfo(value);
+            return GOD_SKINS[info.god] || {
+                primary: '#d5b25b',
+                secondary: '#7a8cff',
+                glow: 'rgba(213,178,91,0.16)',
+                dark: 'rgba(18,19,27,0.82)',
+                palette: '旧档暗金 / 星尘蓝',
+                motif: '旧档碎片',
+                pattern: '未归档神谕纹路',
+                particle: '星尘碎光',
+                oracle: '谕行原文待补。',
+                entryTitle: '进入旧档试炼',
+                entryHint: '这场试炼尚未归入神明名录。',
+                confirmText: '踏入试炼',
+                cancelText: '暂不进入'
+            };
+        }
+
+        function getGodSkinStyle(value) {
+            const skin = getGodSkin(value);
+            return [
+                `--god-primary:${skin.primary}`,
+                `--god-secondary:${skin.secondary}`,
+                `--god-glow:${skin.glow}`,
+                `--god-dark:${skin.dark}`
+            ].join(';');
+        }
+
+        function getGodOracle(value) {
+            return getGodSkin(value).oracle || getGodPrayer(value);
+        }
+
         function getPathMetaByPath(path) {
             return PATH_META[path] || { sigil: '✧', tone: '旧档案', edict: '谕行原文待补' };
         }
@@ -3661,7 +4220,7 @@
             const prayer = getGodPrayer(value);
             const label = `${info.god}之神 · ${info.path}命途｜${prayer}`;
             const classes = ['god-sigil', `god-sigil-${size}`, info.className, `sigil-${meta.key}`, extraClass].filter(Boolean).join(' ');
-            return `<span class="${classes}" title="${escapeHtml(label)}" data-tooltip="${escapeHtml(label)}" aria-label="${escapeHtml(label)}">${meta.svg}</span>`;
+            return `<span class="${classes}" data-god="${escapeHtml(info.god)}" style="${getGodSkinStyle(value)}" title="${escapeHtml(label)}" data-tooltip="${escapeHtml(label)}" aria-label="${escapeHtml(label)}">${meta.svg}</span>`;
         }
 
         function getRitualLayout(id, type) {
@@ -3722,9 +4281,7 @@
         }
 
         function renderTrialOracle(d, godClass) {
-            const prefix = isTaskOracle(d) ? '【神谕任务】' : '【试炼谶语】';
-            const content = d.description || '此试炼尚未留下谶语。';
-            return `<div class="trial-oracle ${godClass}"><b>${prefix}</b>${escapeHtml(content).substring(0, 180)}${content.length > 180 ? '…' : ''}</div>`;
+            return `<div class="trial-oracle ${godClass}" style="${getGodSkinStyle(d.type)}"><b>【专属谶语】</b>${escapeHtml(getGodOracle(d.type))}</div>`;
         }
 
         function isVeteranArchitect(d) {
@@ -3951,6 +4508,8 @@
                 const godPath = formatGodPath(d.type);
                 const godClass = getGodClass(d.type);
                 const pathMeta = getPathMetaByGod(d.type);
+                const skin = getGodSkin(d.type);
+                const godStyle = getGodSkinStyle(d.type);
                 const difficultyLabel = formatDifficulty(d.difficulty);
                 const divineClass = isDivineTrial(d) ? 'divine-trial' : '';
                 const score = Number(d.avg_rating || 0);
@@ -3958,7 +4517,7 @@
                 const testimonyCount = Number(d.comment_count || 0);
                 const godSigil = renderGodSigil(d.type, 'lg', 'god-emblem');
                 return `
-                <div class="dungeon-card ${godClass} ${divineClass}" onclick="openDetail('${escapeHtml(d.id)}')">
+                <div class="dungeon-card ${godClass} ${divineClass}" data-god="${escapeHtml(getGodInfo(d.type).god)}" data-motif="${escapeHtml(skin.motif)}" data-particle="${escapeHtml(skin.particle)}" style="${godStyle}" onclick="openDetail('${escapeHtml(d.id)}')">
                     <div class="trial-card-head">
                         <div class="trial-title-block">
                             ${godSigil}
@@ -4216,6 +4775,8 @@
             const godClass = getGodClass(d.type);
             const godSigil = renderGodSigil(d.type, 'xl', 'detail-god-mark');
             const pathMeta = getPathMetaByGod(d.type);
+            const skin = getGodSkin(d.type);
+            const godStyle = getGodSkinStyle(d.type);
             const difficultyLabel = formatDifficulty(d.difficulty);
             const activeCommentCount = comments.filter(c => !c.is_deleted).length;
             const ratingScore = Number(d.avg_rating || 0);
@@ -4242,21 +4803,21 @@
                         </div>` : ''}
                 </div>` : '';
             document.getElementById('detailContent').innerHTML = `
-                <div class="detail-hero ${godClass}">
-                    <div class="detail-hero-main">
-                        ${godSigil}
+                <section class="trial-entry-window ${godClass}" data-god="${escapeHtml(getGodInfo(d.type).god)}" data-motif="${escapeHtml(skin.motif)}" style="${godStyle}">
+                    <div class="trial-entry-head">
+                        ${renderGodSigil(d.type, 'lg')}
                         <div>
-                            <div class="detail-kicker">PRAYER TRIAL DOSSIER · 祈愿试炼档案</div>
-                            <h2>${escapeHtml(d.name)}</h2>
-                            <div class="detail-subtitle">${escapeHtml(godPath)}命途 · ${escapeHtml(godLabel)} · 筑戏人：${escapeHtml(d.creator)}</div>
+                            <div class="trial-entry-kicker">${escapeHtml(skin.entryTitle)}</div>
+                            <h3>${escapeHtml(d.name || '未命名试炼')}</h3>
+                            <p>${escapeHtml(godPath)}命途 · ${escapeHtml(godLabel)} · 筑戏人：${escapeHtml(d.creator)}</p>
                         </div>
-                        <div class="detail-score-card">
+                        <div class="trial-entry-score">
                             <span>神格判定</span>
                             <strong>${ratingValue}</strong>
                             <small>${escapeHtml(getRatingTier(ratingScore))} · 评议人次 ${Number(d.rating_count || 0)}</small>
                         </div>
                     </div>
-                    <div class="detail-pill-grid">
+                    <div class="trial-entry-meta">
                         <span class="tag god-tag ${godClass}">${escapeHtml(godLabel)}</span>
                         <span class="tag path-tag ${godClass}">${escapeHtml(godPath)}命途</span>
                         <span class="tag ${getDiffClass(d.difficulty)} ${godClass}-difficulty">${escapeHtml(difficultyLabel)}</span>
@@ -4268,13 +4829,17 @@
                         ${canUseRole(['author','admin']) ? `<button class="btn btn-outline btn-xs" onclick="advanceRunUI('${escapeHtml(id)}')">重掷下一局</button>` : ''}
                         ${isAdmin() ? `<button class="btn btn-danger btn-xs" onclick="deleteDungeon('${escapeHtml(id)}')">封存试炼</button>` : ''}
                     </div>
-                </div>
+                    <div class="trial-entry-body">
+                        <p><strong>神明专属说明：</strong>${escapeHtml(skin.entryHint)}</p>
+                        <p><strong>试炼说明：</strong>${escapeHtml(d.description || '此试炼尚未留下说明。')}</p>
+                        <p><strong>专属谶语：</strong>${escapeHtml(skin.oracle)}</p>
+                    </div>
+                </section>
                 ${pinnedNoteHtml}
-                <div class="path-dossier ${godClass}">
+                <div class="path-dossier ${godClass}" data-god="${escapeHtml(getGodInfo(d.type).god)}" style="${godStyle}">
                     <div class="path-dossier-title">${escapeHtml(pathMeta.sigil)} ${escapeHtml(godPath)}命途 · ${escapeHtml(godLabel)}</div>
-                    <div class="path-dossier-body"><span>专属色：</span>${escapeHtml(pathMeta.tone)}<br><span>谕行摘录：</span>${escapeHtml(pathMeta.edict)}</div>
+                    <div class="path-dossier-body"><span>神明主色：</span>${escapeHtml(skin.palette)}<br><span>背景暗纹：</span>${escapeHtml(skin.pattern)}<br><span>粒子意象：</span>${escapeHtml(skin.particle)}<br><span>谕行摘录：</span>${escapeHtml(getGodPrayer(d.type))}</div>
                 </div>
-                <div class="detail-desc">${escapeHtml(d.description||'（无试炼描述）')}</div>
                 <div class="clear-panel">
                     <div class="clear-panel-head">
                         <span class="clear-panel-title">🎲 命运骰记录 · ${formatRunCount(d)}</span>
@@ -4300,7 +4865,7 @@
                 </div>
                 <div class="comments-section">
                     <div class="section-title">💬 试炼证言殿 (${activeCommentCount})</div>
-                    <div class="testimony-launch ${godClass}">
+                    <div class="testimony-launch ${godClass}" data-god="${escapeHtml(getGodInfo(d.type).god)}" style="${godStyle}">
                         <div>
                             <div class="testimony-launch-title">${renderGodSigil(d.type, 'sm')} 递交试炼证言</div>
                             <div class="testimony-launch-note">当前身份：<strong>${locked ? '访客' : escapeHtml(inviteSession?.name || ROLE_LABELS[getInviteRole()] || '匿名')}</strong>。神谕记录将被留存，供后来信徒判断。</div>
@@ -4312,9 +4877,21 @@
             const overlay = document.getElementById('detailOverlay');
             const panel = document.getElementById('detailPanel');
             overlay.className = `detail-overlay ${godClass}`;
+            overlay.dataset.god = getGodInfo(d.type).god;
+            overlay.setAttribute('style', `${godStyle};display:grid;`);
             overlay.dataset.layout = 'center';
             panel.className = `detail-panel ${godClass}`;
-            overlay.style.display='block';
+            panel.dataset.god = getGodInfo(d.type).god;
+            panel.setAttribute('style', godStyle);
+            const footer = document.getElementById('detailFooter');
+            if (footer) {
+                footer.innerHTML = `
+                    <span class="detail-footer-note">${escapeHtml(skin.oracle)} · ${escapeHtml(skin.entryHint)}</span>
+                    <div class="detail-footer-actions">
+                        <button type="button" class="btn btn-outline btn-sm detail-leave-btn" onclick="closeDetail()">${escapeHtml(skin.cancelText)}</button>
+                        <button type="button" class="btn btn-primary btn-sm" onclick="focusTrialRecord()">${escapeHtml(skin.confirmText)}</button>
+                    </div>`;
+            }
             const content = document.getElementById('detailContent');
             const resetDetailScroll = () => {
                 if (content) content.scrollTo({ top: 0, behavior: 'auto' });
@@ -4327,6 +4904,12 @@
         }
 
         function closeDetail(e){ if(e && e.target!==document.getElementById('detailOverlay')) return; document.getElementById('detailOverlay').style.display='none'; document.body.style.overflow=''; currentDetailId=null; }
+        function focusTrialRecord() {
+            const target = document.getElementById('clearFeedbackNote') || document.querySelector('.clear-panel');
+            if (!target) return;
+            target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            if (typeof target.focus === 'function' && !target.disabled) target.focus();
+        }
 
         function openInviteModal(message) {
             const overlay = document.getElementById('inviteModalOverlay');
@@ -4406,14 +4989,20 @@
             if (!d) { showToast('试炼未找到'); return; }
             const info = getGodInfo(d.type);
             const godClass = getGodClass(d.type);
+            const skin = getGodSkin(d.type);
+            const godStyle = getGodSkinStyle(d.type);
             const modal = document.getElementById('testimonyModal');
             const sigil = document.getElementById('testimonyModalSigil');
             const prayer = document.getElementById('testimonyModalPrayer');
             const dossier = document.getElementById('testimonyModalDossier');
             const input = document.getElementById('testimonyContentInput');
-            if (modal) modal.className = `modal ritual-modal ${godClass}`;
+            if (modal) {
+                modal.className = `modal ritual-modal ${godClass}`;
+                modal.dataset.god = info.god;
+                modal.setAttribute('style', godStyle);
+            }
             if (sigil) sigil.innerHTML = renderGodSigil(d.type, 'xl', 'detail-god-mark');
-            if (prayer) prayer.textContent = `${getGodPrayer(d.type)} —— ${info.god}之神`;
+            if (prayer) prayer.textContent = `${skin.oracle} —— ${info.god}之神`;
             if (dossier) {
                 dossier.innerHTML = `
                     <strong>${escapeHtml(d.name || '未命名试炼')}</strong>
@@ -4433,7 +5022,8 @@
         function closeTestimonyModal(e) {
             if(e && e.target!==document.getElementById('testimonyModalOverlay')) return;
             document.getElementById('testimonyModalOverlay').style.display='none';
-            document.body.style.overflow = document.getElementById('detailOverlay')?.style.display === 'flex' ? 'hidden' : '';
+            const detailVisible = getComputedStyle(document.getElementById('detailOverlay')).display !== 'none';
+            document.body.style.overflow = detailVisible ? 'hidden' : '';
         }
 
         async function setRatingModalContext(id) {
@@ -4442,13 +5032,19 @@
             if (!d) return;
             const info = getGodInfo(d.type);
             const godClass = getGodClass(d.type);
+            const skin = getGodSkin(d.type);
+            const godStyle = getGodSkinStyle(d.type);
             const modal = document.getElementById('ratingModal');
             const sigil = document.getElementById('ratingModalSigil');
             const prayer = document.getElementById('ratingModalPrayer');
             const dossier = document.getElementById('ratingModalDossier');
-            if (modal) modal.className = `modal judgement-modal ritual-modal ${godClass}`;
+            if (modal) {
+                modal.className = `modal judgement-modal ritual-modal ${godClass}`;
+                modal.dataset.god = info.god;
+                modal.setAttribute('style', godStyle);
+            }
             if (sigil) sigil.innerHTML = renderGodSigil(d.type, 'xl', 'detail-god-mark');
-            if (prayer) prayer.textContent = `${getGodPrayer(d.type)} —— ${info.god}之神`;
+            if (prayer) prayer.textContent = `${skin.oracle} —— ${info.god}之神`;
             if (dossier) {
                 dossier.innerHTML = `
                     <strong>${escapeHtml(d.name || '未命名试炼')}</strong>
@@ -4517,7 +5113,8 @@
         function closeRatingModal(e) {
             if(e && e.target!==document.getElementById('ratingModalOverlay')) return;
             document.getElementById('ratingModalOverlay').style.display='none';
-            document.body.style.overflow = document.getElementById('detailOverlay')?.style.display === 'flex' ? 'hidden' : '';
+            const detailVisible = getComputedStyle(document.getElementById('detailOverlay')).display !== 'none';
+            document.body.style.overflow = detailVisible ? 'hidden' : '';
         }
 
         function renderRatingChoices() {
