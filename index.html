@@ -46,6 +46,10 @@
             box-sizing: border-box;
         }
 
+        html {
+            overflow-anchor: none;
+        }
+
         body {
             background: var(--bg);
             background-image: var(--bg-pattern), radial-gradient(ellipse at 20% 10%, rgba(180, 130, 50, 0.05) 0%, transparent 60%), radial-gradient(ellipse at 80% 90%, rgba(160, 100, 180, 0.03) 0%, transparent 60%);
@@ -1279,9 +1283,31 @@
             console.warn('⚠️ Supabase 未配置，使用本地存储模式。替换 SUPABASE_URL 和 SUPABASE_ANON_KEY 以启用在线功能。');
         }
         if ('scrollRestoration' in history) history.scrollRestoration = 'manual';
-        window.addEventListener('pageshow', () => {
-            requestAnimationFrame(() => window.scrollTo(0, 0));
-        }, { once: true });
+        let initialTopLockActive = true;
+        function scrollPageToTop() {
+            window.scrollTo(0, 0);
+            document.documentElement.scrollTop = 0;
+            document.body.scrollTop = 0;
+        }
+        function releaseInitialTopLock() {
+            initialTopLockActive = false;
+        }
+        function lockInitialViewToTop(duration = 2200) {
+            initialTopLockActive = true;
+            const startedAt = performance.now();
+            const tick = () => {
+                if (!initialTopLockActive) return;
+                scrollPageToTop();
+                if (performance.now() - startedAt < duration) requestAnimationFrame(tick);
+                else releaseInitialTopLock();
+            };
+            tick();
+        }
+        ['wheel', 'touchstart', 'pointerdown'].forEach(eventName => {
+            window.addEventListener(eventName, releaseInitialTopLock, { once: true, passive: true });
+        });
+        window.addEventListener('keydown', releaseInitialTopLock, { once: true });
+        window.addEventListener('pageshow', () => lockInitialViewToTop());
 
         function getLocalData(key, defaultValue) { try { const raw = localStorage.getItem('fog_' + key); return raw ? JSON.parse(raw) : defaultValue; } catch { return defaultValue; } }
         function setLocalData(key, value) { try { localStorage.setItem('fog_' + key, JSON.stringify(value)); } catch {} }
@@ -2231,7 +2257,7 @@
                 await renderDungeonList();
                 await renderLatestComments();
             }
-            requestAnimationFrame(() => window.scrollTo(0, 0));
+            requestAnimationFrame(scrollPageToTop);
         })();
     </script>
 </body>
