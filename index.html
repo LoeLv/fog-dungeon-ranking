@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>诸神愚戏 · 副本排行榜</title>
+    <title>诸神愚戏 · 祈愿试炼留存地</title>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2">
     </script>
     <style>
@@ -22,11 +22,17 @@
             --danger: #8b3a3a;
             --star-color: #e2b04a;
             --path-life: #77c37b;
-            --path-fall: #a05064;
+            --path-fall: #6d7683;
             --path-civil: #d0aa55;
             --path-chaos: #9a78e0;
             --path-exist: #75bdd0;
             --path-void: #d7d7e8;
+            --path-life-soft: rgba(119, 195, 123, 0.12);
+            --path-fall-soft: rgba(109, 118, 131, 0.14);
+            --path-civil-soft: rgba(208, 170, 85, 0.12);
+            --path-chaos-soft: rgba(154, 120, 224, 0.13);
+            --path-exist-soft: rgba(117, 189, 208, 0.13);
+            --path-void-soft: rgba(215, 215, 232, 0.1);
             --difficulty-newbie: #7bbf8c;
             --difficulty-low: #69a9cf;
             --difficulty-medium: #d0aa55;
@@ -52,12 +58,40 @@
 
         body {
             background: var(--bg);
-            background-image: var(--bg-pattern), radial-gradient(ellipse at 20% 10%, rgba(180, 130, 50, 0.05) 0%, transparent 60%), radial-gradient(ellipse at 80% 90%, rgba(160, 100, 180, 0.03) 0%, transparent 60%);
+            background-image:
+                var(--bg-pattern),
+                linear-gradient(118deg, rgba(213,178,91,0.07) 0 1px, transparent 1px 46%, rgba(117,189,208,0.06) 47%, transparent 49%),
+                repeating-linear-gradient(90deg, rgba(255,255,255,0.012) 0 1px, transparent 1px 72px),
+                repeating-linear-gradient(0deg, rgba(255,255,255,0.01) 0 1px, transparent 1px 72px);
             color: var(--text);
             font-family: var(--font-body);
             min-height: 100vh;
             line-height: 1.6;
             backdrop-filter: blur(1px);
+            overflow-x: hidden;
+        }
+        body::before {
+            content: "";
+            position: fixed;
+            inset: -20vh -10vw;
+            pointer-events: none;
+            z-index: -1;
+            background:
+                linear-gradient(118deg, transparent 0 45%, rgba(231,207,138,0.1) 46%, rgba(117,189,208,0.08) 48%, transparent 51%),
+                conic-gradient(from 210deg at 70% 18%, transparent 0deg, rgba(117,189,208,0.06) 18deg, transparent 42deg, rgba(154,120,224,0.05) 62deg, transparent 96deg);
+            opacity: 0.78;
+        }
+        body::after {
+            content: "🎭   🎲";
+            position: fixed;
+            right: clamp(18px, 5vw, 86px);
+            top: 120px;
+            pointer-events: none;
+            z-index: -1;
+            color: rgba(231,207,138,0.06);
+            font-size: clamp(4.2rem, 12vw, 10rem);
+            letter-spacing: 0.16em;
+            filter: blur(0.5px);
         }
 
         /* ========== 顶部导航 ========== */
@@ -125,6 +159,21 @@
             border-color: rgba(200, 160, 80, 0.35);
             background: rgba(184, 134, 11, 0.12);
         }
+        .role-badge[data-role="player"] {
+            color: var(--path-exist);
+            border-color: rgba(117,189,208,0.38);
+            background: rgba(117,189,208,0.09);
+        }
+        .role-badge[data-role="author"] {
+            color: var(--gold-light);
+            border-color: rgba(213,178,91,0.42);
+            background: rgba(213,178,91,0.11);
+        }
+        .role-badge[data-role="admin"] {
+            color: #f1d9ff;
+            border-color: rgba(154,120,224,0.44);
+            background: rgba(154,120,224,0.12);
+        }
         .btn {
             padding: 10px 22px;
             border-radius: 30px;
@@ -190,6 +239,127 @@
             max-width: 1120px;
             margin: 0 auto;
             padding: 28px 20px 70px;
+        }
+
+        /* ========== 祈愿试炼主视觉 ========== */
+        .world-altar {
+            position: relative;
+            display: grid;
+            grid-template-columns: minmax(0, 1fr) minmax(230px, 0.46fr);
+            gap: 20px;
+            margin-bottom: 22px;
+            padding: clamp(22px, 4vw, 34px);
+            border-radius: var(--radius);
+            border: 1px solid rgba(231,207,138,0.14);
+            background:
+                linear-gradient(135deg, rgba(213,178,91,0.12), transparent 38%),
+                linear-gradient(245deg, rgba(117,189,208,0.08), transparent 46%),
+                rgba(10,10,18,0.82);
+            box-shadow: var(--shadow);
+            overflow: hidden;
+        }
+        .world-altar::before {
+            content: "";
+            position: absolute;
+            inset: 0;
+            background:
+                linear-gradient(112deg, transparent 0 43%, rgba(231,207,138,0.17) 43.5%, rgba(117,189,208,0.11) 45%, transparent 47%),
+                repeating-linear-gradient(90deg, rgba(255,255,255,0.025) 0 1px, transparent 1px 48px);
+            opacity: 0.58;
+            pointer-events: none;
+        }
+        .world-altar-copy, .world-altar-symbols {
+            position: relative;
+            z-index: 1;
+        }
+        .world-kicker {
+            color: var(--gold-light);
+            font-size: 0.72rem;
+            font-weight: 800;
+            letter-spacing: 0.22em;
+            text-transform: uppercase;
+            margin-bottom: 8px;
+        }
+        .world-title {
+            margin-bottom: 10px;
+            color: var(--text-bright);
+            font-family: var(--font-display);
+            font-size: clamp(2rem, 5vw, 4.1rem);
+            line-height: 1;
+            letter-spacing: 0.06em;
+            text-shadow: 0 0 24px rgba(231,207,138,0.18);
+        }
+        .world-line {
+            max-width: 620px;
+            color: var(--text);
+            font-size: 0.95rem;
+            line-height: 1.8;
+        }
+        .world-tokens {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-top: 16px;
+        }
+        .world-token {
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 999px;
+            padding: 6px 10px;
+            background: rgba(0,0,0,0.24);
+            color: var(--text-bright);
+            font-size: 0.75rem;
+            font-weight: 800;
+            letter-spacing: 0.05em;
+        }
+        .world-altar-symbols {
+            display: grid;
+            place-items: center;
+            min-height: 210px;
+        }
+        .fate-emblem {
+            position: relative;
+            width: min(250px, 58vw);
+            aspect-ratio: 1;
+            display: grid;
+            place-items: center;
+            border-radius: 50%;
+            border: 1px solid rgba(231,207,138,0.22);
+            background:
+                conic-gradient(from 12deg, rgba(213,178,91,0.26), rgba(154,120,224,0.13), rgba(117,189,208,0.18), rgba(213,178,91,0.26)),
+                rgba(0,0,0,0.3);
+            box-shadow: inset 0 0 34px rgba(0,0,0,0.6), 0 0 38px rgba(213,178,91,0.12);
+        }
+        .fate-emblem::before, .fate-emblem::after {
+            content: "";
+            position: absolute;
+            inset: 17%;
+            border: 1px solid rgba(255,255,255,0.08);
+            transform: rotate(45deg);
+        }
+        .fate-emblem::after {
+            inset: 31%;
+            border-color: rgba(231,207,138,0.28);
+            transform: rotate(0deg);
+        }
+        .fate-face {
+            position: relative;
+            z-index: 1;
+            display: grid;
+            gap: 4px;
+            place-items: center;
+            color: var(--gold-light);
+            font-family: var(--font-display);
+            font-size: clamp(3rem, 9vw, 5.8rem);
+            letter-spacing: 0.08em;
+            text-shadow: 0 0 28px rgba(231,207,138,0.34);
+        }
+        .fate-face small {
+            color: var(--text-muted);
+            font-family: var(--font-body);
+            font-size: 0.68rem;
+            font-weight: 800;
+            letter-spacing: 0.18em;
+            text-transform: uppercase;
         }
 
         /* ========== 控制栏 ========== */
@@ -337,16 +507,41 @@
         }
         .god-cluster {
             display: grid;
-            grid-template-columns: 72px 1fr;
-            gap: 10px;
+            grid-template-columns: minmax(130px, 0.42fr) 1fr;
+            gap: 12px;
             align-items: start;
+            padding: 10px;
+            border: 1px solid rgba(255,255,255,0.055);
+            border-radius: var(--radius-sm);
+            background: rgba(0,0,0,0.13);
         }
+        .god-cluster.path-life { background: linear-gradient(90deg, var(--path-life-soft), rgba(0,0,0,0.1)); border-color: rgba(119,195,123,0.16); }
+        .god-cluster.path-fall { background: linear-gradient(90deg, var(--path-fall-soft), rgba(0,0,0,0.1)); border-color: rgba(109,118,131,0.2); }
+        .god-cluster.path-civil { background: linear-gradient(90deg, var(--path-civil-soft), rgba(0,0,0,0.1)); border-color: rgba(208,170,85,0.18); }
+        .god-cluster.path-chaos { background: linear-gradient(90deg, var(--path-chaos-soft), rgba(0,0,0,0.1)); border-color: rgba(154,120,224,0.18); }
+        .god-cluster.path-exist { background: linear-gradient(90deg, var(--path-exist-soft), rgba(0,0,0,0.1)); border-color: rgba(117,189,208,0.18); }
+        .god-cluster.path-void { background: linear-gradient(90deg, var(--path-void-soft), rgba(0,0,0,0.1)); border-color: rgba(215,215,232,0.16); }
         .god-cluster-title {
-            padding-top: 7px;
             color: var(--text-muted);
             font-size: 0.72rem;
             letter-spacing: 0.14em;
             text-transform: uppercase;
+        }
+        .god-cluster-title strong {
+            display: block;
+            color: var(--text-bright);
+            font-family: var(--font-display);
+            font-size: 0.92rem;
+            letter-spacing: 0.08em;
+            margin-bottom: 3px;
+        }
+        .god-cluster-title small {
+            display: block;
+            color: var(--text-muted);
+            font-size: 0.68rem;
+            line-height: 1.45;
+            letter-spacing: 0.03em;
+            text-transform: none;
         }
         .god-cluster-buttons, .difficulty-filter {
             display: flex;
@@ -387,7 +582,7 @@
             padding-top: 2px;
         }
 
-        /* ========== 副本卡片列表 ========== */
+        /* ========== 试炼卡片列表 ========== */
         .dungeon-list {
             display: flex;
             flex-direction: column;
@@ -405,6 +600,12 @@
             backdrop-filter: blur(5px);
             background-image: linear-gradient(135deg, rgba(255,255,255,0.02) 0%, transparent 50%);
         }
+        .dungeon-card.path-life { border-color: rgba(119,195,123,0.18); background-image: linear-gradient(135deg, var(--path-life-soft), transparent 46%); }
+        .dungeon-card.path-fall { border-color: rgba(109,118,131,0.2); background-image: linear-gradient(135deg, var(--path-fall-soft), transparent 46%); }
+        .dungeon-card.path-civil { border-color: rgba(208,170,85,0.2); background-image: linear-gradient(135deg, var(--path-civil-soft), transparent 46%); }
+        .dungeon-card.path-chaos { border-color: rgba(154,120,224,0.2); background-image: linear-gradient(135deg, var(--path-chaos-soft), transparent 46%); }
+        .dungeon-card.path-exist { border-color: rgba(117,189,208,0.2); background-image: linear-gradient(135deg, var(--path-exist-soft), transparent 46%); }
+        .dungeon-card.path-void { border-color: rgba(215,215,232,0.16); background-image: linear-gradient(135deg, var(--path-void-soft), transparent 46%); }
         .dungeon-card:hover {
             background: var(--bg-card-hover);
             border-color: #3a3a4a;
@@ -425,6 +626,51 @@
         }
         .dungeon-card:hover::before {
             opacity: 1;
+        }
+        .dungeon-card.path-life::before { background: linear-gradient(180deg, var(--path-life), transparent); }
+        .dungeon-card.path-fall::before { background: linear-gradient(180deg, var(--path-fall), transparent); }
+        .dungeon-card.path-civil::before { background: linear-gradient(180deg, var(--path-civil), transparent); }
+        .dungeon-card.path-chaos::before { background: linear-gradient(180deg, var(--path-chaos), transparent); }
+        .dungeon-card.path-exist::before { background: linear-gradient(180deg, var(--path-exist), transparent); }
+        .dungeon-card.path-void::before { background: linear-gradient(180deg, var(--path-void), transparent); }
+        .card-path-rune {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            max-width: 100%;
+            margin-bottom: 9px;
+            padding: 4px 10px;
+            border-radius: 999px;
+            border: 1px solid rgba(255,255,255,0.08);
+            background: rgba(0,0,0,0.22);
+            color: var(--text-muted);
+            font-size: 0.68rem;
+            font-weight: 700;
+            letter-spacing: 0.06em;
+        }
+        .card-path-rune strong {
+            color: var(--text-bright);
+            font-weight: 800;
+        }
+        .card-path-rune em {
+            font-style: normal;
+            color: var(--text-muted);
+            letter-spacing: 0.03em;
+        }
+        .card-path-rune.path-life { border-color: rgba(119,195,123,0.28); color: var(--path-life); }
+        .card-path-rune.path-fall { border-color: rgba(109,118,131,0.32); color: var(--path-fall); }
+        .card-path-rune.path-civil { border-color: rgba(208,170,85,0.3); color: var(--path-civil); }
+        .card-path-rune.path-chaos { border-color: rgba(154,120,224,0.3); color: var(--path-chaos); }
+        .card-path-rune.path-exist { border-color: rgba(117,189,208,0.3); color: var(--path-exist); }
+        .card-path-rune.path-void { border-color: rgba(215,215,232,0.24); color: var(--path-void); }
+        .identity-chip {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            color: var(--text-muted);
+        }
+        .identity-chip.author {
+            color: var(--gold-light);
         }
         .dungeon-card .card-header {
             display: flex;
@@ -639,6 +885,37 @@
             border: 1px solid rgba(255,255,255,0.05);
             font-style: italic;
         }
+        .path-dossier {
+            margin-bottom: 18px;
+            padding: 14px 16px;
+            border-radius: var(--radius-sm);
+            border: 1px solid rgba(255,255,255,0.08);
+            background: rgba(255,255,255,0.025);
+        }
+        .path-dossier.path-life { border-color: rgba(119,195,123,0.24); background: var(--path-life-soft); }
+        .path-dossier.path-fall { border-color: rgba(109,118,131,0.28); background: var(--path-fall-soft); }
+        .path-dossier.path-civil { border-color: rgba(208,170,85,0.26); background: var(--path-civil-soft); }
+        .path-dossier.path-chaos { border-color: rgba(154,120,224,0.26); background: var(--path-chaos-soft); }
+        .path-dossier.path-exist { border-color: rgba(117,189,208,0.26); background: var(--path-exist-soft); }
+        .path-dossier.path-void { border-color: rgba(215,215,232,0.2); background: var(--path-void-soft); }
+        .path-dossier-title {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 8px;
+            color: var(--text-bright);
+            font-family: var(--font-display);
+            letter-spacing: 0.06em;
+            margin-bottom: 6px;
+        }
+        .path-dossier-body {
+            color: var(--text);
+            font-size: 0.82rem;
+            line-height: 1.65;
+        }
+        .path-dossier-body span {
+            color: var(--text-muted);
+        }
         .detail-panel .section-title {
             font-weight: 700;
             font-size: 0.9rem;
@@ -794,7 +1071,7 @@
             font-size: 0.74rem;
         }
 
-        /* 评论 */
+        /* 回响 */
         .forum-feed {
             position: relative;
             overflow: hidden;
@@ -802,8 +1079,8 @@
             border: 1px solid rgba(213,178,91,0.16);
             border-radius: var(--radius);
             background:
-                radial-gradient(circle at 8% 0%, rgba(231,207,138,0.12), transparent 30%),
-                radial-gradient(circle at 88% 24%, rgba(117,189,208,0.09), transparent 32%),
+                linear-gradient(118deg, rgba(231,207,138,0.09) 0 1px, transparent 1px 37%, rgba(117,189,208,0.07) 38%, transparent 40%),
+                repeating-linear-gradient(135deg, rgba(255,255,255,0.018) 0 1px, transparent 1px 26px),
                 linear-gradient(135deg, rgba(208,170,85,0.075), rgba(154,120,224,0.04) 45%, rgba(117,189,208,0.055)),
                 rgba(18,18,31,0.72);
             padding: 20px 22px 22px;
@@ -980,7 +1257,7 @@
             place-items: center;
             border: 1px solid rgba(231,207,138,0.28);
             background:
-                radial-gradient(circle at 35% 25%, rgba(231,207,138,0.26), transparent 42%),
+                linear-gradient(135deg, rgba(231,207,138,0.22), transparent 46%),
                 rgba(0,0,0,0.45);
             color: var(--gold-light);
             box-shadow: 0 0 18px rgba(231,207,138,0.08);
@@ -1435,7 +1712,21 @@
         .empty-state { text-align: center; padding: 60px 20px; color: var(--text-muted); }
         @media (max-width: 720px) {
             .header { align-items: flex-start; }
-            .header-actions { width: 100%; justify-content: flex-start; }
+            .header-actions {
+                display: grid;
+                grid-template-columns: 1fr;
+                width: 100%;
+                justify-content: stretch;
+            }
+            .header-actions .role-badge { grid-column: 1 / -1; width: fit-content; }
+            .header-actions .btn {
+                min-width: 0;
+                width: 100%;
+                padding: 9px 10px;
+                font-size: 0.74rem;
+                line-height: 1.2;
+                white-space: normal;
+            }
             .detail-overlay { padding: 8px; align-items: stretch; }
             .detail-panel {
                 max-height: calc(100dvh - 16px);
@@ -1459,6 +1750,21 @@
             .role-guide { grid-template-columns: 1fr; }
             .form-grid, .form-grid.compact { grid-template-columns: 1fr; }
             .form-span { grid-column: auto; }
+            .world-altar {
+                grid-template-columns: 1fr;
+                padding: 22px 18px;
+            }
+            .world-altar-symbols { min-height: 150px; }
+            .fate-emblem { width: min(190px, 70vw); }
+            .world-title {
+                font-size: clamp(1.85rem, 9vw, 2.55rem);
+                overflow-wrap: anywhere;
+            }
+            .world-line { overflow-wrap: anywhere; }
+            .world-token {
+                min-width: 0;
+                white-space: normal;
+            }
             .controls { align-items: stretch; }
             .control-topline { align-items: stretch; }
             .controls .sort-group { width: 100%; }
@@ -1466,8 +1772,13 @@
                 width: 100%;
                 justify-content: space-between;
             }
-            .god-cluster { grid-template-columns: 1fr; gap: 4px; }
+            .god-cluster { grid-template-columns: 1fr; gap: 8px; }
             .god-cluster-title { padding-top: 0; }
+            .card-path-rune {
+                white-space: normal;
+                align-items: flex-start;
+                border-radius: 12px;
+            }
             .search-input { max-width: none; width: 100%; }
             .forum-feed { padding: 16px 14px; }
             .forum-feed-head { flex-direction: column; align-items: stretch; }
@@ -1494,26 +1805,45 @@
 <body>
     <header class="header">
         <div class="logo">
-            <span class="icon">♟️</span>
-            <span>诸神愚戏<span class="sub">Folly of the Gods · 副本圣殿</span></span>
+            <span class="icon">🎭🎲</span>
+            <span>诸神愚戏<span class="sub">Folly of the Gods · 祈愿试炼神谕留存地</span></span>
         </div>
         <div class="header-actions">
-            <div class="role-badge" id="roleBadge">访客只读</div>
-            <button class="btn btn-outline" id="inviteButton" onclick="openInviteModal()">🔑 输入邀请</button>
-            <button class="btn btn-primary" id="submitEntryButton" onclick="openSubmitModal()">📜 献上你的副本</button>
+            <div class="role-badge" id="roleBadge">旁观者只读</div>
+            <button class="btn btn-outline" id="inviteButton" onclick="openInviteModal()">🎲 验入局谕令</button>
+            <button class="btn btn-primary" id="submitEntryButton" onclick="openSubmitModal()">🎭 构筑祈愿试炼</button>
         </div>
     </header>
 
     <div class="container">
+        <section class="world-altar" aria-label="祈愿试炼主视觉">
+            <div class="world-altar-copy">
+                <div class="world-kicker">TRIAL ARCHIVE · 愚戏棋局</div>
+                <h1 class="world-title">祈愿试炼留存地</h1>
+                <p class="world-line">欺诈假面垂落，命运骰子已在裂隙中转动。这里记录构筑者降下的切片宇宙，也收存入局信徒的神眷评定与试炼回响。</p>
+                <div class="world-tokens" aria-label="核心标识">
+                    <span class="world-token">🎭 欺诈假面</span>
+                    <span class="world-token">🎲 命运骰子</span>
+                    <span class="world-token">裂隙切片</span>
+                    <span class="world-token">六大命途</span>
+                </div>
+            </div>
+            <div class="world-altar-symbols" aria-hidden="true">
+                <div class="fate-emblem">
+                    <div class="fate-face">🎭🎲<small>FOLLY</small></div>
+                </div>
+            </div>
+        </section>
+
         <div class="controls">
             <div class="control-topline">
                 <div class="sort-group">
-                    <button class="sort-btn active" data-sort="popular" onclick="setSort('popular', this)">🔥 热度高</button>
-                    <button class="sort-btn" data-sort="rating" onclick="setSort('rating', this)">⭐ 神眷评分</button>
-                    <button class="sort-btn" data-sort="newest" onclick="setSort('newest', this)">🕐 最新降临</button>
+                    <button class="sort-btn active" data-sort="popular" onclick="setSort('popular', this)">🔥 试炼热度</button>
+                    <button class="sort-btn" data-sort="rating" onclick="setSort('rating', this)">⭐ 神眷评定</button>
+                    <button class="sort-btn" data-sort="newest" onclick="setSort('newest', this)">🎲 新降试炼</button>
                     <button class="sort-btn" data-sort="comments" onclick="setSort('comments', this)">💬 众声回响</button>
                 </div>
-                <input type="text" class="search-input" placeholder="🔍 搜索副本、作者、神明或命途..." oninput="debounceSearch()" id="searchInput">
+                <input type="text" class="search-input" placeholder="🔍 搜索试炼、构筑者、神明或命途..." oninput="debounceSearch()" id="searchInput">
                 <button class="filter-toggle-btn" id="filterToggleBtn" onclick="toggleAdvancedFilters()" aria-expanded="false">
                     <span>✦ 筛选</span>
                     <small id="filterSummaryText">全神席 · 全部难度</small>
@@ -1522,8 +1852,8 @@
             <div class="advanced-filters" id="advancedFilters" hidden>
                 <div class="god-filter-panel" aria-label="神明分区筛选">
                     <div class="filter-heading">
-                        <span>✦ 神明分区</span>
-                        <span>按 16 位神明选择副本归属</span>
+                        <span>✦ 六大命途</span>
+                        <span>按命途与神明筛选祈愿试炼</span>
                     </div>
                     <div class="god-filter-list" id="godFilterList"></div>
                 </div>
@@ -1534,9 +1864,9 @@
         <section class="forum-feed is-collapsed" id="forumFeed" aria-label="全站最新回响">
             <div class="forum-feed-head">
                 <div>
-                    <div class="forum-feed-kicker">ORACLE LOG · 全站动态</div>
-                    <div class="forum-feed-title">诸神回音壁</div>
-                    <div class="forum-feed-note">记录玩家的短评、回复与副本余温，点击任意回响可进入对应副本。</div>
+                    <div class="forum-feed-kicker">ORACLE LOG · 神谕留存</div>
+                    <div class="forum-feed-title">试炼回音壁</div>
+                    <div class="forum-feed-note">记录入局信徒的短评、回复与试炼余温，点击任意回响可进入对应试炼。</div>
                 </div>
                 <div class="forum-feed-actions">
                     <div class="feed-count-badge"><span>最近</span><strong>3</strong><span>条回响</span></div>
@@ -1544,12 +1874,12 @@
                 </div>
             </div>
             <div class="latest-comments-feed" id="latestCommentsFeed" hidden>
-                <div class="feed-empty"><strong>正在听取众声……</strong><span>评论流加载中</span></div>
+                <div class="feed-empty"><strong>正在听取众声……</strong><span>回响流加载中</span></div>
             </div>
         </section>
 
         <div class="dungeon-list" id="dungeonList">
-            <div class="loading"><div class="spinner"></div><br>正在从诸神的棋盘中加载副本...</div>
+                <div class="loading"><div class="spinner"></div><br>正在从切片宇宙中加载祈愿试炼...</div>
         </div>
     </div>
 
@@ -1568,31 +1898,31 @@
     <div class="modal-overlay" id="inviteModalOverlay" style="display:none;" onclick="closeInviteModal(event)">
         <div class="modal" id="inviteModal" onclick="event.stopPropagation()">
             <button class="close-btn" style="position:absolute;top:16px;right:20px;" onclick="closeInviteModal()">✕</button>
-            <h2>🔑 邀请权限</h2>
-            <p class="modal-note" id="inviteHint">输入群内邀请码后，才能参与评分、评论或投稿。</p>
+            <h2>🎲 入局谕令</h2>
+            <p class="modal-note" id="inviteHint">输入群内谕令后，才能参与神眷评定、众声回响或构筑试炼。</p>
             <div class="form-group">
-                <label>邀请码</label>
-                <input type="password" id="inviteCodeInput" placeholder="输入玩家或作者邀请码" autocomplete="off">
+                <label>入局谕令</label>
+                <input type="password" id="inviteCodeInput" placeholder="输入信徒或构筑者谕令" autocomplete="off">
             </div>
             <div class="role-guide">
-                <div class="role-card"><strong>玩家</strong><span>评分、评论，不能投稿。</span></div>
-                <div class="role-card"><strong>作者</strong><span>投稿、评分、评论。</span></div>
-                <div class="role-card"><strong>馆主</strong><span>管理与删除副本。</span></div>
+                <div class="role-card"><strong>入局信徒</strong><span>神眷评定、回响试炼，不能构筑。</span></div>
+                <div class="role-card"><strong>试炼构筑者</strong><span>构筑试炼、评定、回响。</span></div>
+                <div class="role-card"><strong>神谕馆主</strong><span>封存与管理祈愿试炼。</span></div>
             </div>
             <div class="identity-card" id="identityCard">
                 <div class="identity-card-head">
-                    <div class="identity-card-title">身份铭牌</div>
-                    <div class="identity-card-role" id="identityRoleText">未登录</div>
+                    <div class="identity-card-title">入局铭牌</div>
+                    <div class="identity-card-role" id="identityRoleText">未入局</div>
                 </div>
                 <div class="identity-row">
                     <input type="text" id="displayNameInput" maxlength="16" placeholder="绑定你的昵称，例如：无我">
                     <button type="button" class="btn btn-primary btn-sm" id="displayNameButton" onclick="saveDisplayName()">保存昵称</button>
                 </div>
-                <div class="identity-help">保存后，这个专属邀请码发评论、评分、投稿都会显示这个昵称。</div>
+                <div class="identity-help">保存后，这枚谕令在回响、评定、构筑试炼时都会显示这个昵称。</div>
             </div>
             <div class="form-actions">
                 <button type="button" class="btn btn-outline" onclick="clearInviteSession()">退出身份</button>
-                <button type="button" class="btn btn-primary" id="inviteSubmitButton" onclick="submitInviteCode()">进入圣殿</button>
+                <button type="button" class="btn btn-primary" id="inviteSubmitButton" onclick="submitInviteCode()">掷骰入局</button>
             </div>
         </div>
     </div>
@@ -1601,21 +1931,21 @@
     <div class="modal-overlay" id="submitModalOverlay" style="display:none;" onclick="closeSubmitModal(event)">
         <div class="modal" id="submitModal" onclick="event.stopPropagation()">
             <button class="close-btn" style="position:absolute;top:16px;right:20px;" onclick="closeSubmitModal()">✕</button>
-            <h2>📜 提交新副本</h2>
+            <h2>🎭 构筑祈愿试炼</h2>
             <form id="submitForm" onsubmit="submitDungeon(event)">
                 <div class="form-grid">
-                    <div class="form-group"><label>副本名字 *</label><input type="text" id="dungeonName" placeholder="为你的试炼命名..." required maxlength="60"></div>
-                    <div class="form-group"><label>作者名字 *</label><input type="text" id="dungeonCreator" placeholder="你的神名或代号..." required maxlength="30"></div>
+                    <div class="form-group"><label>试炼名 *</label><input type="text" id="dungeonName" placeholder="为这枚切片宇宙命名..." required maxlength="60"></div>
+                    <div class="form-group"><label>构筑者 *</label><input type="text" id="dungeonCreator" placeholder="你的神名或代号..." required maxlength="30"></div>
                 </div>
                 <div class="form-grid compact">
                     <div class="form-group"><label>神明标签 *</label><select id="dungeonType" required><option value="记忆" selected>存在 · 记忆之神</option></select></div>
                     <div class="form-group"><label>固定人数 *</label><input type="number" id="participantCount" min="1" max="99" value="6" required></div>
-                    <div class="form-group"><label>当前周目 *</label><input type="number" id="runCount" min="1" max="999" value="1" required></div>
+                    <div class="form-group"><label>当前局数 *</label><input type="number" id="runCount" min="1" max="999" value="1" required></div>
                 </div>
                 <div class="form-group"><label>难度标签</label><select id="dungeonDifficulty"><option value="新手">新手本 —— 第一次入场也能跑</option><option value="低">低难 —— 轻量机制与短流程</option><option value="中" selected>中难 —— 标准挑战强度</option><option value="高">高难 —— 需要配合或硬核机制</option></select></div>
-                <div class="form-group"><label>副本简介 *</label><textarea id="dungeonDesc" placeholder="描述副本背景、主要机制、胜负条件或特别之处..." required maxlength="1500"></textarea></div>
-                <div class="form-group"><label>作者置顶说明（可选）</label><textarea id="pinnedNoteInput" placeholder="可以写开本时间、注意事项、车卡要求、作者补充说明..." maxlength="800"></textarea></div>
-                <div class="form-actions"><button type="button" class="btn btn-outline" onclick="closeSubmitModal()">取消</button><button type="submit" class="btn btn-primary">✨ 献上祭品</button></div>
+                <div class="form-group"><label>试炼简介 *</label><textarea id="dungeonDesc" placeholder="记录试炼背景、主要机制、胜负条件或特别之处..." required maxlength="1500"></textarea></div>
+                <div class="form-group"><label>构筑者置顶神谕（可选）</label><textarea id="pinnedNoteInput" placeholder="可以写开本时间、注意事项、车卡要求、构筑者补充神谕..." maxlength="800"></textarea></div>
+                <div class="form-actions"><button type="button" class="btn btn-outline" onclick="closeSubmitModal()">取消</button><button type="submit" class="btn btn-primary">✨ 降下试炼</button></div>
             </form>
         </div>
     </div>
@@ -1663,15 +1993,24 @@
         function setLocalData(key, value) { try { localStorage.setItem('fog_' + key, JSON.stringify(value)); } catch {} }
 
         const INVITE_STORAGE_KEY = 'invite_session_v1';
-        const ROLE_LABELS = { player: '玩家', author: '作者', admin: '馆主' };
+        const ROLE_LABELS = { player: '入局信徒', author: '试炼构筑者', admin: '神谕馆主' };
         const GOD_GROUPS = [
             { path: '生命', className: 'path-life', gods: ['诞育', '繁荣', '死亡'] },
-            { path: '沉沦', className: 'path-fall', gods: ['污堕', '腐朽', '湮灭'] },
-            { path: '文明', className: 'path-civil', gods: ['秩序', '真理', '战争'] },
-            { path: '混沌', className: 'path-chaos', gods: ['混乱', '痴愚', '沉默'] },
             { path: '存在', className: 'path-exist', gods: ['记忆', '时间'] },
-            { path: '虚无', className: 'path-void', gods: ['欺诈', '命运'] }
+            { path: '文明', className: 'path-civil', gods: ['秩序', '真理', '战争'] },
+            { path: '虚无', className: 'path-void', gods: ['欺诈', '命运'] },
+            { path: '混沌', className: 'path-chaos', gods: ['混乱', '痴愚'] },
+            { path: '湮灭', className: 'path-fall', gods: ['污堕', '腐朽', '湮灭', '沉沦'] }
         ];
+        const GOD_ALIASES = { 沉默: '沉沦' };
+        const PATH_META = {
+            生命: { sigil: '✦', tone: '苔青 / 腐木暗绿 / 浅琥珀柔光', edict: '感孕生命，行育自然；拥抱繁行，创造新生' },
+            湮灭: { sigil: '◒', tone: '深墨黑 / 暗灰浊雾', edict: '自溺 / 自闭 / 自娱 / 无趣' },
+            文明: { sigil: '▣', tone: '赭红 / 暗铜 / 岩浆橙', edict: '寻找秩序；纷争' },
+            混沌: { sigil: '✺', tone: '灰黄雾霭 / 破碎黑纹', edict: '占卜；生命皆痴，文明皆愚' },
+            存在: { sigil: '◇', tone: '冷银灰 / 雾蓝 / 暗紫流光', edict: '敬献一段记忆；精准守时' },
+            虚无: { sigil: '◈', tone: '暗鎏金 / 螺旋迷纹紫 / 小丑灰', edict: '不辨真伪，勿论虚实；欺骗' }
+        };
         const DIFFICULTY_OPTIONS = [
             { value: '新手', label: '新手本' },
             { value: '低', label: '低难' },
@@ -1709,13 +2048,14 @@
             const identityRoleText = document.getElementById('identityRoleText');
             const displayNameInput = document.getElementById('displayNameInput');
             if (roleBadge) {
-                roleBadge.textContent = role ? `${inviteSession?.name || ROLE_LABELS[role]} · ${ROLE_LABELS[role]}权限` : '访客只读';
+                roleBadge.textContent = role ? `${inviteSession?.name || ROLE_LABELS[role]} · ${ROLE_LABELS[role]}` : '旁观者只读';
                 roleBadge.classList.toggle('active', !!role);
+                roleBadge.dataset.role = role || 'guest';
             }
-            if (inviteButton) inviteButton.textContent = role ? '🔑 切换邀请' : '🔑 输入邀请';
-            if (submitButton) submitButton.title = canSubmit() ? '提交新副本' : '需要作者邀请码';
+            if (inviteButton) inviteButton.textContent = role ? '🎲 重验谕令' : '🎲 验入局谕令';
+            if (submitButton) submitButton.title = canSubmit() ? '构筑祈愿试炼' : '需要构筑者谕令';
             if (identityCard) identityCard.classList.toggle('active', !!role);
-            if (identityRoleText) identityRoleText.textContent = role ? `${ROLE_LABELS[role]}权限` : '未登录';
+            if (identityRoleText) identityRoleText.textContent = role ? `${ROLE_LABELS[role]}` : '未入局';
             if (displayNameInput && role) displayNameInput.value = inviteSession?.name || ROLE_LABELS[role];
         }
 
@@ -1725,14 +2065,14 @@
 
         function requireInvite(roles, message) {
             if (USE_LOCAL_FALLBACK || canUseRole(roles)) return true;
-            openInviteModal(message || '请先输入邀请码。');
+            openInviteModal(message || '请先验入局谕令。');
             return false;
         }
 
         async function invokeDungeonAction(action, payload = {}, codeOverride = null) {
             const inviteCode = codeOverride ?? inviteSession?.code;
             if (!USE_LOCAL_FALLBACK && !inviteCode) {
-                return { data: null, error: { message: '请先输入邀请码' } };
+                return { data: null, error: { message: '请先验入局谕令' } };
             }
             const response = await fetch(DUNGEON_ACTION_URL, {
                 method: 'POST',
@@ -1755,7 +2095,7 @@
             if (!name) return { error: { message: '昵称不能为空' } };
             if (/[<>@#]/.test(name)) return { error: { message: '昵称不能包含特殊符号' } };
             if (USE_LOCAL_FALLBACK) {
-                if (!inviteSession) return { error: { message: '请先输入邀请码' } };
+                if (!inviteSession) return { error: { message: '请先验入局谕令' } };
                 saveInviteSession({ ...inviteSession, name });
                 return { data: { display_name: name }, error: null, name };
             }
@@ -1887,11 +2227,11 @@
             if (USE_LOCAL_FALLBACK) {
                 const comments = getLocalData('comments', []);
                 const comment = comments.find(c => c.id === commentId);
-                if (!comment) return { error: { message: '评论不存在' } };
-                if (comment.invite_code_hash !== (inviteSession?.code || 'local') && !isAdmin()) return { error: { message: '只能删除自己的评论' } };
+                if (!comment) return { error: { message: '回响不存在' } };
+                if (comment.invite_code_hash !== (inviteSession?.code || 'local') && !isAdmin()) return { error: { message: '只能抹去自己的回响' } };
                 comment.is_deleted = true;
                 comment.deleted_at = new Date().toISOString();
-                comment.content = '此评论已被删除';
+                comment.content = '此回响已被抹去';
                 setLocalData('comments', comments);
                 return { data: [comment], error: null };
             }
@@ -1902,7 +2242,7 @@
             if (USE_LOCAL_FALLBACK) {
                 const dungeons = getLocalData('dungeons', []);
                 const d = dungeons.find(d => d.id === dungeonId);
-                if (!d) return { error: { message: '副本未找到' } };
+                if (!d) return { error: { message: '试炼未找到' } };
                 d.pinned_note = pinnedNote.trim();
                 setLocalData('dungeons', dungeons);
                 return { data: [d], error: null };
@@ -1926,10 +2266,10 @@
                 const cleared = getLocalData('cleared', {});
                 const dungeons = getLocalData('dungeons', []);
                 const d = dungeons.find(d => d.id === dungeonId);
-                if (!d) return { error: { message: '副本未找到' } };
+                if (!d) return { error: { message: '试炼未找到' } };
                 const run = Number(d.run_count || d.runCount || 1);
                 const key = `${dungeonId}:${run}`;
-                if (cleared[key]) return { error: { message: '你已经登记过本周目通过了' } };
+                if (cleared[key]) return { error: { message: '你已经登记过本局通过了' } };
                 cleared[key] = true;
                 d.clear_count = Number(d.clear_count || d.clearCount || 0) + 1;
                 const slots = Number(d.participant_count || d.participantCount || 1) * run;
@@ -1949,7 +2289,7 @@
             if (USE_LOCAL_FALLBACK) {
                 const dungeons = getLocalData('dungeons', []);
                 const d = dungeons.find(d => d.id === dungeonId);
-                if (!d) return { error: { message: '副本未找到' } };
+                if (!d) return { error: { message: '试炼未找到' } };
                 d.run_count = Number(d.run_count || d.runCount || 1) + 1;
                 const slots = Number(d.participant_count || d.participantCount || 1) * d.run_count;
                 d.clear_rate = slots > 0 ? Math.round((Number(d.clear_count || 0) / slots) * 1000) / 10 : 0;
@@ -1979,13 +2319,22 @@
         }
 
         function cleanGodName(value) {
-            return String(value || '').replace(/之神$/u, '').trim();
+            const raw = String(value || '').replace(/之神$/u, '').trim();
+            return GOD_ALIASES[raw] || raw;
         }
 
         function getGodInfo(value) {
             const clean = cleanGodName(value);
             const found = getAllGods().find(item => item.god === clean);
             return found ? { ...found, known: true } : { god: clean || '未归档', path: '旧档案', className: 'path-unknown', known: false };
+        }
+
+        function getPathMetaByPath(path) {
+            return PATH_META[path] || { sigil: '✧', tone: '旧档案', edict: '谕行原文待补' };
+        }
+
+        function getPathMetaByGod(value) {
+            return getPathMetaByPath(getGodInfo(value).path);
         }
 
         function formatGodName(value) {
@@ -2014,10 +2363,13 @@
         function renderGodFilters() {
             const listEl = document.getElementById('godFilterList');
             if (!listEl) return;
-            const allButton = `<div class="god-cluster"><div class="god-cluster-title">全部</div><div class="god-cluster-buttons"><button class="god-button path-all ${selectedGod === 'all' ? 'active' : ''}" onclick="setGodFilter('all')">全神席</button></div></div>`;
+            const allButton = `<div class="god-cluster"><div class="god-cluster-title"><strong>全神席</strong><small>不限定命途，查看所有祈愿试炼。</small></div><div class="god-cluster-buttons"><button class="god-button path-all ${selectedGod === 'all' ? 'active' : ''}" onclick="setGodFilter('all')">全神席</button></div></div>`;
             const groupHtml = GOD_GROUPS.map(group => `
-                <div class="god-cluster">
-                    <div class="god-cluster-title">${escapeHtml(group.path)}命途</div>
+                <div class="god-cluster ${group.className}">
+                    <div class="god-cluster-title">
+                        <strong>${escapeHtml(getPathMetaByPath(group.path).sigil)} ${escapeHtml(group.path)}命途</strong>
+                        <small>谕行：${escapeHtml(getPathMetaByPath(group.path).edict)}</small>
+                    </div>
                     <div class="god-cluster-buttons">
                         ${group.gods.map(god => `<button class="god-button ${group.className} ${selectedGod === god ? 'active' : ''}" onclick="setGodFilter('${escapeHtml(god)}')">${escapeHtml(god)}之神</button>`).join('')}
                     </div>
@@ -2091,13 +2443,13 @@
 
         async function renderDungeonList() {
             const listEl = document.getElementById('dungeonList');
-            listEl.innerHTML = '<div class="loading"><div class="spinner"></div><br>正在从诸神的棋盘中加载副本...</div>';
+            listEl.innerHTML = '<div class="loading"><div class="spinner"></div><br>正在从切片宇宙中加载祈愿试炼...</div>';
             let dungeons = [];
             try {
                 dungeons = await fetchDungeons();
             } catch (error) {
-                console.error('加载副本失败:', error);
-                listEl.innerHTML = '<div class="empty-state"><div style="font-size:3rem;">⚠️</div><p>副本加载失败，请刷新页面再试。</p></div>';
+                console.error('加载试炼失败:', error);
+                listEl.innerHTML = '<div class="empty-state"><div style="font-size:3rem;">⚠️</div><p>祈愿试炼加载失败，请刷新页面再试。</p></div>';
                 return;
             }
             if (searchQuery.trim()) {
@@ -2125,7 +2477,7 @@
             else if (currentSort === 'comments') dungeons.sort((a,b) => (b.comment_count||0)-(a.comment_count||0));
             if (!dungeons.length) {
                 const filtered = searchQuery || selectedGod !== 'all' || selectedDifficulty !== 'all';
-                listEl.innerHTML = `<div class="empty-state"><div style="font-size:3rem;">♟️</div><p>${filtered ? '这个神席暂时没有匹配的副本，换个神明或难度试试。' : '排行榜上空无一物……<br>成为第一个献上副本的探索者吧！'}</p></div>`;
+                listEl.innerHTML = `<div class="empty-state"><div style="font-size:3rem;">🎲</div><p>${filtered ? '这个神席暂时没有匹配的试炼，换个神明或难度试试。' : '神谕留存地尚无试炼……<br>成为第一位构筑祈愿试炼的丑角吧！'}</p></div>`;
                 return;
             }
             listEl.innerHTML = dungeons.map((d,i) => {
@@ -2133,24 +2485,29 @@
                 const godLabel = formatGodName(d.type);
                 const godPath = formatGodPath(d.type);
                 const godClass = getGodClass(d.type);
+                const pathMeta = getPathMetaByGod(d.type);
                 const difficultyLabel = formatDifficulty(d.difficulty);
                 return `
-                <div class="dungeon-card" onclick="openDetail('${escapeHtml(d.id)}')">
+                <div class="dungeon-card ${godClass}" onclick="openDetail('${escapeHtml(d.id)}')">
+                    <div class="card-path-rune ${godClass}">
+                        <span>${escapeHtml(pathMeta.sigil)}</span>
+                        <strong>${escapeHtml(godPath)}命途</strong>
+                        <em>${escapeHtml(pathMeta.edict)}</em>
+                    </div>
                     <div class="card-header">
                         <div>
                             <span style="font-size:1.1rem;margin-right:8px;">${rank}</span>
                             <span class="card-title">${escapeHtml(d.name||'未命名')}</span>
                             <div class="card-meta">
-                                <span>👤 ${escapeHtml(d.creator||'匿名')}</span>
+                                <span class="identity-chip author">🎭 构筑者 ${escapeHtml(d.creator||'匿名')}</span>
                                 <span class="tag god-tag ${godClass}">${escapeHtml(godLabel)}</span>
-                                <span class="tag path-tag ${godClass}">${escapeHtml(godPath)}命途</span>
                                 <span class="tag ${getDiffClass(d.difficulty)}">${escapeHtml(difficultyLabel)}</span>
-                                <span style="font-size:0.7rem;">🕐 ${formatDate(d.created_at)}</span>
+                                <span style="font-size:0.7rem;">🎲 ${formatDate(d.created_at)}降下</span>
                             </div>
                             <div class="metric-strip">
                                 <span class="metric-pill">👥 <strong>${formatParticipants(d)}</strong></span>
-                                <span class="metric-pill">🔁 <strong>${formatRunCount(d)}</strong></span>
-                                <span class="metric-pill">🎯 <strong>${formatClearRate(d)}</strong></span>
+                                <span class="metric-pill">🎲 <strong>${formatRunCount(d)}</strong></span>
+                                <span class="metric-pill">裂隙通关 <strong>${formatClearRate(d)}</strong></span>
                                 <span class="metric-pill">💬 <strong>${d.comment_count||0}</strong></span>
                             </div>
                         </div>
@@ -2182,7 +2539,7 @@
             return getParticipantCount(d) * getRunCount(d);
         }
         function formatRunCount(d) {
-            return `第${getRunCount(d)}周目`;
+            return `第${getRunCount(d)}局`;
         }
         function formatClearRate(d) {
             const stored = Number(d.clear_rate ?? d.clearRate);
@@ -2254,7 +2611,7 @@
 
         function renderComments(comments) {
             const roots = buildCommentTree(comments);
-            if (!roots.length) return '<div class="no-comments">尚无评论，成为第一个留下印记的探索者。</div>';
+            if (!roots.length) return '<div class="no-comments">尚无回响，成为第一位留下神谕印记的入局者。</div>';
             return roots.map((comment, index) => renderCommentNode(comment, 0, index + 1)).join('');
         }
 
@@ -2265,7 +2622,7 @@
         function renderFeedbackSummary(summary) {
             if (!summary.length) return '<div class="feedback-summary-title">暂无通关反馈标签</div>';
             return `
-                <div class="feedback-summary-title">玩家通关反馈</div>
+                <div class="feedback-summary-title">入局者通关反馈</div>
                 <div class="feedback-summary-list">
                     ${summary.map(item => `<span class="feedback-summary-pill">${escapeHtml(item.tag)} × ${Number(item.tag_count || 0)}</span>`).join('')}
                 </div>`;
@@ -2276,15 +2633,15 @@
             if (!feed) return;
             const comments = await fetchLatestComments(3);
             if (!comments.length) {
-                feed.innerHTML = '<div class="feed-empty"><strong>神谕石壁暂时无声</strong><span>等第一位玩家留下评论，新的回响会出现在这里。</span></div>';
+                feed.innerHTML = '<div class="feed-empty"><strong>神谕石壁暂时无声</strong><span>等第一位入局者留下回响，新的神谕会出现在这里。</span></div>';
                 return;
             }
             const feedGlyphs = ['♟', '✦', '◈', '◇', '✧', '✷', '✹', '✺'];
             const feedMarks = ['Ⅰ', 'Ⅱ', 'Ⅲ', 'Ⅳ', 'Ⅴ', 'Ⅵ', 'Ⅶ', 'Ⅷ'];
             feed.innerHTML = comments.map((comment, index) => {
                 const dungeon = comment.dungeon || {};
-                const title = dungeon.name || '未知副本';
-                const action = comment.parent_comment_id ? '楼中回复' : '留下评论';
+                const title = dungeon.name || '未知试炼';
+                const action = comment.parent_comment_id ? '楼中回响' : '留下回响';
                 const godLabel = dungeon.type ? formatGodName(dungeon.type) : '未归档神明';
                 const godPath = dungeon.type ? `${formatGodPath(dungeon.type)}命途` : '未知命途';
                 const godClass = dungeon.type ? getGodClass(dungeon.type) : 'path-unknown';
@@ -2315,26 +2672,27 @@
             currentDetailId = id;
             replyTarget = null;
             const dungeons = await fetchDungeons(); const d = dungeons.find(d=>d.id===id);
-            if(!d){showToast('副本未找到');return;}
+            if(!d){showToast('试炼未找到');return;}
             const comments = await fetchComments(id);
             const feedbackSummary = await fetchClearFeedbackSummary(id);
             const rated = await checkHasRated(id);
             const locked = !canInteract();
             const ratingLocked = rated || locked;
-            const ratingText = rated ? '✅ 你已经献上评价' : (locked ? '🔑 输入邀请码后可评分' : '👆 点击星星赐福');
+            const ratingText = rated ? '✅ 你已经献上神眷评定' : (locked ? '🎲 验入局谕令后可评定试炼' : '👆 点击星星为此试炼赐福');
             const commentLockedAttrs = locked ? 'disabled' : '';
-            const commentPlaceholder = locked ? '输入玩家或作者邀请码后可评论' : '写下你的评论...';
+            const commentPlaceholder = locked ? '验入局谕令后可留下回响' : '写下你的试炼回响...';
             const runCount = getRunCount(d);
             const clearLocalKey = `${id}:${runCount}:${inviteSession?.code || 'guest'}`;
             const clearDone = !!getLocalData('cleared_supabase', {})[clearLocalKey];
             const clearAction = locked
-                ? `openInviteModal('输入玩家或作者邀请码后可登记通关。')`
+                ? `openInviteModal('验入局谕令后可登记通关。')`
                 : (clearDone ? '' : `markClearedUI('${escapeHtml(id)}')`);
-            const clearButtonText = locked ? '输入邀请' : (clearDone ? '本周目已登记' : '我已通过本周目');
+            const clearButtonText = locked ? '验入局谕令' : (clearDone ? '本局已登记' : '我已通过本局');
             const clearRateNumber = Number.parseFloat(formatClearRate(d)) || 0;
             const godLabel = formatGodName(d.type);
             const godPath = formatGodPath(d.type);
             const godClass = getGodClass(d.type);
+            const pathMeta = getPathMetaByGod(d.type);
             const difficultyLabel = formatDifficulty(d.difficulty);
             const activeCommentCount = comments.filter(c => !c.is_deleted).length;
             const pinnedNote = d.pinned_note || '';
@@ -2342,13 +2700,13 @@
             const pinnedNoteHtml = pinnedNote || canEditNote ? `
                 <div class="pinned-note">
                     <div class="pinned-note-head">
-                        <span>📌 作者置顶说明</span>
+                        <span>📌 构筑者置顶神谕</span>
                         ${canEditNote ? `<button class="text-action" onclick="togglePinnedEditor()">编辑</button>` : ''}
                     </div>
-                    <div class="pinned-note-body" id="pinnedNoteBody">${pinnedNote ? escapeHtml(pinnedNote) : '作者还没有写置顶说明。'}</div>
+                    <div class="pinned-note-body" id="pinnedNoteBody">${pinnedNote ? escapeHtml(pinnedNote) : '构筑者还没有留下置顶神谕。'}</div>
                     ${canEditNote ? `
                         <div id="pinnedNoteEditor" style="display:none;margin-top:10px;">
-                            <textarea id="pinnedNoteTextarea" maxlength="800" placeholder="写下开本时间、注意事项、车卡要求、作者补充说明...">${escapeHtml(pinnedNote)}</textarea>
+                            <textarea id="pinnedNoteTextarea" maxlength="800" placeholder="写下开本时间、注意事项、车卡要求、构筑者补充神谕...">${escapeHtml(pinnedNote)}</textarea>
                             <div class="form-actions" style="margin-top:10px;">
                                 <button class="btn btn-outline btn-sm" onclick="togglePinnedEditor(false)">取消</button>
                                 <button class="btn btn-primary btn-sm" onclick="savePinnedNoteUI('${escapeHtml(id)}')">保存置顶</button>
@@ -2358,33 +2716,37 @@
             document.getElementById('detailContent').innerHTML = `
                 <h2>${escapeHtml(d.name)}</h2>
                 <div class="detail-meta">
-                    <span>👤 ${escapeHtml(d.creator)}</span>
+                    <span>🎭 试炼构筑者 ${escapeHtml(d.creator)}</span>
                     <span class="tag god-tag ${godClass}">${escapeHtml(godLabel)}</span>
                     <span class="tag path-tag ${godClass}">${escapeHtml(godPath)}命途</span>
                     <span class="tag ${getDiffClass(d.difficulty)}">${escapeHtml(difficultyLabel)}</span>
                     <span>👥 ${formatParticipants(d)}</span>
-                    <span>🔁 ${formatRunCount(d)}</span>
-                    <span>🎯 通过率 ${formatClearRate(d)}</span>
+                    <span>🎲 ${formatRunCount(d)}</span>
+                    <span>切片裂隙通关 ${formatClearRate(d)}</span>
                     <span>⭐ ${(d.avg_rating||0).toFixed(1)} (${d.rating_count||0}人)</span>
-                    <span>💬 ${activeCommentCount} 评论</span>
-                    ${canUseRole(['author','admin']) ? `<button class="btn btn-outline btn-xs" onclick="advanceRunUI('${escapeHtml(id)}')">开启下一周目</button>` : ''}
-                    ${isAdmin() ? `<button class="btn btn-danger btn-xs" onclick="deleteDungeon('${escapeHtml(id)}')">删除副本</button>` : ''}
+                    <span>💬 ${activeCommentCount} 回响</span>
+                    ${canUseRole(['author','admin']) ? `<button class="btn btn-outline btn-xs" onclick="advanceRunUI('${escapeHtml(id)}')">重掷下一局</button>` : ''}
+                    ${isAdmin() ? `<button class="btn btn-danger btn-xs" onclick="deleteDungeon('${escapeHtml(id)}')">封存试炼</button>` : ''}
                 </div>
                 ${pinnedNoteHtml}
-                <div class="detail-desc">${escapeHtml(d.description||'（无描述）')}</div>
+                <div class="path-dossier ${godClass}">
+                    <div class="path-dossier-title">${escapeHtml(pathMeta.sigil)} ${escapeHtml(godPath)}命途 · ${escapeHtml(godLabel)}</div>
+                    <div class="path-dossier-body"><span>专属色：</span>${escapeHtml(pathMeta.tone)}<br><span>谕行摘录：</span>${escapeHtml(pathMeta.edict)}</div>
+                </div>
+                <div class="detail-desc">${escapeHtml(d.description||'（无试炼描述）')}</div>
                 <div class="clear-panel">
                     <div class="clear-panel-head">
-                        <span class="clear-panel-title">🎯 通关记录 · ${formatRunCount(d)}</span>
+                        <span class="clear-panel-title">🎲 命运骰记录 · ${formatRunCount(d)}</span>
                         <span class="clear-rate-big">${formatClearRate(d)}</span>
                     </div>
                     <div class="clear-progress"><div class="clear-progress-fill" style="width:${Math.max(0, Math.min(100, clearRateNumber))}%"></div></div>
                     <div class="feedback-picker">
                         <div class="feedback-tags">${renderFeedbackTags(locked || clearDone)}</div>
-                        <textarea id="clearFeedbackNote" class="feedback-note" maxlength="200" placeholder="${locked ? '输入邀请码后可留下通关反馈' : (clearDone ? '本周目已登记' : '可选：写一句通关反馈，只有标签会进入公开统计')} " ${locked || clearDone ? 'disabled' : ''}></textarea>
+                        <textarea id="clearFeedbackNote" class="feedback-note" maxlength="200" placeholder="${locked ? '验入局谕令后可留下通关反馈' : (clearDone ? '本局已登记' : '可选：写一句通关反馈，只有标签会进入公开统计')} " ${locked || clearDone ? 'disabled' : ''}></textarea>
                     </div>
                     <div class="feedback-summary">${renderFeedbackSummary(feedbackSummary)}</div>
                     <div class="clear-panel-foot">
-                        <span>已通过 ${formatClearSlots(d)} 人次</span>
+                        <span>已穿越裂隙 ${formatClearSlots(d)} 人次</span>
                         <button class="btn btn-primary btn-sm" ${clearDone?'disabled':''} onclick="${clearAction}">${clearButtonText}</button>
                     </div>
                 </div>
@@ -2396,7 +2758,7 @@
                     <span class="rating-text">${ratingText}</span>
                 </div>
                 <div class="comments-section">
-                    <div class="section-title">💬 众声回响 (${activeCommentCount})</div>
+                    <div class="section-title">💬 试炼回响 (${activeCommentCount})</div>
                     <div class="comment-form">
                         <div class="reply-context" id="replyContext"><span id="replyContextText"></span><button class="text-action" onclick="clearReplyTarget()">取消回复</button></div>
                         <div class="comment-identity">
@@ -2404,7 +2766,7 @@
                             <strong>${locked ? '访客' : escapeHtml(inviteSession?.name || ROLE_LABELS[getInviteRole()] || '匿名')}</strong>
                         </div>
                         <textarea id="commentContentInput" placeholder="${commentPlaceholder}" maxlength="800" style="flex:2;" ${commentLockedAttrs}></textarea>
-                        <button class="btn btn-primary btn-sm" onclick="${locked?`openInviteModal('输入玩家或作者邀请码后可评论。')`:`submitComment('${escapeHtml(id)}')`}">${locked?'输入邀请':'发布'}</button>
+                        <button class="btn btn-primary btn-sm" onclick="${locked?`openInviteModal('验入局谕令后可留下回响。')`:`submitComment('${escapeHtml(id)}')`}">${locked?'验入局谕令':'发布回响'}</button>
                     </div>
                     <div id="commentsList">${renderComments(comments)}</div>
                 </div>`;
@@ -2416,7 +2778,7 @@
         function openInviteModal(message) {
             const overlay = document.getElementById('inviteModalOverlay');
             const hint = document.getElementById('inviteHint');
-            if (hint) hint.textContent = message || '输入群内邀请码后，才能参与评分、评论或投稿。';
+            if (hint) hint.textContent = message || '输入群内谕令后，才能参与神眷评定、试炼回响或构筑试炼。';
             updateInviteUI();
             overlay.style.display='flex';
             document.body.style.overflow='hidden';
@@ -2433,22 +2795,22 @@
             const input = document.getElementById('inviteCodeInput');
             const btn = document.getElementById('inviteSubmitButton');
             const code = input?.value.trim();
-            if (!code) { showToast('请输入邀请码'); return; }
+            if (!code) { showToast('请输入入局谕令'); return; }
             btn.disabled = true;
-            btn.textContent = '验证中...';
-            const { error, role, name } = USE_LOCAL_FALLBACK ? { error: null, role: 'author', name: '本地作者' } : await invokeDungeonAction('verifyInvite', {}, code);
+            btn.textContent = '掷骰中...';
+            const { error, role, name } = USE_LOCAL_FALLBACK ? { error: null, role: 'author', name: '本地构筑者' } : await invokeDungeonAction('verifyInvite', {}, code);
             btn.disabled = false;
-            btn.textContent = '进入圣殿';
-            if (error || !role) { showToast(`❌ ${error?.message || '邀请码无效'}`); return; }
+            btn.textContent = '掷骰入局';
+            if (error || !role) { showToast(`❌ ${error?.message || '入局谕令无效'}`); return; }
             saveInviteSession({ role, code, name: name || ROLE_LABELS[role] });
             input.value = '';
             closeInviteModal();
-            showToast(`✅ 已获得${name || ROLE_LABELS[role]}的${ROLE_LABELS[role]}权限`);
+            showToast(`✅ ${name || ROLE_LABELS[role]}已入局：${ROLE_LABELS[role]}`);
             if (currentDetailId) await openDetail(currentDetailId);
         }
 
         async function saveDisplayName() {
-            if (!inviteSession?.code) { showToast('请先输入邀请码'); return; }
+            if (!inviteSession?.code) { showToast('请先验入局谕令'); return; }
             const input = document.getElementById('displayNameInput');
             const btn = document.getElementById('displayNameButton');
             const name = cleanDisplayNameInput(input?.value);
@@ -2489,7 +2851,7 @@
             const text = document.getElementById('replyContextText');
             const input = document.getElementById('commentContentInput');
             if (context) context.style.display = 'flex';
-            if (text) text.textContent = `正在回复 ${author}，会显示在这条评论下面`;
+            if (text) text.textContent = `正在回应 ${author}，会显示在这条回响下面`;
             if (input) {
                 input.placeholder = `回复 ${author}...`;
                 input.focus();
@@ -2501,7 +2863,7 @@
             const context = document.getElementById('replyContext');
             const input = document.getElementById('commentContentInput');
             if (context) context.style.display = 'none';
-            if (input) input.placeholder = '写下你的评论...';
+            if (input) input.placeholder = '写下你的试炼回响...';
         }
 
         function togglePinnedEditor(force) {
@@ -2513,19 +2875,19 @@
         }
 
         async function savePinnedNoteUI(id) {
-            if(!requireInvite(['author','admin'], '只有副本作者或馆主可以修改置顶说明。')) return;
+            if(!requireInvite(['author','admin'], '只有试炼构筑者或神谕馆主可以修改置顶神谕。')) return;
             const note = document.getElementById('pinnedNoteTextarea')?.value || '';
             const { error } = await savePinnedNote(id, note);
             if(error){ showToast(`❌ ${error.message || '保存失败'}`); return; }
-            showToast('📌 置顶说明已更新');
+            showToast('📌 置顶神谕已更新');
             await openDetail(id);
             await renderDungeonList();
         }
 
         async function rateDungeon(id, val){
-            if(!requireInvite(['player','author','admin'], '输入玩家或作者邀请码后可评分。')) return;
+            if(!requireInvite(['player','author','admin'], '验入局谕令后可为试炼献上神眷评定。')) return;
             const {error}=await addRating(id,val);
-            if(error){ showToast(error.message?.includes('已经')?'⚠️ 你已经评价过了':`❌ ${error.message || '评分失败'}`); return; }
+            if(error){ showToast(error.message?.includes('已经')?'⚠️ 你已经献过神眷评定了':`❌ ${error.message || '评定失败'}`); return; }
             markAsRated(id);
             showToast('⭐ 神眷已降临');
             if(currentDetailId===id) await openDetail(id);
@@ -2533,13 +2895,13 @@
         }
 
         async function submitComment(id){
-            if(!requireInvite(['player','author','admin'], '输入玩家或作者邀请码后可评论。')) return;
+            if(!requireInvite(['player','author','admin'], '验入局谕令后可留下试炼回响。')) return;
             const a=inviteSession?.name || ROLE_LABELS[getInviteRole()] || '';
             const c=document.getElementById('commentContentInput')?.value.trim();
-            if(!c){showToast('请输入评论');return;}
+            if(!c){showToast('请输入回响');return;}
             const {error}=await addComment(id,a,c, replyTarget?.id || null);
-            if(error){showToast(`❌ ${error.message || '评论失败'}`);return;}
-            showToast(replyTarget ? '↩️ 回复已发布' : '💬 评论已发布');
+            if(error){showToast(`❌ ${error.message || '回响失败'}`);return;}
+            showToast(replyTarget ? '↩️ 副帖回响已发布' : '💬 主帖回响已发布');
             clearReplyTarget();
             if(document.getElementById('commentContentInput')) document.getElementById('commentContentInput').value='';
             if(currentDetailId===id) await openDetail(id);
@@ -2548,18 +2910,18 @@
         }
 
         async function deleteCommentUI(commentId){
-            if(!requireInvite(['player','author','admin'], '输入邀请码后才可删除自己的评论。')) return;
-            if(!confirm('确定删除这条评论吗？')) return;
+            if(!requireInvite(['player','author','admin'], '验入局谕令后才可删除自己的回响。')) return;
+            if(!confirm('确定抹去这条回响吗？')) return;
             const {error}=await removeComment(commentId);
             if(error){showToast(`❌ ${error.message || '删除失败'}`);return;}
-            showToast('评论已删除');
+            showToast('回响已抹去');
             if(currentDetailId) await openDetail(currentDetailId);
             await renderDungeonList();
             await renderLatestComments();
         }
 
         async function markClearedUI(id){
-            if(!requireInvite(['player','author','admin'], '输入玩家或作者邀请码后可登记通关。')) return;
+            if(!requireInvite(['player','author','admin'], '验入局谕令后可登记通关。')) return;
             const feedbackTags = getSelectedFeedbackTags();
             const feedbackNote = document.getElementById('clearFeedbackNote')?.value || '';
             const {error}=await markDungeonCleared(id, feedbackTags, feedbackNote);
@@ -2570,24 +2932,24 @@
             const cleared = getLocalData('cleared_supabase', {});
             cleared[key] = true;
             setLocalData('cleared_supabase', cleared);
-            showToast('🎯 已记录本周目通关');
+            showToast('🎲 已记录本局通关');
             if(currentDetailId===id) await openDetail(id);
             await renderDungeonList();
             await renderLatestComments();
         }
 
         async function advanceRunUI(id){
-            if(!requireInvite(['author','admin'], '只有作者或馆主可以开启下一周目。')) return;
-            if(!confirm('确定开启下一周目吗？通关率会按新的总参与人次重新计算。')) return;
+            if(!requireInvite(['author','admin'], '只有试炼构筑者或神谕馆主可以重掷下一局。')) return;
+            if(!confirm('确定重掷下一局吗？通关率会按新的总参与人次重新计算。')) return;
             const {error}=await advanceDungeonRun(id);
             if(error){ showToast(`❌ ${error.message || '开启失败'}`); return; }
-            showToast('🔁 已开启下一周目');
+            showToast('🎲 已重掷下一局');
             if(currentDetailId===id) await openDetail(id);
             await renderDungeonList();
         }
 
         function openSubmitModal(){
-            if(!requireInvite(['author','admin'], '只有作者邀请码可以投稿副本。')) return;
+            if(!requireInvite(['author','admin'], '只有试炼构筑者谕令可以构筑试炼。')) return;
             document.getElementById('submitModalOverlay').style.display='flex';
             document.body.style.overflow='hidden';
             const creatorInput = document.getElementById('dungeonCreator');
@@ -2612,7 +2974,7 @@
 
         async function submitDungeon(e){
             e.preventDefault();
-            if(!requireInvite(['author','admin'], '只有作者邀请码可以投稿副本。')) return;
+            if(!requireInvite(['author','admin'], '只有试炼构筑者谕令可以构筑试炼。')) return;
             const name=document.getElementById('dungeonName').value.trim();
             const creator=document.getElementById('dungeonCreator').value.trim();
             const difficulty=document.getElementById('dungeonDifficulty').value;
@@ -2623,26 +2985,26 @@
             const pinnedNote=document.getElementById('pinnedNoteInput')?.value.trim() || '';
             if(!name||!creator||!desc){showToast('请填写所有必填项');return;}
             if(!Number.isInteger(participantCount)||participantCount<1||participantCount>99){showToast('请检查固定人数');return;}
-            if(!Number.isInteger(runCount)||runCount<1||runCount>999){showToast('请检查当前周目');return;}
+            if(!Number.isInteger(runCount)||runCount<1||runCount>999){showToast('请检查当前局数');return;}
             const btn=e.target.querySelector('button[type="submit"]');
             btn.disabled=true;
-            btn.textContent='献上中...';
+            btn.textContent='降下中...';
             const {error}=await addDungeon({name,creator,difficulty,type,participantCount,runCount,description:desc,pinnedNote});
             btn.disabled=false;
-            btn.textContent='✨ 献上祭品';
+            btn.textContent='✨ 降下试炼';
             if(error){showToast(`❌ ${error.message || '失败'}`);return;}
-            showToast('🎉 副本已降临！');
+            showToast('🎉 祈愿试炼已降临！');
             closeSubmitModal();
             await renderDungeonList();
             await renderLatestComments();
         }
 
         async function deleteDungeon(id) {
-            if(!requireInvite(['admin'], '只有馆主邀请码可以删除副本。')) return;
-            if(!confirm('确定删除这条副本吗？评分和评论会一起消失。')) return;
+            if(!requireInvite(['admin'], '只有神谕馆主谕令可以封存试炼。')) return;
+            if(!confirm('确定封存这场试炼吗？神眷评定和回响会一起消失。')) return;
             const { error } = await removeDungeon(id);
             if(error){ showToast(`❌ ${error.message || '删除失败'}`); return; }
-            showToast('🗑️ 副本已删除');
+            showToast('🗑️ 试炼已封存');
             closeDetail();
             await renderDungeonList();
             await renderLatestComments();
@@ -2664,8 +3026,8 @@
                     { id:'s1',name:'深渊回廊',creator:'灰袍叙事者',difficulty:'中',type:'记忆',description:'在无尽深渊边缘，一座古老回廊静静等待。封印着陨落神祇的记忆碎片，踏入者将直面内心最深的恐惧……',pinned_note:'建议 6 人满员进入，第二幕需要有人记录线索。',participant_count:6,run_count:2,clear_count:6,clear_rate:50,avg_rating:4.7,rating_count:23,comment_count:8,created_at:new Date(Date.now()-7*86400000).toISOString()},
                     { id:'s2',name:'愚者之塔',creator:'星辰旅人',difficulty:'高',type:'痴愚',description:'倒悬于天空的巨塔，每一层都蕴含悖论与谜题。唯有拥抱荒诞之人，方能窥见塔顶的真相。',pinned_note:'高难解谜本，建议预留 2 小时以上。',participant_count:4,run_count:3,clear_count:9,clear_rate:75,avg_rating:4.9,rating_count:41,comment_count:15,created_at:new Date(Date.now()-3*86400000).toISOString()},
                     { id:'s3',name:'血色竞技场',creator:'铁腕判官',difficulty:'高',type:'战争',description:'上古诸神取乐的竞技场，回响着古老战吼。策略与力量并重，每一战都可能揭开神戏一角。',participant_count:8,run_count:1,clear_count:3,clear_rate:37.5,avg_rating:4.3,rating_count:17,comment_count:5,created_at:new Date(Date.now()-14*86400000).toISOString()},
-                    { id:'s4',name:'雾隐村',creator:'迷雾行者',difficulty:'低',type:'沉默',description:'永远被浓雾笼罩的村庄，平静生活之下，每个夜晚雾中都会出现不可名状之物。',participant_count:5,run_count:2,clear_count:4,clear_rate:40,avg_rating:4.1,rating_count:12,comment_count:4,created_at:new Date(Date.now()-5*86400000).toISOString()},
-                    { id:'s5',name:'诸神棋盘',creator:'执棋人',difficulty:'中',type:'命运',description:'整个副本就是一张巨大的棋盘，参与者成为诸神的棋子。每一步都可能改变命运。',participant_count:6,run_count:4,clear_count:18,clear_rate:75,avg_rating:4.6,rating_count:30,comment_count:11,created_at:new Date(Date.now()-10*86400000).toISOString()}
+                    { id:'s4',name:'雾隐村',creator:'迷雾行者',difficulty:'低',type:'沉沦',description:'永远被浓雾笼罩的村庄，平静生活之下，每个夜晚雾中都会出现不可名状之物。',participant_count:5,run_count:2,clear_count:4,clear_rate:40,avg_rating:4.1,rating_count:12,comment_count:4,created_at:new Date(Date.now()-5*86400000).toISOString()},
+                    { id:'s5',name:'诸神棋盘',creator:'执棋人',difficulty:'中',type:'命运',description:'整场试炼就是一张巨大的棋盘，参与者成为诸神的棋子。每一步都可能改变命运。',participant_count:6,run_count:4,clear_count:18,clear_rate:75,avg_rating:4.6,rating_count:30,comment_count:11,created_at:new Date(Date.now()-10*86400000).toISOString()}
                 ];
                 setLocalData('dungeons',samples);
                 setLocalData('comments',[
