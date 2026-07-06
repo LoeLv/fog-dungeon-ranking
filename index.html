@@ -258,6 +258,40 @@
             border-color: var(--gold-dark);
             box-shadow: 0 0 0 4px rgba(184, 134, 11, 0.08);
         }
+        .filter-toggle-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 9px;
+            min-height: 40px;
+            padding: 8px 14px;
+            border-radius: 999px;
+            border: 1px solid rgba(208,170,85,0.28);
+            background: rgba(208,170,85,0.07);
+            color: var(--gold-light);
+            font-family: var(--font-body);
+            font-size: 0.8rem;
+            font-weight: 800;
+            cursor: pointer;
+            transition: all var(--transition);
+            white-space: nowrap;
+        }
+        .filter-toggle-btn:hover {
+            border-color: rgba(231,207,138,0.46);
+            background: rgba(208,170,85,0.12);
+            color: var(--text-bright);
+        }
+        .filter-toggle-btn small {
+            color: var(--text-muted);
+            font-size: 0.68rem;
+            font-weight: 600;
+        }
+        .advanced-filters {
+            display: grid;
+            gap: 12px;
+        }
+        .advanced-filters[hidden] {
+            display: none;
+        }
         .god-filter-panel {
             position: relative;
             display: grid;
@@ -1333,6 +1367,10 @@
             .controls { align-items: stretch; }
             .control-topline { align-items: stretch; }
             .controls .sort-group { width: 100%; }
+            .filter-toggle-btn {
+                width: 100%;
+                justify-content: space-between;
+            }
             .god-cluster { grid-template-columns: 1fr; gap: 4px; }
             .god-cluster-title { padding-top: 0; }
             .search-input { max-width: none; width: 100%; }
@@ -1373,20 +1411,27 @@
         <div class="controls">
             <div class="control-topline">
                 <div class="sort-group">
-                    <button class="sort-btn active" data-sort="rating" onclick="setSort('rating', this)">⭐ 神眷评分</button>
+                    <button class="sort-btn active" data-sort="liked" onclick="setSort('liked', this)">🔥 点赞多</button>
+                    <button class="sort-btn" data-sort="rating" onclick="setSort('rating', this)">⭐ 神眷评分</button>
                     <button class="sort-btn" data-sort="newest" onclick="setSort('newest', this)">🕐 最新降临</button>
                     <button class="sort-btn" data-sort="comments" onclick="setSort('comments', this)">💬 众声回响</button>
                 </div>
                 <input type="text" class="search-input" placeholder="🔍 搜索副本、作者、神明或命途..." oninput="debounceSearch()" id="searchInput">
+                <button class="filter-toggle-btn" id="filterToggleBtn" onclick="toggleAdvancedFilters()" aria-expanded="false">
+                    <span>✦ 筛选</span>
+                    <small id="filterSummaryText">全神席 · 全部难度</small>
+                </button>
             </div>
-            <div class="god-filter-panel" aria-label="神明分区筛选">
-                <div class="filter-heading">
-                    <span>✦ 神明分区</span>
-                    <span>按 16 位神明选择副本归属</span>
+            <div class="advanced-filters" id="advancedFilters" hidden>
+                <div class="god-filter-panel" aria-label="神明分区筛选">
+                    <div class="filter-heading">
+                        <span>✦ 神明分区</span>
+                        <span>按 16 位神明选择副本归属</span>
+                    </div>
+                    <div class="god-filter-list" id="godFilterList"></div>
                 </div>
-                <div class="god-filter-list" id="godFilterList"></div>
+                <div class="difficulty-filter" id="difficultyFilterList" aria-label="难度标签筛选"></div>
             </div>
-            <div class="difficulty-filter" id="difficultyFilterList" aria-label="难度标签筛选"></div>
         </div>
 
         <section class="forum-feed" aria-label="全站最新回响">
@@ -1396,7 +1441,7 @@
                     <div class="forum-feed-title">诸神回音壁</div>
                     <div class="forum-feed-note">记录玩家的短评、回复与副本余温，点击任意回响可进入对应副本。</div>
                 </div>
-                <div class="feed-count-badge"><span>最近</span><strong>8</strong><span>条回响</span></div>
+                <div class="feed-count-badge"><span>最近</span><strong>3</strong><span>条回响</span></div>
             </div>
             <div class="latest-comments-feed" id="latestCommentsFeed">
                 <div class="feed-empty"><strong>正在听取众声……</strong><span>评论流加载中</span></div>
@@ -1536,7 +1581,7 @@
         const CLEAR_FEEDBACK_OPTIONS = ['机制清楚', '剧情好', '氛围强', '有挑战', '偏难', '想再跑', '需要修订'];
         const LEGACY_DIFFICULTY_MAP = { 凡尘: '新手', 觉醒: '低', 超凡: '中', 神话: '高', 愚者: '高' };
         let inviteSession = getLocalData(INVITE_STORAGE_KEY, null);
-        let currentSort = 'rating', searchQuery = '', selectedGod = 'all', selectedDifficulty = 'all', searchTimeout = null, currentDetailId = null;
+        let currentSort = 'liked', searchQuery = '', selectedGod = 'all', selectedDifficulty = 'all', searchTimeout = null, currentDetailId = null;
         let replyTarget = null;
 
         function getInviteRole() { return inviteSession?.role || null; }
@@ -1651,7 +1696,7 @@
             return fallback.error ? [] : (fallback.data || []).map(c => ({ ...c, parent_comment_id: null, is_deleted: false }));
         }
 
-        async function fetchLatestComments(limit = 8) {
+        async function fetchLatestComments(limit = 3) {
             if (USE_LOCAL_FALLBACK) {
                 const dungeons = getLocalData('dungeons', []);
                 return getLocalData('comments', [])
@@ -1886,6 +1931,29 @@
             if (!listEl) return;
             listEl.innerHTML = `<button class="difficulty-filter-btn ${selectedDifficulty === 'all' ? 'active' : ''}" onclick="setDifficultyFilter('all')">全部难度</button>` +
                 DIFFICULTY_OPTIONS.map(item => `<button class="difficulty-filter-btn ${selectedDifficulty === item.value ? 'active' : ''}" onclick="setDifficultyFilter('${item.value}')">${item.label}</button>`).join('');
+            updateFilterSummary();
+        }
+
+        function updateFilterSummary() {
+            const summary = document.getElementById('filterSummaryText');
+            if (!summary) return;
+            const godText = selectedGod === 'all' ? '全神席' : `${selectedGod}之神`;
+            const difficultyText = selectedDifficulty === 'all' ? '全部难度' : formatDifficulty(selectedDifficulty);
+            summary.textContent = `${godText} · ${difficultyText}`;
+        }
+
+        function toggleAdvancedFilters(force) {
+            const panel = document.getElementById('advancedFilters');
+            const button = document.getElementById('filterToggleBtn');
+            if (!panel || !button) return;
+            const shouldOpen = typeof force === 'boolean' ? force : panel.hasAttribute('hidden');
+            if (shouldOpen) {
+                panel.removeAttribute('hidden');
+                button.setAttribute('aria-expanded', 'true');
+            } else {
+                panel.setAttribute('hidden', '');
+                button.setAttribute('aria-expanded', 'false');
+            }
         }
 
         function populateGodSelect() {
@@ -1898,12 +1966,14 @@
         function setGodFilter(god) {
             selectedGod = god;
             renderGodFilters();
+            updateFilterSummary();
             renderDungeonList();
         }
 
         function setDifficultyFilter(difficulty) {
             selectedDifficulty = difficulty;
             renderDifficultyFilters();
+            updateFilterSummary();
             renderDungeonList();
         }
 
@@ -1932,7 +2002,13 @@
             }
             if (selectedGod !== 'all') dungeons = dungeons.filter(d => getGodInfo(d.type).god === selectedGod);
             if (selectedDifficulty !== 'all') dungeons = dungeons.filter(d => normalizeDifficulty(d.difficulty) === selectedDifficulty);
-            if (currentSort === 'rating') dungeons.sort((a,b) => (b.avg_rating||0)-(a.avg_rating||0));
+            if (currentSort === 'liked') dungeons.sort((a,b) =>
+                (b.rating_count||0) - (a.rating_count||0) ||
+                (b.avg_rating||0) - (a.avg_rating||0) ||
+                (b.comment_count||0) - (a.comment_count||0) ||
+                new Date(b.created_at) - new Date(a.created_at)
+            );
+            else if (currentSort === 'rating') dungeons.sort((a,b) => (b.avg_rating||0)-(a.avg_rating||0));
             else if (currentSort === 'newest') dungeons.sort((a,b) => new Date(b.created_at) - new Date(a.created_at));
             else if (currentSort === 'comments') dungeons.sort((a,b) => (b.comment_count||0)-(a.comment_count||0));
             if (!dungeons.length) {
@@ -1941,7 +2017,7 @@
                 return;
             }
             listEl.innerHTML = dungeons.map((d,i) => {
-                const rank = currentSort==='rating' && i<3 ? ['🥇','🥈','🥉'][i] : `#${i+1}`;
+                const rank = (currentSort==='rating' || currentSort==='liked') && i<3 ? ['🥇','🥈','🥉'][i] : `#${i+1}`;
                 const godLabel = formatGodName(d.type);
                 const godPath = formatGodPath(d.type);
                 const godClass = getGodClass(d.type);
@@ -2076,7 +2152,7 @@
         async function renderLatestComments() {
             const feed = document.getElementById('latestCommentsFeed');
             if (!feed) return;
-            const comments = await fetchLatestComments(8);
+            const comments = await fetchLatestComments(3);
             if (!comments.length) {
                 feed.innerHTML = '<div class="feed-empty"><strong>神谕石壁暂时无声</strong><span>等第一位玩家留下评论，新的回响会出现在这里。</span></div>';
                 return;
