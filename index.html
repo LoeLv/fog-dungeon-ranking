@@ -8,9 +8,9 @@
     </script>
     <style>
         :root {
-            --bg: #0b0b10;
-            --bg-card: #12121f;
-            --bg-card-hover: #1a1a2c;
+            --bg: #101218;
+            --bg-card: #12141b;
+            --bg-card-hover: #181b24;
             --gold: #c5a668;
             --gold-light: #e7cf8a;
             --gold-dark: #7a5d2e;
@@ -21,22 +21,23 @@
             --accent: #a67c2e;
             --danger: #8b3a3a;
             --star-color: #e2b04a;
-            --path-life: #77c37b;
-            --path-fall: #6d7683;
-            --path-civil: #d0aa55;
-            --path-chaos: #9a78e0;
-            --path-exist: #75bdd0;
-            --path-void: #d7d7e8;
-            --path-life-soft: rgba(119, 195, 123, 0.12);
-            --path-fall-soft: rgba(109, 118, 131, 0.14);
-            --path-civil-soft: rgba(208, 170, 85, 0.12);
-            --path-chaos-soft: rgba(154, 120, 224, 0.13);
-            --path-exist-soft: rgba(117, 189, 208, 0.13);
-            --path-void-soft: rgba(215, 215, 232, 0.1);
-            --difficulty-newbie: #7bbf8c;
-            --difficulty-low: #69a9cf;
-            --difficulty-medium: #d0aa55;
+            --path-life: #6fa879;
+            --path-fall: #676d76;
+            --path-civil: #9f4938;
+            --path-chaos: #a69b69;
+            --path-exist: #7aaec2;
+            --path-void: #d3af61;
+            --path-life-soft: rgba(111, 168, 121, 0.06);
+            --path-fall-soft: rgba(103, 109, 118, 0.06);
+            --path-civil-soft: rgba(159, 73, 56, 0.06);
+            --path-chaos-soft: rgba(166, 155, 105, 0.06);
+            --path-exist-soft: rgba(122, 174, 194, 0.06);
+            --path-void-soft: rgba(211, 175, 97, 0.06);
+            --difficulty-newbie: #d8d8d0;
+            --difficulty-low: #d8d8d0;
+            --difficulty-medium: #7aaec2;
             --difficulty-high: #d76b4a;
+            --divine-blood: #8b2f30;
             --radius: 12px;
             --radius-sm: 8px;
             --shadow: 0 4px 24px rgba(0, 0, 0, 0.5);
@@ -60,9 +61,14 @@
             background: var(--bg);
             background-image:
                 var(--bg-pattern),
-                linear-gradient(118deg, rgba(213,178,91,0.07) 0 1px, transparent 1px 46%, rgba(117,189,208,0.06) 47%, transparent 49%),
-                repeating-linear-gradient(90deg, rgba(255,255,255,0.012) 0 1px, transparent 1px 72px),
-                repeating-linear-gradient(0deg, rgba(255,255,255,0.01) 0 1px, transparent 1px 72px);
+                linear-gradient(118deg, transparent 0 28%, var(--path-life-soft) 28.4%, transparent 30%),
+                linear-gradient(62deg, transparent 0 39%, var(--path-exist-soft) 39.4%, transparent 41%),
+                linear-gradient(143deg, transparent 0 49%, var(--path-void-soft) 49.4%, transparent 51%),
+                linear-gradient(101deg, transparent 0 60%, var(--path-civil-soft) 60.3%, transparent 61.5%),
+                linear-gradient(36deg, transparent 0 70%, var(--path-chaos-soft) 70.3%, transparent 72%),
+                linear-gradient(154deg, transparent 0 77%, var(--path-fall-soft) 77.3%, transparent 79%),
+                repeating-linear-gradient(90deg, rgba(255,255,255,0.010) 0 1px, transparent 1px 72px),
+                repeating-linear-gradient(0deg, rgba(255,255,255,0.009) 0 1px, transparent 1px 72px);
             color: var(--text);
             font-family: var(--font-body);
             min-height: 100vh;
@@ -77,39 +83,66 @@
             pointer-events: none;
             z-index: -1;
             background:
-                linear-gradient(118deg, transparent 0 45%, rgba(231,207,138,0.1) 46%, rgba(117,189,208,0.08) 48%, transparent 51%),
-                conic-gradient(from 210deg at 70% 18%, transparent 0deg, rgba(117,189,208,0.06) 18deg, transparent 42deg, rgba(154,120,224,0.05) 62deg, transparent 96deg);
-            opacity: 0.78;
+                linear-gradient(118deg, transparent 0 45%, rgba(231,207,138,0.06) 46%, rgba(117,189,208,0.05) 48%, transparent 51%),
+                linear-gradient(64deg, transparent 0 32%, rgba(111,168,121,0.045) 32.4%, transparent 34%),
+                linear-gradient(151deg, transparent 0 67%, rgba(159,73,56,0.038) 67.4%, transparent 69%);
+            opacity: 0.9;
         }
-        body::after {
-            content: "🎭   🎲";
+        .ambient-mask {
             position: fixed;
-            right: clamp(18px, 5vw, 86px);
-            top: 120px;
+            top: 28vh;
+            z-index: 0;
             pointer-events: none;
-            z-index: -1;
-            color: rgba(231,207,138,0.06);
-            font-size: clamp(4.2rem, 12vw, 10rem);
-            letter-spacing: 0.16em;
-            filter: blur(0.5px);
+            color: rgba(231,207,138,0.05);
+            font-size: clamp(8rem, 18vw, 18rem);
+            line-height: 1;
+            filter: grayscale(1) blur(0.4px);
+            transform: rotate(-8deg);
+            user-select: none;
+        }
+        .ambient-mask-left {
+            left: max(-72px, -5vw);
+        }
+        .ambient-mask-right {
+            right: max(-76px, -5vw);
+            transform: rotate(8deg) scaleX(-1);
         }
 
         /* ========== 顶部导航 ========== */
         .header {
-            background: rgba(14, 14, 24, 0.9);
+            background: rgba(13, 15, 22, 0.92);
             backdrop-filter: blur(20px);
             -webkit-backdrop-filter: blur(20px);
-            border-bottom: 1px solid var(--border);
-            padding: 14px 28px;
-            display: flex;
+            border-bottom: 1px solid rgba(231,207,138,0.12);
+            padding: 14px 28px 17px;
+            display: grid;
+            grid-template-columns: minmax(260px, 0.9fr) minmax(280px, 1.2fr) minmax(280px, 0.9fr);
             align-items: center;
-            justify-content: space-between;
-            flex-wrap: wrap;
-            gap: 12px;
+            gap: 18px;
             position: sticky;
             top: 0;
             z-index: 100;
             box-shadow: 0 4px 30px rgba(0, 0, 0, 0.6);
+        }
+        .header::after {
+            content: "生命 ✦ 存在 ◇ 文明 ▣ 虚无 ◈ 混沌 ✺ 湮灭 ◒";
+            position: absolute;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            height: 1px;
+            overflow: hidden;
+            color: rgba(231,207,138,0.44);
+            font-size: 0.6rem;
+            letter-spacing: 1.6em;
+            white-space: nowrap;
+            background: linear-gradient(90deg, transparent, rgba(231,207,138,0.36), transparent);
+            text-shadow: 0 0 10px rgba(231,207,138,0.35);
+            animation: runeDrift 18s linear infinite;
+        }
+        @keyframes runeDrift {
+            from { text-indent: -18em; }
+            to { text-indent: 18em; }
         }
         .header .logo {
             display: flex;
@@ -123,9 +156,41 @@
             white-space: nowrap;
             text-shadow: 0 0 20px rgba(200, 160, 80, 0.3);
         }
-        .header .logo .icon {
-            font-size: 2rem;
-            filter: drop-shadow(0 0 8px rgba(200, 160, 80, 0.5));
+        .brand-emblem {
+            position: relative;
+            width: 62px;
+            height: 50px;
+            flex: 0 0 62px;
+            display: grid;
+            place-items: center;
+            border-radius: 15px;
+            border: 1px solid rgba(231,207,138,0.16);
+            background:
+                linear-gradient(135deg, rgba(211,175,97,0.12), transparent 48%),
+                rgba(0,0,0,0.28);
+            box-shadow: 0 0 24px rgba(211,175,97,0.12);
+        }
+        .brand-emblem .mask-mark {
+            position: absolute;
+            left: 5px;
+            top: 2px;
+            z-index: 1;
+            font-size: 1.7rem;
+            opacity: 0.96;
+            filter: drop-shadow(0 0 8px rgba(231,207,138,0.28));
+        }
+        .brand-emblem .dice-mark {
+            position: absolute;
+            right: 4px;
+            bottom: 2px;
+            z-index: 2;
+            font-size: 1.46rem;
+            transform: rotate(-9deg);
+            filter: drop-shadow(0 0 8px rgba(122,174,194,0.18));
+        }
+        .brand-copy {
+            display: grid;
+            gap: 2px;
         }
         .header .logo .sub {
             font-size: 0.65rem;
@@ -135,6 +200,67 @@
             line-height: 1;
             font-family: var(--font-body);
             text-transform: uppercase;
+        }
+        .brand-motto {
+            color: rgba(231,207,138,0.78);
+            font-family: var(--font-body);
+            font-size: 0.72rem;
+            letter-spacing: 0.16em;
+        }
+        .path-nav {
+            display: flex;
+            justify-content: center;
+            gap: 7px;
+            min-width: 0;
+        }
+        .path-nav-btn {
+            position: relative;
+            border: 1px solid rgba(255,255,255,0.08);
+            border-radius: 999px;
+            background: rgba(255,255,255,0.025);
+            color: var(--text-muted);
+            padding: 7px 10px;
+            font-family: var(--font-body);
+            font-size: 0.73rem;
+            font-weight: 800;
+            letter-spacing: 0.06em;
+            cursor: pointer;
+            transition: all var(--transition);
+            white-space: nowrap;
+        }
+        .path-nav-btn:hover, .path-nav-btn.active {
+            color: var(--text-bright);
+            transform: translateY(-1px);
+        }
+        .path-nav-btn.path-life:hover, .path-nav-btn.path-life.active { border-color: rgba(111,168,121,0.48); box-shadow: 0 0 14px rgba(111,168,121,0.12); }
+        .path-nav-btn.path-exist:hover, .path-nav-btn.path-exist.active { border-color: rgba(122,174,194,0.5); box-shadow: 0 0 14px rgba(122,174,194,0.12); }
+        .path-nav-btn.path-civil:hover, .path-nav-btn.path-civil.active { border-color: rgba(159,73,56,0.52); box-shadow: 0 0 14px rgba(159,73,56,0.12); }
+        .path-nav-btn.path-void:hover, .path-nav-btn.path-void.active { border-color: rgba(211,175,97,0.58); box-shadow: 0 0 18px rgba(211,175,97,0.16); }
+        .path-nav-btn.path-chaos:hover, .path-nav-btn.path-chaos.active { border-color: rgba(166,155,105,0.5); box-shadow: 0 0 14px rgba(166,155,105,0.12); }
+        .path-nav-btn.path-fall:hover, .path-nav-btn.path-fall.active { border-color: rgba(103,109,118,0.52); box-shadow: 0 0 14px rgba(103,109,118,0.12); }
+        .path-nav-prayer {
+            position: absolute;
+            left: 50%;
+            top: calc(100% + 10px);
+            transform: translateX(-50%) translateY(-4px);
+            width: max-content;
+            max-width: 260px;
+            padding: 8px 10px;
+            border: 1px solid rgba(231,207,138,0.14);
+            border-radius: 10px;
+            background: rgba(10,12,18,0.96);
+            color: var(--text);
+            font-size: 0.68rem;
+            line-height: 1.45;
+            white-space: normal;
+            pointer-events: none;
+            opacity: 0;
+            box-shadow: 0 12px 28px rgba(0,0,0,0.38);
+            transition: all var(--transition);
+        }
+        .path-nav-btn:hover .path-nav-prayer {
+            opacity: 1;
+            transform: translateX(-50%) translateY(0);
         }
         .header-actions {
             display: flex;
@@ -208,6 +334,20 @@
             background: rgba(184, 134, 11, 0.1);
             border-color: var(--gold-light);
         }
+        .btn-folly {
+            border-color: rgba(231,207,138,0.5);
+            background:
+                repeating-linear-gradient(135deg, rgba(255,255,255,0.12) 0 1px, transparent 1px 9px),
+                linear-gradient(135deg, #b98b12 0%, #876112 100%);
+        }
+        .btn-folly::after {
+            content: "";
+            position: absolute;
+            inset: 4px;
+            border-radius: inherit;
+            border: 1px solid rgba(16,18,24,0.42);
+            pointer-events: none;
+        }
         .btn-danger {
             background: rgba(139, 58, 58, 0.18);
             color: #ffb7b0;
@@ -236,6 +376,8 @@
 
         /* ========== 主容器 ========== */
         .container {
+            position: relative;
+            z-index: 1;
             max-width: 1120px;
             margin: 0 auto;
             padding: 28px 20px 70px;
@@ -596,21 +738,40 @@
             cursor: pointer;
             transition: all var(--transition);
             position: relative;
+            isolation: isolate;
+            overflow: hidden;
             box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
             backdrop-filter: blur(5px);
-            background-image: linear-gradient(135deg, rgba(255,255,255,0.02) 0%, transparent 50%);
+            background-image: linear-gradient(135deg, rgba(255,255,255,0.018) 0%, transparent 50%);
         }
-        .dungeon-card.path-life { border-color: rgba(119,195,123,0.18); background-image: linear-gradient(135deg, var(--path-life-soft), transparent 46%); }
-        .dungeon-card.path-fall { border-color: rgba(109,118,131,0.2); background-image: linear-gradient(135deg, var(--path-fall-soft), transparent 46%); }
-        .dungeon-card.path-civil { border-color: rgba(208,170,85,0.2); background-image: linear-gradient(135deg, var(--path-civil-soft), transparent 46%); }
-        .dungeon-card.path-chaos { border-color: rgba(154,120,224,0.2); background-image: linear-gradient(135deg, var(--path-chaos-soft), transparent 46%); }
-        .dungeon-card.path-exist { border-color: rgba(117,189,208,0.2); background-image: linear-gradient(135deg, var(--path-exist-soft), transparent 46%); }
-        .dungeon-card.path-void { border-color: rgba(215,215,232,0.16); background-image: linear-gradient(135deg, var(--path-void-soft), transparent 46%); }
+        .dungeon-card > * {
+            position: relative;
+            z-index: 1;
+        }
+        .dungeon-card.path-life { border-color: rgba(111,168,121,0.3); background-image: linear-gradient(135deg, var(--path-life-soft), transparent 46%); }
+        .dungeon-card.path-fall { border-color: rgba(103,109,118,0.32); background-image: linear-gradient(135deg, var(--path-fall-soft), transparent 46%); }
+        .dungeon-card.path-civil { border-color: rgba(159,73,56,0.32); background-image: linear-gradient(135deg, var(--path-civil-soft), transparent 46%); }
+        .dungeon-card.path-chaos { border-color: rgba(166,155,105,0.32); background-image: linear-gradient(135deg, var(--path-chaos-soft), transparent 46%); }
+        .dungeon-card.path-exist { border-color: rgba(122,174,194,0.34); background-image: linear-gradient(135deg, var(--path-exist-soft), transparent 46%); }
+        .dungeon-card.path-void { border-color: rgba(211,175,97,0.42); background-image: linear-gradient(135deg, var(--path-void-soft), transparent 46%); }
         .dungeon-card:hover {
             background: var(--bg-card-hover);
             border-color: #3a3a4a;
             transform: translateY(-3px);
             box-shadow: 0 12px 40px rgba(0, 0, 0, 0.6), 0 0 30px rgba(180, 130, 50, 0.1);
+        }
+        .dungeon-card.path-life:hover { box-shadow: 0 12px 40px rgba(0,0,0,0.62), 0 0 28px rgba(231,183,112,0.14); }
+        .dungeon-card.path-exist:hover { box-shadow: 0 12px 40px rgba(0,0,0,0.62), 0 0 28px rgba(154,120,224,0.12); }
+        .dungeon-card.path-void:hover { box-shadow: 0 12px 40px rgba(0,0,0,0.64), 0 0 34px rgba(211,175,97,0.18); }
+        .dungeon-card.path-civil:hover { box-shadow: 0 12px 40px rgba(0,0,0,0.62), 0 0 24px rgba(159,73,56,0.13); }
+        .dungeon-card.path-chaos:hover { box-shadow: 0 12px 40px rgba(0,0,0,0.62), 0 0 24px rgba(166,155,105,0.12); }
+        .dungeon-card.path-fall:hover { box-shadow: 0 12px 40px rgba(0,0,0,0.62), 0 0 22px rgba(103,109,118,0.12); }
+        .dungeon-card.divine-trial {
+            border-color: rgba(231,207,138,0.46);
+        }
+        .dungeon-card.divine-trial .rating-badge {
+            border-color: rgba(231,207,138,0.52);
+            background: rgba(139,47,48,0.16);
         }
         .dungeon-card::before {
             content: '';
@@ -624,8 +785,27 @@
             opacity: 0;
             transition: opacity 0.3s;
         }
+        .dungeon-card::after {
+            content: '';
+            position: absolute;
+            inset: 0;
+            z-index: 0;
+            pointer-events: none;
+            opacity: 0.42;
+            transition: opacity 0.3s, transform 0.3s;
+            mix-blend-mode: screen;
+        }
         .dungeon-card:hover::before {
             opacity: 1;
+        }
+        .dungeon-card.divine-trial:hover::before {
+            opacity: 1;
+            animation: divineRift 2.4s linear infinite;
+        }
+        @keyframes divineRift {
+            0% { filter: hue-rotate(0deg) brightness(1); }
+            50% { filter: hue-rotate(-24deg) brightness(1.35); }
+            100% { filter: hue-rotate(0deg) brightness(1); }
         }
         .dungeon-card.path-life::before { background: linear-gradient(180deg, var(--path-life), transparent); }
         .dungeon-card.path-fall::before { background: linear-gradient(180deg, var(--path-fall), transparent); }
@@ -633,6 +813,51 @@
         .dungeon-card.path-chaos::before { background: linear-gradient(180deg, var(--path-chaos), transparent); }
         .dungeon-card.path-exist::before { background: linear-gradient(180deg, var(--path-exist), transparent); }
         .dungeon-card.path-void::before { background: linear-gradient(180deg, var(--path-void), transparent); }
+        .dungeon-card.path-life::after {
+            background:
+                repeating-linear-gradient(90deg, rgba(111,168,121,0.11) 0 1px, transparent 1px 22px),
+                linear-gradient(135deg, transparent, rgba(111,168,121,0.05));
+        }
+        .dungeon-card.path-exist::after {
+            background:
+                repeating-linear-gradient(120deg, rgba(122,174,194,0.12) 0 1px, transparent 1px 30px),
+                linear-gradient(90deg, transparent, rgba(154,120,224,0.055), transparent);
+        }
+        .dungeon-card.path-void::after {
+            background:
+                repeating-conic-gradient(from 18deg at 82% 20%, rgba(211,175,97,0.11) 0deg 4deg, transparent 4deg 18deg),
+                linear-gradient(120deg, transparent, rgba(211,175,97,0.06), transparent);
+        }
+        .dungeon-card.path-civil::after {
+            background:
+                repeating-linear-gradient(0deg, rgba(159,73,56,0.11) 0 1px, transparent 1px 20px),
+                linear-gradient(135deg, rgba(90,38,32,0.08), transparent 42%);
+        }
+        .dungeon-card.path-chaos::after {
+            background:
+                linear-gradient(72deg, transparent 0 45%, rgba(166,155,105,0.12) 45.4%, transparent 47%),
+                linear-gradient(142deg, transparent 0 63%, rgba(166,155,105,0.09) 63.4%, transparent 65%);
+        }
+        .dungeon-card.path-fall::after {
+            background:
+                repeating-linear-gradient(135deg, rgba(103,109,118,0.09) 0 2px, transparent 2px 18px),
+                linear-gradient(90deg, rgba(0,0,0,0.18), transparent);
+            opacity: 0.36;
+        }
+        .dungeon-card:hover::after {
+            opacity: 0.72;
+            transform: translateX(2px);
+        }
+        .dungeon-card.path-void:hover .card-title::after {
+            content: ' 🎲';
+            display: inline-block;
+            color: var(--path-void);
+            animation: diceScatter 1.4s ease-in-out infinite;
+        }
+        @keyframes diceScatter {
+            0%, 100% { transform: translate(0, 0) rotate(0deg); opacity: 0.35; }
+            48% { transform: translate(7px, -5px) rotate(18deg); opacity: 0.95; }
+        }
         .card-path-rune {
             display: inline-flex;
             align-items: center;
@@ -735,10 +960,20 @@
             border: 1px solid rgba(255, 255, 255, 0.08);
             text-transform: uppercase;
         }
-        .tag.difficulty-newbie { color: var(--difficulty-newbie); border-color: rgba(123, 191, 140, 0.35); background: rgba(123, 191, 140, 0.09); }
-        .tag.difficulty-low { color: var(--difficulty-low); border-color: rgba(105, 169, 207, 0.35); background: rgba(105, 169, 207, 0.09); }
-        .tag.difficulty-medium { color: var(--difficulty-medium); border-color: rgba(208, 170, 85, 0.35); background: rgba(208, 170, 85, 0.09); }
-        .tag.difficulty-high { color: var(--difficulty-high); border-color: rgba(215, 107, 74, 0.38); background: rgba(215, 107, 74, 0.1); }
+        .tag.difficulty-newbie { color: var(--difficulty-newbie); border-color: rgba(216,216,208,0.24); background: rgba(216,216,208,0.055); }
+        .tag.difficulty-low { color: var(--difficulty-low); border-color: rgba(216,216,208,0.24); background: rgba(216,216,208,0.055); }
+        .tag.difficulty-medium { color: var(--difficulty-medium); border-color: rgba(122,174,194,0.32); background: rgba(122,174,194,0.075); }
+        .tag.difficulty-medium.path-life-difficulty { color: var(--path-life); border-color: rgba(111,168,121,0.34); background: rgba(111,168,121,0.075); }
+        .tag.difficulty-medium.path-exist-difficulty { color: var(--path-exist); border-color: rgba(122,174,194,0.34); background: rgba(122,174,194,0.075); }
+        .tag.difficulty-high { color: #ff9576; border-color: rgba(215,107,74,0.44); background: rgba(127,46,36,0.16); }
+        .tag.divine-tag {
+            color: var(--gold-light);
+            border-color: rgba(231,207,138,0.58);
+            background:
+                repeating-linear-gradient(135deg, rgba(231,207,138,0.12) 0 1px, transparent 1px 8px),
+                rgba(139,47,48,0.18);
+            box-shadow: 0 0 18px rgba(231,207,138,0.12);
+        }
         .tag.god-tag {
             color: var(--gold-light);
             background: rgba(200, 160, 80, 0.1);
@@ -749,7 +984,7 @@
             background: rgba(255, 255, 255, 0.025);
         }
         .tag.path-life { color: var(--path-life); border-color: rgba(119, 195, 123, 0.34); background: rgba(119, 195, 123, 0.08); }
-        .tag.path-fall { color: var(--path-fall); border-color: rgba(160, 80, 100, 0.4); background: rgba(160, 80, 100, 0.1); }
+        .tag.path-fall { color: var(--path-fall); border-color: rgba(103,109,118,0.38); background: rgba(103,109,118,0.08); }
         .tag.path-civil { color: var(--path-civil); border-color: rgba(208, 170, 85, 0.38); background: rgba(208, 170, 85, 0.08); }
         .tag.path-chaos { color: var(--path-chaos); border-color: rgba(154, 120, 224, 0.38); background: rgba(154, 120, 224, 0.09); }
         .tag.path-exist { color: var(--path-exist); border-color: rgba(117, 189, 208, 0.38); background: rgba(117, 189, 208, 0.09); }
@@ -1710,6 +1945,30 @@
         }
         @keyframes spin { to { transform: rotate(360deg); } }
         .empty-state { text-align: center; padding: 60px 20px; color: var(--text-muted); }
+        @media (max-width: 1100px) {
+            .header {
+                grid-template-columns: 1fr;
+                align-items: stretch;
+            }
+            .header .logo {
+                white-space: normal;
+            }
+            .path-nav {
+                justify-content: flex-start;
+                overflow-x: auto;
+                padding-bottom: 2px;
+                scrollbar-width: thin;
+            }
+            .path-nav-btn {
+                flex: 0 0 auto;
+            }
+            .path-nav-prayer {
+                display: none;
+            }
+            .header-actions {
+                justify-content: flex-start;
+            }
+        }
         @media (max-width: 720px) {
             .header { align-items: flex-start; }
             .header-actions {
@@ -1803,15 +2062,21 @@
     </style>
 </head>
 <body>
+    <div class="ambient-mask ambient-mask-left" aria-hidden="true">🎭</div>
+    <div class="ambient-mask ambient-mask-right" aria-hidden="true">🎭</div>
     <header class="header">
         <div class="logo">
-            <span class="icon">🎭🎲</span>
-            <span>诸神愚戏<span class="sub">Folly of the Gods · 祈愿试炼神谕留存地</span></span>
+            <span class="brand-emblem" aria-hidden="true"><span class="mask-mark">🎭</span><span class="dice-mark">🎲</span></span>
+            <span class="brand-copy">
+                <span>诸神愚戏<span class="sub">Folly of the Gods · 祈愿试炼神谕留存地</span></span>
+                <span class="brand-motto">凡骨入局，诸神设戏</span>
+            </span>
         </div>
+        <nav class="path-nav" id="pathNav" aria-label="六大命途快速筛选"></nav>
         <div class="header-actions">
             <div class="role-badge" id="roleBadge">旁观者只读</div>
-            <button class="btn btn-outline" id="inviteButton" onclick="openInviteModal()">🎲 验入局谕令</button>
-            <button class="btn btn-primary" id="submitEntryButton" onclick="openSubmitModal()">🎭 构筑祈愿试炼</button>
+            <button class="btn btn-outline" id="inviteButton" onclick="openInviteModal()">🎲 同契召引</button>
+            <button class="btn btn-primary btn-folly" id="submitEntryButton" onclick="openSubmitModal()">🎭 构筑愚戏</button>
         </div>
     </header>
 
@@ -2020,7 +2285,7 @@
         const CLEAR_FEEDBACK_OPTIONS = ['机制清楚', '剧情好', '氛围强', '有挑战', '偏难', '想再跑', '需要修订'];
         const LEGACY_DIFFICULTY_MAP = { 凡尘: '新手', 觉醒: '低', 超凡: '中', 神话: '高', 愚者: '高' };
         let inviteSession = getLocalData(INVITE_STORAGE_KEY, null);
-        let currentSort = 'popular', searchQuery = '', selectedGod = 'all', selectedDifficulty = 'all', searchTimeout = null, currentDetailId = null;
+        let currentSort = 'popular', searchQuery = '', selectedGod = 'all', selectedPath = 'all', selectedDifficulty = 'all', searchTimeout = null, currentDetailId = null;
         let replyTarget = null;
 
         function getInviteRole() { return inviteSession?.role || null; }
@@ -2048,12 +2313,16 @@
             const identityRoleText = document.getElementById('identityRoleText');
             const displayNameInput = document.getElementById('displayNameInput');
             if (roleBadge) {
-                roleBadge.textContent = role ? `${inviteSession?.name || ROLE_LABELS[role]} · ${ROLE_LABELS[role]}` : '旁观者只读';
+                const registry = role === 'admin' ? '神谕馆册' : role === 'author' ? '构筑者名录' : '信徒名录';
+                roleBadge.textContent = role ? `${registry} · ${inviteSession?.name || ROLE_LABELS[role]}` : '旁观者只读';
                 roleBadge.classList.toggle('active', !!role);
                 roleBadge.dataset.role = role || 'guest';
             }
-            if (inviteButton) inviteButton.textContent = role ? '🎲 重验谕令' : '🎲 验入局谕令';
-            if (submitButton) submitButton.title = canSubmit() ? '构筑祈愿试炼' : '需要构筑者谕令';
+            if (inviteButton) inviteButton.textContent = '🎲 同契召引';
+            if (submitButton) {
+                submitButton.textContent = '🎭 构筑愚戏';
+                submitButton.title = canSubmit() ? '构筑愚戏' : '需要构筑者谕令';
+            }
             if (identityCard) identityCard.classList.toggle('active', !!role);
             if (identityRoleText) identityRoleText.textContent = role ? `${ROLE_LABELS[role]}` : '未入局';
             if (displayNameInput && role) displayNameInput.value = inviteSession?.name || ROLE_LABELS[role];
@@ -2333,6 +2602,10 @@
             return PATH_META[path] || { sigil: '✧', tone: '旧档案', edict: '谕行原文待补' };
         }
 
+        function getPathClassByPath(path) {
+            return GOD_GROUPS.find(group => group.path === path)?.className || 'path-unknown';
+        }
+
         function getPathMetaByGod(value) {
             return getPathMetaByPath(getGodInfo(value).path);
         }
@@ -2363,7 +2636,7 @@
         function renderGodFilters() {
             const listEl = document.getElementById('godFilterList');
             if (!listEl) return;
-            const allButton = `<div class="god-cluster"><div class="god-cluster-title"><strong>全神席</strong><small>不限定命途，查看所有祈愿试炼。</small></div><div class="god-cluster-buttons"><button class="god-button path-all ${selectedGod === 'all' ? 'active' : ''}" onclick="setGodFilter('all')">全神席</button></div></div>`;
+            const allButton = `<div class="god-cluster"><div class="god-cluster-title"><strong>全神席</strong><small>不限定命途，查看所有祈愿试炼。</small></div><div class="god-cluster-buttons"><button class="god-button path-all ${selectedGod === 'all' && selectedPath === 'all' ? 'active' : ''}" onclick="setGodFilter('all')">全神席</button></div></div>`;
             const groupHtml = GOD_GROUPS.map(group => `
                 <div class="god-cluster ${group.className}">
                     <div class="god-cluster-title">
@@ -2378,6 +2651,19 @@
             listEl.innerHTML = allButton + groupHtml;
         }
 
+        function renderPathNav() {
+            const nav = document.getElementById('pathNav');
+            if (!nav) return;
+            nav.innerHTML = GOD_GROUPS.map(group => {
+                const meta = getPathMetaByPath(group.path);
+                const active = selectedPath === group.path && selectedGod === 'all';
+                return `<button class="path-nav-btn ${group.className} ${active ? 'active' : ''}" onclick="setPathFilter('${escapeHtml(group.path)}')">
+                    ${escapeHtml(meta.sigil)} ${escapeHtml(group.path)}
+                    <span class="path-nav-prayer">${escapeHtml(group.gods.join(' / '))} · ${escapeHtml(meta.edict)}</span>
+                </button>`;
+            }).join('');
+        }
+
         function renderDifficultyFilters() {
             const listEl = document.getElementById('difficultyFilterList');
             if (!listEl) return;
@@ -2389,7 +2675,7 @@
         function updateFilterSummary() {
             const summary = document.getElementById('filterSummaryText');
             if (!summary) return;
-            const godText = selectedGod === 'all' ? '全神席' : `${selectedGod}之神`;
+            const godText = selectedGod !== 'all' ? `${selectedGod}之神` : (selectedPath !== 'all' ? `${selectedPath}命途` : '全神席');
             const difficultyText = selectedDifficulty === 'all' ? '全部难度' : formatDifficulty(selectedDifficulty);
             summary.textContent = `${godText} · ${difficultyText}`;
         }
@@ -2429,6 +2715,17 @@
 
         function setGodFilter(god) {
             selectedGod = god;
+            selectedPath = 'all';
+            renderGodFilters();
+            renderPathNav();
+            updateFilterSummary();
+            renderDungeonList();
+        }
+
+        function setPathFilter(path) {
+            selectedPath = selectedPath === path ? 'all' : path;
+            selectedGod = 'all';
+            renderPathNav();
             renderGodFilters();
             updateFilterSummary();
             renderDungeonList();
@@ -2464,6 +2761,7 @@
                     formatDifficulty(d.difficulty)
                 ].some(value => String(value || '').toLowerCase().includes(q)));
             }
+            if (selectedPath !== 'all') dungeons = dungeons.filter(d => getGodInfo(d.type).path === selectedPath);
             if (selectedGod !== 'all') dungeons = dungeons.filter(d => getGodInfo(d.type).god === selectedGod);
             if (selectedDifficulty !== 'all') dungeons = dungeons.filter(d => normalizeDifficulty(d.difficulty) === selectedDifficulty);
             if (currentSort === 'popular') dungeons.sort((a,b) =>
@@ -2476,7 +2774,7 @@
             else if (currentSort === 'newest') dungeons.sort((a,b) => new Date(b.created_at) - new Date(a.created_at));
             else if (currentSort === 'comments') dungeons.sort((a,b) => (b.comment_count||0)-(a.comment_count||0));
             if (!dungeons.length) {
-                const filtered = searchQuery || selectedGod !== 'all' || selectedDifficulty !== 'all';
+                const filtered = searchQuery || selectedGod !== 'all' || selectedPath !== 'all' || selectedDifficulty !== 'all';
                 listEl.innerHTML = `<div class="empty-state"><div style="font-size:3rem;">🎲</div><p>${filtered ? '这个神席暂时没有匹配的试炼，换个神明或难度试试。' : '神谕留存地尚无试炼……<br>成为第一位构筑祈愿试炼的丑角吧！'}</p></div>`;
                 return;
             }
@@ -2487,8 +2785,9 @@
                 const godClass = getGodClass(d.type);
                 const pathMeta = getPathMetaByGod(d.type);
                 const difficultyLabel = formatDifficulty(d.difficulty);
+                const divineClass = isDivineTrial(d) ? 'divine-trial' : '';
                 return `
-                <div class="dungeon-card ${godClass}" onclick="openDetail('${escapeHtml(d.id)}')">
+                <div class="dungeon-card ${godClass} ${divineClass}" onclick="openDetail('${escapeHtml(d.id)}')">
                     <div class="card-path-rune ${godClass}">
                         <span>${escapeHtml(pathMeta.sigil)}</span>
                         <strong>${escapeHtml(godPath)}命途</strong>
@@ -2501,7 +2800,8 @@
                             <div class="card-meta">
                                 <span class="identity-chip author">🎭 构筑者 ${escapeHtml(d.creator||'匿名')}</span>
                                 <span class="tag god-tag ${godClass}">${escapeHtml(godLabel)}</span>
-                                <span class="tag ${getDiffClass(d.difficulty)}">${escapeHtml(difficultyLabel)}</span>
+                                <span class="tag ${getDiffClass(d.difficulty)} ${godClass}-difficulty">${escapeHtml(difficultyLabel)}</span>
+                                ${isDivineTrial(d) ? '<span class="tag divine-tag">神级愚戏</span>' : ''}
                                 <span style="font-size:0.7rem;">🎲 ${formatDate(d.created_at)}降下</span>
                             </div>
                             <div class="metric-strip">
@@ -2519,6 +2819,9 @@
         }
 
         function getDiffClass(d) { const m={新手:'difficulty-newbie',低:'difficulty-low',中:'difficulty-medium',高:'difficulty-high'}; return m[normalizeDifficulty(d)]||'difficulty-medium'; }
+        function isDivineTrial(d) {
+            return Number(d.avg_rating || 0) >= 4.8 && Number(d.rating_count || 0) >= 1;
+        }
         function formatParticipants(d) {
             const count = Number(d.participant_count || d.participantCount);
             return Number.isFinite(count) && count > 0 ? `${count}人固定` : '人数未定';
@@ -2719,7 +3022,8 @@
                     <span>🎭 试炼构筑者 ${escapeHtml(d.creator)}</span>
                     <span class="tag god-tag ${godClass}">${escapeHtml(godLabel)}</span>
                     <span class="tag path-tag ${godClass}">${escapeHtml(godPath)}命途</span>
-                    <span class="tag ${getDiffClass(d.difficulty)}">${escapeHtml(difficultyLabel)}</span>
+                    <span class="tag ${getDiffClass(d.difficulty)} ${godClass}-difficulty">${escapeHtml(difficultyLabel)}</span>
+                    ${isDivineTrial(d) ? '<span class="tag divine-tag">神级愚戏</span>' : ''}
                     <span>👥 ${formatParticipants(d)}</span>
                     <span>🎲 ${formatRunCount(d)}</span>
                     <span>切片裂隙通关 ${formatClearRate(d)}</span>
@@ -3016,6 +3320,7 @@
 
         (async function init(){
             populateGodSelect();
+            renderPathNav();
             renderGodFilters();
             renderDifficultyFilters();
             updateInviteUI();
