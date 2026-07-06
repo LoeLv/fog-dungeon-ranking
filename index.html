@@ -845,6 +845,23 @@
             padding-bottom: 15px;
             border-bottom: 1px solid rgba(255,255,255,0.06);
         }
+        .forum-feed.is-collapsed {
+            padding: 14px 18px;
+            margin-bottom: 22px;
+        }
+        .forum-feed.is-collapsed .forum-feed-head {
+            align-items: center;
+            margin-bottom: 0;
+            padding-bottom: 0;
+            border-bottom: 0;
+        }
+        .forum-feed.is-collapsed .forum-feed-note,
+        .forum-feed.is-collapsed .latest-comments-feed {
+            display: none;
+        }
+        .forum-feed.is-collapsed::after {
+            opacity: 0.55;
+        }
         .forum-feed-kicker {
             color: var(--gold-light);
             font-size: 0.72rem;
@@ -867,6 +884,12 @@
             font-size: 0.78rem;
             letter-spacing: 0.03em;
         }
+        .forum-feed-actions {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            flex-shrink: 0;
+        }
         .feed-count-badge {
             display: inline-flex;
             align-items: center;
@@ -885,11 +908,33 @@
             font-size: 1rem;
             line-height: 1;
         }
+        .feed-toggle-btn {
+            min-height: 34px;
+            padding: 7px 12px;
+            border-radius: 999px;
+            border: 1px solid rgba(117,189,208,0.28);
+            background: rgba(117,189,208,0.075);
+            color: var(--path-exist);
+            font-family: var(--font-body);
+            font-size: 0.72rem;
+            font-weight: 800;
+            cursor: pointer;
+            transition: all var(--transition);
+            white-space: nowrap;
+        }
+        .feed-toggle-btn:hover {
+            border-color: rgba(117,189,208,0.5);
+            background: rgba(117,189,208,0.14);
+            color: var(--text-bright);
+        }
         .latest-comments-feed {
             position: relative;
             z-index: 1;
             display: grid;
             gap: 10px;
+        }
+        .latest-comments-feed[hidden] {
+            display: none;
         }
         .latest-comments-feed::before {
             content: "";
@@ -1426,6 +1471,8 @@
             .search-input { max-width: none; width: 100%; }
             .forum-feed { padding: 16px 14px; }
             .forum-feed-head { flex-direction: column; align-items: stretch; }
+            .forum-feed.is-collapsed .forum-feed-head { align-items: stretch; }
+            .forum-feed-actions { justify-content: space-between; }
             .feed-count-badge { width: fit-content; }
             .latest-comments-feed::before { left: 18px; }
             .feed-item {
@@ -1484,16 +1531,19 @@
             </div>
         </div>
 
-        <section class="forum-feed" aria-label="全站最新回响">
+        <section class="forum-feed is-collapsed" id="forumFeed" aria-label="全站最新回响">
             <div class="forum-feed-head">
                 <div>
                     <div class="forum-feed-kicker">ORACLE LOG · 全站动态</div>
                     <div class="forum-feed-title">诸神回音壁</div>
                     <div class="forum-feed-note">记录玩家的短评、回复与副本余温，点击任意回响可进入对应副本。</div>
                 </div>
-                <div class="feed-count-badge"><span>最近</span><strong>3</strong><span>条回响</span></div>
+                <div class="forum-feed-actions">
+                    <div class="feed-count-badge"><span>最近</span><strong>3</strong><span>条回响</span></div>
+                    <button class="feed-toggle-btn" id="forumFeedToggle" onclick="toggleForumFeed()" aria-expanded="false" aria-controls="latestCommentsFeed">展开</button>
+                </div>
             </div>
-            <div class="latest-comments-feed" id="latestCommentsFeed">
+            <div class="latest-comments-feed" id="latestCommentsFeed" hidden>
                 <div class="feed-empty"><strong>正在听取众声……</strong><span>评论流加载中</span></div>
             </div>
         </section>
@@ -2004,6 +2054,18 @@
                 panel.setAttribute('hidden', '');
                 button.setAttribute('aria-expanded', 'false');
             }
+        }
+
+        function toggleForumFeed(force) {
+            const panel = document.getElementById('forumFeed');
+            const feed = document.getElementById('latestCommentsFeed');
+            const button = document.getElementById('forumFeedToggle');
+            if (!panel || !feed || !button) return;
+            const shouldOpen = typeof force === 'boolean' ? force : panel.classList.contains('is-collapsed');
+            panel.classList.toggle('is-collapsed', !shouldOpen);
+            feed.hidden = !shouldOpen;
+            button.setAttribute('aria-expanded', String(shouldOpen));
+            button.textContent = shouldOpen ? '收起' : '展开';
         }
 
         function populateGodSelect() {
