@@ -762,66 +762,253 @@
 
         /* 评论 */
         .forum-feed {
-            margin: -8px 0 26px;
-            border: 1px solid rgba(255,255,255,0.05);
+            position: relative;
+            overflow: hidden;
+            margin: -8px 0 28px;
+            border: 1px solid rgba(213,178,91,0.16);
             border-radius: var(--radius);
             background:
-                linear-gradient(135deg, rgba(117,189,208,0.05), rgba(208,170,85,0.05)),
-                rgba(255,255,255,0.015);
-            padding: 14px 16px;
+                radial-gradient(circle at 8% 0%, rgba(231,207,138,0.12), transparent 30%),
+                radial-gradient(circle at 88% 24%, rgba(117,189,208,0.09), transparent 32%),
+                linear-gradient(135deg, rgba(208,170,85,0.075), rgba(154,120,224,0.04) 45%, rgba(117,189,208,0.055)),
+                rgba(18,18,31,0.72);
+            padding: 20px 22px 22px;
+            box-shadow:
+                0 20px 56px rgba(0,0,0,0.32),
+                inset 0 1px 0 rgba(255,255,255,0.04);
+        }
+        .forum-feed::before {
+            content: "";
+            position: absolute;
+            inset: 0;
+            pointer-events: none;
+            background:
+                linear-gradient(90deg, rgba(231,207,138,0.08) 0 1px, transparent 1px 34px),
+                linear-gradient(180deg, rgba(255,255,255,0.035) 0 1px, transparent 1px 34px);
+            mask-image: linear-gradient(90deg, transparent, #000 16%, #000 82%, transparent);
+            opacity: 0.34;
+        }
+        .forum-feed::after {
+            content: "FOLLY OF THE GODS";
+            position: absolute;
+            right: 24px;
+            bottom: 8px;
+            color: rgba(231,207,138,0.045);
+            font-family: var(--font-display);
+            font-size: clamp(2.2rem, 5vw, 5.6rem);
+            letter-spacing: 0.08em;
+            pointer-events: none;
+            white-space: nowrap;
         }
         .forum-feed-head {
+            position: relative;
+            z-index: 1;
             display: flex;
             justify-content: space-between;
+            align-items: flex-start;
+            gap: 18px;
+            margin-bottom: 16px;
+            padding-bottom: 15px;
+            border-bottom: 1px solid rgba(255,255,255,0.06);
+        }
+        .forum-feed-kicker {
+            color: var(--gold-light);
+            font-size: 0.72rem;
+            font-weight: 800;
+            letter-spacing: 0.15em;
+            text-transform: uppercase;
+        }
+        .forum-feed-title {
+            margin-top: 3px;
+            color: var(--text-bright);
+            font-family: var(--font-display);
+            font-size: 1.28rem;
+            letter-spacing: 0.06em;
+            text-shadow: 0 0 18px rgba(231,207,138,0.16);
+        }
+        .forum-feed-note {
+            margin-top: 4px;
+            color: var(--text-muted);
+            font-weight: 500;
+            font-size: 0.78rem;
+            letter-spacing: 0.03em;
+        }
+        .feed-count-badge {
+            display: inline-flex;
             align-items: center;
+            gap: 7px;
+            flex-shrink: 0;
+            padding: 8px 12px;
+            border-radius: 999px;
+            border: 1px solid rgba(213,178,91,0.26);
+            background: rgba(0,0,0,0.24);
+            color: var(--text-muted);
+            font-size: 0.72rem;
+            box-shadow: inset 0 1px 0 rgba(255,255,255,0.04);
+        }
+        .feed-count-badge strong {
+            color: var(--gold-light);
+            font-size: 1rem;
+            line-height: 1;
+        }
+        .latest-comments-feed {
+            position: relative;
+            z-index: 1;
+            display: grid;
             gap: 10px;
-            margin-bottom: 10px;
+        }
+        .latest-comments-feed::before {
+            content: "";
+            position: absolute;
+            top: 12px;
+            bottom: 12px;
+            left: 20px;
+            width: 1px;
+            background: linear-gradient(180deg, transparent, rgba(231,207,138,0.35), rgba(117,189,208,0.2), transparent);
+            pointer-events: none;
+        }
+        .feed-item {
+            position: relative;
+            display: grid;
+            grid-template-columns: 42px minmax(0, 1fr) auto;
+            gap: 14px;
+            align-items: start;
+            padding: 14px 16px;
+            border-radius: 10px;
+            background:
+                linear-gradient(90deg, rgba(231,207,138,0.055), transparent 24%),
+                rgba(6,6,12,0.42);
+            border: 1px solid rgba(255,255,255,0.055);
+            cursor: pointer;
+            transition: transform var(--transition), border-color var(--transition), background var(--transition), box-shadow var(--transition);
+            box-shadow: inset 0 1px 0 rgba(255,255,255,0.025);
+        }
+        .feed-item:hover {
+            border-color: rgba(231,207,138,0.32);
+            background:
+                linear-gradient(90deg, rgba(231,207,138,0.09), rgba(117,189,208,0.035) 45%, transparent),
+                rgba(10,10,18,0.62);
+            box-shadow: 0 14px 30px rgba(0,0,0,0.22);
+            transform: translateY(-1px);
+        }
+        .feed-sigil {
+            position: relative;
+            z-index: 1;
+            width: 42px;
+            height: 42px;
+            border-radius: 11px;
+            display: grid;
+            place-items: center;
+            border: 1px solid rgba(231,207,138,0.28);
+            background:
+                radial-gradient(circle at 35% 25%, rgba(231,207,138,0.26), transparent 42%),
+                rgba(0,0,0,0.45);
+            color: var(--gold-light);
+            box-shadow: 0 0 18px rgba(231,207,138,0.08);
+        }
+        .feed-sigil span {
+            font-size: 1rem;
+            line-height: 1;
+        }
+        .feed-sigil small {
+            position: absolute;
+            right: 4px;
+            bottom: 2px;
+            color: rgba(255,255,255,0.34);
+            font-size: 0.52rem;
+            font-family: var(--font-display);
+        }
+        .feed-main {
+            min-width: 0;
+        }
+        .feed-row {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 7px;
+        }
+        .feed-author {
+            color: var(--gold-light);
+            font-size: 0.82rem;
+            font-weight: 800;
+        }
+        .feed-action {
+            padding: 2px 8px;
+            border-radius: 999px;
+            color: var(--path-exist);
+            background: rgba(117,189,208,0.1);
+            border: 1px solid rgba(117,189,208,0.18);
+            font-size: 0.68rem;
+            font-weight: 700;
+            letter-spacing: 0.04em;
+        }
+        .feed-dungeon {
             color: var(--text-bright);
             font-size: 0.88rem;
             font-weight: 800;
-            letter-spacing: 0.05em;
+            letter-spacing: 0.02em;
         }
-        .forum-feed-head span:last-child {
-            color: var(--text-muted);
-            font-weight: 500;
-            font-size: 0.72rem;
-        }
-        .latest-comments-feed {
-            display: grid;
-            gap: 8px;
-        }
-        .feed-item {
-            display: grid;
-            grid-template-columns: minmax(0, 1fr) auto;
-            gap: 10px;
-            align-items: center;
-            padding: 10px 12px;
-            border-radius: var(--radius-sm);
-            background: rgba(0,0,0,0.22);
-            border: 1px solid rgba(255,255,255,0.04);
-            cursor: pointer;
-            transition: all var(--transition);
-        }
-        .feed-item:hover {
-            border-color: rgba(200,160,80,0.25);
-            transform: translateY(-1px);
-        }
-        .feed-title {
-            color: var(--gold-light);
-            font-size: 0.76rem;
-            margin-bottom: 3px;
-        }
-        .feed-text {
+        .feed-lore {
+            margin-top: 7px;
             color: var(--text);
-            font-size: 0.8rem;
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
+            font-size: 0.84rem;
+            line-height: 1.65;
         }
-        .feed-time {
+        .feed-meta {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 7px;
+            margin-top: 9px;
+        }
+        .mini-tag {
+            display: inline-flex;
+            align-items: center;
+            max-width: 100%;
+            min-height: 24px;
+            padding: 3px 9px;
+            border-radius: 999px;
+            border: 1px solid rgba(255,255,255,0.08);
+            background: rgba(255,255,255,0.026);
             color: var(--text-muted);
-            font-size: 0.7rem;
+            font-size: 0.68rem;
+            font-weight: 700;
+            letter-spacing: 0.03em;
+        }
+        .mini-tag.path-life { color: var(--path-life); border-color: rgba(119,195,123,0.28); background: rgba(119,195,123,0.075); }
+        .mini-tag.path-fall { color: var(--path-fall); border-color: rgba(160,80,100,0.34); background: rgba(160,80,100,0.09); }
+        .mini-tag.path-civil { color: var(--path-civil); border-color: rgba(208,170,85,0.32); background: rgba(208,170,85,0.08); }
+        .mini-tag.path-chaos { color: var(--path-chaos); border-color: rgba(154,120,224,0.32); background: rgba(154,120,224,0.09); }
+        .mini-tag.path-exist { color: var(--path-exist); border-color: rgba(117,189,208,0.32); background: rgba(117,189,208,0.085); }
+        .mini-tag.path-void { color: var(--path-void); border-color: rgba(215,215,232,0.28); background: rgba(215,215,232,0.07); }
+        .mini-tag.path-unknown { color: var(--text-muted); border-color: rgba(255,255,255,0.1); background: rgba(255,255,255,0.035); }
+        .mini-tag.difficulty-newbie { color: var(--difficulty-newbie); border-color: rgba(123,191,140,0.3); background: rgba(123,191,140,0.075); }
+        .mini-tag.difficulty-low { color: var(--difficulty-low); border-color: rgba(105,169,207,0.3); background: rgba(105,169,207,0.075); }
+        .mini-tag.difficulty-medium { color: var(--difficulty-medium); border-color: rgba(208,170,85,0.3); background: rgba(208,170,85,0.075); }
+        .mini-tag.difficulty-high { color: var(--difficulty-high); border-color: rgba(215,107,74,0.34); background: rgba(215,107,74,0.085); }
+        .feed-time {
+            align-self: center;
+            padding: 5px 9px;
+            border-radius: 999px;
+            border: 1px solid rgba(255,255,255,0.08);
+            background: rgba(255,255,255,0.028);
+            color: var(--text-muted);
+            font-size: 0.68rem;
             white-space: nowrap;
+        }
+        .feed-empty {
+            position: relative;
+            z-index: 1;
+            padding: 22px 18px;
+            border-radius: 10px;
+            border: 1px dashed rgba(231,207,138,0.24);
+            background: rgba(0,0,0,0.22);
+            color: var(--text-muted);
+        }
+        .feed-empty strong {
+            display: block;
+            color: var(--gold-light);
+            font-size: 0.92rem;
+            margin-bottom: 4px;
         }
         .pinned-note {
             margin-bottom: 18px;
@@ -1149,7 +1336,21 @@
             .god-cluster { grid-template-columns: 1fr; gap: 4px; }
             .god-cluster-title { padding-top: 0; }
             .search-input { max-width: none; width: 100%; }
-            .feed-item { grid-template-columns: 1fr; }
+            .forum-feed { padding: 16px 14px; }
+            .forum-feed-head { flex-direction: column; align-items: stretch; }
+            .feed-count-badge { width: fit-content; }
+            .latest-comments-feed::before { left: 18px; }
+            .feed-item {
+                grid-template-columns: 38px minmax(0, 1fr);
+                gap: 11px;
+                padding: 13px 12px;
+            }
+            .feed-sigil { width: 38px; height: 38px; }
+            .feed-time {
+                grid-column: 2;
+                justify-self: start;
+                margin-top: -4px;
+            }
             .comment-item.reply { margin-left: 10px; }
             .clear-panel-foot { align-items: stretch; }
         }
@@ -1188,13 +1389,17 @@
             <div class="difficulty-filter" id="difficultyFilterList" aria-label="难度标签筛选"></div>
         </div>
 
-        <section class="forum-feed">
+        <section class="forum-feed" aria-label="全站最新回响">
             <div class="forum-feed-head">
-                <span>💬 最新回响</span>
-                <span>论坛动态</span>
+                <div>
+                    <div class="forum-feed-kicker">ORACLE LOG · 全站动态</div>
+                    <div class="forum-feed-title">诸神回音壁</div>
+                    <div class="forum-feed-note">记录玩家的短评、回复与副本余温，点击任意回响可进入对应副本。</div>
+                </div>
+                <div class="feed-count-badge"><span>最近</span><strong>8</strong><span>条回响</span></div>
             </div>
             <div class="latest-comments-feed" id="latestCommentsFeed">
-                <div class="feed-item"><div><div class="feed-title">正在听取众声……</div><div class="feed-text">评论流加载中</div></div><span class="feed-time">现在</span></div>
+                <div class="feed-empty"><strong>正在听取众声……</strong><span>评论流加载中</span></div>
             </div>
         </section>
 
@@ -1873,21 +2078,38 @@
             if (!feed) return;
             const comments = await fetchLatestComments(8);
             if (!comments.length) {
-                feed.innerHTML = '<div class="feed-item"><div><div class="feed-title">暂无回响</div><div class="feed-text">等第一位玩家留下评论。</div></div><span class="feed-time">现在</span></div>';
+                feed.innerHTML = '<div class="feed-empty"><strong>神谕石壁暂时无声</strong><span>等第一位玩家留下评论，新的回响会出现在这里。</span></div>';
                 return;
             }
-            feed.innerHTML = comments.map(comment => {
+            const feedGlyphs = ['♟', '✦', '◈', '◇', '✧', '✷', '✹', '✺'];
+            const feedMarks = ['Ⅰ', 'Ⅱ', 'Ⅲ', 'Ⅳ', 'Ⅴ', 'Ⅵ', 'Ⅶ', 'Ⅷ'];
+            feed.innerHTML = comments.map((comment, index) => {
                 const dungeon = comment.dungeon || {};
                 const title = dungeon.name || '未知副本';
-                const prefix = comment.parent_comment_id ? '回复了' : '评论了';
+                const action = comment.parent_comment_id ? '楼中回复' : '留下评论';
+                const godLabel = dungeon.type ? formatGodName(dungeon.type) : '未归档神明';
+                const godPath = dungeon.type ? `${formatGodPath(dungeon.type)}命途` : '未知命途';
+                const godClass = dungeon.type ? getGodClass(dungeon.type) : 'path-unknown';
+                const difficultyLabel = dungeon.difficulty ? formatDifficulty(dungeon.difficulty) : '难度未定';
+                const difficultyClass = dungeon.difficulty ? getDiffClass(dungeon.difficulty) : 'path-unknown';
                 return `
-                    <div class="feed-item" onclick="openDetail(${jsString(comment.dungeon_id)})">
-                        <div>
-                            <div class="feed-title">${escapeHtml(comment.author || '匿名')} ${prefix}《${escapeHtml(title)}》</div>
-                            <div class="feed-text">${escapeHtml(truncateText(comment.content, 96))}</div>
+                    <article class="feed-item" onclick="openDetail(${jsString(comment.dungeon_id)})">
+                        <div class="feed-sigil"><span>${feedGlyphs[index % feedGlyphs.length]}</span><small>${feedMarks[index] || index + 1}</small></div>
+                        <div class="feed-main">
+                            <div class="feed-row">
+                                <span class="feed-author">${escapeHtml(comment.author || '匿名探索者')}</span>
+                                <span class="feed-action">${escapeHtml(action)}</span>
+                                <span class="feed-dungeon">《${escapeHtml(title)}》</span>
+                            </div>
+                            <div class="feed-lore">${escapeHtml(truncateText(comment.content, 120))}</div>
+                            <div class="feed-meta">
+                                <span class="mini-tag ${godClass}">${escapeHtml(godLabel)}</span>
+                                <span class="mini-tag ${godClass}">${escapeHtml(godPath)}</span>
+                                <span class="mini-tag ${difficultyClass}">${escapeHtml(difficultyLabel)}</span>
+                            </div>
                         </div>
-                        <span class="feed-time">${formatDate(comment.created_at)}</span>
-                    </div>`;
+                        <time class="feed-time">${formatDate(comment.created_at)}</time>
+                    </article>`;
             }).join('');
         }
 
