@@ -968,7 +968,7 @@
             align-items: center;
             min-width: 0;
         }
-        .path-emblem {
+        .god-emblem {
             position: relative;
             display: grid;
             place-items: center;
@@ -980,8 +980,8 @@
             font-size: 1.25rem;
             box-shadow: inset 0 0 18px rgba(0,0,0,0.34);
         }
-        .path-emblem::after {
-            content: "🎲";
+        .god-emblem::after {
+            content: attr(data-orbit);
             position: absolute;
             right: -10px;
             top: -12px;
@@ -992,16 +992,16 @@
             pointer-events: none;
             filter: drop-shadow(0 0 8px rgba(231,207,138,0.35));
         }
-        .dungeon-card:hover .path-emblem::after {
+        .dungeon-card:hover .god-emblem::after {
             opacity: 0.74;
             transform: translateY(0) rotate(10deg);
         }
-        .path-emblem.path-life { border-color: rgba(111,168,121,0.34); color: var(--path-life); }
-        .path-emblem.path-exist { border-color: rgba(122,174,194,0.36); color: var(--path-exist); }
-        .path-emblem.path-civil { border-color: rgba(159,73,56,0.38); color: var(--path-civil); }
-        .path-emblem.path-void { border-color: rgba(211,175,97,0.42); color: var(--path-void); }
-        .path-emblem.path-chaos { border-color: rgba(166,155,105,0.36); color: var(--path-chaos); }
-        .path-emblem.path-fall { border-color: rgba(103,109,118,0.36); color: var(--path-fall); }
+        .god-emblem.path-life { border-color: rgba(111,168,121,0.34); color: var(--path-life); }
+        .god-emblem.path-exist { border-color: rgba(122,174,194,0.36); color: var(--path-exist); }
+        .god-emblem.path-civil { border-color: rgba(159,73,56,0.38); color: var(--path-civil); }
+        .god-emblem.path-void { border-color: rgba(211,175,97,0.42); color: var(--path-void); }
+        .god-emblem.path-chaos { border-color: rgba(166,155,105,0.36); color: var(--path-chaos); }
+        .god-emblem.path-fall { border-color: rgba(103,109,118,0.36); color: var(--path-fall); }
         .card-title-line {
             display: flex;
             flex-wrap: wrap;
@@ -2620,6 +2620,24 @@
             腐朽: '众生应腐，万物将朽',
             沉默: '万物归寂，寰宇无音'
         };
+        const GOD_ICONS = {
+            诞育: '🌱',
+            繁荣: '✿',
+            死亡: '☾',
+            记忆: '📜',
+            时间: '⌛',
+            秩序: '▦',
+            真理: '◉',
+            战争: '⚔',
+            欺诈: '🎭',
+            命运: '🎲',
+            混乱: '✺',
+            痴愚: '¿',
+            污堕: '☣',
+            腐朽: '🍂',
+            湮灭: '✖',
+            沉默: '◌'
+        };
         const PATH_META = {
             生命: { sigil: '✦', emblem: '🌱', tone: '苔青 / 腐木暗绿 / 浅琥珀柔光', edict: '感孕生命，衍育自然；万物滋生，亦繁亦荣' },
             湮灭: { sigil: '◒', emblem: '◒', tone: '深墨黑 / 暗灰浊雾', edict: '众生应腐，万物将朽；万物归寂，寰宇无音' },
@@ -2969,6 +2987,11 @@
             return GOD_PRAYERS[god] || '谕行待补';
         }
 
+        function getGodIcon(value) {
+            const god = getGodInfo(value).god;
+            return GOD_ICONS[god] || '✧';
+        }
+
         function getRatingTier(score) {
             const value = Number(score || 0);
             if (value >= 4.95) return '愚戏至尊';
@@ -3066,7 +3089,7 @@
                         <small>谕行：${escapeHtml(getPathMetaByPath(group.path).edict)}</small>
                     </div>
                     <div class="god-cluster-buttons">
-                        ${group.gods.map(god => `<button class="god-button ${group.className} ${selectedGod === god ? 'active' : ''}" onclick="setGodFilter('${escapeHtml(god)}')">${escapeHtml(god)}之神</button>`).join('')}
+                        ${group.gods.map(god => `<button class="god-button ${group.className} ${selectedGod === god ? 'active' : ''}" onclick="setGodFilter('${escapeHtml(god)}')">${escapeHtml(getGodIcon(god))} ${escapeHtml(god)}之神</button>`).join('')}
                     </div>
                 </div>
             `).join('');
@@ -3131,7 +3154,7 @@
         function populateGodSelect() {
             const select = document.getElementById('dungeonType');
             if (!select) return;
-            select.innerHTML = GOD_GROUPS.map(group => `<optgroup label="${escapeHtml(group.path)}命途">${group.gods.map(god => `<option value="${escapeHtml(god)}">${escapeHtml(group.path)} · ${escapeHtml(god)}之神</option>`).join('')}</optgroup>`).join('');
+            select.innerHTML = GOD_GROUPS.map(group => `<optgroup label="${escapeHtml(group.path)}命途">${group.gods.map(god => `<option value="${escapeHtml(god)}">${escapeHtml(getGodIcon(god))} ${escapeHtml(group.path)} · ${escapeHtml(god)}之神</option>`).join('')}</optgroup>`).join('');
             select.value = '记忆';
         }
 
@@ -3211,11 +3234,12 @@
                 const score = Number(d.avg_rating || 0);
                 const ratingValue = score ? score.toFixed(1) : '—';
                 const testimonyCount = Number(d.comment_count || 0);
+                const godIcon = getGodIcon(d.type);
                 return `
                 <div class="dungeon-card ${godClass} ${divineClass}" onclick="openDetail('${escapeHtml(d.id)}')">
                     <div class="trial-card-head">
                         <div class="trial-title-block">
-                            <span class="path-emblem ${godClass}">${escapeHtml(pathMeta.emblem || pathMeta.sigil)}</span>
+                            <span class="god-emblem ${godClass}" data-orbit="${escapeHtml(godIcon)}" title="${escapeHtml(godLabel)}">${escapeHtml(godIcon)}</span>
                             <div>
                                 <div class="card-title-line">
                                     <span class="card-title">${escapeHtml(d.name||'未命名试炼')}</span>
