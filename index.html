@@ -1118,21 +1118,71 @@
             font-size: 0.78rem;
         }
         .comment-item {
-            padding: 12px 16px;
+            position: relative;
+            padding: 13px 16px;
             margin-bottom: 10px;
             border: 1px solid rgba(255,255,255,0.04);
             border-radius: var(--radius-sm);
-            background: rgba(0,0,0,0.16);
+            background:
+                linear-gradient(135deg, rgba(213,178,91,0.035), transparent 34%),
+                rgba(0,0,0,0.18);
             font-size: 0.85rem;
         }
         .comment-item.reply {
-            margin-left: 28px;
+            margin: 9px 0 0 28px;
             background: rgba(255,255,255,0.018);
-            border-left-color: rgba(200,160,80,0.2);
+            border-left-color: rgba(117,189,208,0.32);
         }
-        .comment-item .comment-author { font-weight: 600; color: var(--gold-light); font-size: 0.8rem; }
-        .comment-item .comment-time { font-size: 0.7rem; color: var(--text-muted); margin-left: 10px; }
-        .comment-item .comment-content { margin-top: 6px; color: var(--text); white-space: pre-wrap; }
+        .comment-item.reply::before {
+            content: "";
+            position: absolute;
+            left: -15px;
+            top: 0;
+            bottom: 10px;
+            width: 1px;
+            background: linear-gradient(180deg, rgba(117,189,208,0.36), transparent);
+        }
+        .comment-head {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 10px;
+            margin-bottom: 7px;
+        }
+        .comment-author-line {
+            display: flex;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 7px;
+        }
+        .comment-role {
+            display: inline-flex;
+            align-items: center;
+            min-height: 22px;
+            padding: 2px 8px;
+            border-radius: 999px;
+            border: 1px solid rgba(213,178,91,0.3);
+            background: rgba(213,178,91,0.08);
+            color: var(--gold-light);
+            font-size: 0.66rem;
+            font-weight: 800;
+            letter-spacing: 0.08em;
+        }
+        .comment-role.reply {
+            border-color: rgba(117,189,208,0.3);
+            background: rgba(117,189,208,0.08);
+            color: var(--path-exist);
+        }
+        .comment-floor {
+            color: var(--text-muted);
+            font-size: 0.68rem;
+        }
+        .comment-item .comment-author { font-weight: 700; color: var(--gold-light); font-size: 0.82rem; }
+        .comment-item .comment-time { font-size: 0.7rem; color: var(--text-muted); white-space: nowrap; }
+        .comment-item .comment-content { margin-top: 6px; color: var(--text); white-space: pre-wrap; line-height: 1.7; }
+        .comment-replies {
+            margin-top: 10px;
+        }
         .comment-actions {
             display: flex;
             flex-wrap: wrap;
@@ -2111,29 +2161,39 @@
             return roots;
         }
 
-        function renderCommentNode(comment, depth = 0) {
+        function renderCommentNode(comment, depth = 0, floorNumber = '') {
             const deleted = !!comment.is_deleted;
             const canReply = canInteract() && !deleted;
+            const isReply = depth > 0;
+            const roleLabel = isReply ? '副帖' : '主帖';
+            const floorLabel = isReply ? '楼中回复' : `第 ${floorNumber} 楼`;
+            const replyLabel = isReply ? '回复副帖' : '回复主帖';
             const deleteButton = canDeleteComment(comment) && !deleted
                 ? `<button class="text-action" onclick="deleteCommentUI(${jsString(comment.id)})">删除</button>`
                 : '';
             return `
-                <div class="comment-item ${depth ? 'reply' : ''}">
-                    <span class="comment-author">${escapeHtml(comment.author || comment.invite_name || '匿名')}</span>
-                    <span class="comment-time">${formatDate(comment.created_at)}</span>
+                <div class="comment-item ${isReply ? 'reply' : 'root'}">
+                    <div class="comment-head">
+                        <div class="comment-author-line">
+                            <span class="comment-role ${isReply ? 'reply' : 'root'}">${roleLabel}</span>
+                            <span class="comment-author">${escapeHtml(comment.author || comment.invite_name || '匿名')}</span>
+                            <span class="comment-floor">${escapeHtml(floorLabel)}</span>
+                        </div>
+                        <span class="comment-time">${formatDate(comment.created_at)}</span>
+                    </div>
                     <div class="comment-content ${deleted ? 'deleted-comment' : ''}">${escapeHtml(comment.content || '')}</div>
                     <div class="comment-actions">
-                        ${canReply ? `<button class="text-action" onclick="setReplyTarget(${jsString(comment.id)}, ${jsString(comment.author || '匿名')})">回复</button>` : ''}
+                        ${canReply ? `<button class="text-action" onclick="setReplyTarget(${jsString(comment.id)}, ${jsString(comment.author || '匿名')})">${replyLabel}</button>` : ''}
                         ${deleteButton}
                     </div>
-                    ${(comment.replies || []).map(reply => renderCommentNode(reply, depth + 1)).join('')}
+                    ${(comment.replies || []).length ? `<div class="comment-replies">${comment.replies.map(reply => renderCommentNode(reply, depth + 1)).join('')}</div>` : ''}
                 </div>`;
         }
 
         function renderComments(comments) {
             const roots = buildCommentTree(comments);
             if (!roots.length) return '<div class="no-comments">尚无评论，成为第一个留下印记的探索者。</div>';
-            return roots.map(comment => renderCommentNode(comment, 0)).join('');
+            return roots.map((comment, index) => renderCommentNode(comment, 0, index + 1)).join('');
         }
 
         function renderFeedbackTags(disabled) {
@@ -2367,7 +2427,7 @@
             const text = document.getElementById('replyContextText');
             const input = document.getElementById('commentContentInput');
             if (context) context.style.display = 'flex';
-            if (text) text.textContent = `正在回复 ${author}`;
+            if (text) text.textContent = `正在回复 ${author}，会显示在这条评论下面`;
             if (input) {
                 input.placeholder = `回复 ${author}...`;
                 input.focus();
