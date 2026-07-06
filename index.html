@@ -1411,7 +1411,7 @@
         <div class="controls">
             <div class="control-topline">
                 <div class="sort-group">
-                    <button class="sort-btn active" data-sort="liked" onclick="setSort('liked', this)">🔥 点赞多</button>
+                    <button class="sort-btn active" data-sort="popular" onclick="setSort('popular', this)">🔥 热度高</button>
                     <button class="sort-btn" data-sort="rating" onclick="setSort('rating', this)">⭐ 神眷评分</button>
                     <button class="sort-btn" data-sort="newest" onclick="setSort('newest', this)">🕐 最新降临</button>
                     <button class="sort-btn" data-sort="comments" onclick="setSort('comments', this)">💬 众声回响</button>
@@ -1581,7 +1581,7 @@
         const CLEAR_FEEDBACK_OPTIONS = ['机制清楚', '剧情好', '氛围强', '有挑战', '偏难', '想再跑', '需要修订'];
         const LEGACY_DIFFICULTY_MAP = { 凡尘: '新手', 觉醒: '低', 超凡: '中', 神话: '高', 愚者: '高' };
         let inviteSession = getLocalData(INVITE_STORAGE_KEY, null);
-        let currentSort = 'liked', searchQuery = '', selectedGod = 'all', selectedDifficulty = 'all', searchTimeout = null, currentDetailId = null;
+        let currentSort = 'popular', searchQuery = '', selectedGod = 'all', selectedDifficulty = 'all', searchTimeout = null, currentDetailId = null;
         let replyTarget = null;
 
         function getInviteRole() { return inviteSession?.role || null; }
@@ -2002,7 +2002,7 @@
             }
             if (selectedGod !== 'all') dungeons = dungeons.filter(d => getGodInfo(d.type).god === selectedGod);
             if (selectedDifficulty !== 'all') dungeons = dungeons.filter(d => normalizeDifficulty(d.difficulty) === selectedDifficulty);
-            if (currentSort === 'liked') dungeons.sort((a,b) =>
+            if (currentSort === 'popular') dungeons.sort((a,b) =>
                 (b.rating_count||0) - (a.rating_count||0) ||
                 (b.avg_rating||0) - (a.avg_rating||0) ||
                 (b.comment_count||0) - (a.comment_count||0) ||
@@ -2017,7 +2017,7 @@
                 return;
             }
             listEl.innerHTML = dungeons.map((d,i) => {
-                const rank = (currentSort==='rating' || currentSort==='liked') && i<3 ? ['🥇','🥈','🥉'][i] : `#${i+1}`;
+                const rank = (currentSort==='rating' || currentSort==='popular') && i<3 ? ['🥇','🥈','🥉'][i] : `#${i+1}`;
                 const godLabel = formatGodName(d.type);
                 const godPath = formatGodPath(d.type);
                 const godClass = getGodClass(d.type);
