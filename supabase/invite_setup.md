@@ -46,6 +46,12 @@ supabase/per_person_invites_migration.sql
 supabase/forum_features_migration.sql
 ```
 
+如果要启用“每个邀请码绑定唯一昵称”，继续执行：
+
+```text
+supabase/nickname_binding_migration.sql
+```
+
 再在本地生成邀请：
 
 ```text
@@ -60,6 +66,8 @@ invite_codes_时间.sql  粘贴进 Supabase SQL Editor 的哈希导入脚本
 ```
 
 不要把 `private_invites/` 里的文件上传到 GitHub。
+
+每个专属码登录后，可以在“邀请权限”弹窗里保存自己的身份昵称。保存后，这个码之后评论、评分、投稿都会使用绑定昵称；共享应急码不能绑定个人昵称。
 
 通关率不是作者手填。副本保存固定人数和当前周目，玩家点击“我已通过本周目”后生成通过记录：
 

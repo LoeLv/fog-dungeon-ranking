@@ -974,6 +974,71 @@
             font-size: 0.76rem;
             line-height: 1.5;
         }
+        .identity-card {
+            display: none;
+            margin: 18px 0;
+            padding: 16px;
+            border-radius: var(--radius-sm);
+            border: 1px solid rgba(213, 178, 91, 0.22);
+            background:
+                linear-gradient(135deg, rgba(213, 178, 91, 0.08), rgba(123, 211, 194, 0.035)),
+                rgba(255,255,255,0.025);
+        }
+        .identity-card.active { display: block; }
+        .identity-card-head {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 10px;
+            margin-bottom: 12px;
+        }
+        .identity-card-title {
+            color: var(--gold-light);
+            font-weight: 800;
+            font-size: 0.86rem;
+            letter-spacing: 0.04em;
+        }
+        .identity-card-role {
+            color: var(--text-muted);
+            font-size: 0.76rem;
+        }
+        .identity-row {
+            display: grid;
+            grid-template-columns: 1fr auto;
+            gap: 10px;
+        }
+        .identity-row input {
+            width: 100%;
+            padding: 11px 14px;
+            border-radius: var(--radius-sm);
+            border: 1px solid var(--border);
+            background: rgba(0,0,0,0.38);
+            color: var(--text-bright);
+            font-family: var(--font-body);
+            font-size: 0.9rem;
+        }
+        .identity-help {
+            margin-top: 8px;
+            color: var(--text-muted);
+            font-size: 0.76rem;
+            line-height: 1.5;
+        }
+        .comment-identity {
+            min-width: 160px;
+            padding: 12px 16px;
+            border-radius: var(--radius-sm);
+            border: 1px solid rgba(213, 178, 91, 0.2);
+            background: rgba(213, 178, 91, 0.07);
+            color: var(--text-muted);
+            font-size: 0.78rem;
+            line-height: 1.45;
+        }
+        .comment-identity strong {
+            display: block;
+            color: var(--gold-light);
+            font-size: 0.94rem;
+            margin-top: 2px;
+        }
         .form-group { margin-bottom: 16px; }
         .form-group label { display: block; font-size: 0.8rem; font-weight: 600; color: var(--text-muted); margin-bottom: 6px; letter-spacing: 0.04em; text-transform: uppercase; }
         .form-group input, .form-group textarea, .form-group select {
@@ -1069,6 +1134,8 @@
             }
             .detail-content { padding: 20px 16px 24px; }
             .detail-panel h2 { font-size: 1.35rem; }
+            .identity-row { grid-template-columns: 1fr; }
+            .comment-identity { width: 100%; }
             .role-guide { grid-template-columns: 1fr; }
             .form-grid, .form-grid.compact { grid-template-columns: 1fr; }
             .form-span { grid-column: auto; }
@@ -1157,6 +1224,17 @@
                 <div class="role-card"><strong>玩家</strong><span>评分、评论，不能投稿。</span></div>
                 <div class="role-card"><strong>作者</strong><span>投稿、评分、评论。</span></div>
                 <div class="role-card"><strong>馆主</strong><span>管理与删除副本。</span></div>
+            </div>
+            <div class="identity-card" id="identityCard">
+                <div class="identity-card-head">
+                    <div class="identity-card-title">身份铭牌</div>
+                    <div class="identity-card-role" id="identityRoleText">未登录</div>
+                </div>
+                <div class="identity-row">
+                    <input type="text" id="displayNameInput" maxlength="16" placeholder="绑定你的昵称，例如：无我">
+                    <button type="button" class="btn btn-primary btn-sm" id="displayNameButton" onclick="saveDisplayName()">保存昵称</button>
+                </div>
+                <div class="identity-help">保存后，这个专属邀请码发评论、评分、投稿都会显示这个昵称。</div>
             </div>
             <div class="form-actions">
                 <button type="button" class="btn btn-outline" onclick="clearInviteSession()">退出身份</button>
@@ -1247,12 +1325,22 @@
             const roleBadge = document.getElementById('roleBadge');
             const inviteButton = document.getElementById('inviteButton');
             const submitButton = document.getElementById('submitEntryButton');
+            const identityCard = document.getElementById('identityCard');
+            const identityRoleText = document.getElementById('identityRoleText');
+            const displayNameInput = document.getElementById('displayNameInput');
             if (roleBadge) {
                 roleBadge.textContent = role ? `${inviteSession?.name || ROLE_LABELS[role]} · ${ROLE_LABELS[role]}权限` : '访客只读';
                 roleBadge.classList.toggle('active', !!role);
             }
             if (inviteButton) inviteButton.textContent = role ? '🔑 切换邀请' : '🔑 输入邀请';
             if (submitButton) submitButton.title = canSubmit() ? '提交新副本' : '需要作者邀请码';
+            if (identityCard) identityCard.classList.toggle('active', !!role);
+            if (identityRoleText) identityRoleText.textContent = role ? `${ROLE_LABELS[role]}权限` : '未登录';
+            if (displayNameInput && role) displayNameInput.value = inviteSession?.name || ROLE_LABELS[role];
+        }
+
+        function cleanDisplayNameInput(value) {
+            return String(value || '').trim().replace(/\s+/g, ' ').slice(0, 16);
         }
 
         function requireInvite(roles, message) {
@@ -1280,6 +1368,18 @@
             const role = normalizeRole(result.role);
             if (role && inviteCode) saveInviteSession({ role, code: inviteCode, name: result.name || result.label || ROLE_LABELS[role] });
             return { data: result.data ?? null, error: null, role, name: result.name };
+        }
+
+        async function updateDisplayName(displayName) {
+            const name = cleanDisplayNameInput(displayName);
+            if (!name) return { error: { message: '昵称不能为空' } };
+            if (/[<>@#]/.test(name)) return { error: { message: '昵称不能包含特殊符号' } };
+            if (USE_LOCAL_FALLBACK) {
+                if (!inviteSession) return { error: { message: '请先输入邀请码' } };
+                saveInviteSession({ ...inviteSession, name });
+                return { data: { display_name: name }, error: null, name };
+            }
+            return invokeDungeonAction('updateDisplayName', { displayName: name });
         }
 
         async function fetchDungeons() {
@@ -1381,15 +1481,17 @@
         }
 
         async function addComment(dungeonId, author, content, parentCommentId = null) {
+            const displayAuthor = cleanDisplayNameInput(author) || inviteSession?.name || '匿名探索者';
             if (USE_LOCAL_FALLBACK) {
                 const comments = getLocalData('comments', []);
                 const newComment = {
                     id: 'c_'+Date.now(),
                     dungeon_id: dungeonId,
                     parent_comment_id: parentCommentId,
-                    author: author.trim()||'匿名探索者',
+                    author: displayAuthor,
                     content: content.trim(),
                     invite_code_hash: inviteSession?.code || 'local',
+                    invite_name: inviteSession?.name || displayAuthor,
                     is_deleted: false,
                     created_at: new Date().toISOString()
                 };
@@ -1398,7 +1500,7 @@
                 if(d) { d.comment_count = (d.comment_count||0)+1; setLocalData('dungeons', dungeons); }
                 return { data: [newComment], error: null };
             }
-            return invokeDungeonAction('addComment', { dungeonId, parentCommentId, author: author.trim()||'匿名探索者', content: content.trim() });
+            return invokeDungeonAction('addComment', { dungeonId, parentCommentId, author: displayAuthor, content: content.trim() });
         }
 
         async function removeComment(commentId) {
@@ -1836,7 +1938,10 @@
                     <div class="section-title">💬 众声回响 (${activeCommentCount})</div>
                     <div class="comment-form">
                         <div class="reply-context" id="replyContext"><span id="replyContextText"></span><button class="text-action" onclick="clearReplyTarget()">取消回复</button></div>
-                        <input type="text" id="commentAuthorInput" placeholder="你的署名" maxlength="20" value="${locked?'':escapeHtml(inviteSession?.name || '')}" ${commentLockedAttrs}>
+                        <div class="comment-identity">
+                            以此身份发言
+                            <strong>${locked ? '访客' : escapeHtml(inviteSession?.name || ROLE_LABELS[getInviteRole()] || '匿名')}</strong>
+                        </div>
                         <textarea id="commentContentInput" placeholder="${commentPlaceholder}" maxlength="800" style="flex:2;" ${commentLockedAttrs}></textarea>
                         <button class="btn btn-primary btn-sm" onclick="${locked?`openInviteModal('输入玩家或作者邀请码后可评论。')`:`submitComment('${escapeHtml(id)}')`}">${locked?'输入邀请':'发布'}</button>
                     </div>
@@ -1851,6 +1956,7 @@
             const overlay = document.getElementById('inviteModalOverlay');
             const hint = document.getElementById('inviteHint');
             if (hint) hint.textContent = message || '输入群内邀请码后，才能参与评分、评论或投稿。';
+            updateInviteUI();
             overlay.style.display='flex';
             document.body.style.overflow='hidden';
             setTimeout(() => document.getElementById('inviteCodeInput')?.focus(), 50);
@@ -1878,6 +1984,24 @@
             closeInviteModal();
             showToast(`✅ 已获得${name || ROLE_LABELS[role]}的${ROLE_LABELS[role]}权限`);
             if (currentDetailId) await openDetail(currentDetailId);
+        }
+
+        async function saveDisplayName() {
+            if (!inviteSession?.code) { showToast('请先输入邀请码'); return; }
+            const input = document.getElementById('displayNameInput');
+            const btn = document.getElementById('displayNameButton');
+            const name = cleanDisplayNameInput(input?.value);
+            if (!name) { showToast('请输入昵称'); return; }
+            btn.disabled = true;
+            btn.textContent = '保存中...';
+            const { error } = await updateDisplayName(name);
+            btn.disabled = false;
+            btn.textContent = '保存昵称';
+            if (error) { showToast(`❌ ${error.message || '昵称保存失败'}`); return; }
+            showToast(`✅ 昵称已绑定为 ${name}`);
+            updateInviteUI();
+            if (currentDetailId) await openDetail(currentDetailId);
+            await renderDungeonList();
         }
 
         function clearInviteSession() {
@@ -1949,7 +2073,7 @@
 
         async function submitComment(id){
             if(!requireInvite(['player','author','admin'], '输入玩家或作者邀请码后可评论。')) return;
-            const a=document.getElementById('commentAuthorInput')?.value.trim();
+            const a=inviteSession?.name || ROLE_LABELS[getInviteRole()] || '';
             const c=document.getElementById('commentContentInput')?.value.trim();
             if(!c){showToast('请输入评论');return;}
             const {error}=await addComment(id,a,c, replyTarget?.id || null);
@@ -2065,7 +2189,7 @@
         function setSort(sort,btn){ currentSort=sort; document.querySelectorAll('.sort-btn').forEach(b=>b.classList.remove('active')); btn.classList.add('active'); renderDungeonList(); }
         function debounceSearch(){ clearTimeout(searchTimeout); searchTimeout=setTimeout(()=>{ searchQuery=document.getElementById('searchInput').value; renderDungeonList(); },350); }
         function showToast(msg){ const c=document.getElementById('toastContainer'); const t=document.createElement('div'); t.className='toast'; t.textContent=msg; c.appendChild(t); setTimeout(()=>{if(t.parentNode)t.remove();},3200); }
-        document.addEventListener('keydown',e=>{ if(e.key==='Escape'){ if(document.getElementById('inviteModalOverlay').style.display==='flex') closeInviteModal(); else if(document.getElementById('detailOverlay').style.display==='flex') closeDetail(); else if(document.getElementById('submitModalOverlay').style.display==='flex') closeSubmitModal(); } if(e.key==='Enter' && document.activeElement?.id === 'inviteCodeInput') submitInviteCode(); });
+        document.addEventListener('keydown',e=>{ if(e.key==='Escape'){ if(document.getElementById('inviteModalOverlay').style.display==='flex') closeInviteModal(); else if(document.getElementById('detailOverlay').style.display==='flex') closeDetail(); else if(document.getElementById('submitModalOverlay').style.display==='flex') closeSubmitModal(); } if(e.key==='Enter' && document.activeElement?.id === 'inviteCodeInput') submitInviteCode(); if(e.key==='Enter' && document.activeElement?.id === 'displayNameInput') saveDisplayName(); });
 
         (async function init(){
             populateGodSelect();

@@ -48,6 +48,17 @@ function cleanText(value: unknown, maxLength: number) {
   return String(value ?? "").trim().slice(0, maxLength);
 }
 
+function cleanDisplayName(value: unknown, role: InviteRole) {
+  const name = cleanText(value, 16).replace(/\s+/g, " ");
+  if (!name || name.length < 1) return { error: "昵称不能为空" };
+  if (/[<>@#]/.test(name)) return { error: "昵称不能包含特殊符号" };
+  const reserved = ["馆主", "官方", "管理员", "系统"];
+  if (role !== "admin" && reserved.some((word) => name.includes(word))) {
+    return { error: "这个昵称像管理身份，换一个吧" };
+  }
+  return { name };
+}
+
 function isUuid(value: string) {
   return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value);
 }
@@ -182,6 +193,24 @@ Deno.serve(async (req) => {
   try {
     if (action === "verifyInvite") {
       return json({ role, label: roleLabels[role], name: identity.displayName });
+    }
+
+    if (action === "updateDisplayName") {
+      if (!identity.inviteId) return json({ error: "共享邀请码不能绑定个人昵称，请使用专属码" }, 403);
+
+      const display = cleanDisplayName(payload.displayName, role);
+      if (display.error || !display.name) return json({ error: display.error || "昵称不正确" }, 400);
+
+      const { data, error } = await supabase
+        .from("invite_codes")
+        .update({ display_name: display.name })
+        .eq("id", identity.inviteId)
+        .select("id, role, display_name")
+        .single();
+      if (error?.code === "23505") return json({ error: "这个昵称已经有人绑定了" }, 409);
+      if (error) return json({ error: error.message }, 400);
+
+      return json({ role, label: roleLabels[role], name: data.display_name });
     }
 
     if (action === "submitDungeon") {
@@ -372,7 +401,8 @@ Deno.serve(async (req) => {
       if (!hasRole(role, ["player", "author", "admin"])) return json({ error: "需要玩家或作者邀请码" }, 403);
 
       const dungeonId = cleanText(payload.dungeonId, 80);
-      const author = cleanText(payload.author, 40) || identity.displayName || "匿名探索者";
+      const authorInput = cleanText(payload.author, 40);
+      const author = identity.inviteId ? identity.displayName : (authorInput || identity.displayName || "匿名探索者");
       const content = cleanText(payload.content, 800);
       const parentCommentId = cleanText(payload.parentCommentId, 80);
       if (!isUuid(dungeonId) || !content) return json({ error: "评论参数不正确" }, 400);

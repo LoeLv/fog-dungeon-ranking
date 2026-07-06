@@ -77,6 +77,9 @@ create index if not exists clear_records_feedback_tags_idx on public.clear_recor
 create unique index if not exists clear_records_one_per_invite_run_idx
   on public.clear_records(dungeon_id, run_number, invite_code_hash);
 create index if not exists invite_codes_role_idx on public.invite_codes(role, is_active);
+create unique index if not exists invite_codes_active_display_name_unique
+  on public.invite_codes (lower(display_name))
+  where is_active = true;
 
 alter table public.dungeons enable row level security;
 alter table public.ratings enable row level security;
