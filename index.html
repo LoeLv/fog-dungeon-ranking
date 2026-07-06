@@ -1287,17 +1287,14 @@
             overflow-y: auto;
             overscroll-behavior: contain;
             background:
-                radial-gradient(circle at 50% 42%, rgba(231,207,138,0.08), transparent 28%),
-                radial-gradient(circle at 18% 78%, rgba(122,174,194,0.055), transparent 26%),
-                rgba(0, 0, 0, 0.84);
+                radial-gradient(circle at 18% 10%, rgba(231,207,138,0.08), transparent 30%),
+                radial-gradient(circle at 82% 28%, rgba(122,174,194,0.06), transparent 28%),
+                linear-gradient(180deg, #12141d, #08090d 42%, #06080b);
+            background-color: #08090d;
             z-index: 200;
-            display: flex;
-            flex-direction: column;
-            align-items: flex-start;
-            justify-content: flex-start;
-            padding: max(14px, env(safe-area-inset-top)) clamp(14px, 4vw, 42px) clamp(82px, 10dvh, 128px);
+            display: block;
+            padding: clamp(18px, 3dvh, 34px) clamp(18px, 4vw, 58px) clamp(56px, 8dvh, 96px);
             animation: fadeIn 0.3s ease;
-            backdrop-filter: blur(12px);
             scrollbar-color: rgba(213, 178, 91, 0.34) rgba(255,255,255,0.035);
             scrollbar-width: thin;
         }
@@ -1306,9 +1303,12 @@
             position: fixed;
             inset: 0;
             background:
-                repeating-radial-gradient(circle at 35% 38%, rgba(231,207,138,0.08) 0 1px, transparent 1px 32px),
-                linear-gradient(118deg, transparent 0 46%, rgba(231,207,138,0.12) 46.2%, transparent 47.1%);
-            opacity: 0.28;
+                linear-gradient(90deg, rgba(255,255,255,0.035) 1px, transparent 1px),
+                linear-gradient(180deg, rgba(255,255,255,0.028) 1px, transparent 1px),
+                repeating-radial-gradient(circle at 50% 12%, rgba(231,207,138,0.055) 0 1px, transparent 1px 42px),
+                linear-gradient(118deg, transparent 0 44%, rgba(231,207,138,0.06) 44.2%, transparent 45%);
+            background-size: 48px 48px, 48px 48px, auto, auto;
+            opacity: 0.42;
             pointer-events: none;
         }
         .detail-overlay::-webkit-scrollbar { width: 8px; }
@@ -1318,47 +1318,41 @@
         .detail-overlay.path-exist::before { background: repeating-radial-gradient(circle at 35% 38%, rgba(122,174,194,0.10) 0 1px, transparent 1px 34px); }
         .detail-overlay.path-void::before { background: repeating-radial-gradient(circle at 35% 38%, rgba(211,175,97,0.11) 0 1px, transparent 1px 32px); }
         .detail-overlay[data-layout="anchored"] {
-            flex-direction: column;
-            align-items: flex-start;
-            justify-content: flex-start;
-            padding: max(14px, env(safe-area-inset-top)) clamp(14px, 4vw, 42px) clamp(82px, 10dvh, 128px);
+            padding: clamp(18px, 3dvh, 34px) clamp(18px, 4vw, 58px) clamp(56px, 8dvh, 96px);
         }
         .detail-overlay[data-layout="side"] {
-            flex-direction: column;
-            align-items: flex-start;
-            justify-content: flex-start;
-            padding: max(14px, env(safe-area-inset-top)) clamp(14px, 4vw, 42px) clamp(82px, 10dvh, 128px);
+            padding: clamp(18px, 3dvh, 34px) clamp(18px, 4vw, 58px) clamp(56px, 8dvh, 96px);
         }
         @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
         .detail-panel {
             background:
                 linear-gradient(180deg, rgba(255,255,255,0.035), transparent 28%),
                 radial-gradient(circle at 12% 8%, rgba(231,207,138,0.09), transparent 28%),
-                rgba(13, 14, 21, 0.96);
+                rgba(13, 14, 21, 0.90);
             border: 1px solid rgba(231,207,138,0.24);
-            border-radius: 22px;
-            width: min(760px, calc(100vw - 28px));
+            border-radius: 18px;
+            width: min(1180px, 100%);
             max-height: none;
             overflow: visible;
             padding: 0;
             position: relative;
-            align-self: center;
-            box-shadow: 0 32px 82px rgba(0, 0, 0, 0.86), 0 0 54px rgba(180, 130, 50, 0.16);
+            margin: 0 auto;
+            box-shadow: 0 24px 80px rgba(0, 0, 0, 0.58), 0 0 54px rgba(180, 130, 50, 0.10);
             animation: slideUp 0.3s ease;
             display: flex;
             flex-direction: column;
         }
         .detail-overlay[data-layout="anchored"] .detail-panel,
-        .detail-overlay[data-layout="side"] .detail-panel { width: min(760px, calc(100vw - 28px)); }
-        .detail-panel.path-life { border-color: rgba(111,168,121,0.34); box-shadow: 0 32px 82px rgba(0,0,0,0.86), 0 0 42px rgba(111,168,121,0.13); }
-        .detail-panel.path-exist { border-color: rgba(122,174,194,0.34); box-shadow: 0 32px 82px rgba(0,0,0,0.86), 0 0 42px rgba(122,174,194,0.13); }
-        .detail-panel.path-civil { border-color: rgba(159,73,56,0.34); box-shadow: 0 32px 82px rgba(0,0,0,0.86), 0 0 42px rgba(159,73,56,0.12); }
-        .detail-panel.path-void { border-color: rgba(211,175,97,0.42); box-shadow: 0 32px 82px rgba(0,0,0,0.86), 0 0 52px rgba(211,175,97,0.16); }
-        .detail-panel.path-chaos { border-color: rgba(166,155,105,0.34); box-shadow: 0 32px 82px rgba(0,0,0,0.86), 0 0 42px rgba(166,155,105,0.12); }
-        .detail-panel.path-fall { border-color: rgba(103,109,118,0.34); box-shadow: 0 32px 82px rgba(0,0,0,0.86), 0 0 40px rgba(103,109,118,0.12); }
+        .detail-overlay[data-layout="side"] .detail-panel { width: min(1180px, 100%); }
+        .detail-panel.path-life { border-color: rgba(111,168,121,0.34); box-shadow: 0 24px 80px rgba(0,0,0,0.58), 0 0 42px rgba(111,168,121,0.10); }
+        .detail-panel.path-exist { border-color: rgba(122,174,194,0.34); box-shadow: 0 24px 80px rgba(0,0,0,0.58), 0 0 42px rgba(122,174,194,0.10); }
+        .detail-panel.path-civil { border-color: rgba(159,73,56,0.34); box-shadow: 0 24px 80px rgba(0,0,0,0.58), 0 0 42px rgba(159,73,56,0.10); }
+        .detail-panel.path-void { border-color: rgba(211,175,97,0.42); box-shadow: 0 24px 80px rgba(0,0,0,0.58), 0 0 52px rgba(211,175,97,0.12); }
+        .detail-panel.path-chaos { border-color: rgba(166,155,105,0.34); box-shadow: 0 24px 80px rgba(0,0,0,0.58), 0 0 42px rgba(166,155,105,0.10); }
+        .detail-panel.path-fall { border-color: rgba(103,109,118,0.34); box-shadow: 0 24px 80px rgba(0,0,0,0.58), 0 0 40px rgba(103,109,118,0.10); }
         @keyframes slideUp { from { transform: translateY(40px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
         .detail-toolbar {
-            position: relative;
+            position: sticky;
             top: 0;
             z-index: 12;
             flex: 0 0 auto;
@@ -1366,12 +1360,14 @@
             grid-template-columns: auto 1fr auto;
             align-items: center;
             gap: 12px;
-            padding: 14px 16px;
+            padding: 12px clamp(16px, 2.2vw, 26px);
             border-bottom: 1px solid rgba(255,255,255,0.08);
             background:
                 linear-gradient(90deg, rgba(231,207,138,0.08), transparent 48%),
-                rgba(12, 12, 18, 0.98);
-            box-shadow: 0 12px 26px rgba(0, 0, 0, 0.28);
+                rgba(12, 12, 18, 0.94);
+            backdrop-filter: blur(14px);
+            border-radius: 18px 18px 0 0;
+            box-shadow: 0 12px 26px rgba(0, 0, 0, 0.22);
         }
         .detail-window-title {
             min-width: 0;
@@ -1420,44 +1416,13 @@
         }
         .detail-close-icon:hover { color: var(--text-bright); background: rgba(193, 69, 50, 0.22); border-color: rgba(215, 107, 74, 0.5); box-shadow: 0 0 18px rgba(215,107,74,0.16); }
         .detail-floating-close {
-            position: sticky;
-            top: max(14px, env(safe-area-inset-top));
-            align-self: flex-end;
-            z-index: 260;
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            gap: 8px;
-            min-width: 104px;
-            height: 42px;
-            padding: 0 14px;
-            border-radius: 999px;
-            border: 1px solid rgba(231,207,138,0.36);
-            background:
-                linear-gradient(135deg, rgba(231,207,138,0.16), rgba(255,255,255,0.035)),
-                rgba(10,10,16,0.92);
-            color: var(--gold-light);
-            font-family: var(--font-body);
-            font-size: 0.82rem;
-            font-weight: 900;
-            letter-spacing: 0.04em;
-            cursor: pointer;
-            margin: 0 0 clamp(18px, 5dvh, 56px);
-            box-shadow: 0 14px 34px rgba(0,0,0,0.5), 0 0 22px rgba(231,207,138,0.12);
-            transition: all var(--transition);
-        }
-        .detail-floating-close:hover {
-            color: var(--text-bright);
-            border-color: rgba(215,107,74,0.58);
-            background: rgba(112,42,36,0.76);
-            box-shadow: 0 14px 34px rgba(0,0,0,0.5), 0 0 24px rgba(215,107,74,0.24);
-            transform: translateY(-1px);
+            display: none;
         }
         .detail-content {
             flex: 0 0 auto;
             min-height: auto;
             overflow: visible;
-            padding: 22px 24px 24px;
+            padding: clamp(20px, 2.4vw, 34px);
         }
         .detail-hero {
             position: relative;
@@ -1551,9 +1516,10 @@
             align-items: center;
             justify-content: space-between;
             gap: 12px;
-            padding: 12px 16px;
+            padding: 14px clamp(16px, 2.2vw, 26px);
             border-top: 1px solid rgba(255,255,255,0.08);
-            background: rgba(12,12,18,0.98);
+            background: rgba(12,12,18,0.72);
+            border-radius: 0 0 18px 18px;
         }
         .detail-footer-note {
             color: var(--text-muted);
@@ -2728,17 +2694,7 @@
             .detail-overlay,
             .detail-overlay[data-layout="anchored"],
             .detail-overlay[data-layout="side"] {
-                padding: 56px 10px 72px;
-                align-items: flex-start;
-                justify-content: flex-start;
-            }
-            .detail-floating-close {
-                top: max(8px, env(safe-area-inset-top));
-                min-width: 82px;
-                height: 36px;
-                padding: 0 10px;
-                font-size: 0.74rem;
-                margin-bottom: 12px;
+                padding: 10px 10px 42px;
             }
             .detail-panel {
                 width: min(100%, calc(100vw - 20px));
@@ -2982,13 +2938,12 @@
         </div>
     </div>
 
-    <!-- 详情弹窗 -->
+    <!-- 详情页 -->
     <div class="detail-overlay" id="detailOverlay" style="display:none;" onclick="closeDetail(event)">
-        <button class="detail-floating-close" onclick="closeDetail()" aria-label="关闭神谕窗口">关闭窗口 ✕</button>
         <div class="detail-panel" id="detailPanel" onclick="event.stopPropagation()">
             <div class="detail-toolbar">
                 <button class="detail-back" onclick="closeDetail()">← 返回列表</button>
-                <div class="detail-window-title">ORACLE WINDOW · 神谕记录窗口</div>
+                <div class="detail-window-title">TRIAL DOSSIER · 试炼神谕档案</div>
                 <button class="detail-close-icon" onclick="closeDetail()" title="关闭神谕窗口" aria-label="关闭神谕窗口">✕</button>
             </div>
             <div id="detailContent" class="detail-content"></div>
@@ -4265,7 +4220,7 @@
             overlay.className = `detail-overlay ${godClass}`;
             overlay.dataset.layout = 'center';
             panel.className = `detail-panel ${godClass}`;
-            overlay.style.display='flex';
+            overlay.style.display='block';
             const content = document.getElementById('detailContent');
             const resetDetailScroll = () => {
                 if (content) content.scrollTo({ top: 0, behavior: 'auto' });
