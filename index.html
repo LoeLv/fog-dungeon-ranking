@@ -730,6 +730,62 @@
             flex-direction: column;
             gap: 16px;
         }
+        .archive-layout {
+            display: grid;
+            grid-template-columns: minmax(0, 1fr) 300px;
+            gap: 18px;
+            align-items: start;
+        }
+        .oracle-sidebar {
+            position: sticky;
+            top: 108px;
+            display: grid;
+            gap: 14px;
+        }
+        .oracle-panel {
+            border: 1px solid rgba(231,207,138,0.13);
+            border-radius: var(--radius);
+            background:
+                linear-gradient(135deg, rgba(231,207,138,0.045), transparent 48%),
+                rgba(18,20,27,0.78);
+            padding: 14px;
+            box-shadow: 0 12px 30px rgba(0,0,0,0.28);
+        }
+        .oracle-panel-title {
+            color: var(--gold-light);
+            font-family: var(--font-display);
+            font-size: 0.92rem;
+            letter-spacing: 0.08em;
+            margin-bottom: 10px;
+        }
+        .oracle-list {
+            display: grid;
+            gap: 9px;
+        }
+        .oracle-item {
+            display: grid;
+            gap: 2px;
+            padding: 9px 10px;
+            border: 1px solid rgba(255,255,255,0.055);
+            border-radius: 10px;
+            background: rgba(0,0,0,0.16);
+            color: var(--text);
+            cursor: pointer;
+            transition: all var(--transition);
+        }
+        .oracle-item:hover {
+            border-color: rgba(231,207,138,0.28);
+            color: var(--text-bright);
+            transform: translateY(-1px);
+        }
+        .oracle-item strong {
+            font-size: 0.82rem;
+            color: var(--text-bright);
+        }
+        .oracle-item span {
+            font-size: 0.7rem;
+            color: var(--text-muted);
+        }
         .dungeon-card {
             background: var(--bg-card);
             border: 1px solid var(--border);
@@ -769,7 +825,7 @@
         .dungeon-card.divine-trial {
             border-color: rgba(231,207,138,0.46);
         }
-        .dungeon-card.divine-trial .rating-badge {
+        .dungeon-card.divine-trial .judgement-badge {
             border-color: rgba(231,207,138,0.52);
             background: rgba(139,47,48,0.16);
         }
@@ -897,21 +953,83 @@
         .identity-chip.author {
             color: var(--gold-light);
         }
-        .dungeon-card .card-header {
+        .trial-card-head {
             display: flex;
             align-items: flex-start;
             justify-content: space-between;
             gap: 12px;
             flex-wrap: wrap;
+            margin-bottom: 12px;
+        }
+        .trial-title-block {
+            display: grid;
+            grid-template-columns: auto minmax(0, 1fr);
+            gap: 10px;
+            align-items: center;
+            min-width: 0;
+        }
+        .path-emblem {
+            position: relative;
+            display: grid;
+            place-items: center;
+            width: 38px;
+            height: 38px;
+            border-radius: 12px;
+            border: 1px solid rgba(255,255,255,0.1);
+            background: rgba(0,0,0,0.22);
+            font-size: 1.25rem;
+            box-shadow: inset 0 0 18px rgba(0,0,0,0.34);
+        }
+        .path-emblem::after {
+            content: "🎲";
+            position: absolute;
+            right: -10px;
+            top: -12px;
+            font-size: 0.72rem;
+            opacity: 0;
+            transform: translateY(8px) rotate(-12deg);
+            transition: opacity 0.28s ease, transform 0.28s ease;
+            pointer-events: none;
+            filter: drop-shadow(0 0 8px rgba(231,207,138,0.35));
+        }
+        .dungeon-card:hover .path-emblem::after {
+            opacity: 0.74;
+            transform: translateY(0) rotate(10deg);
+        }
+        .path-emblem.path-life { border-color: rgba(111,168,121,0.34); color: var(--path-life); }
+        .path-emblem.path-exist { border-color: rgba(122,174,194,0.36); color: var(--path-exist); }
+        .path-emblem.path-civil { border-color: rgba(159,73,56,0.38); color: var(--path-civil); }
+        .path-emblem.path-void { border-color: rgba(211,175,97,0.42); color: var(--path-void); }
+        .path-emblem.path-chaos { border-color: rgba(166,155,105,0.36); color: var(--path-chaos); }
+        .path-emblem.path-fall { border-color: rgba(103,109,118,0.36); color: var(--path-fall); }
+        .card-title-line {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: baseline;
+            gap: 9px;
+            min-width: 0;
         }
         .dungeon-card .card-title {
             font-family: var(--font-display);
-            font-size: 1.25rem;
-            color: var(--text-bright);
+            font-size: 1.34rem;
+            color: transparent;
+            background: linear-gradient(180deg, #fff3c6, #c99d46 62%, #8a692d);
+            -webkit-background-clip: text;
+            background-clip: text;
             letter-spacing: 0.04em;
             flex: 1;
-            min-width: 200px;
             text-shadow: 0 2px 4px rgba(0,0,0,0.5);
+        }
+        .trial-number {
+            color: var(--text-muted);
+            font-size: 0.72rem;
+            font-weight: 800;
+            letter-spacing: 0.08em;
+        }
+        .trial-subline {
+            color: var(--text-muted);
+            font-size: 0.72rem;
+            margin-top: 2px;
         }
         .dungeon-card .card-meta {
             display: flex;
@@ -922,30 +1040,118 @@
             color: var(--text-muted);
             margin-top: 4px;
         }
-        .dungeon-card .rating-badge {
-            display: flex;
-            align-items: center;
-            gap: 6px;
-            background: rgba(226, 176, 74, 0.12);
-            padding: 6px 14px;
-            border-radius: 20px;
+        .judgement-badge {
+            display: grid;
+            justify-items: end;
+            gap: 2px;
+            min-width: 150px;
+            background: rgba(226, 176, 74, 0.08);
+            padding: 8px 12px;
+            border-radius: 14px;
             font-weight: 700;
             color: var(--star-color);
-            font-size: 0.95rem;
+            font-size: 0.86rem;
             white-space: nowrap;
             flex-shrink: 0;
             border: 1px solid rgba(226, 176, 74, 0.3);
         }
-        .dungeon-card .card-desc {
-            margin-top: 10px;
-            font-size: 0.85rem;
+        .judgement-score {
+            color: var(--gold-light);
+            font-family: var(--font-display);
+            letter-spacing: 0.06em;
+        }
+        .judgement-tier {
+            color: var(--text-bright);
+            font-size: 0.74rem;
+        }
+        .judgement-count {
             color: var(--text-muted);
-            display: -webkit-box;
-            -webkit-line-clamp: 2;
-            -webkit-box-orient: vertical;
-            overflow: hidden;
+            font-size: 0.68rem;
+        }
+        .trial-identity-row,
+        .trial-data-row {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            align-items: center;
+            margin-top: 10px;
+        }
+        .author-mark {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            color: #cfd2da;
+            font-size: 0.78rem;
+            font-weight: 800;
+        }
+        .author-mark.master {
+            color: var(--gold-light);
+            text-shadow: 0 0 12px rgba(231,207,138,0.12);
+        }
+        .lore-tag {
+            position: relative;
+        }
+        .lore-tag[data-prayer]::after {
+            content: attr(data-prayer);
+            position: absolute;
+            left: 50%;
+            bottom: calc(100% + 8px);
+            transform: translateX(-50%) translateY(4px);
+            width: max-content;
+            max-width: 280px;
+            padding: 7px 9px;
+            border-radius: 9px;
+            border: 1px solid rgba(231,207,138,0.18);
+            background: rgba(9,10,14,0.98);
+            color: var(--text);
+            font-size: 0.68rem;
+            line-height: 1.45;
+            white-space: normal;
+            opacity: 0;
+            pointer-events: none;
+            transition: all var(--transition);
+            z-index: 8;
+            box-shadow: 0 12px 28px rgba(0,0,0,0.36);
+        }
+        .lore-tag:hover::after {
+            opacity: 1;
+            transform: translateX(-50%) translateY(0);
+        }
+        .danger-stamp {
+            background-image: repeating-linear-gradient(135deg, rgba(255,255,255,0.06) 0 1px, transparent 1px 7px);
+        }
+        .trial-data-pill {
+            border: 1px solid rgba(255,255,255,0.075);
+            border-radius: 999px;
+            background: rgba(0,0,0,0.18);
+            color: var(--text-muted);
+            padding: 5px 9px;
+            font-size: 0.72rem;
+            font-weight: 700;
+        }
+        .trial-data-pill strong {
+            color: var(--text-bright);
+        }
+        .trial-oracle {
+            margin-top: 12px;
+            padding: 11px 12px;
+            border: 1px solid rgba(255,255,255,0.06);
+            border-radius: 10px;
+            background: rgba(0,0,0,0.16);
+            color: var(--text);
+            font-size: 0.85rem;
             line-height: 1.5;
-            font-style: italic;
+        }
+        .trial-oracle.path-life { background: rgba(111,168,121,0.045); }
+        .trial-oracle.path-exist { background: rgba(122,174,194,0.045); }
+        .trial-oracle.path-void { background: rgba(211,175,97,0.045); }
+        .trial-oracle.path-civil { background: rgba(159,73,56,0.045); }
+        .trial-oracle.path-chaos { background: rgba(166,155,105,0.045); }
+        .trial-oracle.path-fall { background: rgba(103,109,118,0.045); }
+        .trial-oracle b {
+            color: var(--gold-light);
+            letter-spacing: 0.06em;
+            margin-right: 4px;
         }
         .tag {
             display: inline-block;
@@ -1194,6 +1400,72 @@
         }
         .stars.readonly label { cursor: default; pointer-events: none; }
         .rating-area .rating-text { font-size: 0.8rem; color: var(--text-muted); }
+        .judgement-area {
+            justify-content: space-between;
+            border-color: rgba(211, 171, 72, 0.18);
+            background:
+                radial-gradient(circle at 18% 20%, rgba(211,171,72,0.14), transparent 34%),
+                rgba(255,255,255,0.025);
+        }
+        .judgement-area-title {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            color: var(--text-bright);
+            font-weight: 800;
+            letter-spacing: 0.06em;
+        }
+        .judgement-modal {
+            max-width: 720px;
+        }
+        .rating-choice-grid {
+            display: grid;
+            gap: 10px;
+            margin: 20px 0;
+        }
+        .rating-choice {
+            width: 100%;
+            display: grid;
+            grid-template-columns: auto minmax(0, 1fr);
+            gap: 12px;
+            align-items: center;
+            padding: 14px 16px;
+            border-radius: var(--radius-sm);
+            border: 1px solid rgba(255,255,255,0.08);
+            background: rgba(6,7,12,0.72);
+            color: var(--text);
+            text-align: left;
+            cursor: pointer;
+            transition: border-color 0.2s ease, transform 0.2s ease, background 0.2s ease;
+        }
+        .rating-choice:hover,
+        .rating-choice.active {
+            transform: translateY(-1px);
+            border-color: rgba(232,202,120,0.56);
+            background: linear-gradient(135deg, rgba(184,134,11,0.18), rgba(255,255,255,0.025));
+        }
+        .rating-choice-mark {
+            width: 40px;
+            height: 40px;
+            display: grid;
+            place-items: center;
+            border-radius: 12px;
+            border: 1px solid rgba(232,202,120,0.3);
+            color: var(--gold-light);
+            background: rgba(184,134,11,0.12);
+            box-shadow: inset 0 0 18px rgba(184,134,11,0.08);
+        }
+        .rating-choice strong {
+            display: block;
+            color: var(--text-bright);
+            font-size: 0.98rem;
+            margin-bottom: 4px;
+        }
+        .rating-choice span {
+            color: var(--text-muted);
+            font-size: 0.84rem;
+            line-height: 1.5;
+        }
 
         .clear-panel {
             margin-bottom: 20px;
@@ -1306,7 +1578,7 @@
             font-size: 0.74rem;
         }
 
-        /* 回响 */
+        /* 证言 */
         .forum-feed {
             position: relative;
             overflow: hidden;
@@ -1690,6 +1962,21 @@
             background: rgba(255,255,255,0.018);
             border-left-color: rgba(117,189,208,0.32);
         }
+        .comment-item.architect {
+            border-color: rgba(231,207,138,0.28);
+            background:
+                linear-gradient(90deg, rgba(231,207,138,0.055), transparent 38%),
+                rgba(0,0,0,0.1);
+        }
+        .comment-item.architect::after {
+            content: "🎭 试炼构筑台";
+            position: absolute;
+            right: 12px;
+            top: 10px;
+            color: rgba(231,207,138,0.48);
+            font-size: 0.62rem;
+            letter-spacing: 0.08em;
+        }
         .comment-item.reply::before {
             content: "";
             position: absolute;
@@ -1968,6 +2255,13 @@
             .header-actions {
                 justify-content: flex-start;
             }
+            .archive-layout {
+                grid-template-columns: 1fr;
+            }
+            .oracle-sidebar {
+                position: static;
+                grid-template-columns: repeat(3, minmax(0, 1fr));
+            }
         }
         @media (max-width: 720px) {
             .header { align-items: flex-start; }
@@ -2038,6 +2332,19 @@
                 align-items: flex-start;
                 border-radius: 12px;
             }
+            .trial-card-head {
+                display: grid;
+            }
+            .trial-title-block {
+                grid-template-columns: auto minmax(0, 1fr);
+            }
+            .judgement-badge {
+                justify-items: start;
+                width: 100%;
+            }
+            .oracle-sidebar {
+                grid-template-columns: 1fr;
+            }
             .search-input { max-width: none; width: 100%; }
             .forum-feed { padding: 16px 14px; }
             .forum-feed-head { flex-direction: column; align-items: stretch; }
@@ -2085,7 +2392,7 @@
             <div class="world-altar-copy">
                 <div class="world-kicker">TRIAL ARCHIVE · 愚戏棋局</div>
                 <h1 class="world-title">祈愿试炼留存地</h1>
-                <p class="world-line">欺诈假面垂落，命运骰子已在裂隙中转动。这里记录构筑者降下的切片宇宙，也收存入局信徒的神眷评定与试炼回响。</p>
+                <p class="world-line">欺诈假面垂落，命运骰子已在裂隙中转动。这里记录构筑者降下的切片宇宙，也收存入局信徒的神格判定与试炼证言。</p>
                 <div class="world-tokens" aria-label="核心标识">
                     <span class="world-token">🎭 欺诈假面</span>
                     <span class="world-token">🎲 命运骰子</span>
@@ -2104,9 +2411,9 @@
             <div class="control-topline">
                 <div class="sort-group">
                     <button class="sort-btn active" data-sort="popular" onclick="setSort('popular', this)">🔥 试炼热度</button>
-                    <button class="sort-btn" data-sort="rating" onclick="setSort('rating', this)">⭐ 神眷评定</button>
+                    <button class="sort-btn" data-sort="rating" onclick="setSort('rating', this)">🎲 神格判定</button>
                     <button class="sort-btn" data-sort="newest" onclick="setSort('newest', this)">🎲 新降试炼</button>
-                    <button class="sort-btn" data-sort="comments" onclick="setSort('comments', this)">💬 众声回响</button>
+                    <button class="sort-btn" data-sort="comments" onclick="setSort('comments', this)">💬 证言热度</button>
                 </div>
                 <input type="text" class="search-input" placeholder="🔍 搜索试炼、构筑者、神明或命途..." oninput="debounceSearch()" id="searchInput">
                 <button class="filter-toggle-btn" id="filterToggleBtn" onclick="toggleAdvancedFilters()" aria-expanded="false">
@@ -2126,25 +2433,41 @@
             </div>
         </div>
 
-        <section class="forum-feed is-collapsed" id="forumFeed" aria-label="全站最新回响">
+        <section class="forum-feed is-collapsed" id="forumFeed" aria-label="全站最新证言">
             <div class="forum-feed-head">
                 <div>
                     <div class="forum-feed-kicker">ORACLE LOG · 神谕留存</div>
-                    <div class="forum-feed-title">试炼回音壁</div>
-                    <div class="forum-feed-note">记录入局信徒的短评、回复与试炼余温，点击任意回响可进入对应试炼。</div>
+                    <div class="forum-feed-title">试炼证言殿</div>
+                    <div class="forum-feed-note">记录入局信徒递交的证言、楼中副证与试炼余温，点击任意证言可进入对应试炼。</div>
                 </div>
                 <div class="forum-feed-actions">
-                    <div class="feed-count-badge"><span>最近</span><strong>3</strong><span>条回响</span></div>
+                    <div class="feed-count-badge"><span>最近</span><strong>3</strong><span>则证言</span></div>
                     <button class="feed-toggle-btn" id="forumFeedToggle" onclick="toggleForumFeed()" aria-expanded="false" aria-controls="latestCommentsFeed">展开</button>
                 </div>
             </div>
             <div class="latest-comments-feed" id="latestCommentsFeed" hidden>
-                <div class="feed-empty"><strong>正在听取众声……</strong><span>回响流加载中</span></div>
+                <div class="feed-empty"><strong>正在听取众声……</strong><span>证言流加载中</span></div>
             </div>
         </section>
 
-        <div class="dungeon-list" id="dungeonList">
-                <div class="loading"><div class="spinner"></div><br>正在从切片宇宙中加载祈愿试炼...</div>
+        <div class="archive-layout">
+            <div class="dungeon-list" id="dungeonList">
+                    <div class="loading"><div class="spinner"></div><br>正在从切片宇宙中加载祈愿试炼...</div>
+            </div>
+            <aside class="oracle-sidebar" aria-label="神谕榜">
+                <section class="oracle-panel">
+                    <div class="oracle-panel-title">【诸神注目试炼名录】</div>
+                    <div class="oracle-list" id="supremeTrialList"><div class="oracle-item"><span>正在检索神格判定...</span></div></div>
+                </section>
+                <section class="oracle-panel">
+                    <div class="oracle-panel-title">【信徒采信证言录】</div>
+                    <div class="oracle-list" id="testimonyLedger"><div class="oracle-item"><span>正在听取证言...</span></div></div>
+                </section>
+                <section class="oracle-panel">
+                    <div class="oracle-panel-title">【新晋筑戏人】</div>
+                    <div class="oracle-list" id="architectLedger"><div class="oracle-item"><span>等待新的构筑者献祭试炼。</span></div></div>
+                </section>
+            </aside>
         </div>
     </div>
 
@@ -2164,14 +2487,14 @@
         <div class="modal" id="inviteModal" onclick="event.stopPropagation()">
             <button class="close-btn" style="position:absolute;top:16px;right:20px;" onclick="closeInviteModal()">✕</button>
             <h2>🎲 入局谕令</h2>
-            <p class="modal-note" id="inviteHint">输入群内谕令后，才能参与神眷评定、众声回响或构筑试炼。</p>
+            <p class="modal-note" id="inviteHint">输入群内谕令后，才能参与神格判定、试炼证言或构筑愚戏。</p>
             <div class="form-group">
                 <label>入局谕令</label>
                 <input type="password" id="inviteCodeInput" placeholder="输入信徒或构筑者谕令" autocomplete="off">
             </div>
             <div class="role-guide">
-                <div class="role-card"><strong>入局信徒</strong><span>神眷评定、回响试炼，不能构筑。</span></div>
-                <div class="role-card"><strong>试炼构筑者</strong><span>构筑试炼、评定、回响。</span></div>
+                <div class="role-card"><strong>入局信徒</strong><span>神格判定、递交证言，不能构筑。</span></div>
+                <div class="role-card"><strong>试炼构筑者</strong><span>构筑愚戏、判定、证言。</span></div>
                 <div class="role-card"><strong>神谕馆主</strong><span>封存与管理祈愿试炼。</span></div>
             </div>
             <div class="identity-card" id="identityCard">
@@ -2183,7 +2506,7 @@
                     <input type="text" id="displayNameInput" maxlength="16" placeholder="绑定你的昵称，例如：无我">
                     <button type="button" class="btn btn-primary btn-sm" id="displayNameButton" onclick="saveDisplayName()">保存昵称</button>
                 </div>
-                <div class="identity-help">保存后，这枚谕令在回响、评定、构筑试炼时都会显示这个昵称。</div>
+                <div class="identity-help">保存后，这枚谕令在证言、判定、构筑愚戏时都会显示这个昵称。</div>
             </div>
             <div class="form-actions">
                 <button type="button" class="btn btn-outline" onclick="clearInviteSession()">退出身份</button>
@@ -2196,7 +2519,7 @@
     <div class="modal-overlay" id="submitModalOverlay" style="display:none;" onclick="closeSubmitModal(event)">
         <div class="modal" id="submitModal" onclick="event.stopPropagation()">
             <button class="close-btn" style="position:absolute;top:16px;right:20px;" onclick="closeSubmitModal()">✕</button>
-            <h2>🎭 构筑祈愿试炼</h2>
+            <h2>🎭 《构筑你的试炼愚戏》</h2>
             <form id="submitForm" onsubmit="submitDungeon(event)">
                 <div class="form-grid">
                     <div class="form-group"><label>试炼名 *</label><input type="text" id="dungeonName" placeholder="为这枚切片宇宙命名..." required maxlength="60"></div>
@@ -2208,10 +2531,23 @@
                     <div class="form-group"><label>当前局数 *</label><input type="number" id="runCount" min="1" max="999" value="1" required></div>
                 </div>
                 <div class="form-group"><label>难度标签</label><select id="dungeonDifficulty"><option value="新手">新手本 —— 第一次入场也能跑</option><option value="低">低难 —— 轻量机制与短流程</option><option value="中" selected>中难 —— 标准挑战强度</option><option value="高">高难 —— 需要配合或硬核机制</option></select></div>
-                <div class="form-group"><label>试炼简介 *</label><textarea id="dungeonDesc" placeholder="记录试炼背景、主要机制、胜负条件或特别之处..." required maxlength="1500"></textarea></div>
+                <div class="form-group"><label>试炼简介 *</label><textarea id="dungeonDesc" placeholder="【写下这场试炼的谶语，供入局信徒见证】" required maxlength="1500"></textarea></div>
                 <div class="form-group"><label>构筑者置顶神谕（可选）</label><textarea id="pinnedNoteInput" placeholder="可以写开本时间、注意事项、车卡要求、构筑者补充神谕..." maxlength="800"></textarea></div>
-                <div class="form-actions"><button type="button" class="btn btn-outline" onclick="closeSubmitModal()">取消</button><button type="submit" class="btn btn-primary">✨ 降下试炼</button></div>
+                <div class="form-actions"><button type="button" class="btn btn-outline" onclick="closeSubmitModal()">取消</button><button type="submit" class="btn btn-primary">献祭试炼至圣殿</button></div>
             </form>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="ratingModalOverlay" style="display:none;" onclick="closeRatingModal(event)">
+        <div class="modal judgement-modal" id="ratingModal" onclick="event.stopPropagation()">
+            <button class="close-btn" style="position:absolute;top:16px;right:20px;" onclick="closeRatingModal()">✕</button>
+            <h2>🎲 为这场愚戏降下你的判定</h2>
+            <p class="modal-note">神格判定会封存为一次评议，同一枚谕令只可判定同一试炼一次。</p>
+            <div class="rating-choice-grid" id="ratingChoiceGrid"></div>
+            <div class="form-actions">
+                <button type="button" class="btn btn-outline" onclick="closeRatingModal()">暂不判定</button>
+                <button type="button" class="btn btn-primary" onclick="submitRatingJudgement()">封存你的神格评议</button>
+            </div>
         </div>
     </div>
 
@@ -2265,17 +2601,34 @@
             { path: '文明', className: 'path-civil', gods: ['秩序', '真理', '战争'] },
             { path: '虚无', className: 'path-void', gods: ['欺诈', '命运'] },
             { path: '混沌', className: 'path-chaos', gods: ['混乱', '痴愚'] },
-            { path: '湮灭', className: 'path-fall', gods: ['污堕', '腐朽', '湮灭', '沉沦'] }
+            { path: '湮灭', className: 'path-fall', gods: ['污堕', '腐朽', '湮灭', '沉默'] }
         ];
-        const GOD_ALIASES = { 沉默: '沉沦' };
-        const PATH_META = {
-            生命: { sigil: '✦', tone: '苔青 / 腐木暗绿 / 浅琥珀柔光', edict: '感孕生命，行育自然；拥抱繁行，创造新生' },
-            湮灭: { sigil: '◒', tone: '深墨黑 / 暗灰浊雾', edict: '自溺 / 自闭 / 自娱 / 无趣' },
-            文明: { sigil: '▣', tone: '赭红 / 暗铜 / 岩浆橙', edict: '寻找秩序；纷争' },
-            混沌: { sigil: '✺', tone: '灰黄雾霭 / 破碎黑纹', edict: '占卜；生命皆痴，文明皆愚' },
-            存在: { sigil: '◇', tone: '冷银灰 / 雾蓝 / 暗紫流光', edict: '敬献一段记忆；精准守时' },
-            虚无: { sigil: '◈', tone: '暗鎏金 / 螺旋迷纹紫 / 小丑灰', edict: '不辨真伪，勿论虚实；欺骗' }
+        const GOD_ALIASES = { 沉沦: '沉默' };
+        const GOD_PRAYERS = {
+            诞育: '感孕生命，衍育自然',
+            繁荣: '万物滋生，亦繁亦荣',
+            死亡: '灵魂安眠，生命终焉',
+            记忆: '昔我长铭，流光拓影',
+            时间: '时光如隙，我亦如风',
+            秩序: '文明火起，秩序长存',
+            真理: '洞窥本质，行见真理',
+            战争: '何以求存，唯血与火',
+            欺诈: '悦如昨日，嗤笑今朝；不辨真伪，勿论虚实',
+            命运: '命若繁星，望而不及；来途去路，尽皆命定',
+            混乱: '虚构规律，寰宇笑谈',
+            痴愚: '生命皆痴，文明皆愚',
+            腐朽: '众生应腐，万物将朽',
+            沉默: '万物归寂，寰宇无音'
         };
+        const PATH_META = {
+            生命: { sigil: '✦', emblem: '🌱', tone: '苔青 / 腐木暗绿 / 浅琥珀柔光', edict: '感孕生命，衍育自然；万物滋生，亦繁亦荣' },
+            湮灭: { sigil: '◒', emblem: '◒', tone: '深墨黑 / 暗灰浊雾', edict: '众生应腐，万物将朽；万物归寂，寰宇无音' },
+            文明: { sigil: '▣', emblem: '▣', tone: '赭红 / 暗铜 / 岩浆橙', edict: '文明火起，秩序长存；何以求存，唯血与火' },
+            混沌: { sigil: '✺', emblem: '✺', tone: '灰黄雾霭 / 破碎黑纹', edict: '虚构规律，寰宇笑谈；生命皆痴，文明皆愚' },
+            存在: { sigil: '◇', emblem: '⌛', tone: '冷银灰 / 雾蓝 / 暗紫流光', edict: '昔我长铭，流光拓影；时光如隙，我亦如风' },
+            虚无: { sigil: '◈', emblem: '🎲', tone: '暗鎏金 / 螺旋迷纹紫 / 小丑灰', edict: '不辨真伪，勿论虚实；来途去路，尽皆命定' }
+        };
+        const LOADING_ORACLES = ['不辨真伪，勿论虚实', '昔我长铭，流光拓影', '时光如隙，我亦如风', '感孕生命，衍育自然', '凡骨入局，诸神设戏'];
         const DIFFICULTY_OPTIONS = [
             { value: '新手', label: '新手本' },
             { value: '低', label: '低难' },
@@ -2287,6 +2640,7 @@
         let inviteSession = getLocalData(INVITE_STORAGE_KEY, null);
         let currentSort = 'popular', searchQuery = '', selectedGod = 'all', selectedPath = 'all', selectedDifficulty = 'all', searchTimeout = null, currentDetailId = null;
         let replyTarget = null;
+        let pendingRating = { dungeonId: null, value: 5 };
 
         function getInviteRole() { return inviteSession?.role || null; }
         function canUseRole(roles) { return roles.includes(getInviteRole()); }
@@ -2459,7 +2813,7 @@
         async function addRating(dungeonId, ratingValue) {
             if (USE_LOCAL_FALLBACK) {
                 const rated = getLocalData('rated', {});
-                if (rated[dungeonId]) return { error: { message: '你已经评过分了' } };
+                if (rated[dungeonId]) return { error: { message: '你已经封存过神格评议了' } };
                 rated[dungeonId] = ratingValue; setLocalData('rated', rated);
                 const dungeons = getLocalData('dungeons', []);
                 const d = dungeons.find(d => d.id === dungeonId);
@@ -2496,11 +2850,11 @@
             if (USE_LOCAL_FALLBACK) {
                 const comments = getLocalData('comments', []);
                 const comment = comments.find(c => c.id === commentId);
-                if (!comment) return { error: { message: '回响不存在' } };
-                if (comment.invite_code_hash !== (inviteSession?.code || 'local') && !isAdmin()) return { error: { message: '只能抹去自己的回响' } };
+                if (!comment) return { error: { message: '证言不存在' } };
+                if (comment.invite_code_hash !== (inviteSession?.code || 'local') && !isAdmin()) return { error: { message: '只能抹去自己的证言' } };
                 comment.is_deleted = true;
                 comment.deleted_at = new Date().toISOString();
-                comment.content = '此回响已被抹去';
+                comment.content = '此证言已被抹去';
                 setLocalData('comments', comments);
                 return { data: [comment], error: null };
             }
@@ -2608,6 +2962,74 @@
 
         function getPathMetaByGod(value) {
             return getPathMetaByPath(getGodInfo(value).path);
+        }
+
+        function getGodPrayer(value) {
+            const god = getGodInfo(value).god;
+            return GOD_PRAYERS[god] || '谕行待补';
+        }
+
+        function getRatingTier(score) {
+            const value = Number(score || 0);
+            if (value >= 4.95) return '愚戏至尊';
+            if (value >= 4.5) return '半神';
+            if (value >= 3.5) return '黄金';
+            if (value >= 2.5) return '白银';
+            if (value >= 1.5) return '黑铁';
+            if (value > 0) return '凡俗';
+            return '未判定';
+        }
+
+        function getRatingCopy(value) {
+            const copies = {
+                1: '凡俗：试炼浅薄，难称愚戏',
+                2: '黑铁：循规试炼，无甚反转',
+                3: '白银：合格祈愿试炼，中规中矩',
+                4: '黄金：精巧布局，窥见神明博弈',
+                5: '愚戏至尊：完美切片愚戏，源初见喜'
+            };
+            return copies[value] || '';
+        }
+
+        function getLoadingOracle() {
+            return LOADING_ORACLES[Math.floor(Math.random() * LOADING_ORACLES.length)] || '凡骨入局，诸神设戏';
+        }
+
+        function getTrialCycle(d) {
+            const count = getRunCount(d);
+            return count === 1 ? '初周目' : `第${count}周目`;
+        }
+
+        function formatContractSize(d) {
+            const count = getParticipantCount(d);
+            return count ? `${count} 人组队` : '人数未定';
+        }
+
+        function getTestimonyPlaceholder(type) {
+            const info = getGodInfo(type);
+            if (info.path === '生命') return '【敬献你在繁衍试炼中的见闻】';
+            if (info.path === '存在') return '【敬献一段试炼留存的记忆】';
+            if (info.path === '虚无') return '【留下你识破谎言的证言】';
+            return `【${getGodPrayer(type)}】`;
+        }
+
+        function isTaskOracle(d) {
+            const text = `${d.name || ''} ${d.description || ''} ${d.pinned_note || ''}`;
+            return /任务|要求|提示|48h|虫皇|击败|结束/.test(text);
+        }
+
+        function renderTrialOracle(d, godClass) {
+            const prefix = isTaskOracle(d) ? '【神谕任务】' : '【试炼谶语】';
+            const content = d.description || '此试炼尚未留下谶语。';
+            return `<div class="trial-oracle ${godClass}"><b>${prefix}</b>${escapeHtml(content).substring(0, 180)}${content.length > 180 ? '…' : ''}</div>`;
+        }
+
+        function isVeteranArchitect(d) {
+            return Number(d.avg_rating || 0) >= 4.8 && Number(d.rating_count || 0) >= 2;
+        }
+
+        function getArchitectLabel(d) {
+            return isVeteranArchitect(d) ? '🎭 愚戏构筑师：' : '筑戏人：';
         }
 
         function formatGodName(value) {
@@ -2740,7 +3162,7 @@
 
         async function renderDungeonList() {
             const listEl = document.getElementById('dungeonList');
-            listEl.innerHTML = '<div class="loading"><div class="spinner"></div><br>正在从切片宇宙中加载祈愿试炼...</div>';
+            listEl.innerHTML = `<div class="loading"><div class="spinner"></div><br>正在从切片宇宙中加载祈愿试炼...<br><span>${escapeHtml(getLoadingOracle())}</span></div>`;
             let dungeons = [];
             try {
                 dungeons = await fetchDungeons();
@@ -2775,56 +3197,107 @@
             else if (currentSort === 'comments') dungeons.sort((a,b) => (b.comment_count||0)-(a.comment_count||0));
             if (!dungeons.length) {
                 const filtered = searchQuery || selectedGod !== 'all' || selectedPath !== 'all' || selectedDifficulty !== 'all';
-                listEl.innerHTML = `<div class="empty-state"><div style="font-size:3rem;">🎲</div><p>${filtered ? '这个神席暂时没有匹配的试炼，换个神明或难度试试。' : '神谕留存地尚无试炼……<br>成为第一位构筑祈愿试炼的丑角吧！'}</p></div>`;
+                listEl.innerHTML = `<div class="empty-state"><div style="font-size:3rem;">🎲</div><p>${filtered ? '【此试炼碎片未录入神谕名录，或是被神明抹除】' : '【暂无新构筑的愚戏试炼，静待筑戏人献祭新试炼】'}</p></div>`;
+                await renderOracleSidebar([]);
                 return;
             }
             listEl.innerHTML = dungeons.map((d,i) => {
-                const rank = (currentSort==='rating' || currentSort==='popular') && i<3 ? ['🥇','🥈','🥉'][i] : `#${i+1}`;
                 const godLabel = formatGodName(d.type);
                 const godPath = formatGodPath(d.type);
                 const godClass = getGodClass(d.type);
                 const pathMeta = getPathMetaByGod(d.type);
                 const difficultyLabel = formatDifficulty(d.difficulty);
                 const divineClass = isDivineTrial(d) ? 'divine-trial' : '';
+                const score = Number(d.avg_rating || 0);
+                const ratingValue = score ? score.toFixed(1) : '—';
+                const testimonyCount = Number(d.comment_count || 0);
                 return `
                 <div class="dungeon-card ${godClass} ${divineClass}" onclick="openDetail('${escapeHtml(d.id)}')">
-                    <div class="card-path-rune ${godClass}">
-                        <span>${escapeHtml(pathMeta.sigil)}</span>
-                        <strong>${escapeHtml(godPath)}命途</strong>
-                        <em>${escapeHtml(pathMeta.edict)}</em>
-                    </div>
-                    <div class="card-header">
-                        <div>
-                            <span style="font-size:1.1rem;margin-right:8px;">${rank}</span>
-                            <span class="card-title">${escapeHtml(d.name||'未命名')}</span>
-                            <div class="card-meta">
-                                <span class="identity-chip author">🎭 构筑者 ${escapeHtml(d.creator||'匿名')}</span>
-                                <span class="tag god-tag ${godClass}">${escapeHtml(godLabel)}</span>
-                                <span class="tag ${getDiffClass(d.difficulty)} ${godClass}-difficulty">${escapeHtml(difficultyLabel)}</span>
-                                ${isDivineTrial(d) ? '<span class="tag divine-tag">神级愚戏</span>' : ''}
-                                <span style="font-size:0.7rem;">🎲 ${formatDate(d.created_at)}降下</span>
-                            </div>
-                            <div class="metric-strip">
-                                <span class="metric-pill">👥 <strong>${formatParticipants(d)}</strong></span>
-                                <span class="metric-pill">🎲 <strong>${formatRunCount(d)}</strong></span>
-                                <span class="metric-pill">裂隙通关 <strong>${formatClearRate(d)}</strong></span>
-                                <span class="metric-pill">💬 <strong>${d.comment_count||0}</strong></span>
+                    <div class="trial-card-head">
+                        <div class="trial-title-block">
+                            <span class="path-emblem ${godClass}">${escapeHtml(pathMeta.emblem || pathMeta.sigil)}</span>
+                            <div>
+                                <div class="card-title-line">
+                                    <span class="card-title">${escapeHtml(d.name||'未命名试炼')}</span>
+                                    <span class="trial-number">试炼编号 #${i + 1}</span>
+                                </div>
+                                <div class="trial-subline">${escapeHtml(godPath)}命途 · ${escapeHtml(godLabel)}</div>
                             </div>
                         </div>
-                        <div class="rating-badge"><span class="star">⭐</span> ${d.avg_rating ? d.avg_rating.toFixed(1) : '—'} <span style="font-weight:400;font-size:0.7rem;color:var(--text-muted);">(${d.rating_count||0})</span></div>
+                        <div class="judgement-badge" aria-label="神格判定">
+                            <span class="judgement-score">🎲 神格判定：${ratingValue}</span>
+                            <span class="judgement-tier">${escapeHtml(getRatingTier(score))}</span>
+                            <span class="judgement-count">评议人次 (${Number(d.rating_count || 0)})</span>
+                        </div>
                     </div>
-                    ${d.description ? `<div class="card-desc">“${escapeHtml(d.description).substring(0,140)}${d.description.length>140?'…':''}”</div>` : ''}
+                    <div class="trial-identity-row">
+                        <span class="author-mark ${isVeteranArchitect(d) ? 'master' : ''}">${getArchitectLabel(d)}${escapeHtml(d.creator||'匿名')}</span>
+                        <span class="tag god-tag lore-tag ${godClass}" data-prayer="${escapeHtml(getGodPrayer(d.type))}">${escapeHtml(godLabel)}</span>
+                        <span class="tag path-tag lore-tag ${godClass}" data-prayer="${escapeHtml(pathMeta.edict)}">${escapeHtml(godPath)}命途</span>
+                        <span class="tag danger-stamp ${getDiffClass(d.difficulty)} ${godClass}-difficulty">${escapeHtml(difficultyLabel)}</span>
+                        ${isDivineTrial(d) ? '<span class="tag divine-tag">神级愚戏</span>' : ''}
+                        <span class="trial-data-pill">🎲 ${formatDate(d.created_at)}降下</span>
+                    </div>
+                    <div class="trial-data-row">
+                        <span class="trial-data-pill">同契人数：<strong>${formatContractSize(d)}</strong></span>
+                        <span class="trial-data-pill">试炼轮回：<strong>${escapeHtml(getTrialCycle(d))}</strong></span>
+                        <span class="trial-data-pill">通关留存率：<strong>${formatClearRate(d)}</strong></span>
+                        <span class="trial-data-pill">证言条数：<strong>${testimonyCount}</strong></span>
+                    </div>
+                    ${renderTrialOracle(d, godClass)}
                 </div>`;
             }).join('');
+            await renderOracleSidebar(dungeons);
         }
 
         function getDiffClass(d) { const m={新手:'difficulty-newbie',低:'difficulty-low',中:'difficulty-medium',高:'difficulty-high'}; return m[normalizeDifficulty(d)]||'difficulty-medium'; }
         function isDivineTrial(d) {
             return Number(d.avg_rating || 0) >= 4.8 && Number(d.rating_count || 0) >= 1;
         }
+
+        async function renderOracleSidebar(dungeons = []) {
+            const supreme = document.getElementById('supremeTrialList');
+            const testimony = document.getElementById('testimonyLedger');
+            const architects = document.getElementById('architectLedger');
+            if (supreme) {
+                const top = [...dungeons]
+                    .sort((a,b) => (Number(b.avg_rating || 0) - Number(a.avg_rating || 0)) || (Number(b.rating_count || 0) - Number(a.rating_count || 0)))
+                    .slice(0, 4);
+                supreme.innerHTML = top.length ? top.map((d, index) => `
+                    <div class="oracle-item" onclick="openDetail(${jsString(d.id)})">
+                        <strong>${index + 1}. 🎲 ${escapeHtml(d.name || '未命名试炼')}</strong>
+                        <span>${escapeHtml(getRatingTier(d.avg_rating))} · 神格判定 ${Number(d.avg_rating || 0).toFixed(1)} · ${escapeHtml(formatGodName(d.type))}</span>
+                    </div>`).join('') : '<div class="oracle-item"><span>暂无诸神注目的试炼。</span></div>';
+            }
+            if (testimony) {
+                const latest = await fetchLatestComments(4);
+                testimony.innerHTML = latest.length ? latest.map(item => `
+                    <div class="oracle-item" onclick="openDetail(${jsString(item.dungeon_id)})">
+                        <strong>${escapeHtml(item.author || '匿名信徒')}</strong>
+                        <span>${escapeHtml(truncateText(item.content, 46))}</span>
+                    </div>`).join('') : '<div class="oracle-item"><span>暂无可采信证言。</span></div>';
+            }
+            if (architects) {
+                const seen = new Set();
+                const newest = [...dungeons]
+                    .sort((a,b) => new Date(b.created_at) - new Date(a.created_at))
+                    .filter(d => {
+                        const name = d.creator || '匿名';
+                        if (seen.has(name)) return false;
+                        seen.add(name);
+                        return true;
+                    })
+                    .slice(0, 4);
+                architects.innerHTML = newest.length ? newest.map(d => `
+                    <div class="oracle-item" onclick="openDetail(${jsString(d.id)})">
+                        <strong>${escapeHtml(d.creator || '匿名筑戏人')}</strong>
+                        <span>献祭《${escapeHtml(d.name || '未命名试炼')}》 · ${escapeHtml(formatDate(d.created_at))}</span>
+                    </div>`).join('') : '<div class="oracle-item"><span>等待新的构筑者献祭试炼。</span></div>';
+            }
+        }
         function formatParticipants(d) {
             const count = Number(d.participant_count || d.participantCount);
-            return Number.isFinite(count) && count > 0 ? `${count}人固定` : '人数未定';
+            return Number.isFinite(count) && count > 0 ? `同契人数：${count} 人组队` : '同契人数：未定';
         }
         function getParticipantCount(d) {
             const count = Number(d.participant_count || d.participantCount);
@@ -2842,7 +3315,7 @@
             return getParticipantCount(d) * getRunCount(d);
         }
         function formatRunCount(d) {
-            return `第${getRunCount(d)}局`;
+            return `试炼轮回：${getTrialCycle(d)}`;
         }
         function formatClearRate(d) {
             const stored = Number(d.clear_rate ?? d.clearRate);
@@ -2883,18 +3356,19 @@
             return roots;
         }
 
-        function renderCommentNode(comment, depth = 0, floorNumber = '') {
+        function renderCommentNode(comment, depth = 0, floorNumber = '', creator = '') {
             const deleted = !!comment.is_deleted;
             const canReply = canInteract() && !deleted;
             const isReply = depth > 0;
-            const roleLabel = isReply ? '副帖' : '主帖';
-            const floorLabel = isReply ? '楼中回复' : `第 ${floorNumber} 楼`;
-            const replyLabel = isReply ? '回复副帖' : '回复主帖';
+            const isArchitect = !!creator && (comment.author === creator || comment.invite_name === creator);
+            const roleLabel = isReply ? '副证言' : '主证言';
+            const floorLabel = isReply ? '楼中证言' : `第 ${floorNumber} 则证言`;
+            const replyLabel = isReply ? '回应副证' : '回应主证';
             const deleteButton = canDeleteComment(comment) && !deleted
-                ? `<button class="text-action" onclick="deleteCommentUI(${jsString(comment.id)})">删除</button>`
+                ? `<button class="text-action" onclick="deleteCommentUI(${jsString(comment.id)})">抹去证言</button>`
                 : '';
             return `
-                <div class="comment-item ${isReply ? 'reply' : 'root'}">
+                <div class="comment-item ${isReply ? 'reply' : 'root'} ${isArchitect ? 'architect' : ''}">
                     <div class="comment-head">
                         <div class="comment-author-line">
                             <span class="comment-role ${isReply ? 'reply' : 'root'}">${roleLabel}</span>
@@ -2908,14 +3382,14 @@
                         ${canReply ? `<button class="text-action" onclick="setReplyTarget(${jsString(comment.id)}, ${jsString(comment.author || '匿名')})">${replyLabel}</button>` : ''}
                         ${deleteButton}
                     </div>
-                    ${(comment.replies || []).length ? `<div class="comment-replies">${comment.replies.map(reply => renderCommentNode(reply, depth + 1)).join('')}</div>` : ''}
+                    ${(comment.replies || []).length ? `<div class="comment-replies">${comment.replies.map(reply => renderCommentNode(reply, depth + 1, '', creator)).join('')}</div>` : ''}
                 </div>`;
         }
 
-        function renderComments(comments) {
+        function renderComments(comments, creator = '') {
             const roots = buildCommentTree(comments);
-            if (!roots.length) return '<div class="no-comments">尚无回响，成为第一位留下神谕印记的入局者。</div>';
-            return roots.map((comment, index) => renderCommentNode(comment, 0, index + 1)).join('');
+            if (!roots.length) return '<div class="no-comments">尚无证言，成为第一位向试炼证言殿递交见闻的入局者。</div>';
+            return roots.map((comment, index) => renderCommentNode(comment, 0, index + 1, creator)).join('');
         }
 
         function renderFeedbackTags(disabled) {
@@ -2936,7 +3410,7 @@
             if (!feed) return;
             const comments = await fetchLatestComments(3);
             if (!comments.length) {
-                feed.innerHTML = '<div class="feed-empty"><strong>神谕石壁暂时无声</strong><span>等第一位入局者留下回响，新的神谕会出现在这里。</span></div>';
+                feed.innerHTML = '<div class="feed-empty"><strong>神谕石壁暂时无声</strong><span>等第一位入局者递交证言，新的神谕会出现在这里。</span></div>';
                 return;
             }
             const feedGlyphs = ['♟', '✦', '◈', '◇', '✧', '✷', '✹', '✺'];
@@ -2944,7 +3418,7 @@
             feed.innerHTML = comments.map((comment, index) => {
                 const dungeon = comment.dungeon || {};
                 const title = dungeon.name || '未知试炼';
-                const action = comment.parent_comment_id ? '楼中回响' : '留下回响';
+                const action = comment.parent_comment_id ? '楼中副证' : '递交证言';
                 const godLabel = dungeon.type ? formatGodName(dungeon.type) : '未归档神明';
                 const godPath = dungeon.type ? `${formatGodPath(dungeon.type)}命途` : '未知命途';
                 const godClass = dungeon.type ? getGodClass(dungeon.type) : 'path-unknown';
@@ -2980,10 +3454,9 @@
             const feedbackSummary = await fetchClearFeedbackSummary(id);
             const rated = await checkHasRated(id);
             const locked = !canInteract();
-            const ratingLocked = rated || locked;
-            const ratingText = rated ? '✅ 你已经献上神眷评定' : (locked ? '🎲 验入局谕令后可评定试炼' : '👆 点击星星为此试炼赐福');
+            const ratingText = rated ? '✅ 你已经封存神格评议' : (locked ? '🎲 验入局谕令后可降下判定' : '选择 1-5 阶，封存你的神格评议');
             const commentLockedAttrs = locked ? 'disabled' : '';
-            const commentPlaceholder = locked ? '验入局谕令后可留下回响' : '写下你的试炼回响...';
+            const commentPlaceholder = locked ? '验入局谕令后可递交证言' : getTestimonyPlaceholder(d.type);
             const runCount = getRunCount(d);
             const clearLocalKey = `${id}:${runCount}:${inviteSession?.code || 'guest'}`;
             const clearDone = !!getLocalData('cleared_supabase', {})[clearLocalKey];
@@ -3027,8 +3500,8 @@
                     <span>👥 ${formatParticipants(d)}</span>
                     <span>🎲 ${formatRunCount(d)}</span>
                     <span>切片裂隙通关 ${formatClearRate(d)}</span>
-                    <span>⭐ ${(d.avg_rating||0).toFixed(1)} (${d.rating_count||0}人)</span>
-                    <span>💬 ${activeCommentCount} 回响</span>
+                    <span>🎲 神格判定 ${(d.avg_rating||0).toFixed(1)} · 评议人次 ${d.rating_count||0}</span>
+                    <span>💬 证言条数 ${activeCommentCount}</span>
                     ${canUseRole(['author','admin']) ? `<button class="btn btn-outline btn-xs" onclick="advanceRunUI('${escapeHtml(id)}')">重掷下一局</button>` : ''}
                     ${isAdmin() ? `<button class="btn btn-danger btn-xs" onclick="deleteDungeon('${escapeHtml(id)}')">封存试炼</button>` : ''}
                 </div>
@@ -3054,25 +3527,23 @@
                         <button class="btn btn-primary btn-sm" ${clearDone?'disabled':''} onclick="${clearAction}">${clearButtonText}</button>
                     </div>
                 </div>
-                <div class="rating-area">
-                    <span style="font-weight:600;font-size:0.85rem;">⚡ 你的神眷：</span>
-                    <div class="stars ${ratingLocked?'readonly':''}" id="starRating">
-                        ${[5,4,3,2,1].map(v=>`<input type="radio" name="rating" value="${v}" id="star${v}" ${ratingLocked?'disabled':''}><label for="star${v}" onclick="${ratingLocked?'':`rateDungeon('${escapeHtml(id)}',${v})`}">★</label>`).join('')}
-                    </div>
+                <div class="rating-area judgement-area">
+                    <span class="judgement-area-title">🎲 神格判定</span>
+                    <button class="btn btn-outline btn-sm" onclick="${locked ? `openInviteModal('验入局谕令后可为试炼降下神格判定。')` : (rated ? '' : `openRatingModal('${escapeHtml(id)}')`)}" ${rated ? 'disabled' : ''}>${rated ? '已封存神格评议' : (locked ? '验入局谕令' : '降下你的判定')}</button>
                     <span class="rating-text">${ratingText}</span>
                 </div>
                 <div class="comments-section">
-                    <div class="section-title">💬 试炼回响 (${activeCommentCount})</div>
+                    <div class="section-title">💬 试炼证言殿 (${activeCommentCount})</div>
                     <div class="comment-form">
-                        <div class="reply-context" id="replyContext"><span id="replyContextText"></span><button class="text-action" onclick="clearReplyTarget()">取消回复</button></div>
+                        <div class="reply-context" id="replyContext"><span id="replyContextText"></span><button class="text-action" onclick="clearReplyTarget()">撤回回应</button></div>
                         <div class="comment-identity">
-                            以此身份发言
+                            以此身份递交证言
                             <strong>${locked ? '访客' : escapeHtml(inviteSession?.name || ROLE_LABELS[getInviteRole()] || '匿名')}</strong>
                         </div>
                         <textarea id="commentContentInput" placeholder="${commentPlaceholder}" maxlength="800" style="flex:2;" ${commentLockedAttrs}></textarea>
-                        <button class="btn btn-primary btn-sm" onclick="${locked?`openInviteModal('验入局谕令后可留下回响。')`:`submitComment('${escapeHtml(id)}')`}">${locked?'验入局谕令':'发布回响'}</button>
+                        <button class="btn btn-primary btn-sm" onclick="${locked?`openInviteModal('验入局谕令后可递交证言。')`:`submitComment('${escapeHtml(id)}')`}">${locked?'验入局谕令':'递交证言'}</button>
                     </div>
-                    <div id="commentsList">${renderComments(comments)}</div>
+                    <div id="commentsList">${renderComments(comments, d.creator)}</div>
                 </div>`;
             document.getElementById('detailOverlay').style.display='flex'; document.body.style.overflow='hidden';
         }
@@ -3082,7 +3553,7 @@
         function openInviteModal(message) {
             const overlay = document.getElementById('inviteModalOverlay');
             const hint = document.getElementById('inviteHint');
-            if (hint) hint.textContent = message || '输入群内谕令后，才能参与神眷评定、试炼回响或构筑试炼。';
+            if (hint) hint.textContent = message || '输入群内谕令后，才能参与神格判定、试炼证言或构筑愚戏。';
             updateInviteUI();
             overlay.style.display='flex';
             document.body.style.overflow='hidden';
@@ -3155,7 +3626,7 @@
             const text = document.getElementById('replyContextText');
             const input = document.getElementById('commentContentInput');
             if (context) context.style.display = 'flex';
-            if (text) text.textContent = `正在回应 ${author}，会显示在这条回响下面`;
+            if (text) text.textContent = `正在回应 ${author}，会显示在这条证言下面`;
             if (input) {
                 input.placeholder = `回复 ${author}...`;
                 input.focus();
@@ -3167,7 +3638,7 @@
             const context = document.getElementById('replyContext');
             const input = document.getElementById('commentContentInput');
             if (context) context.style.display = 'none';
-            if (input) input.placeholder = '写下你的试炼回响...';
+            if (input) input.placeholder = '递交你的试炼证言...';
         }
 
         function togglePinnedEditor(force) {
@@ -3188,24 +3659,64 @@
             await renderDungeonList();
         }
 
+        function openRatingModal(id) {
+            if(!requireInvite(['player','author','admin'], '验入局谕令后可为试炼降下神格判定。')) return;
+            pendingRating = { dungeonId: id, value: 5 };
+            renderRatingChoices();
+            document.getElementById('ratingModalOverlay').style.display='flex';
+            document.body.style.overflow='hidden';
+        }
+
+        function closeRatingModal(e) {
+            if(e && e.target!==document.getElementById('ratingModalOverlay')) return;
+            document.getElementById('ratingModalOverlay').style.display='none';
+            document.body.style.overflow = document.getElementById('detailOverlay')?.style.display === 'flex' ? 'hidden' : '';
+        }
+
+        function renderRatingChoices() {
+            const grid = document.getElementById('ratingChoiceGrid');
+            if (!grid) return;
+            grid.innerHTML = [5,4,3,2,1].map(value => {
+                const copy = getRatingCopy(value);
+                const [tier, text] = copy.split('：');
+                return `
+                    <button type="button" class="rating-choice ${pendingRating.value === value ? 'active' : ''}" onclick="selectRatingValue(${value})">
+                        <span class="rating-choice-mark">🎲${value}</span>
+                        <span><strong>${escapeHtml(tier || value)}</strong>${escapeHtml(text || copy)}</span>
+                    </button>`;
+            }).join('');
+        }
+
+        function selectRatingValue(value) {
+            pendingRating.value = value;
+            renderRatingChoices();
+        }
+
+        async function submitRatingJudgement() {
+            if (!pendingRating.dungeonId || !pendingRating.value) { showToast('请选择神格判定'); return; }
+            const { dungeonId, value } = pendingRating;
+            closeRatingModal();
+            await rateDungeon(dungeonId, value);
+        }
+
         async function rateDungeon(id, val){
-            if(!requireInvite(['player','author','admin'], '验入局谕令后可为试炼献上神眷评定。')) return;
+            if(!requireInvite(['player','author','admin'], '验入局谕令后可为试炼降下神格判定。')) return;
             const {error}=await addRating(id,val);
-            if(error){ showToast(error.message?.includes('已经')?'⚠️ 你已经献过神眷评定了':`❌ ${error.message || '评定失败'}`); return; }
+            if(error){ showToast(error.message?.includes('已经')?'⚠️ 你已经封存过神格评议了':`❌ ${error.message || '判定失败'}`); return; }
             markAsRated(id);
-            showToast('⭐ 神眷已降临');
+            showToast('🎲 神格评议已封存');
             if(currentDetailId===id) await openDetail(id);
             await renderDungeonList();
         }
 
         async function submitComment(id){
-            if(!requireInvite(['player','author','admin'], '验入局谕令后可留下试炼回响。')) return;
+            if(!requireInvite(['player','author','admin'], '验入局谕令后可递交试炼证言。')) return;
             const a=inviteSession?.name || ROLE_LABELS[getInviteRole()] || '';
             const c=document.getElementById('commentContentInput')?.value.trim();
-            if(!c){showToast('请输入回响');return;}
+            if(!c){showToast('请输入证言');return;}
             const {error}=await addComment(id,a,c, replyTarget?.id || null);
-            if(error){showToast(`❌ ${error.message || '回响失败'}`);return;}
-            showToast(replyTarget ? '↩️ 副帖回响已发布' : '💬 主帖回响已发布');
+            if(error){showToast(`❌ ${error.message || '证言失败'}`);return;}
+            showToast(replyTarget ? '↩️ 副证言已递交' : '💬 主证言已递交');
             clearReplyTarget();
             if(document.getElementById('commentContentInput')) document.getElementById('commentContentInput').value='';
             if(currentDetailId===id) await openDetail(id);
@@ -3214,11 +3725,11 @@
         }
 
         async function deleteCommentUI(commentId){
-            if(!requireInvite(['player','author','admin'], '验入局谕令后才可删除自己的回响。')) return;
-            if(!confirm('确定抹去这条回响吗？')) return;
+            if(!requireInvite(['player','author','admin'], '验入局谕令后才可抹去自己的证言。')) return;
+            if(!confirm('确定抹去这条证言吗？')) return;
             const {error}=await removeComment(commentId);
             if(error){showToast(`❌ ${error.message || '删除失败'}`);return;}
-            showToast('回响已抹去');
+            showToast('证言已抹去');
             if(currentDetailId) await openDetail(currentDetailId);
             await renderDungeonList();
             await renderLatestComments();
@@ -3292,12 +3803,12 @@
             if(!Number.isInteger(runCount)||runCount<1||runCount>999){showToast('请检查当前局数');return;}
             const btn=e.target.querySelector('button[type="submit"]');
             btn.disabled=true;
-            btn.textContent='降下中...';
+            btn.textContent='献祭中...';
             const {error}=await addDungeon({name,creator,difficulty,type,participantCount,runCount,description:desc,pinnedNote});
             btn.disabled=false;
-            btn.textContent='✨ 降下试炼';
+            btn.textContent='献祭试炼至圣殿';
             if(error){showToast(`❌ ${error.message || '失败'}`);return;}
-            showToast('🎉 祈愿试炼已降临！');
+            showToast('你已代行神明权柄，一场愚戏试炼，正式落位切片宇宙。静待信徒入局，降下他们的神格判定。');
             closeSubmitModal();
             await renderDungeonList();
             await renderLatestComments();
@@ -3305,7 +3816,7 @@
 
         async function deleteDungeon(id) {
             if(!requireInvite(['admin'], '只有神谕馆主谕令可以封存试炼。')) return;
-            if(!confirm('确定封存这场试炼吗？神眷评定和回响会一起消失。')) return;
+            if(!confirm('确定封存这场试炼吗？神格判定和证言会一起消失。')) return;
             const { error } = await removeDungeon(id);
             if(error){ showToast(`❌ ${error.message || '删除失败'}`); return; }
             showToast('🗑️ 试炼已封存');
@@ -3316,7 +3827,7 @@
         function setSort(sort,btn){ currentSort=sort; document.querySelectorAll('.sort-btn').forEach(b=>b.classList.remove('active')); btn.classList.add('active'); renderDungeonList(); }
         function debounceSearch(){ clearTimeout(searchTimeout); searchTimeout=setTimeout(()=>{ searchQuery=document.getElementById('searchInput').value; renderDungeonList(); },350); }
         function showToast(msg){ const c=document.getElementById('toastContainer'); const t=document.createElement('div'); t.className='toast'; t.textContent=msg; c.appendChild(t); setTimeout(()=>{if(t.parentNode)t.remove();},3200); }
-        document.addEventListener('keydown',e=>{ if(e.key==='Escape'){ if(document.getElementById('inviteModalOverlay').style.display==='flex') closeInviteModal(); else if(document.getElementById('detailOverlay').style.display==='flex') closeDetail(); else if(document.getElementById('submitModalOverlay').style.display==='flex') closeSubmitModal(); } if(e.key==='Enter' && document.activeElement?.id === 'inviteCodeInput') submitInviteCode(); if(e.key==='Enter' && document.activeElement?.id === 'displayNameInput') saveDisplayName(); });
+        document.addEventListener('keydown',e=>{ if(e.key==='Escape'){ if(document.getElementById('ratingModalOverlay').style.display==='flex') closeRatingModal(); else if(document.getElementById('inviteModalOverlay').style.display==='flex') closeInviteModal(); else if(document.getElementById('detailOverlay').style.display==='flex') closeDetail(); else if(document.getElementById('submitModalOverlay').style.display==='flex') closeSubmitModal(); } if(e.key==='Enter' && document.activeElement?.id === 'inviteCodeInput') submitInviteCode(); if(e.key==='Enter' && document.activeElement?.id === 'displayNameInput') saveDisplayName(); });
 
         (async function init(){
             populateGodSelect();
@@ -3330,7 +3841,7 @@
                 const samples = [
                     { id:'s1',name:'深渊回廊',creator:'灰袍叙事者',difficulty:'中',type:'记忆',description:'在无尽深渊边缘，一座古老回廊静静等待。封印着陨落神祇的记忆碎片，踏入者将直面内心最深的恐惧……',pinned_note:'建议 6 人满员进入，第二幕需要有人记录线索。',participant_count:6,run_count:2,clear_count:6,clear_rate:50,avg_rating:4.7,rating_count:23,comment_count:8,created_at:new Date(Date.now()-7*86400000).toISOString()},
                     { id:'s2',name:'愚者之塔',creator:'星辰旅人',difficulty:'高',type:'痴愚',description:'倒悬于天空的巨塔，每一层都蕴含悖论与谜题。唯有拥抱荒诞之人，方能窥见塔顶的真相。',pinned_note:'高难解谜本，建议预留 2 小时以上。',participant_count:4,run_count:3,clear_count:9,clear_rate:75,avg_rating:4.9,rating_count:41,comment_count:15,created_at:new Date(Date.now()-3*86400000).toISOString()},
-                    { id:'s3',name:'血色竞技场',creator:'铁腕判官',difficulty:'高',type:'战争',description:'上古诸神取乐的竞技场，回响着古老战吼。策略与力量并重，每一战都可能揭开神戏一角。',participant_count:8,run_count:1,clear_count:3,clear_rate:37.5,avg_rating:4.3,rating_count:17,comment_count:5,created_at:new Date(Date.now()-14*86400000).toISOString()},
+                    { id:'s3',name:'血色竞技场',creator:'铁腕判官',difficulty:'高',type:'战争',description:'上古诸神取乐的竞技场，回荡着古老战吼。策略与力量并重，每一战都可能揭开神戏一角。',participant_count:8,run_count:1,clear_count:3,clear_rate:37.5,avg_rating:4.3,rating_count:17,comment_count:5,created_at:new Date(Date.now()-14*86400000).toISOString()},
                     { id:'s4',name:'雾隐村',creator:'迷雾行者',difficulty:'低',type:'沉沦',description:'永远被浓雾笼罩的村庄，平静生活之下，每个夜晚雾中都会出现不可名状之物。',participant_count:5,run_count:2,clear_count:4,clear_rate:40,avg_rating:4.1,rating_count:12,comment_count:4,created_at:new Date(Date.now()-5*86400000).toISOString()},
                     { id:'s5',name:'诸神棋盘',creator:'执棋人',difficulty:'中',type:'命运',description:'整场试炼就是一张巨大的棋盘，参与者成为诸神的棋子。每一步都可能改变命运。',participant_count:6,run_count:4,clear_count:18,clear_rate:75,avg_rating:4.6,rating_count:30,comment_count:11,created_at:new Date(Date.now()-10*86400000).toISOString()}
                 ];
