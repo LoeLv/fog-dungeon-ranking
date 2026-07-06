@@ -27,6 +27,16 @@ const roleLabels: Record<InviteRole, string> = {
   admin: "馆主",
 };
 
+const feedbackTagAllowlist = new Set([
+  "机制清楚",
+  "剧情好",
+  "氛围强",
+  "有挑战",
+  "偏难",
+  "想再跑",
+  "需要修订",
+]);
+
 function json(body: Record<string, unknown>, status = 200) {
   return new Response(JSON.stringify(body), {
     status,
@@ -93,7 +103,22 @@ function hasRole(role: InviteRole, allowed: InviteRole[]) {
 }
 
 function isMissingInviteColumn(error: { code?: string; message?: string } | null) {
-  return error?.code === "42703" || error?.message?.includes("invite_code_hash");
+  return error?.code === "42703" && (
+    error?.message?.includes("invite_code_hash") ||
+    error?.message?.includes("invite_name")
+  );
+}
+
+function isMissingForumColumn(error: { code?: string; message?: string } | null) {
+  return error?.code === "42703";
+}
+
+function cleanFeedbackTags(value: unknown) {
+  if (!Array.isArray(value)) return [];
+  const tags = value
+    .map((item) => cleanText(item, 20))
+    .filter((tag) => feedbackTagAllowlist.has(tag));
+  return [...new Set(tags)].slice(0, 5);
 }
 
 async function recalculateClearStats(
@@ -165,6 +190,7 @@ Deno.serve(async (req) => {
       const name = cleanText(payload.name, 80);
       const creator = cleanText(payload.creator, 40);
       const description = cleanText(payload.description, 1800);
+      const pinnedNote = cleanText(payload.pinnedNote, 800);
       const difficulty = cleanText(payload.difficulty, 20) || "超凡";
       const type = cleanText(payload.type, 20) || "综合";
       const participantCount = Number(payload.participantCount ?? payload.participant_count);
@@ -187,6 +213,7 @@ Deno.serve(async (req) => {
           difficulty,
           type,
           description,
+          pinned_note: pinnedNote,
           participant_count: participantCount,
           run_count: runCount,
           clear_count: 0,
@@ -200,6 +227,27 @@ Deno.serve(async (req) => {
         const retry = await supabase
           .from("dungeons")
           .insert({ name, creator, difficulty, type, description })
+          .select()
+          .single();
+        if (retry.error) return json({ error: retry.error.message }, 400);
+        return json({ role, name: identity.displayName, data: retry.data });
+      }
+      if (isMissingForumColumn(error)) {
+        const retry = await supabase
+          .from("dungeons")
+          .insert({
+            name,
+            creator,
+            difficulty,
+            type,
+            description,
+            participant_count: participantCount,
+            run_count: runCount,
+            clear_count: 0,
+            clear_rate: 0,
+            invite_code_hash: identity.codeHash,
+            invite_name: identity.displayName,
+          })
           .select()
           .single();
         if (retry.error) return json({ error: retry.error.message }, 400);
@@ -222,6 +270,8 @@ Deno.serve(async (req) => {
         .single();
       if (dungeonError) return json({ error: dungeonError.message }, 400);
       const runNumber = Number(dungeon.run_count) || 1;
+      const feedbackTags = cleanFeedbackTags(payload.feedbackTags);
+      const feedbackNote = cleanText(payload.feedbackNote, 200);
 
       const { data: clearRecord, error } = await supabase
         .from("clear_records")
@@ -230,10 +280,29 @@ Deno.serve(async (req) => {
           run_number: runNumber,
           invite_code_hash: identity.codeHash,
           invite_name: identity.displayName,
+          feedback_tags: feedbackTags,
+          feedback_note: feedbackNote,
         })
         .select()
         .single();
       if (error?.code === "23505") return json({ error: "你已经登记过本周目通过了" }, 409);
+      if (isMissingForumColumn(error)) {
+        const retry = await supabase
+          .from("clear_records")
+          .insert({
+            dungeon_id: dungeonId,
+            run_number: runNumber,
+            invite_code_hash: identity.codeHash,
+            invite_name: identity.displayName,
+          })
+          .select()
+          .single();
+        if (retry.error?.code === "23505") return json({ error: "你已经登记过本周目通过了" }, 409);
+        if (retry.error) return json({ error: retry.error.message }, 400);
+        const stats = await recalculateClearStats(supabase, dungeonId);
+        if (stats.error) return json({ error: stats.error.message }, 400);
+        return json({ role, name: identity.displayName, data: { clearRecord: retry.data, dungeon: stats.data } });
+      }
       if (error) return json({ error: error.message }, 400);
 
       const stats = await recalculateClearStats(supabase, dungeonId);
@@ -304,13 +373,29 @@ Deno.serve(async (req) => {
 
       const dungeonId = cleanText(payload.dungeonId, 80);
       const author = cleanText(payload.author, 40) || identity.displayName || "匿名探索者";
-      const content = cleanText(payload.content, 500);
+      const content = cleanText(payload.content, 800);
+      const parentCommentId = cleanText(payload.parentCommentId, 80);
       if (!isUuid(dungeonId) || !content) return json({ error: "评论参数不正确" }, 400);
+      if (parentCommentId) {
+        if (!isUuid(parentCommentId)) return json({ error: "回复目标不正确" }, 400);
+        const { data: parent, error: parentError } = await supabase
+          .from("comments")
+          .select("id, dungeon_id, is_deleted")
+          .eq("id", parentCommentId)
+          .single();
+        if (isMissingForumColumn(parentError)) {
+          return json({ error: "请先运行论坛功能数据库升级 SQL" }, 400);
+        }
+        if (parentError || parent?.dungeon_id !== dungeonId || parent?.is_deleted) {
+          return json({ error: "回复目标不存在" }, 400);
+        }
+      }
 
       const { data, error } = await supabase
         .from("comments")
         .insert({
           dungeon_id: dungeonId,
+          parent_comment_id: parentCommentId || null,
           author,
           content,
           invite_code_hash: identity.codeHash,
@@ -327,6 +412,71 @@ Deno.serve(async (req) => {
         if (retry.error) return json({ error: retry.error.message }, 400);
         return json({ role, name: identity.displayName, data: retry.data });
       }
+      if (isMissingForumColumn(error)) {
+        return json({ error: "请先运行论坛功能数据库升级 SQL" }, 400);
+      }
+      if (error) return json({ error: error.message }, 400);
+      return json({ role, name: identity.displayName, data });
+    }
+
+    if (action === "deleteComment") {
+      if (!hasRole(role, ["player", "author", "admin"])) return json({ error: "需要邀请码" }, 403);
+
+      const commentId = cleanText(payload.commentId, 80);
+      if (!isUuid(commentId)) return json({ error: "评论 ID 不正确" }, 400);
+
+      const { data: comment, error: readError } = await supabase
+        .from("comments")
+        .select("id, invite_code_hash, is_deleted")
+        .eq("id", commentId)
+        .single();
+      if (isMissingForumColumn(readError)) return json({ error: "请先运行论坛功能数据库升级 SQL" }, 400);
+      if (readError) return json({ error: readError.message }, 400);
+      if (comment.is_deleted) return json({ role, name: identity.displayName, data: comment });
+      if (role !== "admin" && comment.invite_code_hash !== identity.codeHash) {
+        return json({ error: "只能删除自己的评论" }, 403);
+      }
+
+      const { data, error } = await supabase
+        .from("comments")
+        .update({
+          is_deleted: true,
+          deleted_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+          content: "此评论已被删除",
+        })
+        .eq("id", commentId)
+        .select()
+        .single();
+      if (error) return json({ error: error.message }, 400);
+      return json({ role, name: identity.displayName, data });
+    }
+
+    if (action === "updatePinnedNote") {
+      if (!hasRole(role, ["author", "admin"])) return json({ error: "需要作者或馆主邀请码" }, 403);
+
+      const dungeonId = cleanText(payload.dungeonId, 80);
+      const pinnedNote = cleanText(payload.pinnedNote, 800);
+      if (!isUuid(dungeonId)) return json({ error: "副本 ID 不正确" }, 400);
+
+      const { data: dungeon, error: readError } = await supabase
+        .from("dungeons")
+        .select("id, invite_code_hash")
+        .eq("id", dungeonId)
+        .single();
+      if (isMissingInviteColumn(readError)) return json({ error: "请先运行邀请码数据库升级 SQL" }, 400);
+      if (readError) return json({ error: readError.message }, 400);
+      if (role !== "admin" && dungeon.invite_code_hash !== identity.codeHash) {
+        return json({ error: "只有副本作者或馆主可以修改置顶说明" }, 403);
+      }
+
+      const { data, error } = await supabase
+        .from("dungeons")
+        .update({ pinned_note: pinnedNote })
+        .eq("id", dungeonId)
+        .select()
+        .single();
+      if (isMissingForumColumn(error)) return json({ error: "请先运行论坛功能数据库升级 SQL" }, 400);
       if (error) return json({ error: error.message }, 400);
       return json({ role, name: identity.displayName, data });
     }

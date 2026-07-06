@@ -5,6 +5,7 @@ create table if not exists public.dungeons (
   difficulty text not null default '超凡',
   type text not null default '综合',
   description text not null check (char_length(trim(description)) between 1 and 1800),
+  pinned_note text not null default '',
   participant_count integer not null default 1 check (participant_count >= 1),
   run_count integer not null default 1 check (run_count >= 1),
   clear_count integer not null default 0 check (clear_count >= 0),
@@ -29,10 +30,14 @@ create table if not exists public.ratings (
 create table if not exists public.comments (
   id uuid primary key default gen_random_uuid(),
   dungeon_id uuid not null references public.dungeons(id) on delete cascade,
+  parent_comment_id uuid references public.comments(id) on delete cascade,
   author text not null default '匿名探索者' check (char_length(trim(author)) between 1 and 40),
-  content text not null check (char_length(trim(content)) between 1 and 500),
+  content text not null check (char_length(trim(content)) between 1 and 800),
   invite_code_hash text,
   invite_name text,
+  is_deleted boolean not null default false,
+  deleted_at timestamptz,
+  updated_at timestamptz,
   created_at timestamptz not null default now()
 );
 
@@ -42,6 +47,8 @@ create table if not exists public.clear_records (
   run_number integer not null check (run_number >= 1),
   invite_code_hash text not null,
   invite_name text,
+  feedback_tags text[] not null default '{}'::text[],
+  feedback_note text,
   created_at timestamptz not null default now()
 );
 
@@ -63,7 +70,10 @@ create unique index if not exists ratings_one_per_invite_code_idx
   on public.ratings(dungeon_id, invite_code_hash)
   where invite_code_hash is not null;
 create index if not exists comments_dungeon_id_idx on public.comments(dungeon_id, created_at desc);
+create index if not exists comments_parent_comment_id_idx on public.comments(parent_comment_id, created_at);
+create index if not exists comments_latest_active_idx on public.comments(created_at desc) where is_deleted = false;
 create index if not exists clear_records_dungeon_id_idx on public.clear_records(dungeon_id, run_number);
+create index if not exists clear_records_feedback_tags_idx on public.clear_records using gin(feedback_tags);
 create unique index if not exists clear_records_one_per_invite_run_idx
   on public.clear_records(dungeon_id, run_number, invite_code_hash);
 create index if not exists invite_codes_role_idx on public.invite_codes(role, is_active);
@@ -98,6 +108,16 @@ on public.comments
 for select
 to anon, authenticated
 using (true);
+
+create or replace view public.clear_feedback_summary as
+select
+  cr.dungeon_id,
+  tag.value as tag,
+  count(*)::integer as tag_count
+from public.clear_records cr
+cross join lateral unnest(coalesce(cr.feedback_tags, '{}'::text[])) as tag(value)
+where trim(tag.value) <> ''
+group by cr.dungeon_id, tag.value;
 
 create or replace function public.recalculate_dungeon_rating()
 returns trigger
@@ -138,7 +158,10 @@ begin
 
   update public.dungeons
   set comment_count = (
-    select count(*)::integer from public.comments where dungeon_id = target_dungeon_id
+    select count(*)::integer
+    from public.comments
+    where dungeon_id = target_dungeon_id
+      and is_deleted = false
   )
   where id = target_dungeon_id;
 
@@ -160,6 +183,7 @@ grant usage on schema public to anon, authenticated;
 grant select on public.dungeons to anon, authenticated;
 grant select on public.ratings to anon, authenticated;
 grant select on public.comments to anon, authenticated;
+grant select on public.clear_feedback_summary to anon, authenticated;
 grant usage on schema public to service_role;
 grant select, insert, update, delete on public.dungeons to service_role;
 grant select, insert, update, delete on public.ratings to service_role;

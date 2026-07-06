@@ -40,6 +40,12 @@ DUNGEON_ADMIN_CODE=你的馆主邀请码
 supabase/per_person_invites_migration.sql
 ```
 
+如果要启用副本论坛增强功能（最新评论流、楼中楼回复、评论删除、作者置顶说明、通关反馈标签），继续执行：
+
+```text
+supabase/forum_features_migration.sql
+```
+
 再在本地生成邀请：
 
 ```text

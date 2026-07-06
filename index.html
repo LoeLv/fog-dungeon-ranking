@@ -643,8 +643,165 @@
             color: var(--text-muted);
             font-size: 0.8rem;
         }
+        .feedback-picker {
+            margin-top: 14px;
+            display: grid;
+            gap: 10px;
+        }
+        .feedback-tags, .feedback-summary-list {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+        .feedback-chip {
+            border: 1px solid rgba(255,255,255,0.09);
+            background: rgba(0,0,0,0.22);
+            color: var(--text);
+            border-radius: 999px;
+            padding: 6px 11px;
+            font-family: var(--font-body);
+            font-size: 0.74rem;
+            cursor: pointer;
+            transition: all var(--transition);
+        }
+        .feedback-chip.active {
+            color: #09090f;
+            background: var(--gold-light);
+            border-color: var(--gold-light);
+            font-weight: 800;
+        }
+        .feedback-note {
+            width: 100%;
+            min-height: 66px;
+            resize: vertical;
+            border-radius: var(--radius-sm);
+            border: 1px solid rgba(255,255,255,0.08);
+            background: rgba(0,0,0,0.32);
+            color: var(--text-bright);
+            padding: 10px 12px;
+            font-family: var(--font-body);
+            font-size: 0.82rem;
+        }
+        .feedback-note:focus { outline: none; border-color: var(--gold-dark); }
+        .feedback-summary {
+            margin-top: 12px;
+            padding-top: 12px;
+            border-top: 1px solid rgba(255,255,255,0.06);
+        }
+        .feedback-summary-title {
+            color: var(--text-muted);
+            font-size: 0.76rem;
+            margin-bottom: 8px;
+        }
+        .feedback-summary-pill {
+            padding: 5px 10px;
+            border-radius: 999px;
+            color: var(--gold-light);
+            border: 1px solid rgba(200,160,80,0.28);
+            background: rgba(200,160,80,0.08);
+            font-size: 0.74rem;
+        }
 
         /* 评论 */
+        .forum-feed {
+            margin: -8px 0 26px;
+            border: 1px solid rgba(255,255,255,0.05);
+            border-radius: var(--radius);
+            background:
+                linear-gradient(135deg, rgba(117,189,208,0.05), rgba(208,170,85,0.05)),
+                rgba(255,255,255,0.015);
+            padding: 14px 16px;
+        }
+        .forum-feed-head {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 10px;
+            color: var(--text-bright);
+            font-size: 0.88rem;
+            font-weight: 800;
+            letter-spacing: 0.05em;
+        }
+        .forum-feed-head span:last-child {
+            color: var(--text-muted);
+            font-weight: 500;
+            font-size: 0.72rem;
+        }
+        .latest-comments-feed {
+            display: grid;
+            gap: 8px;
+        }
+        .feed-item {
+            display: grid;
+            grid-template-columns: minmax(0, 1fr) auto;
+            gap: 10px;
+            align-items: center;
+            padding: 10px 12px;
+            border-radius: var(--radius-sm);
+            background: rgba(0,0,0,0.22);
+            border: 1px solid rgba(255,255,255,0.04);
+            cursor: pointer;
+            transition: all var(--transition);
+        }
+        .feed-item:hover {
+            border-color: rgba(200,160,80,0.25);
+            transform: translateY(-1px);
+        }
+        .feed-title {
+            color: var(--gold-light);
+            font-size: 0.76rem;
+            margin-bottom: 3px;
+        }
+        .feed-text {
+            color: var(--text);
+            font-size: 0.8rem;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .feed-time {
+            color: var(--text-muted);
+            font-size: 0.7rem;
+            white-space: nowrap;
+        }
+        .pinned-note {
+            margin-bottom: 18px;
+            padding: 16px 18px;
+            border-radius: var(--radius-sm);
+            border: 1px solid rgba(208,170,85,0.22);
+            background:
+                linear-gradient(135deg, rgba(208,170,85,0.12), rgba(255,255,255,0.02)),
+                rgba(0,0,0,0.18);
+        }
+        .pinned-note-head {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+            margin-bottom: 8px;
+            color: var(--gold-light);
+            font-size: 0.82rem;
+            font-weight: 800;
+        }
+        .pinned-note-body {
+            color: var(--text);
+            white-space: pre-wrap;
+            line-height: 1.7;
+            font-size: 0.86rem;
+        }
+        .pinned-note textarea {
+            width: 100%;
+            min-height: 92px;
+            resize: vertical;
+            border-radius: var(--radius-sm);
+            border: 1px solid rgba(255,255,255,0.08);
+            background: rgba(0,0,0,0.34);
+            color: var(--text-bright);
+            padding: 10px 12px;
+            font-family: var(--font-body);
+            font-size: 0.84rem;
+        }
         .comments-section { margin-top: 20px; }
         .comment-form {
             display: flex;
@@ -652,11 +809,11 @@
             margin-bottom: 18px;
             flex-wrap: wrap;
         }
-        .comment-form input {
+        .comment-form input, .comment-form textarea {
             flex: 1;
             min-width: 120px;
             padding: 10px 16px;
-            border-radius: 25px;
+            border-radius: 20px;
             border: 1px solid var(--border);
             background: rgba(0,0,0,0.4);
             color: var(--text-bright);
@@ -664,16 +821,59 @@
             font-family: var(--font-body);
             transition: all var(--transition);
         }
-        .comment-form input:focus { outline: none; border-color: var(--gold-dark); }
+        .comment-form textarea {
+            min-height: 44px;
+            resize: vertical;
+        }
+        .comment-form input:focus, .comment-form textarea:focus { outline: none; border-color: var(--gold-dark); }
+        .reply-context {
+            width: 100%;
+            display: none;
+            justify-content: space-between;
+            align-items: center;
+            gap: 10px;
+            padding: 8px 12px;
+            border-radius: var(--radius-sm);
+            background: rgba(208,170,85,0.08);
+            color: var(--gold-light);
+            font-size: 0.78rem;
+        }
         .comment-item {
             padding: 12px 16px;
-            border-bottom: 1px solid rgba(255,255,255,0.03);
+            margin-bottom: 10px;
+            border: 1px solid rgba(255,255,255,0.04);
+            border-radius: var(--radius-sm);
+            background: rgba(0,0,0,0.16);
             font-size: 0.85rem;
         }
-        .comment-item:last-child { border-bottom: none; }
+        .comment-item.reply {
+            margin-left: 28px;
+            background: rgba(255,255,255,0.018);
+            border-left-color: rgba(200,160,80,0.2);
+        }
         .comment-item .comment-author { font-weight: 600; color: var(--gold-light); font-size: 0.8rem; }
         .comment-item .comment-time { font-size: 0.7rem; color: var(--text-muted); margin-left: 10px; }
-        .comment-item .comment-content { margin-top: 6px; color: var(--text); }
+        .comment-item .comment-content { margin-top: 6px; color: var(--text); white-space: pre-wrap; }
+        .comment-actions {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-top: 8px;
+        }
+        .text-action {
+            border: none;
+            background: transparent;
+            color: var(--text-muted);
+            font-family: var(--font-body);
+            font-size: 0.72rem;
+            cursor: pointer;
+            padding: 0;
+        }
+        .text-action:hover { color: var(--gold-light); }
+        .deleted-comment {
+            color: var(--text-muted);
+            font-style: italic;
+        }
 
         /* 弹窗 */
         .modal-overlay {
@@ -805,6 +1005,9 @@
             .god-cluster { grid-template-columns: 1fr; gap: 4px; }
             .god-cluster-title { padding-top: 0; }
             .search-input { max-width: none; width: 100%; }
+            .feed-item { grid-template-columns: 1fr; }
+            .comment-item.reply { margin-left: 10px; }
+            .clear-panel-foot { align-items: stretch; }
         }
     </style>
 </head>
@@ -840,6 +1043,16 @@
             </div>
             <div class="difficulty-filter" id="difficultyFilterList" aria-label="难度标签筛选"></div>
         </div>
+
+        <section class="forum-feed">
+            <div class="forum-feed-head">
+                <span>💬 最新回响</span>
+                <span>论坛动态</span>
+            </div>
+            <div class="latest-comments-feed" id="latestCommentsFeed">
+                <div class="feed-item"><div><div class="feed-title">正在听取众声……</div><div class="feed-text">评论流加载中</div></div><span class="feed-time">现在</span></div>
+            </div>
+        </section>
 
         <div class="dungeon-list" id="dungeonList">
             <div class="loading"><div class="spinner"></div><br>正在从诸神的棋盘中加载副本...</div>
@@ -893,6 +1106,7 @@
                 </div>
                 <div class="form-group"><label>难度标签</label><select id="dungeonDifficulty"><option value="新手">新手本 —— 第一次入场也能跑</option><option value="低">低难 —— 轻量机制与短流程</option><option value="中" selected>中难 —— 标准挑战强度</option><option value="高">高难 —— 需要配合或硬核机制</option></select></div>
                 <div class="form-group"><label>副本简介 *</label><textarea id="dungeonDesc" placeholder="描述副本背景、主要机制、胜负条件或特别之处..." required maxlength="1500"></textarea></div>
+                <div class="form-group"><label>作者置顶说明（可选）</label><textarea id="pinnedNoteInput" placeholder="可以写开本时间、注意事项、车卡要求、作者补充说明..." maxlength="800"></textarea></div>
                 <div class="form-actions"><button type="button" class="btn btn-outline" onclick="closeSubmitModal()">取消</button><button type="submit" class="btn btn-primary">✨ 献上祭品</button></div>
             </form>
         </div>
@@ -930,9 +1144,11 @@
             { value: '中', label: '中难' },
             { value: '高', label: '高难' }
         ];
+        const CLEAR_FEEDBACK_OPTIONS = ['机制清楚', '剧情好', '氛围强', '有挑战', '偏难', '想再跑', '需要修订'];
         const LEGACY_DIFFICULTY_MAP = { 凡尘: '新手', 觉醒: '低', 超凡: '中', 神话: '高', 愚者: '高' };
         let inviteSession = getLocalData(INVITE_STORAGE_KEY, null);
         let currentSort = 'rating', searchQuery = '', selectedGod = 'all', selectedDifficulty = 'all', searchTimeout = null, currentDetailId = null;
+        let replyTarget = null;
 
         function getInviteRole() { return inviteSession?.role || null; }
         function canUseRole(roles) { return roles.includes(getInviteRole()); }
@@ -992,14 +1208,77 @@
 
         async function fetchDungeons() {
             if (USE_LOCAL_FALLBACK) return getLocalData('dungeons', []);
-            const { data, error } = await supabaseClient.from('dungeons').select('*').order('avg_rating', { ascending: false }).order('created_at', { ascending: false });
-            if (error) { showToast('❌ 获取数据失败'); return []; }
+            const { data, error } = await supabaseClient
+                .from('dungeons')
+                .select('id,name,creator,difficulty,type,description,pinned_note,participant_count,run_count,clear_count,clear_rate,invite_name,avg_rating,rating_count,comment_count,created_at')
+                .order('avg_rating', { ascending: false })
+                .order('created_at', { ascending: false });
+            if (error) {
+                const fallback = await supabaseClient
+                    .from('dungeons')
+                    .select('id,name,creator,difficulty,type,description,participant_count,run_count,clear_count,clear_rate,invite_name,avg_rating,rating_count,comment_count,created_at')
+                    .order('avg_rating', { ascending: false })
+                    .order('created_at', { ascending: false });
+                if (fallback.error) { showToast('❌ 获取数据失败'); return []; }
+                return (fallback.data || []).map(d => ({ ...d, pinned_note: '' }));
+            }
             return data || [];
         }
 
         async function fetchComments(dungeonId) {
-            if (USE_LOCAL_FALLBACK) { const all = getLocalData('comments', []); return all.filter(c => c.dungeon_id === dungeonId).sort((a,b) => new Date(b.created_at) - new Date(a.created_at)); }
-            const { data, error } = await supabaseClient.from('comments').select('*').eq('dungeon_id', dungeonId).order('created_at', { ascending: false });
+            if (USE_LOCAL_FALLBACK) {
+                const all = getLocalData('comments', []);
+                return all.filter(c => c.dungeon_id === dungeonId).sort((a,b) => new Date(a.created_at) - new Date(b.created_at));
+            }
+            const { data, error } = await supabaseClient
+                .from('comments')
+                .select('id,dungeon_id,parent_comment_id,author,content,invite_name,is_deleted,created_at,deleted_at')
+                .eq('dungeon_id', dungeonId)
+                .order('created_at', { ascending: true });
+            if (!error) return data || [];
+            const fallback = await supabaseClient.from('comments').select('id,dungeon_id,author,content,invite_name,created_at').eq('dungeon_id', dungeonId).order('created_at', { ascending: true });
+            return fallback.error ? [] : (fallback.data || []).map(c => ({ ...c, parent_comment_id: null, is_deleted: false }));
+        }
+
+        async function fetchLatestComments(limit = 8) {
+            if (USE_LOCAL_FALLBACK) {
+                const dungeons = getLocalData('dungeons', []);
+                return getLocalData('comments', [])
+                    .filter(c => !c.is_deleted)
+                    .sort((a,b) => new Date(b.created_at) - new Date(a.created_at))
+                    .slice(0, limit)
+                    .map(c => ({ ...c, dungeon: dungeons.find(d => d.id === c.dungeon_id) || null }));
+            }
+            const { data, error } = await supabaseClient
+                .from('comments')
+                .select('id,dungeon_id,parent_comment_id,author,content,is_deleted,created_at,dungeons(name,type,difficulty)')
+                .eq('is_deleted', false)
+                .order('created_at', { ascending: false })
+                .limit(limit);
+            if (!error) return (data || []).map(c => ({ ...c, dungeon: c.dungeons || null }));
+
+            const fallback = await supabaseClient
+                .from('comments')
+                .select('*')
+                .order('created_at', { ascending: false })
+                .limit(limit);
+            if (fallback.error) return [];
+            const dungeons = await fetchDungeons();
+            return (fallback.data || [])
+                .filter(c => !c.is_deleted)
+                .map(c => ({ ...c, dungeon: dungeons.find(d => d.id === c.dungeon_id) || null }));
+        }
+
+        async function fetchClearFeedbackSummary(dungeonId) {
+            if (USE_LOCAL_FALLBACK) {
+                const local = getLocalData('clear_feedback', {});
+                return Object.entries(local[dungeonId] || {}).map(([tag, tag_count]) => ({ tag, tag_count }));
+            }
+            const { data, error } = await supabaseClient
+                .from('clear_feedback_summary')
+                .select('tag,tag_count')
+                .eq('dungeon_id', dungeonId)
+                .order('tag_count', { ascending: false });
             return error ? [] : data || [];
         }
 
@@ -1025,16 +1304,52 @@
             return invokeDungeonAction('addRating', { dungeonId, rating: ratingValue });
         }
 
-        async function addComment(dungeonId, author, content) {
+        async function addComment(dungeonId, author, content, parentCommentId = null) {
             if (USE_LOCAL_FALLBACK) {
                 const comments = getLocalData('comments', []);
-                const newComment = { id: 'c_'+Date.now(), dungeon_id: dungeonId, author: author.trim()||'匿名探索者', content: content.trim(), created_at: new Date().toISOString() };
+                const newComment = {
+                    id: 'c_'+Date.now(),
+                    dungeon_id: dungeonId,
+                    parent_comment_id: parentCommentId,
+                    author: author.trim()||'匿名探索者',
+                    content: content.trim(),
+                    invite_code_hash: inviteSession?.code || 'local',
+                    is_deleted: false,
+                    created_at: new Date().toISOString()
+                };
                 comments.push(newComment); setLocalData('comments', comments);
                 const dungeons = getLocalData('dungeons', []); const d = dungeons.find(d=>d.id===dungeonId);
                 if(d) { d.comment_count = (d.comment_count||0)+1; setLocalData('dungeons', dungeons); }
                 return { data: [newComment], error: null };
             }
-            return invokeDungeonAction('addComment', { dungeonId, author: author.trim()||'匿名探索者', content: content.trim() });
+            return invokeDungeonAction('addComment', { dungeonId, parentCommentId, author: author.trim()||'匿名探索者', content: content.trim() });
+        }
+
+        async function removeComment(commentId) {
+            if (USE_LOCAL_FALLBACK) {
+                const comments = getLocalData('comments', []);
+                const comment = comments.find(c => c.id === commentId);
+                if (!comment) return { error: { message: '评论不存在' } };
+                if (comment.invite_code_hash !== (inviteSession?.code || 'local') && !isAdmin()) return { error: { message: '只能删除自己的评论' } };
+                comment.is_deleted = true;
+                comment.deleted_at = new Date().toISOString();
+                comment.content = '此评论已被删除';
+                setLocalData('comments', comments);
+                return { data: [comment], error: null };
+            }
+            return invokeDungeonAction('deleteComment', { commentId });
+        }
+
+        async function savePinnedNote(dungeonId, pinnedNote) {
+            if (USE_LOCAL_FALLBACK) {
+                const dungeons = getLocalData('dungeons', []);
+                const d = dungeons.find(d => d.id === dungeonId);
+                if (!d) return { error: { message: '副本未找到' } };
+                d.pinned_note = pinnedNote.trim();
+                setLocalData('dungeons', dungeons);
+                return { data: [d], error: null };
+            }
+            return invokeDungeonAction('updatePinnedNote', { dungeonId, pinnedNote: pinnedNote.trim() });
         }
 
         async function removeDungeon(dungeonId) {
@@ -1048,7 +1363,7 @@
             return invokeDungeonAction('deleteDungeon', { dungeonId });
         }
 
-        async function markDungeonCleared(dungeonId) {
+        async function markDungeonCleared(dungeonId, feedbackTags = [], feedbackNote = '') {
             if (USE_LOCAL_FALLBACK) {
                 const cleared = getLocalData('cleared', {});
                 const dungeons = getLocalData('dungeons', []);
@@ -1063,9 +1378,13 @@
                 d.clear_rate = slots > 0 ? Math.round((d.clear_count / slots) * 1000) / 10 : 0;
                 setLocalData('cleared', cleared);
                 setLocalData('dungeons', dungeons);
+                const feedback = getLocalData('clear_feedback', {});
+                feedback[dungeonId] = feedback[dungeonId] || {};
+                feedbackTags.forEach(tag => { feedback[dungeonId][tag] = (feedback[dungeonId][tag] || 0) + 1; });
+                setLocalData('clear_feedback', feedback);
                 return { data: [{}], error: null };
             }
-            return invokeDungeonAction('markCleared', { dungeonId });
+            return invokeDungeonAction('markCleared', { dungeonId, feedbackTags, feedbackNote: feedbackNote.trim() });
         }
 
         async function advanceDungeonRun(dungeonId) {
@@ -1265,12 +1584,101 @@
         }
         function formatDate(iso) { if(!iso)return'未知'; const d=new Date(iso),n=new Date(),diff=Math.floor((n-d)/86400000); if(diff===0)return'今天'; if(diff===1)return'昨天'; if(diff<7)return`${diff}天前`; if(diff<30)return`${Math.floor(diff/7)}周前`; return d.toLocaleDateString('zh-CN'); }
         function escapeHtml(s) { const d=document.createElement('div'); d.textContent=s||''; return d.innerHTML; }
+        function jsString(value) { return JSON.stringify(String(value ?? '')); }
+        function truncateText(value, length = 80) {
+            const text = String(value || '').replace(/\s+/g, ' ').trim();
+            return text.length > length ? `${text.slice(0, length)}…` : text;
+        }
+
+        function canEditPinned(d) {
+            return isAdmin() || (!!inviteSession?.name && !!d.invite_name && inviteSession.name === d.invite_name);
+        }
+
+        function canDeleteComment(c) {
+            return isAdmin() || (!!inviteSession?.name && !!c.invite_name && inviteSession.name === c.invite_name) || (USE_LOCAL_FALLBACK && c.invite_code_hash === inviteSession?.code);
+        }
+
+        function buildCommentTree(comments) {
+            const map = new Map();
+            comments.forEach(comment => map.set(comment.id, { ...comment, replies: [] }));
+            const roots = [];
+            map.forEach(comment => {
+                const parentId = comment.parent_comment_id || comment.parentCommentId;
+                const parent = parentId ? map.get(parentId) : null;
+                if (parent) parent.replies.push(comment);
+                else roots.push(comment);
+            });
+            return roots;
+        }
+
+        function renderCommentNode(comment, depth = 0) {
+            const deleted = !!comment.is_deleted;
+            const canReply = canInteract() && !deleted;
+            const deleteButton = canDeleteComment(comment) && !deleted
+                ? `<button class="text-action" onclick="deleteCommentUI(${jsString(comment.id)})">删除</button>`
+                : '';
+            return `
+                <div class="comment-item ${depth ? 'reply' : ''}">
+                    <span class="comment-author">${escapeHtml(comment.author || comment.invite_name || '匿名')}</span>
+                    <span class="comment-time">${formatDate(comment.created_at)}</span>
+                    <div class="comment-content ${deleted ? 'deleted-comment' : ''}">${escapeHtml(comment.content || '')}</div>
+                    <div class="comment-actions">
+                        ${canReply ? `<button class="text-action" onclick="setReplyTarget(${jsString(comment.id)}, ${jsString(comment.author || '匿名')})">回复</button>` : ''}
+                        ${deleteButton}
+                    </div>
+                    ${(comment.replies || []).map(reply => renderCommentNode(reply, depth + 1)).join('')}
+                </div>`;
+        }
+
+        function renderComments(comments) {
+            const roots = buildCommentTree(comments);
+            if (!roots.length) return '<div class="no-comments">尚无评论，成为第一个留下印记的探索者。</div>';
+            return roots.map(comment => renderCommentNode(comment, 0)).join('');
+        }
+
+        function renderFeedbackTags(disabled) {
+            return CLEAR_FEEDBACK_OPTIONS.map(tag => `<button type="button" class="feedback-chip" ${disabled ? 'disabled' : ''} onclick="toggleFeedbackTag(this)">${escapeHtml(tag)}</button>`).join('');
+        }
+
+        function renderFeedbackSummary(summary) {
+            if (!summary.length) return '<div class="feedback-summary-title">暂无通关反馈标签</div>';
+            return `
+                <div class="feedback-summary-title">玩家通关反馈</div>
+                <div class="feedback-summary-list">
+                    ${summary.map(item => `<span class="feedback-summary-pill">${escapeHtml(item.tag)} × ${Number(item.tag_count || 0)}</span>`).join('')}
+                </div>`;
+        }
+
+        async function renderLatestComments() {
+            const feed = document.getElementById('latestCommentsFeed');
+            if (!feed) return;
+            const comments = await fetchLatestComments(8);
+            if (!comments.length) {
+                feed.innerHTML = '<div class="feed-item"><div><div class="feed-title">暂无回响</div><div class="feed-text">等第一位玩家留下评论。</div></div><span class="feed-time">现在</span></div>';
+                return;
+            }
+            feed.innerHTML = comments.map(comment => {
+                const dungeon = comment.dungeon || {};
+                const title = dungeon.name || '未知副本';
+                const prefix = comment.parent_comment_id ? '回复了' : '评论了';
+                return `
+                    <div class="feed-item" onclick="openDetail(${jsString(comment.dungeon_id)})">
+                        <div>
+                            <div class="feed-title">${escapeHtml(comment.author || '匿名')} ${prefix}《${escapeHtml(title)}》</div>
+                            <div class="feed-text">${escapeHtml(truncateText(comment.content, 96))}</div>
+                        </div>
+                        <span class="feed-time">${formatDate(comment.created_at)}</span>
+                    </div>`;
+            }).join('');
+        }
 
         async function openDetail(id) {
             currentDetailId = id;
+            replyTarget = null;
             const dungeons = await fetchDungeons(); const d = dungeons.find(d=>d.id===id);
             if(!d){showToast('副本未找到');return;}
             const comments = await fetchComments(id);
+            const feedbackSummary = await fetchClearFeedbackSummary(id);
             const rated = await checkHasRated(id);
             const locked = !canInteract();
             const ratingLocked = rated || locked;
@@ -1289,6 +1697,25 @@
             const godPath = formatGodPath(d.type);
             const godClass = getGodClass(d.type);
             const difficultyLabel = formatDifficulty(d.difficulty);
+            const activeCommentCount = comments.filter(c => !c.is_deleted).length;
+            const pinnedNote = d.pinned_note || '';
+            const canEditNote = canEditPinned(d);
+            const pinnedNoteHtml = pinnedNote || canEditNote ? `
+                <div class="pinned-note">
+                    <div class="pinned-note-head">
+                        <span>📌 作者置顶说明</span>
+                        ${canEditNote ? `<button class="text-action" onclick="togglePinnedEditor()">编辑</button>` : ''}
+                    </div>
+                    <div class="pinned-note-body" id="pinnedNoteBody">${pinnedNote ? escapeHtml(pinnedNote) : '作者还没有写置顶说明。'}</div>
+                    ${canEditNote ? `
+                        <div id="pinnedNoteEditor" style="display:none;margin-top:10px;">
+                            <textarea id="pinnedNoteTextarea" maxlength="800" placeholder="写下开本时间、注意事项、车卡要求、作者补充说明...">${escapeHtml(pinnedNote)}</textarea>
+                            <div class="form-actions" style="margin-top:10px;">
+                                <button class="btn btn-outline btn-sm" onclick="togglePinnedEditor(false)">取消</button>
+                                <button class="btn btn-primary btn-sm" onclick="savePinnedNoteUI('${escapeHtml(id)}')">保存置顶</button>
+                            </div>
+                        </div>` : ''}
+                </div>` : '';
             document.getElementById('detailContent').innerHTML = `
                 <h2>${escapeHtml(d.name)}</h2>
                 <div class="detail-meta">
@@ -1300,10 +1727,11 @@
                     <span>🔁 ${formatRunCount(d)}</span>
                     <span>🎯 通过率 ${formatClearRate(d)}</span>
                     <span>⭐ ${(d.avg_rating||0).toFixed(1)} (${d.rating_count||0}人)</span>
-                    <span>💬 ${comments.length} 评论</span>
+                    <span>💬 ${activeCommentCount} 评论</span>
                     ${canUseRole(['author','admin']) ? `<button class="btn btn-outline btn-xs" onclick="advanceRunUI('${escapeHtml(id)}')">开启下一周目</button>` : ''}
                     ${isAdmin() ? `<button class="btn btn-danger btn-xs" onclick="deleteDungeon('${escapeHtml(id)}')">删除副本</button>` : ''}
                 </div>
+                ${pinnedNoteHtml}
                 <div class="detail-desc">${escapeHtml(d.description||'（无描述）')}</div>
                 <div class="clear-panel">
                     <div class="clear-panel-head">
@@ -1311,6 +1739,11 @@
                         <span class="clear-rate-big">${formatClearRate(d)}</span>
                     </div>
                     <div class="clear-progress"><div class="clear-progress-fill" style="width:${Math.max(0, Math.min(100, clearRateNumber))}%"></div></div>
+                    <div class="feedback-picker">
+                        <div class="feedback-tags">${renderFeedbackTags(locked || clearDone)}</div>
+                        <textarea id="clearFeedbackNote" class="feedback-note" maxlength="200" placeholder="${locked ? '输入邀请码后可留下通关反馈' : (clearDone ? '本周目已登记' : '可选：写一句通关反馈，只有标签会进入公开统计')} " ${locked || clearDone ? 'disabled' : ''}></textarea>
+                    </div>
+                    <div class="feedback-summary">${renderFeedbackSummary(feedbackSummary)}</div>
                     <div class="clear-panel-foot">
                         <span>已通过 ${formatClearSlots(d)} 人次</span>
                         <button class="btn btn-primary btn-sm" ${clearDone?'disabled':''} onclick="${clearAction}">${clearButtonText}</button>
@@ -1324,13 +1757,14 @@
                     <span class="rating-text">${ratingText}</span>
                 </div>
                 <div class="comments-section">
-                    <div class="section-title">💬 众声回响 (${comments.length})</div>
+                    <div class="section-title">💬 众声回响 (${activeCommentCount})</div>
                     <div class="comment-form">
+                        <div class="reply-context" id="replyContext"><span id="replyContextText"></span><button class="text-action" onclick="clearReplyTarget()">取消回复</button></div>
                         <input type="text" id="commentAuthorInput" placeholder="你的署名" maxlength="20" value="${locked?'':escapeHtml(inviteSession?.name || '')}" ${commentLockedAttrs}>
-                        <input type="text" id="commentContentInput" placeholder="${commentPlaceholder}" maxlength="300" style="flex:2;" ${commentLockedAttrs}>
+                        <textarea id="commentContentInput" placeholder="${commentPlaceholder}" maxlength="800" style="flex:2;" ${commentLockedAttrs}></textarea>
                         <button class="btn btn-primary btn-sm" onclick="${locked?`openInviteModal('输入玩家或作者邀请码后可评论。')`:`submitComment('${escapeHtml(id)}')`}">${locked?'输入邀请':'发布'}</button>
                     </div>
-                    <div id="commentsList">${comments.length===0?'<div class="no-comments">尚无评论，成为第一个留下印记的探索者。</div>':comments.map(c=>`<div class="comment-item"><span class="comment-author">${escapeHtml(c.author||'匿名')}</span><span class="comment-time">${formatDate(c.created_at)}</span><div class="comment-content">${escapeHtml(c.content)}</div></div>`).join('')}</div>
+                    <div id="commentsList">${renderComments(comments)}</div>
                 </div>`;
             document.getElementById('detailOverlay').style.display='flex'; document.body.style.overflow='hidden';
         }
@@ -1379,6 +1813,54 @@
             if (currentDetailId) openDetail(currentDetailId);
         }
 
+        function toggleFeedbackTag(button) {
+            if (!button || button.disabled) return;
+            button.classList.toggle('active');
+        }
+
+        function getSelectedFeedbackTags() {
+            return [...document.querySelectorAll('.feedback-chip.active')].map(btn => btn.textContent.trim()).slice(0, 5);
+        }
+
+        function setReplyTarget(commentId, author) {
+            replyTarget = { id: commentId, author };
+            const context = document.getElementById('replyContext');
+            const text = document.getElementById('replyContextText');
+            const input = document.getElementById('commentContentInput');
+            if (context) context.style.display = 'flex';
+            if (text) text.textContent = `正在回复 ${author}`;
+            if (input) {
+                input.placeholder = `回复 ${author}...`;
+                input.focus();
+            }
+        }
+
+        function clearReplyTarget() {
+            replyTarget = null;
+            const context = document.getElementById('replyContext');
+            const input = document.getElementById('commentContentInput');
+            if (context) context.style.display = 'none';
+            if (input) input.placeholder = '写下你的评论...';
+        }
+
+        function togglePinnedEditor(force) {
+            const editor = document.getElementById('pinnedNoteEditor');
+            if (!editor) return;
+            const next = typeof force === 'boolean' ? force : editor.style.display === 'none';
+            editor.style.display = next ? 'block' : 'none';
+            if (next) document.getElementById('pinnedNoteTextarea')?.focus();
+        }
+
+        async function savePinnedNoteUI(id) {
+            if(!requireInvite(['author','admin'], '只有副本作者或馆主可以修改置顶说明。')) return;
+            const note = document.getElementById('pinnedNoteTextarea')?.value || '';
+            const { error } = await savePinnedNote(id, note);
+            if(error){ showToast(`❌ ${error.message || '保存失败'}`); return; }
+            showToast('📌 置顶说明已更新');
+            await openDetail(id);
+            await renderDungeonList();
+        }
+
         async function rateDungeon(id, val){
             if(!requireInvite(['player','author','admin'], '输入玩家或作者邀请码后可评分。')) return;
             const {error}=await addRating(id,val);
@@ -1394,17 +1876,32 @@
             const a=document.getElementById('commentAuthorInput')?.value.trim();
             const c=document.getElementById('commentContentInput')?.value.trim();
             if(!c){showToast('请输入评论');return;}
-            const {error}=await addComment(id,a,c);
+            const {error}=await addComment(id,a,c, replyTarget?.id || null);
             if(error){showToast(`❌ ${error.message || '评论失败'}`);return;}
-            showToast('💬 评论已发布');
+            showToast(replyTarget ? '↩️ 回复已发布' : '💬 评论已发布');
+            clearReplyTarget();
             if(document.getElementById('commentContentInput')) document.getElementById('commentContentInput').value='';
             if(currentDetailId===id) await openDetail(id);
             await renderDungeonList();
+            await renderLatestComments();
+        }
+
+        async function deleteCommentUI(commentId){
+            if(!requireInvite(['player','author','admin'], '输入邀请码后才可删除自己的评论。')) return;
+            if(!confirm('确定删除这条评论吗？')) return;
+            const {error}=await removeComment(commentId);
+            if(error){showToast(`❌ ${error.message || '删除失败'}`);return;}
+            showToast('评论已删除');
+            if(currentDetailId) await openDetail(currentDetailId);
+            await renderDungeonList();
+            await renderLatestComments();
         }
 
         async function markClearedUI(id){
             if(!requireInvite(['player','author','admin'], '输入玩家或作者邀请码后可登记通关。')) return;
-            const {error}=await markDungeonCleared(id);
+            const feedbackTags = getSelectedFeedbackTags();
+            const feedbackNote = document.getElementById('clearFeedbackNote')?.value || '';
+            const {error}=await markDungeonCleared(id, feedbackTags, feedbackNote);
             if(error){ showToast(`❌ ${error.message || '登记失败'}`); return; }
             const dungeons = await fetchDungeons();
             const d = dungeons.find(d => d.id === id);
@@ -1415,6 +1912,7 @@
             showToast('🎯 已记录本周目通关');
             if(currentDetailId===id) await openDetail(id);
             await renderDungeonList();
+            await renderLatestComments();
         }
 
         async function advanceRunUI(id){
@@ -1461,19 +1959,21 @@
             const participantCount=Number(document.getElementById('participantCount').value);
             const runCount=Number(document.getElementById('runCount').value);
             const desc=document.getElementById('dungeonDesc').value.trim();
+            const pinnedNote=document.getElementById('pinnedNoteInput')?.value.trim() || '';
             if(!name||!creator||!desc){showToast('请填写所有必填项');return;}
             if(!Number.isInteger(participantCount)||participantCount<1||participantCount>99){showToast('请检查固定人数');return;}
             if(!Number.isInteger(runCount)||runCount<1||runCount>999){showToast('请检查当前周目');return;}
             const btn=e.target.querySelector('button[type="submit"]');
             btn.disabled=true;
             btn.textContent='献上中...';
-            const {error}=await addDungeon({name,creator,difficulty,type,participantCount,runCount,description:desc});
+            const {error}=await addDungeon({name,creator,difficulty,type,participantCount,runCount,description:desc,pinnedNote});
             btn.disabled=false;
             btn.textContent='✨ 献上祭品';
             if(error){showToast(`❌ ${error.message || '失败'}`);return;}
             showToast('🎉 副本已降临！');
             closeSubmitModal();
             await renderDungeonList();
+            await renderLatestComments();
         }
 
         async function deleteDungeon(id) {
@@ -1484,6 +1984,7 @@
             showToast('🗑️ 副本已删除');
             closeDetail();
             await renderDungeonList();
+            await renderLatestComments();
         }
         function setSort(sort,btn){ currentSort=sort; document.querySelectorAll('.sort-btn').forEach(b=>b.classList.remove('active')); btn.classList.add('active'); renderDungeonList(); }
         function debounceSearch(){ clearTimeout(searchTimeout); searchTimeout=setTimeout(()=>{ searchQuery=document.getElementById('searchInput').value; renderDungeonList(); },350); }
@@ -1496,17 +1997,24 @@
             renderDifficultyFilters();
             updateInviteUI();
             await renderDungeonList();
+            await renderLatestComments();
             if(USE_LOCAL_FALLBACK && getLocalData('dungeons',[]).length===0){
                 const samples = [
-                    { id:'s1',name:'深渊回廊',creator:'灰袍叙事者',difficulty:'中',type:'记忆',description:'在无尽深渊边缘，一座古老回廊静静等待。封印着陨落神祇的记忆碎片，踏入者将直面内心最深的恐惧……',participant_count:6,run_count:2,clear_count:6,clear_rate:50,avg_rating:4.7,rating_count:23,comment_count:8,created_at:new Date(Date.now()-7*86400000).toISOString()},
-                    { id:'s2',name:'愚者之塔',creator:'星辰旅人',difficulty:'高',type:'痴愚',description:'倒悬于天空的巨塔，每一层都蕴含悖论与谜题。唯有拥抱荒诞之人，方能窥见塔顶的真相。',participant_count:4,run_count:3,clear_count:9,clear_rate:75,avg_rating:4.9,rating_count:41,comment_count:15,created_at:new Date(Date.now()-3*86400000).toISOString()},
+                    { id:'s1',name:'深渊回廊',creator:'灰袍叙事者',difficulty:'中',type:'记忆',description:'在无尽深渊边缘，一座古老回廊静静等待。封印着陨落神祇的记忆碎片，踏入者将直面内心最深的恐惧……',pinned_note:'建议 6 人满员进入，第二幕需要有人记录线索。',participant_count:6,run_count:2,clear_count:6,clear_rate:50,avg_rating:4.7,rating_count:23,comment_count:8,created_at:new Date(Date.now()-7*86400000).toISOString()},
+                    { id:'s2',name:'愚者之塔',creator:'星辰旅人',difficulty:'高',type:'痴愚',description:'倒悬于天空的巨塔，每一层都蕴含悖论与谜题。唯有拥抱荒诞之人，方能窥见塔顶的真相。',pinned_note:'高难解谜本，建议预留 2 小时以上。',participant_count:4,run_count:3,clear_count:9,clear_rate:75,avg_rating:4.9,rating_count:41,comment_count:15,created_at:new Date(Date.now()-3*86400000).toISOString()},
                     { id:'s3',name:'血色竞技场',creator:'铁腕判官',difficulty:'高',type:'战争',description:'上古诸神取乐的竞技场，回响着古老战吼。策略与力量并重，每一战都可能揭开神戏一角。',participant_count:8,run_count:1,clear_count:3,clear_rate:37.5,avg_rating:4.3,rating_count:17,comment_count:5,created_at:new Date(Date.now()-14*86400000).toISOString()},
                     { id:'s4',name:'雾隐村',creator:'迷雾行者',difficulty:'低',type:'沉默',description:'永远被浓雾笼罩的村庄，平静生活之下，每个夜晚雾中都会出现不可名状之物。',participant_count:5,run_count:2,clear_count:4,clear_rate:40,avg_rating:4.1,rating_count:12,comment_count:4,created_at:new Date(Date.now()-5*86400000).toISOString()},
                     { id:'s5',name:'诸神棋盘',creator:'执棋人',difficulty:'中',type:'命运',description:'整个副本就是一张巨大的棋盘，参与者成为诸神的棋子。每一步都可能改变命运。',participant_count:6,run_count:4,clear_count:18,clear_rate:75,avg_rating:4.6,rating_count:30,comment_count:11,created_at:new Date(Date.now()-10*86400000).toISOString()}
                 ];
                 setLocalData('dungeons',samples);
-                setLocalData('comments',[{id:'c1',dungeon_id:'s1',author:'探索者A',content:'氛围太棒了，跑完回味了好几天。',created_at:new Date(Date.now()-6*86400000).toISOString()},{id:'c2',dungeon_id:'s2',author:'逻辑粉碎机',content:'完全颠覆了我的思维，愚者神太有趣了',created_at:new Date(Date.now()-2*86400000).toISOString()}]);
+                setLocalData('comments',[
+                    {id:'c1',dungeon_id:'s1',parent_comment_id:null,author:'探索者A',content:'氛围太棒了，跑完回味了好几天。',invite_name:'探索者A',is_deleted:false,created_at:new Date(Date.now()-6*86400000).toISOString()},
+                    {id:'c2',dungeon_id:'s2',parent_comment_id:null,author:'逻辑粉碎机',content:'完全颠覆了我的思维，愚者神太有趣了',invite_name:'逻辑粉碎机',is_deleted:false,created_at:new Date(Date.now()-2*86400000).toISOString()},
+                    {id:'c3',dungeon_id:'s2',parent_comment_id:'c2',author:'星辰旅人',content:'下一次我会把第三层谜题再改得柔和一点。',invite_name:'星辰旅人',is_deleted:false,created_at:new Date(Date.now()-1*86400000).toISOString()}
+                ]);
+                setLocalData('clear_feedback',{s1:{'氛围强':4,'机制清楚':3,'想再跑':2},s2:{'有挑战':6,'偏难':3,'剧情好':2}});
                 await renderDungeonList();
+                await renderLatestComments();
             }
         })();
     </script>
