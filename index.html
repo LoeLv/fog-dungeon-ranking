@@ -570,6 +570,47 @@
             border-color: var(--gold-dark);
             box-shadow: 0 0 0 4px rgba(184, 134, 11, 0.08);
         }
+        .filter-status {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+            margin-top: 12px;
+            padding: 11px 14px;
+            border-radius: var(--radius-sm);
+            border: 1px solid rgba(231,207,138,0.28);
+            background:
+                linear-gradient(90deg, rgba(231,207,138,0.12), rgba(255,255,255,0.025)),
+                rgba(10, 10, 18, 0.72);
+            color: var(--text);
+            font-size: 0.82rem;
+            line-height: 1.5;
+        }
+        .filter-status[hidden] {
+            display: none;
+        }
+        .filter-status strong {
+            color: var(--gold-light);
+        }
+        .filter-reset-btn {
+            flex: 0 0 auto;
+            border: 1px solid rgba(231,207,138,0.38);
+            background: rgba(231,207,138,0.10);
+            color: var(--gold-light);
+            border-radius: 999px;
+            padding: 7px 12px;
+            font-family: var(--font-body);
+            font-weight: 800;
+            font-size: 0.78rem;
+            cursor: pointer;
+            transition: all var(--transition);
+            white-space: nowrap;
+        }
+        .filter-reset-btn:hover {
+            background: rgba(231,207,138,0.18);
+            color: var(--text-bright);
+            transform: translateY(-1px);
+        }
         .filter-toggle-btn {
             display: inline-flex;
             align-items: center;
@@ -2691,6 +2732,13 @@
                 line-height: 1.2;
                 white-space: normal;
             }
+            .filter-status {
+                align-items: stretch;
+                flex-direction: column;
+            }
+            .filter-reset-btn {
+                width: 100%;
+            }
             .detail-overlay,
             .detail-overlay[data-layout="anchored"],
             .detail-overlay[data-layout="side"] {
@@ -2882,7 +2930,7 @@
                     <button class="sort-btn" data-sort="newest" onclick="setSort('newest', this)">🎲 新降试炼</button>
                     <button class="sort-btn" data-sort="comments" onclick="setSort('comments', this)">💬 证言热度</button>
                 </div>
-                <input type="text" class="search-input" placeholder="🔍 搜索试炼、构筑者、神明或命途..." oninput="debounceSearch()" id="searchInput">
+                <input type="text" class="search-input" placeholder="🔍 搜索试炼、构筑者、神明或命途..." oninput="debounceSearch()" id="searchInput" autocomplete="off" autocapitalize="off" spellcheck="false">
                 <button class="filter-toggle-btn" id="filterToggleBtn" onclick="toggleAdvancedFilters()" aria-expanded="false">
                     <span>✦ 筛选</span>
                     <small id="filterSummaryText">全神席 · 全部难度</small>
@@ -2897,6 +2945,10 @@
                     <div class="god-filter-list" id="godFilterList"></div>
                 </div>
                 <div class="difficulty-filter" id="difficultyFilterList" aria-label="难度标签筛选"></div>
+            </div>
+            <div class="filter-status" id="filterStatus" hidden>
+                <span id="filterStatusText"></span>
+                <button type="button" class="filter-reset-btn" onclick="clearDiscoveryFilters()">显示全部试炼</button>
             </div>
         </div>
 
@@ -3811,6 +3863,45 @@
             renderDungeonList();
         }
 
+        function hasActiveDiscoveryFilters() {
+            return Boolean(searchQuery.trim()) ||
+                selectedGod !== 'all' ||
+                selectedPath !== 'all' ||
+                selectedDifficulty !== 'all';
+        }
+
+        function updateDiscoveryFilterStatus(totalCount, visibleCount) {
+            const box = document.getElementById('filterStatus');
+            const text = document.getElementById('filterStatusText');
+            if (!box || !text) return;
+            if (!hasActiveDiscoveryFilters()) {
+                box.hidden = true;
+                return;
+            }
+            const parts = [];
+            if (searchQuery.trim()) parts.push(`搜索：${searchQuery.trim()}`);
+            if (selectedGod !== 'all') parts.push(`${selectedGod}之神`);
+            if (selectedPath !== 'all') parts.push(`${selectedPath}命途`);
+            if (selectedDifficulty !== 'all') parts.push(`${formatDifficulty(selectedDifficulty)}难度`);
+            text.innerHTML = `当前只显示 <strong>${visibleCount}</strong> / ${totalCount} 个试炼，条件：${escapeHtml(parts.join(' · '))}`;
+            box.hidden = false;
+        }
+
+        function clearDiscoveryFilters() {
+            searchQuery = '';
+            selectedGod = 'all';
+            selectedPath = 'all';
+            selectedDifficulty = 'all';
+            const input = document.getElementById('searchInput');
+            if (input) input.value = '';
+            renderPathNav();
+            renderGodFilters();
+            renderDifficultyFilters();
+            updateFilterSummary();
+            renderDungeonList();
+            showToast('已显示全部试炼');
+        }
+
         async function renderDungeonList() {
             const listEl = document.getElementById('dungeonList');
             listEl.innerHTML = `<div class="loading"><div class="spinner"></div><br>正在从切片宇宙中加载祈愿试炼...<br><span>${escapeHtml(getLoadingOracle())}</span></div>`;
@@ -3819,9 +3910,11 @@
                 dungeons = await fetchDungeons();
             } catch (error) {
                 console.error('加载试炼失败:', error);
+                updateDiscoveryFilterStatus(0, 0);
                 listEl.innerHTML = '<div class="empty-state"><div style="font-size:3rem;">⚠️</div><p>祈愿试炼加载失败，请刷新页面再试。</p></div>';
                 return;
             }
+            const totalDungeons = dungeons.length;
             if (searchQuery.trim()) {
                 const q = searchQuery.trim().toLowerCase();
                 dungeons = dungeons.filter(d => [
@@ -3846,6 +3939,7 @@
             else if (currentSort === 'rating') dungeons.sort((a,b) => (b.avg_rating||0)-(a.avg_rating||0));
             else if (currentSort === 'newest') dungeons.sort((a,b) => new Date(b.created_at) - new Date(a.created_at));
             else if (currentSort === 'comments') dungeons.sort((a,b) => (b.comment_count||0)-(a.comment_count||0));
+            updateDiscoveryFilterStatus(totalDungeons, dungeons.length);
             if (!dungeons.length) {
                 const filtered = searchQuery || selectedGod !== 'all' || selectedPath !== 'all' || selectedDifficulty !== 'all';
                 listEl.innerHTML = `<div class="empty-state"><div style="font-size:3rem;">🎲</div><p>${filtered ? '【此试炼碎片未录入神谕名录，或是被神明抹除】' : '【暂无新构筑的愚戏试炼，静待筑戏人献祭新试炼】'}</p></div>`;
@@ -4602,9 +4696,11 @@
         function setSort(sort,btn){ currentSort=sort; document.querySelectorAll('.sort-btn').forEach(b=>b.classList.remove('active')); btn.classList.add('active'); renderDungeonList(); }
         function debounceSearch(){ clearTimeout(searchTimeout); searchTimeout=setTimeout(()=>{ searchQuery=document.getElementById('searchInput').value; renderDungeonList(); },350); }
         function showToast(msg){ const c=document.getElementById('toastContainer'); const t=document.createElement('div'); t.className='toast'; t.textContent=msg; c.appendChild(t); setTimeout(()=>{if(t.parentNode)t.remove();},3200); }
-        document.addEventListener('keydown',e=>{ if(e.key==='Escape'){ if(document.getElementById('testimonyModalOverlay').style.display==='flex') closeTestimonyModal(); else if(document.getElementById('ratingModalOverlay').style.display==='flex') closeRatingModal(); else if(document.getElementById('inviteModalOverlay').style.display==='flex') closeInviteModal(); else if(document.getElementById('detailOverlay').style.display==='flex') closeDetail(); else if(document.getElementById('submitModalOverlay').style.display==='flex') closeSubmitModal(); } if(e.key==='Enter' && document.activeElement?.id === 'inviteCodeInput') submitInviteCode(); if(e.key==='Enter' && document.activeElement?.id === 'displayNameInput') saveDisplayName(); });
+        document.addEventListener('keydown',e=>{ if(e.key==='Escape'){ const detailOverlay = document.getElementById('detailOverlay'); if(document.getElementById('testimonyModalOverlay').style.display==='flex') closeTestimonyModal(); else if(document.getElementById('ratingModalOverlay').style.display==='flex') closeRatingModal(); else if(document.getElementById('inviteModalOverlay').style.display==='flex') closeInviteModal(); else if(detailOverlay && getComputedStyle(detailOverlay).display !== 'none') closeDetail(); else if(document.getElementById('submitModalOverlay').style.display==='flex') closeSubmitModal(); } if(e.key==='Enter' && document.activeElement?.id === 'inviteCodeInput') submitInviteCode(); if(e.key==='Enter' && document.activeElement?.id === 'displayNameInput') saveDisplayName(); });
 
         (async function init(){
+            const searchInput = document.getElementById('searchInput');
+            if (searchInput) searchInput.value = '';
             populateGodSelect();
             renderPathNav();
             renderGodFilters();
