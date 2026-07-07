@@ -76,6 +76,10 @@
             backdrop-filter: blur(1px);
             overflow-x: hidden;
         }
+        body.detail-view-open > .header,
+        body.detail-view-open > .container {
+            display: none;
+        }
         body::before {
             content: "";
             position: fixed;
@@ -1387,20 +1391,17 @@
 
         /* ========== 详情面板 ========== */
         .detail-overlay {
-            position: fixed;
-            inset: 0;
+            position: relative;
             width: 100vw;
-            height: 100dvh;
-            max-height: 100dvh;
-            overflow-x: hidden;
-            overflow-y: auto;
+            min-height: 100dvh;
+            overflow: visible;
             overscroll-behavior: contain;
             background:
                 radial-gradient(circle at 18% 8%, rgba(231,207,138,0.09), transparent 34%),
                 radial-gradient(circle at 86% 18%, rgba(122,174,194,0.07), transparent 34%),
                 linear-gradient(180deg, #11141d 0%, #080a0f 42%, #06080b 100%);
             background-color: #080a0f;
-            z-index: 200;
+            z-index: 1;
             display: block;
             padding: 0;
             animation: fadeIn 0.3s ease;
@@ -1409,7 +1410,7 @@
         }
         .detail-overlay::before {
             content: "";
-            position: fixed;
+            position: absolute;
             inset: 0;
             background:
                 linear-gradient(90deg, rgba(255,255,255,0.035) 1px, transparent 1px),
@@ -3285,8 +3286,8 @@
     </div>
 
     <!-- 详情页 -->
-    <div class="detail-overlay" id="detailOverlay" style="display:none;" onclick="closeDetail(event)">
-        <div class="detail-panel" id="detailPanel" onclick="event.stopPropagation()">
+    <div class="detail-overlay" id="detailOverlay" style="display:none;">
+        <div class="detail-panel" id="detailPanel">
             <div class="detail-toolbar">
                 <button class="detail-back" onclick="closeDetail()">← 返回试炼列表</button>
                 <div class="detail-window-title">TRIAL DOSSIER · 试炼详情页</div>
@@ -3819,6 +3820,7 @@
         const LEGACY_DIFFICULTY_MAP = { 凡尘: '新手', 觉醒: '低', 超凡: '中', 神话: '高', 愚者: '高' };
         let inviteSession = getLocalData(INVITE_STORAGE_KEY, null);
         let currentSort = 'popular', searchQuery = '', selectedGod = 'all', selectedPath = 'all', selectedDifficulty = 'all', searchTimeout = null, currentDetailId = null;
+        let archiveScrollY = 0;
         let replyTarget = null;
         let testimonyTargetId = null;
         let pendingRating = { dungeonId: null, value: 5 };
@@ -4763,6 +4765,8 @@
         }
 
         async function openDetail(id) {
+            const detailWasOpen = document.body.classList.contains('detail-view-open');
+            if (!detailWasOpen) archiveScrollY = window.scrollY || document.documentElement.scrollTop || 0;
             currentDetailId = id;
             replyTarget = null;
             const dungeons = await fetchDungeons(); const d = dungeons.find(d=>d.id===id);
@@ -4892,6 +4896,7 @@
             overlay.dataset.god = getGodInfo(d.type).god;
             overlay.setAttribute('style', `${godStyle};display:block;`);
             overlay.dataset.layout = 'page';
+            document.body.classList.add('detail-view-open');
             panel.className = `detail-panel ${godClass}`;
             panel.dataset.god = getGodInfo(d.type).god;
             panel.setAttribute('style', godStyle);
@@ -4909,13 +4914,20 @@
                 if (content) content.scrollTo({ top: 0, behavior: 'auto' });
                 panel.scrollTop = 0;
                 overlay.scrollTop = 0;
+                window.scrollTo(0, 0);
             };
             resetDetailScroll();
             requestAnimationFrame(() => requestAnimationFrame(resetDetailScroll));
-            document.body.style.overflow='hidden';
         }
 
-        function closeDetail(e){ if(e && e.target!==document.getElementById('detailOverlay')) return; document.getElementById('detailOverlay').style.display='none'; document.body.style.overflow=''; currentDetailId=null; }
+        function closeDetail(e){
+            if(e && e.target!==document.getElementById('detailOverlay')) return;
+            document.getElementById('detailOverlay').style.display='none';
+            document.body.classList.remove('detail-view-open');
+            document.body.style.overflow='';
+            currentDetailId=null;
+            requestAnimationFrame(() => window.scrollTo(0, archiveScrollY || 0));
+        }
         function focusTrialRecord() {
             const target = document.getElementById('clearFeedbackNote') || document.querySelector('.clear-panel');
             if (!target) return;
@@ -5035,7 +5047,7 @@
             if(e && e.target!==document.getElementById('testimonyModalOverlay')) return;
             document.getElementById('testimonyModalOverlay').style.display='none';
             const detailVisible = getComputedStyle(document.getElementById('detailOverlay')).display !== 'none';
-            document.body.style.overflow = detailVisible ? 'hidden' : '';
+            document.body.style.overflow = '';
         }
 
         async function setRatingModalContext(id) {
@@ -5126,7 +5138,7 @@
             if(e && e.target!==document.getElementById('ratingModalOverlay')) return;
             document.getElementById('ratingModalOverlay').style.display='none';
             const detailVisible = getComputedStyle(document.getElementById('detailOverlay')).display !== 'none';
-            document.body.style.overflow = detailVisible ? 'hidden' : '';
+            document.body.style.overflow = '';
         }
 
         function renderRatingChoices() {
