@@ -1392,17 +1392,17 @@
             width: 100vw;
             height: 100dvh;
             max-height: 100dvh;
-            overflow: hidden;
+            overflow-x: hidden;
+            overflow-y: auto;
             overscroll-behavior: contain;
             background:
-                radial-gradient(circle at 18% 10%, rgba(231,207,138,0.08), transparent 30%),
-                radial-gradient(circle at 82% 28%, rgba(122,174,194,0.06), transparent 28%),
-                linear-gradient(180deg, #12141d, #08090d 42%, #06080b);
-            background-color: #08090d;
+                radial-gradient(circle at 18% 8%, rgba(231,207,138,0.09), transparent 34%),
+                radial-gradient(circle at 86% 18%, rgba(122,174,194,0.07), transparent 34%),
+                linear-gradient(180deg, #11141d 0%, #080a0f 42%, #06080b 100%);
+            background-color: #080a0f;
             z-index: 200;
-            display: grid;
-            place-items: center;
-            padding: clamp(14px, 3dvh, 28px);
+            display: block;
+            padding: 0;
             animation: fadeIn 0.3s ease;
             scrollbar-color: rgba(213, 178, 91, 0.34) rgba(255,255,255,0.035);
             scrollbar-width: thin;
@@ -1435,32 +1435,36 @@
             opacity: 0.46;
         }
         .detail-overlay[data-layout="anchored"] {
-            padding: clamp(14px, 3dvh, 28px);
+            padding: 0;
         }
         .detail-overlay[data-layout="side"] {
-            padding: clamp(14px, 3dvh, 28px);
+            padding: 0;
+        }
+        .detail-overlay[data-layout="page"] {
+            padding: 0;
         }
         @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
         .detail-panel {
             background:
-                linear-gradient(180deg, rgba(255,255,255,0.035), transparent 28%),
-                radial-gradient(circle at 12% 8%, rgba(231,207,138,0.09), transparent 28%),
-                rgba(13, 14, 21, 0.90);
-            border: 1px solid rgba(231,207,138,0.24);
-            border-radius: 18px;
-            width: min(860px, calc(100vw - 28px));
-            max-height: min(88dvh, 900px);
-            overflow: hidden;
+                radial-gradient(circle at 14% 5%, rgba(231,207,138,0.06), transparent 24%),
+                linear-gradient(180deg, rgba(255,255,255,0.025), transparent 24%);
+            border: 0;
+            border-radius: 0;
+            width: 100%;
+            min-height: 100dvh;
+            max-height: none;
+            overflow: visible;
             padding: 0;
             position: relative;
-            margin: 0 auto;
-            box-shadow: 0 24px 80px rgba(0, 0, 0, 0.58), 0 0 54px rgba(180, 130, 50, 0.10);
+            margin: 0;
+            box-shadow: none;
             animation: slideUp 0.3s ease;
             display: flex;
             flex-direction: column;
         }
         .detail-overlay[data-layout="anchored"] .detail-panel,
-        .detail-overlay[data-layout="side"] .detail-panel { width: min(860px, calc(100vw - 28px)); }
+        .detail-overlay[data-layout="side"] .detail-panel,
+        .detail-overlay[data-layout="page"] .detail-panel { width: 100%; }
         .detail-panel.path-life { border-color: rgba(111,168,121,0.34); box-shadow: 0 24px 80px rgba(0,0,0,0.58), 0 0 42px rgba(111,168,121,0.10); }
         .detail-panel.path-exist { border-color: rgba(122,174,194,0.34); box-shadow: 0 24px 80px rgba(0,0,0,0.58), 0 0 42px rgba(122,174,194,0.10); }
         .detail-panel.path-civil { border-color: rgba(159,73,56,0.34); box-shadow: 0 24px 80px rgba(0,0,0,0.58), 0 0 42px rgba(159,73,56,0.10); }
@@ -1468,14 +1472,12 @@
         .detail-panel.path-chaos { border-color: rgba(166,155,105,0.34); box-shadow: 0 24px 80px rgba(0,0,0,0.58), 0 0 42px rgba(166,155,105,0.10); }
         .detail-panel.path-fall { border-color: rgba(103,109,118,0.34); box-shadow: 0 24px 80px rgba(0,0,0,0.58), 0 0 40px rgba(103,109,118,0.10); }
         .detail-panel[data-god] {
-            border-color: color-mix(in srgb, var(--god-primary) 34%, rgba(255,255,255,0.08));
+            border-color: transparent;
             background:
-                radial-gradient(circle at 14% 8%, var(--god-glow), transparent 24%),
-                linear-gradient(180deg, color-mix(in srgb, var(--god-dark) 56%, rgba(255,255,255,0.035)), transparent 34%),
-                rgba(13,14,21,0.94);
-            box-shadow:
-                0 24px 86px rgba(0,0,0,0.62),
-                0 0 54px var(--god-glow);
+                radial-gradient(circle at 12% 5%, var(--god-glow), transparent 28%),
+                radial-gradient(circle at 92% 18%, color-mix(in srgb, var(--god-secondary) 10%, transparent), transparent 28%),
+                linear-gradient(180deg, color-mix(in srgb, var(--god-dark) 40%, transparent), transparent 38%);
+            box-shadow: none;
         }
         @keyframes slideUp { from { transform: translateY(40px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
         .detail-toolbar {
@@ -1491,9 +1493,9 @@
             border-bottom: 1px solid rgba(255,255,255,0.08);
             background:
                 linear-gradient(90deg, rgba(231,207,138,0.08), transparent 48%),
-                rgba(12, 12, 18, 0.94);
+                rgba(8, 10, 15, 0.96);
             backdrop-filter: blur(14px);
-            border-radius: 18px 18px 0 0;
+            border-radius: 0;
             box-shadow: 0 12px 26px rgba(0, 0, 0, 0.22);
         }
         .detail-window-title {
@@ -1548,9 +1550,10 @@
         .detail-content {
             flex: 1 1 auto;
             min-height: auto;
-            overflow-y: auto;
-            overscroll-behavior: contain;
-            padding: clamp(20px, 2.4vw, 34px);
+            overflow: visible;
+            width: min(1180px, calc(100vw - 44px));
+            margin: 0 auto;
+            padding: clamp(22px, 3vw, 44px) 0 clamp(34px, 5vw, 72px);
         }
         .detail-content::-webkit-scrollbar { width: 8px; }
         .detail-content::-webkit-scrollbar-track { background: rgba(255,255,255,0.035); }
@@ -1659,10 +1662,13 @@
             align-items: center;
             justify-content: space-between;
             gap: 12px;
-            padding: 14px clamp(16px, 2.2vw, 26px);
+            padding: 14px max(clamp(16px, 3vw, 38px), calc((100vw - 1180px) / 2));
             border-top: 1px solid rgba(255,255,255,0.08);
-            background: rgba(12,12,18,0.72);
-            border-radius: 0 0 18px 18px;
+            background: rgba(8,10,15,0.94);
+            backdrop-filter: blur(14px);
+            border-radius: 0;
+            position: sticky;
+            bottom: 0;
         }
         .detail-footer-note {
             color: var(--text-muted);
@@ -3006,13 +3012,15 @@
             }
             .detail-overlay,
             .detail-overlay[data-layout="anchored"],
-            .detail-overlay[data-layout="side"] {
-                padding: 10px;
+            .detail-overlay[data-layout="side"],
+            .detail-overlay[data-layout="page"] {
+                padding: 0;
             }
             .detail-panel {
-                width: min(100%, calc(100vw - 20px));
-                max-height: calc(100dvh - 20px);
-                border-radius: 14px;
+                width: 100%;
+                min-height: 100dvh;
+                max-height: none;
+                border-radius: 0;
             }
             .detail-toolbar {
                 grid-template-columns: auto 1fr auto;
@@ -3031,7 +3039,11 @@
                 height: 34px;
                 font-size: 0.78rem;
             }
-            .detail-content { padding: 18px 14px 18px; overflow-y: auto; }
+            .detail-content {
+                width: min(100%, calc(100vw - 24px));
+                padding: 18px 0 28px;
+                overflow: visible;
+            }
             .trial-entry-head {
                 grid-template-columns: auto minmax(0, 1fr);
             }
@@ -3276,14 +3288,14 @@
     <div class="detail-overlay" id="detailOverlay" style="display:none;" onclick="closeDetail(event)">
         <div class="detail-panel" id="detailPanel" onclick="event.stopPropagation()">
             <div class="detail-toolbar">
-                <button class="detail-back" onclick="closeDetail()">← 返回列表</button>
-                <div class="detail-window-title">TRIAL DOSSIER · 试炼神谕档案</div>
-                <button class="detail-close-icon" onclick="closeDetail()" title="关闭神谕窗口" aria-label="关闭神谕窗口">✕</button>
+                <button class="detail-back" onclick="closeDetail()">← 返回试炼列表</button>
+                <div class="detail-window-title">TRIAL DOSSIER · 试炼详情页</div>
+                <button class="detail-close-icon" onclick="closeDetail()" title="返回试炼列表" aria-label="返回试炼列表">✕</button>
             </div>
             <div id="detailContent" class="detail-content"></div>
             <div class="detail-footer" id="detailFooter">
-                <span class="detail-footer-note">点击遮罩或按 ESC 也可暂离这场试炼。</span>
-                <button class="btn btn-outline btn-sm detail-leave-btn" onclick="closeDetail()">暂离神谕窗口</button>
+                <span class="detail-footer-note">按 ESC 可返回试炼列表。</span>
+                <button class="btn btn-outline btn-sm detail-leave-btn" onclick="closeDetail()">返回试炼列表</button>
             </div>
         </div>
     </div>
@@ -4878,8 +4890,8 @@
             const panel = document.getElementById('detailPanel');
             overlay.className = `detail-overlay ${godClass}`;
             overlay.dataset.god = getGodInfo(d.type).god;
-            overlay.setAttribute('style', `${godStyle};display:grid;`);
-            overlay.dataset.layout = 'center';
+            overlay.setAttribute('style', `${godStyle};display:block;`);
+            overlay.dataset.layout = 'page';
             panel.className = `detail-panel ${godClass}`;
             panel.dataset.god = getGodInfo(d.type).god;
             panel.setAttribute('style', godStyle);
