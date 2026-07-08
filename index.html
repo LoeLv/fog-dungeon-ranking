@@ -77,7 +77,10 @@
             overflow-x: hidden;
         }
         body.detail-view-open > .header,
-        body.detail-view-open > .container {
+        body.detail-view-open > .container,
+        body.profile-view-open > .header,
+        body.profile-view-open > .container,
+        body.profile-view-open > .detail-overlay {
             display: none;
         }
         body::before {
@@ -279,15 +282,43 @@
             border: 1px solid rgba(255,255,255,0.08);
             background: rgba(255,255,255,0.03);
             color: var(--text-muted);
+            font-family: var(--font-body);
             font-size: 0.78rem;
             font-weight: 600;
             letter-spacing: 0.04em;
             white-space: nowrap;
+            cursor: pointer;
+            transition: all var(--transition);
+            position: relative;
+        }
+        .role-badge:hover {
+            color: var(--text-bright);
+            border-color: rgba(231,207,138,0.34);
+            background: rgba(231,207,138,0.08);
+            transform: translateY(-1px);
         }
         .role-badge.active {
             color: var(--gold-light);
             border-color: rgba(200, 160, 80, 0.35);
             background: rgba(184, 134, 11, 0.12);
+        }
+        .role-badge.has-notice::after {
+            content: attr(data-notice);
+            position: absolute;
+            top: -7px;
+            right: -7px;
+            min-width: 18px;
+            height: 18px;
+            display: grid;
+            place-items: center;
+            padding: 0 5px;
+            border-radius: 999px;
+            border: 1px solid rgba(255,255,255,0.22);
+            background: linear-gradient(135deg, #c95d41, #8f2f32);
+            color: #fff4ed;
+            font-size: 0.62rem;
+            line-height: 1;
+            box-shadow: 0 0 18px rgba(201,93,65,0.28);
         }
         .role-badge[data-role="player"] {
             color: var(--path-exist);
@@ -2874,6 +2905,265 @@
             font-size: 0.76rem;
             line-height: 1.5;
         }
+        .profile-page {
+            min-height: 100dvh;
+            background:
+                radial-gradient(circle at 12% 5%, rgba(231,207,138,0.07), transparent 26%),
+                radial-gradient(circle at 82% 8%, rgba(122,174,194,0.07), transparent 30%),
+                var(--bg);
+            background-image:
+                var(--bg-pattern),
+                linear-gradient(118deg, transparent 0 45%, rgba(231,207,138,0.045) 45.3%, transparent 47%),
+                linear-gradient(62deg, transparent 0 33%, rgba(122,174,194,0.04) 33.4%, transparent 35%);
+            color: var(--text);
+        }
+        .profile-shell {
+            width: min(1180px, calc(100vw - 40px));
+            margin: 0 auto;
+            padding: 0 0 clamp(34px, 5vw, 72px);
+        }
+        .profile-toolbar {
+            position: sticky;
+            top: 0;
+            z-index: 20;
+            display: grid;
+            grid-template-columns: auto 1fr auto;
+            align-items: center;
+            gap: 12px;
+            margin: 0 calc((100vw - min(1180px, calc(100vw - 40px))) / -2);
+            padding: 12px max(20px, calc((100vw - 1180px) / 2));
+            border-bottom: 1px solid rgba(255,255,255,0.08);
+            background:
+                linear-gradient(90deg, rgba(122,174,194,0.08), transparent 48%),
+                rgba(8, 10, 15, 0.96);
+            backdrop-filter: blur(14px);
+            box-shadow: 0 12px 26px rgba(0,0,0,0.22);
+        }
+        .profile-content {
+            padding-top: clamp(22px, 3vw, 44px);
+        }
+        .profile-hero {
+            position: relative;
+            overflow: hidden;
+            display: grid;
+            grid-template-columns: auto minmax(0, 1fr);
+            gap: 18px;
+            align-items: center;
+            padding: clamp(20px, 3vw, 30px);
+            border: 1px solid rgba(231,207,138,0.18);
+            border-radius: 18px;
+            background:
+                radial-gradient(circle at 8% 22%, rgba(231,207,138,0.12), transparent 34%),
+                radial-gradient(circle at 92% 18%, rgba(122,174,194,0.10), transparent 28%),
+                linear-gradient(135deg, rgba(255,255,255,0.045), rgba(255,255,255,0.015) 48%, rgba(0,0,0,0.22));
+            box-shadow: inset 0 1px 0 rgba(255,255,255,0.04), 0 18px 44px rgba(0,0,0,0.22);
+            margin-bottom: 18px;
+        }
+        .profile-hero::after {
+            content: "PILGRIM DOSSIER";
+            position: absolute;
+            right: 22px;
+            bottom: 8px;
+            color: rgba(231,207,138,0.055);
+            font-family: var(--font-display);
+            font-size: clamp(2.4rem, 8vw, 5.5rem);
+            letter-spacing: 0.08em;
+            pointer-events: none;
+        }
+        .profile-avatar {
+            display: grid;
+            place-items: center;
+            width: 76px;
+            height: 76px;
+            border-radius: 22px;
+            border: 1px solid rgba(231,207,138,0.28);
+            background:
+                radial-gradient(circle at 35% 24%, rgba(231,207,138,0.18), transparent 42%),
+                rgba(0,0,0,0.24);
+            box-shadow: inset 0 0 24px rgba(0,0,0,0.34);
+        }
+        .profile-avatar .god-sigil {
+            width: 42px;
+            height: 42px;
+        }
+        .profile-kicker {
+            color: var(--gold-light);
+            font-size: 0.72rem;
+            font-weight: 900;
+            letter-spacing: 0.18em;
+            text-transform: uppercase;
+            margin-bottom: 4px;
+        }
+        .profile-name {
+            position: relative;
+            z-index: 1;
+            color: var(--text-bright);
+            font-family: var(--font-display);
+            font-size: clamp(1.6rem, 4vw, 2.45rem);
+            line-height: 1.15;
+            letter-spacing: 0.04em;
+            margin-bottom: 8px;
+        }
+        .profile-subline {
+            position: relative;
+            z-index: 1;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            align-items: center;
+        }
+        .profile-grid {
+            display: grid;
+            grid-template-columns: minmax(0, 1.02fr) minmax(300px, 0.98fr);
+            gap: 18px;
+            align-items: start;
+        }
+        .profile-panel {
+            border: 1px solid rgba(255,255,255,0.075);
+            border-radius: 16px;
+            background:
+                linear-gradient(135deg, rgba(255,255,255,0.036), rgba(255,255,255,0.012)),
+                rgba(9,10,15,0.66);
+            box-shadow: inset 0 1px 0 rgba(255,255,255,0.035);
+            padding: 18px;
+        }
+        .profile-panel + .profile-panel {
+            margin-top: 18px;
+        }
+        .profile-panel-title {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+            margin-bottom: 14px;
+            color: var(--text-bright);
+            font-size: 1rem;
+            font-weight: 900;
+            letter-spacing: 0.04em;
+        }
+        .profile-panel-title small {
+            color: var(--text-muted);
+            font-size: 0.72rem;
+            font-weight: 600;
+        }
+        .profile-form-grid {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 14px;
+        }
+        .profile-form-grid .form-group {
+            margin-bottom: 0;
+        }
+        .profile-form-grid .full {
+            grid-column: 1 / -1;
+        }
+        .profile-score-row {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 12px;
+        }
+        .profile-score-card,
+        .profile-stat-card {
+            border: 1px solid rgba(231,207,138,0.12);
+            border-radius: 14px;
+            background:
+                radial-gradient(circle at 12% 18%, rgba(231,207,138,0.08), transparent 42%),
+                rgba(0,0,0,0.22);
+            padding: 14px;
+        }
+        .profile-score-card span,
+        .profile-stat-card span {
+            display: block;
+            color: var(--text-muted);
+            font-size: 0.72rem;
+            font-weight: 800;
+            letter-spacing: 0.08em;
+            margin-bottom: 6px;
+        }
+        .profile-score-card strong,
+        .profile-stat-card strong {
+            display: block;
+            color: var(--gold-light);
+            font-family: var(--font-display);
+            font-size: 1.75rem;
+            line-height: 1.1;
+        }
+        .profile-list {
+            display: grid;
+            gap: 10px;
+        }
+        .profile-list-item {
+            display: grid;
+            gap: 5px;
+            padding: 12px 13px;
+            border: 1px solid rgba(255,255,255,0.055);
+            border-radius: 12px;
+            background: rgba(0,0,0,0.18);
+        }
+        .profile-list-item.clickable {
+            cursor: pointer;
+            transition: all var(--transition);
+        }
+        .profile-list-item.clickable:hover {
+            border-color: rgba(231,207,138,0.26);
+            background: rgba(231,207,138,0.045);
+            transform: translateY(-1px);
+        }
+        .profile-list-title {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+            color: var(--text-bright);
+            font-weight: 800;
+        }
+        .profile-list-title small {
+            color: var(--text-muted);
+            font-weight: 600;
+            white-space: nowrap;
+        }
+        .profile-list-meta {
+            color: var(--text-muted);
+            font-size: 0.78rem;
+            line-height: 1.55;
+        }
+        .profile-chip-row {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 7px;
+        }
+        .profile-empty {
+            padding: 18px;
+            border: 1px dashed rgba(255,255,255,0.12);
+            border-radius: 12px;
+            color: var(--text-muted);
+            background: rgba(255,255,255,0.018);
+            font-size: 0.84rem;
+            line-height: 1.65;
+        }
+        .profile-notice {
+            border-color: rgba(213,178,91,0.24);
+            background:
+                linear-gradient(90deg, rgba(213,178,91,0.055), transparent 42%),
+                rgba(0,0,0,0.18);
+        }
+        .profile-notice.unread {
+            border-color: rgba(215,107,74,0.34);
+            box-shadow: 0 0 24px rgba(215,107,74,0.07);
+        }
+        .profile-notice-mark {
+            color: #ffb59f;
+            font-size: 0.7rem;
+            font-weight: 900;
+            letter-spacing: 0.08em;
+        }
+        .profile-tools {
+            display: flex;
+            justify-content: flex-end;
+            gap: 10px;
+            flex-wrap: wrap;
+            margin-top: 16px;
+        }
         .comment-identity {
             min-width: 160px;
             padding: 12px 16px;
@@ -3003,7 +3293,7 @@
                 width: 100%;
                 justify-content: stretch;
             }
-            .header-actions .role-badge { grid-column: 1 / -1; width: fit-content; }
+            .header-actions .role-badge { grid-column: 1 / -1; width: fit-content; max-width: 100%; }
             .header-actions .btn {
                 min-width: 0;
                 width: 100%;
@@ -3076,6 +3366,46 @@
                 flex: 1 1 150px;
             }
             .detail-leave-btn { width: 100%; }
+            .profile-shell {
+                width: min(100%, calc(100vw - 24px));
+            }
+            .profile-toolbar {
+                margin: 0 -12px;
+                padding: 10px 12px;
+                grid-template-columns: auto 1fr auto;
+            }
+            .profile-hero {
+                grid-template-columns: 1fr;
+                padding: 18px;
+            }
+            .profile-avatar {
+                width: 62px;
+                height: 62px;
+                border-radius: 18px;
+            }
+            .profile-grid,
+            .profile-form-grid,
+            .profile-score-row {
+                grid-template-columns: 1fr;
+            }
+            .profile-form-grid .full {
+                grid-column: auto;
+            }
+            .profile-panel {
+                padding: 15px;
+            }
+            .profile-panel-title {
+                align-items: flex-start;
+                flex-direction: column;
+            }
+            .profile-list-title {
+                align-items: flex-start;
+                flex-direction: column;
+                gap: 3px;
+            }
+            .profile-tools .btn {
+                width: 100%;
+            }
             .detail-hero { padding: 14px; }
             .detail-hero-main {
                 grid-template-columns: auto minmax(0, 1fr);
@@ -3216,7 +3546,7 @@
         </div>
         <nav class="path-nav" id="pathNav" aria-label="六大命途快速筛选"></nav>
         <div class="header-actions">
-            <div class="role-badge" id="roleBadge">旁观者只读</div>
+            <button type="button" class="role-badge" id="roleBadge" onclick="openProfilePage()">旁观者只读</button>
             <button class="btn btn-outline" id="inviteButton" onclick="openInviteModal()">🎲 同契召引</button>
             <button class="btn btn-primary btn-folly" id="submitEntryButton" onclick="openSubmitModal()">🎭 构筑愚戏</button>
         </div>
@@ -3325,6 +3655,20 @@
             </div>
         </div>
     </div>
+
+    <!-- 个人档案独立页 -->
+    <main class="profile-page" id="profilePage" style="display:none;">
+        <div class="profile-shell">
+            <div class="profile-toolbar">
+                <button class="detail-back" onclick="closeProfilePage()">← 返回试炼列表</button>
+                <div class="detail-window-title">PILGRIM DOSSIER · 个人档案</div>
+                <button class="detail-close-icon" onclick="closeProfilePage()" title="返回试炼列表" aria-label="返回试炼列表">✕</button>
+            </div>
+            <div id="profileContent" class="profile-content">
+                <div class="loading"><div class="spinner"></div><br>正在读取信徒名录...</div>
+            </div>
+        </div>
+    </main>
 
     <!-- 邀请弹窗 -->
     <div class="modal-overlay" id="inviteModalOverlay" style="display:none;" onclick="closeInviteModal(event)">
@@ -3471,6 +3815,8 @@
         function setLocalData(key, value) { try { localStorage.setItem('fog_' + key, JSON.stringify(value)); } catch {} }
 
         const INVITE_STORAGE_KEY = 'invite_session_v1';
+        const PROFILE_STORAGE_KEY = 'personal_profiles_v1';
+        const PROFILE_NOTICE_SEEN_KEY = 'profile_notice_seen_v1';
         const ROLE_LABELS = { player: '入局信徒', author: '试炼构筑者', admin: '神谕馆主' };
         const GOD_GROUPS = [
             { path: '生命', className: 'path-life', gods: ['诞育', '繁荣', '死亡'] },
@@ -3846,6 +4192,7 @@
         let inviteSession = getLocalData(INVITE_STORAGE_KEY, null);
         let currentSort = 'popular', searchQuery = '', selectedGod = 'all', selectedPath = 'all', selectedDifficulty = 'all', searchTimeout = null, currentDetailId = null;
         let archiveScrollY = 0;
+        let profileScrollY = 0;
         let replyTarget = null;
         let testimonyTargetId = null;
         let pendingRating = { dungeonId: null, value: 5 };
@@ -3882,6 +4229,9 @@
                 roleBadge.textContent = role ? `${registry} · ${inviteSession?.name || ROLE_LABELS[role]}` : '旁观者只读';
                 roleBadge.classList.toggle('active', !!role);
                 roleBadge.dataset.role = role || 'guest';
+                roleBadge.classList.remove('has-notice');
+                roleBadge.removeAttribute('data-notice');
+                roleBadge.title = role ? '打开个人档案' : '验入局谕令后查看个人档案';
             }
             if (inviteButton) inviteButton.textContent = '🎲 同契召引';
             if (submitButton) {
@@ -3891,6 +4241,447 @@
             if (identityCard) identityCard.classList.toggle('active', !!role);
             if (identityRoleText) identityRoleText.textContent = role ? `${ROLE_LABELS[role]}` : '未入局';
             if (displayNameInput && role) displayNameInput.value = inviteSession?.name || ROLE_LABELS[role];
+            updateProfileNoticeBadge();
+        }
+
+        function getProfileKey() {
+            return inviteSession?.code || `${getInviteRole() || 'guest'}:${inviteSession?.name || 'visitor'}`;
+        }
+
+        function getProfileDefaults() {
+            return {
+                faithPath: '存在',
+                profession: '',
+                ascensionScore: 0,
+                audienceScore: 0,
+                items: '',
+                talents: ''
+            };
+        }
+
+        function getStoredProfiles() {
+            return getLocalData(PROFILE_STORAGE_KEY, {});
+        }
+
+        function getCurrentProfile() {
+            const allProfiles = getStoredProfiles();
+            return { ...getProfileDefaults(), ...(allProfiles[getProfileKey()] || {}) };
+        }
+
+        function saveCurrentProfile(profile) {
+            const allProfiles = getStoredProfiles();
+            allProfiles[getProfileKey()] = {
+                ...getProfileDefaults(),
+                ...profile,
+                updatedAt: new Date().toISOString()
+            };
+            setLocalData(PROFILE_STORAGE_KEY, allProfiles);
+        }
+
+        function getProfileNoticeSeenMap() {
+            return getLocalData(PROFILE_NOTICE_SEEN_KEY, {});
+        }
+
+        function getProfileNoticeSeenTime() {
+            return getProfileNoticeSeenMap()[getProfileKey()] || '';
+        }
+
+        function setProfileNoticeSeenTime(value) {
+            const seen = getProfileNoticeSeenMap();
+            seen[getProfileKey()] = value || new Date().toISOString();
+            setLocalData(PROFILE_NOTICE_SEEN_KEY, seen);
+        }
+
+        function normalizeProfileScore(value) {
+            const number = Number(value);
+            if (!Number.isFinite(number)) return 0;
+            return Math.max(0, Math.min(999999, Math.round(number * 10) / 10));
+        }
+
+        function normalizeIdentityText(value) {
+            return String(value || '').trim().slice(0, 40);
+        }
+
+        function splitProfileLines(value) {
+            return String(value || '')
+                .split(/[\n,，;；]/)
+                .map(item => item.trim())
+                .filter(Boolean)
+                .slice(0, 24);
+        }
+
+        function getRepresentativeGodForPath(path) {
+            return GOD_GROUPS.find(group => group.path === path)?.gods?.[0] || '记忆';
+        }
+
+        function renderProfilePathOptions(selected) {
+            return GOD_GROUPS.map(group => `<option value="${escapeHtml(group.path)}" ${group.path === selected ? 'selected' : ''}>${escapeHtml(getPathMetaByPath(group.path).sigil)} ${escapeHtml(group.path)}命途</option>`).join('');
+        }
+
+        function renderProfileChips(value, emptyText) {
+            const items = splitProfileLines(value);
+            if (!items.length) return `<div class="profile-empty">${escapeHtml(emptyText)}</div>`;
+            return `<div class="profile-chip-row">${items.map(item => `<span class="metric-pill">${escapeHtml(item)}</span>`).join('')}</div>`;
+        }
+
+        function isSameProfileName(value) {
+            const currentName = String(inviteSession?.name || '').trim().toLowerCase();
+            return currentName && String(value || '').trim().toLowerCase() === currentName;
+        }
+
+        function getAuthoredDungeons(dungeons) {
+            if (!inviteSession) return [];
+            return (dungeons || []).filter(d => isSameProfileName(d.invite_name) || isSameProfileName(d.creator));
+        }
+
+        function buildLocalClearRecords(dungeons) {
+            const dungeonMap = new Map((dungeons || []).map(d => [String(d.id), d]));
+            const records = new Map();
+            const code = inviteSession?.code || 'guest';
+            Object.entries(getLocalData('cleared_supabase', {})).forEach(([key, value]) => {
+                if (!value) return;
+                const [dungeonId, runNumber, scopedCode] = key.split(':');
+                if (scopedCode && scopedCode !== code) return;
+                const dungeon = dungeonMap.get(String(dungeonId));
+                records.set(`${dungeonId}:${runNumber || getRunCount(dungeon || {})}`, {
+                    id: key,
+                    dungeon_id: dungeonId,
+                    run_number: Number(runNumber || getRunCount(dungeon || {})),
+                    feedback_tags: [],
+                    feedback_note: '',
+                    created_at: '',
+                    dungeon
+                });
+            });
+            Object.entries(getLocalData('cleared', {})).forEach(([key, value]) => {
+                if (!value) return;
+                const [dungeonId, runNumber] = key.split(':');
+                const dungeon = dungeonMap.get(String(dungeonId));
+                const recordKey = `${dungeonId}:${runNumber || getRunCount(dungeon || {})}`;
+                if (records.has(recordKey)) return;
+                records.set(recordKey, {
+                    id: key,
+                    dungeon_id: dungeonId,
+                    run_number: Number(runNumber || getRunCount(dungeon || {})),
+                    feedback_tags: [],
+                    feedback_note: '',
+                    created_at: '',
+                    dungeon
+                });
+            });
+            return [...records.values()];
+        }
+
+        async function fetchMyClearRecords(dungeons) {
+            const localRecords = buildLocalClearRecords(dungeons);
+            if (USE_LOCAL_FALLBACK || !supabaseClient || !inviteSession?.code || !globalThis.crypto?.subtle) return localRecords;
+            try {
+                const codeHash = await sha256Hex(inviteSession.code);
+                const { data, error } = await supabaseClient
+                    .from('clear_records')
+                    .select('id,dungeon_id,run_number,invite_name,feedback_tags,feedback_note,created_at')
+                    .eq('invite_code_hash', codeHash)
+                    .order('created_at', { ascending: false });
+                if (error) return localRecords;
+                const dungeonMap = new Map((dungeons || []).map(d => [String(d.id), d]));
+                return (data || []).map(record => ({
+                    ...record,
+                    dungeon: dungeonMap.get(String(record.dungeon_id)) || null
+                }));
+            } catch {
+                return localRecords;
+            }
+        }
+
+        async function getAuthorCommentNotices(dungeons = null) {
+            if (!inviteSession) return { notices: [], unread: [] };
+            const sourceDungeons = dungeons || await fetchDungeons();
+            const authored = getAuthoredDungeons(sourceDungeons);
+            if (!authored.length) return { notices: [], unread: [] };
+            const seenAt = getProfileNoticeSeenTime();
+            const seenTime = seenAt ? new Date(seenAt).getTime() : 0;
+            const notices = [];
+            for (const dungeon of authored) {
+                const comments = await fetchComments(dungeon.id);
+                comments
+                    .filter(comment => !comment.is_deleted && !isSameProfileName(comment.invite_name) && !isSameProfileName(comment.author))
+                    .forEach(comment => {
+                        const createdTime = comment.created_at ? new Date(comment.created_at).getTime() : 0;
+                        notices.push({
+                            ...comment,
+                            dungeon,
+                            unread: createdTime > seenTime
+                        });
+                    });
+            }
+            notices.sort((a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0));
+            return { notices, unread: notices.filter(item => item.unread) };
+        }
+
+        async function updateProfileNoticeBadge() {
+            const roleBadge = document.getElementById('roleBadge');
+            if (!roleBadge || !inviteSession) return;
+            try {
+                const keyAtStart = getProfileKey();
+                const { unread } = await getAuthorCommentNotices();
+                if (keyAtStart !== getProfileKey()) return;
+                const count = unread.length;
+                roleBadge.classList.toggle('has-notice', count > 0);
+                if (count > 0) roleBadge.dataset.notice = count > 99 ? '99+' : String(count);
+                else roleBadge.removeAttribute('data-notice');
+            } catch (error) {
+                console.warn('个人提醒读取失败:', error);
+            }
+        }
+
+        function renderProfileClearRecords(records) {
+            if (!records.length) return '<div class="profile-empty">尚未登记通关。通关任意试炼后，会在这里形成你的通关记录。</div>';
+            return records.slice(0, 18).map(record => {
+                const d = record.dungeon || {};
+                const title = d.name || '未知试炼';
+                const god = d.type ? `${formatGodName(d.type)} · ${formatGodPath(d.type)}命途` : '未归档神明';
+                const note = record.feedback_note ? `反馈：${record.feedback_note}` : '本设备或神谕记录已登记通过。';
+                const tags = Array.isArray(record.feedback_tags) && record.feedback_tags.length ? ` · ${record.feedback_tags.join(' / ')}` : '';
+                return `
+                    <article class="profile-list-item clickable" onclick="openDetailFromProfile(${jsString(record.dungeon_id)})">
+                        <div class="profile-list-title">
+                            <span>《${escapeHtml(title)}》</span>
+                            <small>${escapeHtml(formatDate(record.created_at))}</small>
+                        </div>
+                        <div class="profile-list-meta">试炼轮回：第 ${Number(record.run_number || 1)} 周目 · ${escapeHtml(god)}</div>
+                        <div class="profile-list-meta">${escapeHtml(note)}${escapeHtml(tags)}</div>
+                    </article>`;
+            }).join('');
+        }
+
+        function renderProfileAuthoredDungeons(authored) {
+            if (!authored.length) return '<div class="profile-empty">当前身份还没有构筑过试炼。作者投稿后，会在这里形成构筑者记录。</div>';
+            return authored.slice(0, 18).map(d => `
+                <article class="profile-list-item clickable" onclick="openDetailFromProfile(${jsString(d.id)})">
+                    <div class="profile-list-title">
+                        <span>《${escapeHtml(d.name || '未命名试炼')}》</span>
+                        <small>神格 ${Number(d.avg_rating || 0).toFixed(1)}</small>
+                    </div>
+                    <div class="profile-list-meta">${escapeHtml(formatGodName(d.type))} · ${escapeHtml(formatGodPath(d.type))}命途 · ${escapeHtml(formatDifficulty(d.difficulty))}</div>
+                    <div class="profile-list-meta">证言 ${Number(d.comment_count || 0)} · 通关留存率 ${formatClearRate(d)} · ${formatDate(d.created_at)}</div>
+                </article>`).join('');
+        }
+
+        function renderProfileNotices(notices) {
+            if (!notices.length) return '<div class="profile-empty">还没有人在你的试炼下留下新证言。</div>';
+            return notices.slice(0, 12).map(notice => {
+                const d = notice.dungeon || {};
+                return `
+                    <article class="profile-list-item profile-notice ${notice.unread ? 'unread' : ''} clickable" onclick="openDetailFromProfile(${jsString(notice.dungeon_id)})">
+                        <div class="profile-list-title">
+                            <span>${notice.unread ? '<span class="profile-notice-mark">未读</span> ' : ''}${escapeHtml(notice.author || notice.invite_name || '匿名信徒')}</span>
+                            <small>${escapeHtml(formatDate(notice.created_at))}</small>
+                        </div>
+                        <div class="profile-list-meta">在《${escapeHtml(d.name || '未知试炼')}》下留下证言</div>
+                        <div class="profile-list-meta">${escapeHtml(truncateText(notice.content, 120))}</div>
+                    </article>`;
+            }).join('');
+        }
+
+        async function renderProfilePage() {
+            const container = document.getElementById('profileContent');
+            if (!container) return;
+            if (!inviteSession) {
+                container.innerHTML = '<div class="profile-empty">请先通过同契召引入局，再查看个人档案。</div>';
+                return;
+            }
+            container.innerHTML = '<div class="loading"><div class="spinner"></div><br>正在读取个人档案...</div>';
+            const profile = getCurrentProfile();
+            const dungeons = await fetchDungeons();
+            const clearRecords = await fetchMyClearRecords(dungeons);
+            const authored = getAuthoredDungeons(dungeons);
+            const { notices, unread } = await getAuthorCommentNotices(dungeons);
+            const uniqueCleared = new Set(clearRecords.map(record => String(record.dungeon_id))).size;
+            const totalAuthoredComments = authored.reduce((sum, d) => sum + Number(d.comment_count || 0), 0);
+            const avgAuthorRating = authored.length
+                ? authored.reduce((sum, d) => sum + Number(d.avg_rating || 0), 0) / authored.length
+                : 0;
+            const faithGod = getRepresentativeGodForPath(profile.faithPath);
+            const faithClass = getPathClassByPath(profile.faithPath);
+            const roleLabel = ROLE_LABELS[getInviteRole()] || '入局信徒';
+            const authorPanel = (authored.length || canSubmit()) ? `
+                <section class="profile-panel">
+                    <div class="profile-panel-title">
+                        <span>🎭 构筑者记录</span>
+                        <small>作者身份额外记录</small>
+                    </div>
+                    <div class="profile-score-row">
+                        <div class="profile-stat-card"><span>构筑试炼数</span><strong>${authored.length}</strong></div>
+                        <div class="profile-stat-card"><span>平均神格判定</span><strong>${authored.length ? avgAuthorRating.toFixed(1) : '—'}</strong></div>
+                    </div>
+                    <div class="metric-strip">
+                        <span class="metric-pill">证言总数 <strong>${totalAuthoredComments}</strong></span>
+                        <span class="metric-pill">楼主提醒 <strong>${unread.length}</strong></span>
+                    </div>
+                    <div class="profile-tools">
+                        <button class="btn btn-outline btn-sm" onclick="markProfileNoticesRead()">标记楼主提醒已读</button>
+                    </div>
+                    <div class="profile-list" style="margin-top:14px;">${renderProfileAuthoredDungeons(authored)}</div>
+                </section>
+                <section class="profile-panel">
+                    <div class="profile-panel-title">
+                        <span>📣 楼主提醒</span>
+                        <small>${unread.length ? `${unread.length} 条未读` : '暂无未读'}</small>
+                    </div>
+                    <div class="profile-list">${renderProfileNotices(notices)}</div>
+                </section>` : '';
+            container.innerHTML = `
+                <section class="profile-hero">
+                    <div class="profile-avatar ${faithClass}" style="${getGodSkinStyle(faithGod)}">${renderGodSigil(faithGod, 'lg')}</div>
+                    <div>
+                        <div class="profile-kicker">PERSONAL PILGRIM ARCHIVE</div>
+                        <h1 class="profile-name">${escapeHtml(inviteSession.name || roleLabel)}</h1>
+                        <div class="profile-subline">
+                            <span class="mini-tag ${faithClass}">${escapeHtml(profile.faithPath)}命途</span>
+                            <span class="mini-tag ${faithClass}">${escapeHtml(roleLabel)}</span>
+                            <span class="metric-pill">职业 <strong>${escapeHtml(profile.profession || '未填写')}</strong></span>
+                            ${unread.length ? `<span class="metric-pill">楼主提醒 <strong>${unread.length}</strong></span>` : ''}
+                        </div>
+                    </div>
+                </section>
+                <div class="profile-grid">
+                    <div>
+                        <section class="profile-panel">
+                            <div class="profile-panel-title">
+                                <span>个人档案</span>
+                                <small>昵称会绑定到当前邀请码</small>
+                            </div>
+                            <div class="profile-form-grid">
+                                <div class="form-group">
+                                    <label for="profileDisplayName">个人昵称</label>
+                                    <input id="profileDisplayName" maxlength="16" value="${escapeHtml(inviteSession.name || '')}" placeholder="例如：无我">
+                                </div>
+                                <div class="form-group">
+                                    <label for="profileFaithPath">信仰命途</label>
+                                    <select id="profileFaithPath">${renderProfilePathOptions(profile.faithPath)}</select>
+                                </div>
+                                <div class="form-group full">
+                                    <label for="profileProfession">个人职业</label>
+                                    <input id="profileProfession" maxlength="40" value="${escapeHtml(profile.profession)}" placeholder="例如：主持人 / 玩家 / 筑戏人 / 记录者">
+                                </div>
+                                <div class="form-group">
+                                    <label for="profileAscensionScore">登神之路分数</label>
+                                    <input id="profileAscensionScore" type="number" min="0" step="0.1" value="${Number(profile.ascensionScore || 0)}">
+                                </div>
+                                <div class="form-group">
+                                    <label for="profileAudienceScore">觐见之梯分数</label>
+                                    <input id="profileAudienceScore" type="number" min="0" step="0.1" value="${Number(profile.audienceScore || 0)}">
+                                </div>
+                                <div class="form-group full">
+                                    <label for="profileItems">个人道具</label>
+                                    <textarea id="profileItems" maxlength="800" placeholder="每行一个道具">${escapeHtml(profile.items)}</textarea>
+                                </div>
+                                <div class="form-group full">
+                                    <label for="profileTalents">个人天赋</label>
+                                    <textarea id="profileTalents" maxlength="800" placeholder="每行一个天赋">${escapeHtml(profile.talents)}</textarea>
+                                </div>
+                            </div>
+                            <div class="profile-tools">
+                                <button class="btn btn-primary btn-sm" onclick="saveProfilePage()">保存个人档案</button>
+                            </div>
+                        </section>
+                        <section class="profile-panel">
+                            <div class="profile-panel-title">
+                                <span>通关记录</span>
+                                <small>${uniqueCleared} 个副本 / ${clearRecords.length} 条记录</small>
+                            </div>
+                            <div class="profile-list">${renderProfileClearRecords(clearRecords)}</div>
+                        </section>
+                    </div>
+                    <div>
+                        <section class="profile-panel">
+                            <div class="profile-panel-title">
+                                <span>个人数值</span>
+                                <small>先做功能，UI 后续细化</small>
+                            </div>
+                            <div class="profile-score-row">
+                                <div class="profile-score-card"><span>登神之路</span><strong>${Number(profile.ascensionScore || 0)}</strong></div>
+                                <div class="profile-score-card"><span>觐见之梯</span><strong>${Number(profile.audienceScore || 0)}</strong></div>
+                            </div>
+                            <div class="metric-strip">
+                                <span class="metric-pill">通关副本数 <strong>${uniqueCleared}</strong></span>
+                                <span class="metric-pill">通关记录 <strong>${clearRecords.length}</strong></span>
+                                <span class="metric-pill">当前身份 <strong>${escapeHtml(roleLabel)}</strong></span>
+                            </div>
+                        </section>
+                        <section class="profile-panel">
+                            <div class="profile-panel-title"><span>个人道具</span></div>
+                            ${renderProfileChips(profile.items, '还没有填写个人道具。')}
+                        </section>
+                        <section class="profile-panel">
+                            <div class="profile-panel-title"><span>个人天赋</span></div>
+                            ${renderProfileChips(profile.talents, '还没有填写个人天赋。')}
+                        </section>
+                        ${authorPanel}
+                    </div>
+                </div>`;
+        }
+
+        async function openProfilePage() {
+            if (!inviteSession) {
+                openInviteModal('先验入局谕令后可查看个人档案。');
+                return;
+            }
+            profileScrollY = window.scrollY || document.documentElement.scrollTop || 0;
+            const detailOverlay = document.getElementById('detailOverlay');
+            if (detailOverlay) detailOverlay.style.display = 'none';
+            document.body.classList.remove('detail-view-open');
+            document.body.classList.add('profile-view-open');
+            document.getElementById('profilePage').style.display = 'block';
+            window.scrollTo(0, 0);
+            await renderProfilePage();
+        }
+
+        function closeProfilePage(restoreScroll = true) {
+            const page = document.getElementById('profilePage');
+            if (page) page.style.display = 'none';
+            document.body.classList.remove('profile-view-open');
+            if (restoreScroll !== false) requestAnimationFrame(() => window.scrollTo(0, profileScrollY || 0));
+        }
+
+        async function openDetailFromProfile(id) {
+            closeProfilePage(false);
+            await openDetail(id);
+        }
+
+        async function saveProfilePage() {
+            if (!inviteSession?.code) {
+                openInviteModal('先验入局谕令后可保存个人档案。');
+                return;
+            }
+            const name = cleanDisplayNameInput(document.getElementById('profileDisplayName')?.value);
+            if (!name) { showToast('请输入个人昵称'); return; }
+            const profile = {
+                faithPath: document.getElementById('profileFaithPath')?.value || '存在',
+                profession: normalizeIdentityText(document.getElementById('profileProfession')?.value),
+                ascensionScore: normalizeProfileScore(document.getElementById('profileAscensionScore')?.value),
+                audienceScore: normalizeProfileScore(document.getElementById('profileAudienceScore')?.value),
+                items: String(document.getElementById('profileItems')?.value || '').trim().slice(0, 800),
+                talents: String(document.getElementById('profileTalents')?.value || '').trim().slice(0, 800)
+            };
+            if (name !== inviteSession.name) {
+                const { error } = await updateDisplayName(name);
+                if (error) { showToast(`❌ ${error.message || '昵称保存失败'}`); return; }
+            }
+            saveCurrentProfile(profile);
+            showToast('个人档案已保存');
+            updateInviteUI();
+            await renderProfilePage();
+            await renderDungeonList();
+        }
+
+        async function markProfileNoticesRead() {
+            const { notices } = await getAuthorCommentNotices();
+            const latest = notices[0]?.created_at || new Date().toISOString();
+            setProfileNoticeSeenTime(latest);
+            showToast('楼主提醒已标记为已读');
+            await updateProfileNoticeBadge();
+            await renderProfilePage();
         }
 
         function cleanDisplayNameInput(value) {
@@ -4995,6 +5786,7 @@
             closeInviteModal();
             showToast(`✅ ${name || ROLE_LABELS[role]}已入局：${ROLE_LABELS[role]}`);
             if (currentDetailId) await openDetail(currentDetailId);
+            await updateProfileNoticeBadge();
         }
 
         async function saveDisplayName() {
@@ -5013,12 +5805,14 @@
             updateInviteUI();
             if (currentDetailId) await openDetail(currentDetailId);
             await renderDungeonList();
+            if (document.getElementById('profilePage')?.style.display !== 'none') await renderProfilePage();
         }
 
         function clearInviteSession() {
             inviteSession = null;
             localStorage.removeItem('fog_' + INVITE_STORAGE_KEY);
             updateInviteUI();
+            closeProfilePage(false);
             closeInviteModal();
             showToast('已退出邀请身份');
             if (currentDetailId) openDetail(currentDetailId);
@@ -5241,6 +6035,8 @@
             if(currentDetailId===id) await openDetail(id);
             await renderDungeonList();
             await renderLatestComments();
+            await updateProfileNoticeBadge();
+            if (document.getElementById('profilePage')?.style.display !== 'none') await renderProfilePage();
         }
 
         async function deleteCommentUI(commentId){
@@ -5252,6 +6048,8 @@
             if(currentDetailId) await openDetail(currentDetailId);
             await renderDungeonList();
             await renderLatestComments();
+            await updateProfileNoticeBadge();
+            if (document.getElementById('profilePage')?.style.display !== 'none') await renderProfilePage();
         }
 
         async function markClearedUI(id){
@@ -5270,6 +6068,7 @@
             if(currentDetailId===id) await openDetail(id);
             await renderDungeonList();
             await renderLatestComments();
+            if (document.getElementById('profilePage')?.style.display !== 'none') await renderProfilePage();
         }
 
         async function advanceRunUI(id){
@@ -5331,6 +6130,8 @@
             closeSubmitModal();
             await renderDungeonList();
             await renderLatestComments();
+            await updateProfileNoticeBadge();
+            if (document.getElementById('profilePage')?.style.display !== 'none') await renderProfilePage();
         }
 
         async function deleteDungeon(id) {
@@ -5342,11 +6143,13 @@
             closeDetail();
             await renderDungeonList();
             await renderLatestComments();
+            await updateProfileNoticeBadge();
+            if (document.getElementById('profilePage')?.style.display !== 'none') await renderProfilePage();
         }
         function setSort(sort,btn){ currentSort=sort; document.querySelectorAll('.sort-btn').forEach(b=>b.classList.remove('active')); btn.classList.add('active'); renderDungeonList(); }
         function debounceSearch(){ clearTimeout(searchTimeout); searchTimeout=setTimeout(()=>{ searchQuery=document.getElementById('searchInput').value; renderDungeonList(); },350); }
         function showToast(msg){ const c=document.getElementById('toastContainer'); const t=document.createElement('div'); t.className='toast'; t.textContent=msg; c.appendChild(t); setTimeout(()=>{if(t.parentNode)t.remove();},3200); }
-        document.addEventListener('keydown',e=>{ if(e.key==='Escape'){ const detailOverlay = document.getElementById('detailOverlay'); if(document.getElementById('testimonyModalOverlay').style.display==='flex') closeTestimonyModal(); else if(document.getElementById('ratingModalOverlay').style.display==='flex') closeRatingModal(); else if(document.getElementById('inviteModalOverlay').style.display==='flex') closeInviteModal(); else if(detailOverlay && getComputedStyle(detailOverlay).display !== 'none') closeDetail(); else if(document.getElementById('submitModalOverlay').style.display==='flex') closeSubmitModal(); } if(e.key==='Enter' && document.activeElement?.id === 'inviteCodeInput') submitInviteCode(); if(e.key==='Enter' && document.activeElement?.id === 'displayNameInput') saveDisplayName(); });
+        document.addEventListener('keydown',e=>{ if(e.key==='Escape'){ const detailOverlay = document.getElementById('detailOverlay'); const profilePage = document.getElementById('profilePage'); if(document.getElementById('testimonyModalOverlay').style.display==='flex') closeTestimonyModal(); else if(document.getElementById('ratingModalOverlay').style.display==='flex') closeRatingModal(); else if(document.getElementById('inviteModalOverlay').style.display==='flex') closeInviteModal(); else if(profilePage && getComputedStyle(profilePage).display !== 'none') closeProfilePage(); else if(detailOverlay && getComputedStyle(detailOverlay).display !== 'none') closeDetail(); else if(document.getElementById('submitModalOverlay').style.display==='flex') closeSubmitModal(); } if(e.key==='Enter' && document.activeElement?.id === 'inviteCodeInput') submitInviteCode(); if(e.key==='Enter' && document.activeElement?.id === 'displayNameInput') saveDisplayName(); });
 
         (async function init(){
             const searchInput = document.getElementById('searchInput');
