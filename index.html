@@ -2530,6 +2530,9 @@
             width: min(620px, calc(100vw - 28px));
             padding: 0;
             overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            max-height: min(90dvh, 720px);
             border-color: rgba(231,207,138,0.28);
             background:
                 linear-gradient(180deg, rgba(255,255,255,0.04), transparent 32%),
@@ -2601,8 +2604,11 @@
             display: grid;
             gap: 14px;
             padding: 20px 22px;
+            flex: 1 1 auto;
+            min-height: 0;
             max-height: min(56dvh, 520px);
             overflow-y: auto;
+            -webkit-overflow-scrolling: touch;
         }
         .ritual-record {
             padding: 16px;
@@ -2638,7 +2644,7 @@
             color: var(--text-bright);
             padding: 16px;
             font-family: var(--font-body);
-            font-size: 0.92rem;
+            font-size: 1rem;
             line-height: 1.7;
             transition: all var(--transition);
         }
@@ -2653,6 +2659,7 @@
             display: flex;
             justify-content: space-between;
             gap: 12px;
+            flex: 0 0 auto;
             padding: 16px 22px 20px;
             margin: 0;
             border-top: 1px solid rgba(255,255,255,0.08);
@@ -2775,8 +2782,9 @@
         /* 弹窗 */
         .modal-overlay {
             position: fixed; inset: 0; background: rgba(0,0,0,0.8); z-index: 300;
-            width: 100vw; height: 100dvh; max-height: 100dvh; overflow: hidden;
+            width: 100vw; height: 100dvh; max-height: 100dvh; overflow-y: auto;
             display: flex; align-items: center; justify-content: center; padding: 20px;
+            -webkit-overflow-scrolling: touch;
             animation: fadeIn 0.3s ease;
         }
         .modal {
@@ -3095,19 +3103,36 @@
             .testimony-launch .btn {
                 width: 100%;
             }
+            .modal-overlay {
+                align-items: flex-start;
+                justify-content: center;
+                padding: max(10px, env(safe-area-inset-top)) 10px max(14px, env(safe-area-inset-bottom));
+            }
+            .modal,
             .ritual-modal {
                 width: min(100%, calc(100vw - 20px));
+                max-height: calc(100dvh - 24px);
             }
             .ritual-modal-head {
                 grid-template-columns: auto 1fr auto;
                 padding: 16px;
             }
             .ritual-modal h2 { font-size: 1.3rem; }
-            .ritual-scroll { padding: 16px; }
+            .ritual-scroll {
+                padding: 16px;
+                max-height: none;
+            }
+            .ritual-input {
+                min-height: 132px;
+                font-size: 16px;
+            }
             .ritual-actions {
                 display: grid;
                 grid-template-columns: 1fr;
                 padding: 14px 16px 16px;
+                position: sticky;
+                bottom: 0;
+                z-index: 2;
             }
             .ritual-actions .btn { width: 100%; }
             .role-guide { grid-template-columns: 1fr; }
@@ -3830,6 +3855,9 @@
         function canInteract() { return canUseRole(['player', 'author', 'admin']); }
         function canSubmit() { return canUseRole(['author', 'admin']); }
         function isAdmin() { return getInviteRole() === 'admin'; }
+        function shouldAutoFocusModalInput() {
+            return !window.matchMedia('(max-width: 720px), (pointer: coarse)').matches;
+        }
 
         function normalizeRole(role) {
             return ['player', 'author', 'admin'].includes(role) ? role : null;
@@ -5040,7 +5068,8 @@
             syncReplyContext();
             document.getElementById('testimonyModalOverlay').style.display = 'flex';
             document.body.style.overflow = 'hidden';
-            setTimeout(() => input?.focus(), 50);
+            document.getElementById('testimonyModal')?.scrollTo?.(0, 0);
+            if (shouldAutoFocusModalInput()) setTimeout(() => input?.focus(), 50);
         }
 
         function closeTestimonyModal(e) {
