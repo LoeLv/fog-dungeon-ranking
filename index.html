@@ -4250,6 +4250,7 @@
 
         function getProfileDefaults() {
             return {
+                faithGod: '',
                 faithPath: '存在',
                 profession: '',
                 ascensionScore: 0,
@@ -4265,7 +4266,10 @@
 
         function getCurrentProfile() {
             const allProfiles = getStoredProfiles();
-            return { ...getProfileDefaults(), ...(allProfiles[getProfileKey()] || {}) };
+            const stored = { ...getProfileDefaults(), ...(allProfiles[getProfileKey()] || {}) };
+            stored.faithGod = cleanGodName(stored.faithGod || '');
+            stored.faithPath = getGodInfo(stored.faithGod).known ? getGodInfo(stored.faithGod).path : (stored.faithPath || '存在');
+            return stored;
         }
 
         function saveCurrentProfile(profile) {
@@ -4310,12 +4314,36 @@
                 .slice(0, 24);
         }
 
-        function getRepresentativeGodForPath(path) {
-            return GOD_GROUPS.find(group => group.path === path)?.gods?.[0] || '记忆';
+        function getProfileFaithGod(profile) {
+            return cleanGodName(profile?.faithGod || '');
         }
 
-        function renderProfilePathOptions(selected) {
-            return GOD_GROUPS.map(group => `<option value="${escapeHtml(group.path)}" ${group.path === selected ? 'selected' : ''}>${escapeHtml(getPathMetaByPath(group.path).sigil)} ${escapeHtml(group.path)}命途</option>`).join('');
+        function isFaithLocked(profile) {
+            const god = getProfileFaithGod(profile);
+            return !!god && god !== '欺诈';
+        }
+
+        function getProfileDisplayFaith(profile) {
+            const god = getProfileFaithGod(profile);
+            if (!god) return {
+                god: '',
+                label: '未立信仰',
+                path: profile?.faithPath || '存在',
+                className: getPathClassByPath(profile?.faithPath || '存在')
+            };
+            const info = getGodInfo(god);
+            return {
+                god: info.god,
+                label: `${info.god}之神`,
+                path: info.path,
+                className: info.className
+            };
+        }
+
+        function renderProfileGodOptions(selected) {
+            const cleanSelected = cleanGodName(selected || '');
+            const emptyOption = `<option value="" ${cleanSelected ? '' : 'selected'}>请选择信仰神明</option>`;
+            return emptyOption + GOD_GROUPS.map(group => `<optgroup label="${escapeHtml(group.path)}命途">${group.gods.map(god => `<option value="${escapeHtml(god)}" ${god === cleanSelected ? 'selected' : ''}>${escapeHtml(getGodIcon(god))} ${escapeHtml(god)}之神 · ${escapeHtml(group.path)}命途</option>`).join('')}</optgroup>`).join('');
         }
 
         function renderProfileChips(value, emptyText) {
@@ -4501,8 +4529,10 @@
             const avgAuthorRating = authored.length
                 ? authored.reduce((sum, d) => sum + Number(d.avg_rating || 0), 0) / authored.length
                 : 0;
-            const faithGod = getRepresentativeGodForPath(profile.faithPath);
-            const faithClass = getPathClassByPath(profile.faithPath);
+            const faith = getProfileDisplayFaith(profile);
+            const faithGod = faith.god || '记忆';
+            const faithClass = faith.className;
+            const faithLocked = isFaithLocked(profile);
             const roleLabel = ROLE_LABELS[getInviteRole()] || '入局信徒';
             const authorPanel = (authored.length || canSubmit()) ? `
                 <section class="profile-panel">
@@ -4537,7 +4567,8 @@
                         <div class="profile-kicker">PERSONAL PILGRIM ARCHIVE</div>
                         <h1 class="profile-name">${escapeHtml(inviteSession.name || roleLabel)}</h1>
                         <div class="profile-subline">
-                            <span class="mini-tag ${faithClass}">${escapeHtml(profile.faithPath)}命途</span>
+                            <span class="mini-tag ${faithClass}">${escapeHtml(faith.label)}</span>
+                            <span class="mini-tag ${faithClass}">${escapeHtml(faith.path)}命途</span>
                             <span class="mini-tag ${faithClass}">${escapeHtml(roleLabel)}</span>
                             <span class="metric-pill">职业 <strong>${escapeHtml(profile.profession || '未填写')}</strong></span>
                             ${unread.length ? `<span class="metric-pill">楼主提醒 <strong>${unread.length}</strong></span>` : ''}
@@ -4557,8 +4588,9 @@
                                     <input id="profileDisplayName" maxlength="16" value="${escapeHtml(inviteSession.name || '')}" placeholder="例如：无我">
                                 </div>
                                 <div class="form-group">
-                                    <label for="profileFaithPath">信仰命途</label>
-                                    <select id="profileFaithPath">${renderProfilePathOptions(profile.faithPath)}</select>
+                                    <label for="profileFaithGod">信仰神明</label>
+                                    <select id="profileFaithGod" ${faithLocked ? 'disabled' : ''}>${renderProfileGodOptions(profile.faithGod)}</select>
+                                    <div class="identity-help">${faithLocked ? `信仰已封存为 ${escapeHtml(faith.label)}，不可再改。` : (faith.god === '欺诈' ? '欺诈信徒可以改写信仰记录。嘻嘻。' : '第一次保存后会锁定信仰；欺诈信徒除外。')}</div>
                                 </div>
                                 <div class="form-group full">
                                     <label for="profileProfession">个人职业</label>
@@ -4656,8 +4688,17 @@
             }
             const name = cleanDisplayNameInput(document.getElementById('profileDisplayName')?.value);
             if (!name) { showToast('请输入个人昵称'); return; }
+            const currentProfile = getCurrentProfile();
+            const lockedFaithGod = isFaithLocked(currentProfile) ? getProfileFaithGod(currentProfile) : '';
+            const selectedFaithGod = lockedFaithGod || cleanGodName(document.getElementById('profileFaithGod')?.value);
+            if (!selectedFaithGod || !getGodInfo(selectedFaithGod).known) {
+                showToast('请选择你的信仰神明');
+                return;
+            }
+            const selectedFaithInfo = getGodInfo(selectedFaithGod);
             const profile = {
-                faithPath: document.getElementById('profileFaithPath')?.value || '存在',
+                faithGod: selectedFaithInfo.god,
+                faithPath: selectedFaithInfo.path,
                 profession: normalizeIdentityText(document.getElementById('profileProfession')?.value),
                 ascensionScore: normalizeProfileScore(document.getElementById('profileAscensionScore')?.value),
                 audienceScore: normalizeProfileScore(document.getElementById('profileAudienceScore')?.value),
