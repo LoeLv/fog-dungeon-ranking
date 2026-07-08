@@ -3863,6 +3863,33 @@
             湮灭: '烬',
             沉默: '默'
         };
+        const PROFESSION_GROUPS = [
+            { path: '文明', god: '秩序', careers: { 战士: '秩序骑士', 法师: '元素法官', 牧师: '公正官', 刺客: '行刑官', 猎人: '搜查官', 歌者: '律者' } },
+            { path: '文明', god: '真理', careers: { 战士: '格斗专家', 法师: '博士学者', 牧师: '外科医生', 刺客: '暗杀博士', 猎人: '陷阱大师', 歌者: '博闻诗人' } },
+            { path: '文明', god: '战争', careers: { 战士: '陷阵勇士', 法师: '炼狱主教', 牧师: '督战官', 刺客: '隙光铁刺', 猎人: '鹰眼斥候', 歌者: '风暴之嗓' } },
+            { path: '混沌', god: '混乱', careers: { 战士: '异血同袍', 法师: '灾祸之源', 牧师: '理智蚀者', 刺客: '折光诡影', 猎人: '渔夫', 歌者: '失律琴师' } },
+            { path: '混沌', god: '痴愚', careers: { 战士: '坚壁骑士', 法师: '幕后戏师', 牧师: '祛愚专家', 刺客: '解构之眼', 猎人: '猎愚人', 歌者: '独奏家' } },
+            { path: '混沌', god: '沉默', careers: { 战士: '苦行僧', 法师: '默剧大师', 牧师: '守夜人', 刺客: '偃偶师', 猎人: '变色龙', 歌者: '囚徒' } },
+            { path: '生命', god: '诞育', careers: { 战士: '酋长', 法师: '生命贤者', 牧师: '子嗣牧', 刺客: '借诞之婴', 猎人: '创生猎人', 歌者: '生灵吟者' } },
+            { path: '生命', god: '繁荣', careers: { 战士: '德鲁伊', 法师: '木精灵', 牧师: '园丁', 刺客: '荆棘之冠', 猎人: '美食家', 歌者: '不朽乐章' } },
+            { path: '生命', god: '死亡', careers: { 战士: '剔骨工', 法师: '死灵法师', 牧师: '守墓人', 刺客: '死亡编织者', 猎人: '猩红猎手', 歌者: '撞钟人' } },
+            { path: '沉沦', god: '污堕', careers: { 战士: '尖啸伯爵', 法师: '欲望主宰', 牧师: '悲悯领主', 刺客: '恶孽', 猎人: '感官追猎者', 歌者: '塞王' } },
+            { path: '沉沦', god: '腐朽', careers: { 战士: '木乃伊', 法师: '瘟疫枢机', 牧师: '凋零祭司', 刺客: '疮瘢之目', 猎人: '黄昏猎人', 歌者: '腐烂颂唱者' } },
+            { path: '沉沦', god: '湮灭', careers: { 战士: '环卫工', 法师: '炬灭者', 牧师: '焚化工', 刺客: '寂灭使徒', 猎人: '终焉行者', 歌者: '毁灭宣誓' } },
+            { path: '存在', god: '时间', careers: { 战士: '指针骑士', 法师: '时间行者', 牧师: '遗忘医生', 刺客: '另日刺客', 猎人: '驯风游侠', 歌者: '吟游诗人' } },
+            { path: '存在', god: '记忆', careers: { 战士: '镜中人', 法师: '回忆旅者', 牧师: '见证者', 刺客: '旧日追猎者', 猎人: '痴梦游侠', 歌者: '史学家' } },
+            { path: '虚无', god: '命运', careers: { 战士: '今日勇者', 法师: '编剧', 牧师: '织命师', 刺客: '窃命之贼', 猎人: '终末之笔', 歌者: '预言家' } },
+            { path: '虚无', god: '欺诈', careers: { 战士: '杂技演员', 法师: '诡术大师', 牧师: '小丑', 刺客: '受害者', 猎人: '驭兽师', 歌者: '魔术师' } }
+        ];
+        const PROFESSIONS = PROFESSION_GROUPS.flatMap(group =>
+            Object.entries(group.careers).map(([className, name]) => ({
+                name,
+                className,
+                god: group.god,
+                path: group.path
+            }))
+        );
+        const PROFESSION_NAMES = new Set(PROFESSIONS.map(item => item.name));
         const GOD_SKINS = {
             欺诈: {
                 primary: '#d7a95f',
@@ -4255,6 +4282,7 @@
                 profession: '',
                 ascensionScore: 0,
                 audienceScore: 0,
+                scoresLockedAt: '',
                 items: '',
                 talents: ''
             };
@@ -4269,6 +4297,10 @@
             const stored = { ...getProfileDefaults(), ...(allProfiles[getProfileKey()] || {}) };
             stored.faithGod = cleanGodName(stored.faithGod || '');
             stored.faithPath = getGodInfo(stored.faithGod).known ? getGodInfo(stored.faithGod).path : (stored.faithPath || '存在');
+            stored.profession = normalizeProfession(stored.profession || '');
+            stored.ascensionScore = normalizeProfileScore(stored.ascensionScore);
+            stored.audienceScore = normalizeProfileScore(stored.audienceScore);
+            stored.scoresLockedAt = stored.scoresLockedAt || '';
             return stored;
         }
 
@@ -4306,6 +4338,17 @@
             return String(value || '').trim().slice(0, 40);
         }
 
+        function normalizeProfession(value) {
+            const clean = String(value || '').trim();
+            return PROFESSION_NAMES.has(clean) ? clean : '';
+        }
+
+        function getProfessionInfo(value) {
+            const clean = normalizeProfession(value);
+            const info = PROFESSIONS.find(item => item.name === clean);
+            return info ? { ...info, known: true } : { name: clean, className: '', god: '', path: '', known: false };
+        }
+
         function splitProfileLines(value) {
             return String(value || '')
                 .split(/[\n,，;；]/)
@@ -4321,6 +4364,18 @@
         function isFaithLocked(profile) {
             const god = getProfileFaithGod(profile);
             return !!god && god !== '欺诈';
+        }
+
+        function isTrickeryProfile(profile) {
+            return getProfileFaithGod(profile) === '欺诈';
+        }
+
+        function isProfessionLocked(profile) {
+            return !isTrickeryProfile(profile) && getProfessionInfo(profile?.profession).known;
+        }
+
+        function areProfileScoresLocked(profile) {
+            return !isTrickeryProfile(profile) && !!profile?.scoresLockedAt;
         }
 
         function getProfileDisplayFaith(profile) {
@@ -4344,6 +4399,18 @@
             const cleanSelected = cleanGodName(selected || '');
             const emptyOption = `<option value="" ${cleanSelected ? '' : 'selected'}>请选择信仰神明</option>`;
             return emptyOption + GOD_GROUPS.map(group => `<optgroup label="${escapeHtml(group.path)}命途">${group.gods.map(god => `<option value="${escapeHtml(god)}" ${god === cleanSelected ? 'selected' : ''}>${escapeHtml(getGodIcon(god))} ${escapeHtml(god)}之神 · ${escapeHtml(group.path)}命途</option>`).join('')}</optgroup>`).join('');
+        }
+
+        function renderProfileProfessionOptions(selected) {
+            const cleanSelected = normalizeProfession(selected || '');
+            const emptyOption = `<option value="" ${cleanSelected ? '' : 'selected'}>请选择游戏职业</option>`;
+            return emptyOption + PROFESSION_GROUPS.map(group => {
+                const groupLabel = `${group.path}命途 · ${group.god}之神`;
+                const options = Object.entries(group.careers)
+                    .map(([className, profession]) => `<option value="${escapeHtml(profession)}" ${profession === cleanSelected ? 'selected' : ''}>${escapeHtml(className)} · ${escapeHtml(profession)}</option>`)
+                    .join('');
+                return `<optgroup label="${escapeHtml(groupLabel)}">${options}</optgroup>`;
+            }).join('');
         }
 
         function renderProfileChips(value, emptyText) {
@@ -4533,6 +4600,9 @@
             const faithGod = faith.god || '记忆';
             const faithClass = faith.className;
             const faithLocked = isFaithLocked(profile);
+            const professionLocked = isProfessionLocked(profile);
+            const scoresLocked = areProfileScoresLocked(profile);
+            const profession = getProfessionInfo(profile.profession);
             const roleLabel = ROLE_LABELS[getInviteRole()] || '入局信徒';
             const authorPanel = (authored.length || canSubmit()) ? `
                 <section class="profile-panel">
@@ -4571,6 +4641,7 @@
                             <span class="mini-tag ${faithClass}">${escapeHtml(faith.path)}命途</span>
                             <span class="mini-tag ${faithClass}">${escapeHtml(roleLabel)}</span>
                             <span class="metric-pill">职业 <strong>${escapeHtml(profile.profession || '未填写')}</strong></span>
+                            ${profession.known ? `<span class="metric-pill">${escapeHtml(profession.god)}之神 <strong>${escapeHtml(profession.className)}</strong></span>` : ''}
                             ${unread.length ? `<span class="metric-pill">楼主提醒 <strong>${unread.length}</strong></span>` : ''}
                         </div>
                     </div>
@@ -4594,15 +4665,17 @@
                                 </div>
                                 <div class="form-group full">
                                     <label for="profileProfession">个人职业</label>
-                                    <input id="profileProfession" maxlength="40" value="${escapeHtml(profile.profession)}" placeholder="例如：主持人 / 玩家 / 筑戏人 / 记录者">
+                                    <select id="profileProfession" ${professionLocked ? 'disabled' : ''}>${renderProfileProfessionOptions(profile.profession)}</select>
+                                    <div class="identity-help">${professionLocked ? `职业已封存为 ${escapeHtml(profile.profession)}，不可再改。` : (faith.god === '欺诈' ? '欺诈信徒可以改写职业记录。嘻嘻。' : '请选择 96 职业之一；首次保存后会封存，欺诈信徒除外。')}</div>
                                 </div>
                                 <div class="form-group">
                                     <label for="profileAscensionScore">登神之路分数</label>
-                                    <input id="profileAscensionScore" type="number" min="0" step="0.1" value="${Number(profile.ascensionScore || 0)}">
+                                    <input id="profileAscensionScore" type="number" min="0" step="0.1" value="${Number(profile.ascensionScore || 0)}" ${scoresLocked ? 'disabled' : ''}>
                                 </div>
                                 <div class="form-group">
                                     <label for="profileAudienceScore">觐见之梯分数</label>
-                                    <input id="profileAudienceScore" type="number" min="0" step="0.1" value="${Number(profile.audienceScore || 0)}">
+                                    <input id="profileAudienceScore" type="number" min="0" step="0.1" value="${Number(profile.audienceScore || 0)}" ${scoresLocked ? 'disabled' : ''}>
+                                    <div class="identity-help">${scoresLocked ? '两项分数已封存，后续不可自改。' : (faith.god === '欺诈' ? '欺诈信徒可以改写分数记录。嘻嘻。' : '两项分数只在首次保存时自填，保存后封存。')}</div>
                                 </div>
                                 <div class="form-group full">
                                     <label for="profileItems">个人道具</label>
@@ -4696,12 +4769,25 @@
                 return;
             }
             const selectedFaithInfo = getGodInfo(selectedFaithGod);
+            const lockedProfession = isProfessionLocked(currentProfile) ? currentProfile.profession : '';
+            const selectedProfession = lockedProfession || normalizeProfession(document.getElementById('profileProfession')?.value);
+            if (!selectedProfession) {
+                showToast('请选择游戏里的 96 职业之一');
+                return;
+            }
+            const scoresLocked = areProfileScoresLocked(currentProfile);
+            const ascensionScore = scoresLocked ? currentProfile.ascensionScore : normalizeProfileScore(document.getElementById('profileAscensionScore')?.value);
+            const audienceScore = scoresLocked ? currentProfile.audienceScore : normalizeProfileScore(document.getElementById('profileAudienceScore')?.value);
+            const nextScoresLockedAt = selectedFaithInfo.god === '欺诈'
+                ? ''
+                : (currentProfile.scoresLockedAt || new Date().toISOString());
             const profile = {
                 faithGod: selectedFaithInfo.god,
                 faithPath: selectedFaithInfo.path,
-                profession: normalizeIdentityText(document.getElementById('profileProfession')?.value),
-                ascensionScore: normalizeProfileScore(document.getElementById('profileAscensionScore')?.value),
-                audienceScore: normalizeProfileScore(document.getElementById('profileAudienceScore')?.value),
+                profession: selectedProfession,
+                ascensionScore,
+                audienceScore,
+                scoresLockedAt: nextScoresLockedAt,
                 items: String(document.getElementById('profileItems')?.value || '').trim().slice(0, 800),
                 talents: String(document.getElementById('profileTalents')?.value || '').trim().slice(0, 800)
             };
