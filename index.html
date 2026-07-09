@@ -4731,12 +4731,12 @@
                 ['ascension', '登神之路'],
                 ['audience', '觐见之梯']
             ];
-            return `<div class="leaderboard-tabs">${tabs.map(([mode, label]) => `<button class="leaderboard-tab ${leaderboardMode === mode ? 'active' : ''}" onclick="setLeaderboardMode(${jsString(mode)})">${escapeHtml(label)}</button>`).join('')}</div>`;
+            return `<div class="leaderboard-tabs">${tabs.map(([mode, label]) => `<button type="button" class="leaderboard-tab ${leaderboardMode === mode ? 'active' : ''}" data-leaderboard-mode="${escapeHtml(mode)}">${escapeHtml(label)}</button>`).join('')}</div>`;
         }
 
         function renderLeaderboardPathTabs() {
             const tabs = [['all', '全部命途'], ...GOD_GROUPS.map(group => [group.path, `${getPathMetaByPath(group.path).sigil} ${group.path}`])];
-            return `<div class="leaderboard-path-tabs">${tabs.map(([path, label]) => `<button class="leaderboard-tab ${leaderboardPath === path ? 'active' : ''}" onclick="setLeaderboardPath(${jsString(path)})">${escapeHtml(label)}</button>`).join('')}</div>`;
+            return `<div class="leaderboard-path-tabs">${tabs.map(([path, label]) => `<button type="button" class="leaderboard-tab ${leaderboardPath === path ? 'active' : ''}" data-leaderboard-path="${escapeHtml(path)}">${escapeHtml(label)}</button>`).join('')}</div>`;
         }
 
         function renderLeaderboardContent(entries) {
@@ -4800,6 +4800,7 @@
 
         async function setLeaderboardMode(mode) {
             leaderboardMode = ['overall', 'path', 'ascension', 'audience'].includes(mode) ? mode : 'overall';
+            if (leaderboardMode !== 'path') leaderboardPath = 'all';
             await renderLeaderboardPage();
         }
 
@@ -5308,12 +5309,27 @@
                 const all = getLocalData('comments', []);
                 return all.filter(c => c.dungeon_id === dungeonId).sort((a,b) => new Date(a.created_at) - new Date(b.created_at));
             }
-            const { data, error } = await supabaseClient
+            const query = () => supabaseClient
                 .from('comments')
-                .select('id,dungeon_id,author,content,invite_name,created_at')
+                .select('id,dungeon_id,parent_comment_id,author,content,invite_name,is_deleted,created_at')
                 .eq('dungeon_id', dungeonId)
                 .order('created_at', { ascending: true });
-            return error ? [] : (data || []).map(c => ({ ...c, parent_comment_id: null, is_deleted: false }));
+            let { data, error } = await query();
+            if (error) {
+                console.warn('读取楼中楼证言失败，使用旧字段兼容:', error);
+                const fallback = await supabaseClient
+                    .from('comments')
+                    .select('id,dungeon_id,author,content,invite_name,created_at')
+                    .eq('dungeon_id', dungeonId)
+                    .order('created_at', { ascending: true });
+                data = fallback.data || [];
+                error = fallback.error;
+            }
+            return error ? [] : (data || []).map(c => ({
+                ...c,
+                parent_comment_id: c.parent_comment_id || c.parentCommentId || null,
+                is_deleted: !!c.is_deleted
+            }));
         }
 
         async function fetchLatestComments(limit = 3) {
@@ -5325,17 +5341,28 @@
                     .slice(0, limit)
                     .map(c => ({ ...c, dungeon: dungeons.find(d => d.id === c.dungeon_id) || null }));
             }
-            const { data, error } = await supabaseClient
+            let { data, error } = await supabaseClient
                 .from('comments')
-                .select('id,dungeon_id,author,content,invite_name,created_at')
+                .select('id,dungeon_id,parent_comment_id,author,content,invite_name,is_deleted,created_at')
+                .eq('is_deleted', false)
                 .order('created_at', { ascending: false })
                 .limit(limit);
+            if (error) {
+                console.warn('读取最新楼中楼证言失败，使用旧字段兼容:', error);
+                const fallback = await supabaseClient
+                    .from('comments')
+                    .select('id,dungeon_id,author,content,invite_name,created_at')
+                    .order('created_at', { ascending: false })
+                    .limit(limit);
+                data = fallback.data || [];
+                error = fallback.error;
+            }
             if (error) return [];
             const dungeons = await fetchDungeons();
             return (data || []).map(c => ({
                 ...c,
-                parent_comment_id: null,
-                is_deleted: false,
+                parent_comment_id: c.parent_comment_id || c.parentCommentId || null,
+                is_deleted: !!c.is_deleted,
                 dungeon: dungeons.find(d => d.id === c.dungeon_id) || null
             }));
         }
@@ -6053,8 +6080,9 @@
             const floorLabel = isReply ? '楼中证言' : `第 ${floorNumber} 则证言`;
             const replyLabel = isReply ? '回应副证' : '回应主证';
             const deleteButton = canDeleteComment(comment) && !deleted
-                ? `<button class="text-action" onclick="deleteCommentUI(${jsString(comment.id)})">抹去证言</button>`
+                ? `<button type="button" class="text-action" data-delete-comment-id="${escapeHtml(comment.id)}">抹去证言</button>`
                 : '';
+            const replyAuthor = comment.author || comment.invite_name || '匿名';
             return `
                 <div class="comment-item ${isReply ? 'reply' : 'root'} ${isArchitect ? 'architect' : ''}">
                     <div class="comment-head">
@@ -6067,7 +6095,7 @@
                     </div>
                     <div class="comment-content ${deleted ? 'deleted-comment' : ''}">${escapeHtml(comment.content || '')}</div>
                     <div class="comment-actions">
-                        ${canReply ? `<button class="text-action" onclick="setReplyTarget(${jsString(comment.id)}, ${jsString(comment.author || '匿名')})">${replyLabel}</button>` : ''}
+                        ${canReply ? `<button type="button" class="text-action" data-reply-comment-id="${escapeHtml(comment.id)}" data-reply-author="${escapeHtml(replyAuthor)}">${replyLabel}</button>` : ''}
                         ${deleteButton}
                     </div>
                     ${(comment.replies || []).length ? `<div class="comment-replies">${comment.replies.map(reply => renderCommentNode(reply, depth + 1, '', creator)).join('')}</div>` : ''}
@@ -6377,12 +6405,13 @@
             return [...document.querySelectorAll('.feedback-chip.active')].map(btn => btn.textContent.trim()).slice(0, 5);
         }
 
-        async function openTestimonyModal(id) {
+        async function openTestimonyModal(id, options = {}) {
             if(!requireInvite(['player','author','admin'], '验入局谕令后可递交试炼证言。')) return;
             testimonyTargetId = id;
             const dungeons = await fetchDungeons();
             const d = dungeons.find(item => item.id === id);
             if (!d) { showToast('试炼未找到'); return; }
+            if (!options.keepReply) replyTarget = null;
             const info = getGodInfo(d.type);
             const godClass = getGodClass(d.type);
             const skin = getGodSkin(d.type);
@@ -6462,10 +6491,10 @@
             });
         }
 
-        function setReplyTarget(commentId, author) {
+        async function setReplyTarget(commentId, author) {
             replyTarget = { id: commentId, author };
             syncReplyContext();
-            if (currentDetailId) openTestimonyModal(currentDetailId);
+            if (currentDetailId) await openTestimonyModal(currentDetailId, { keepReply: true });
         }
 
         function clearReplyTarget() {
@@ -6699,6 +6728,33 @@
         function setSort(sort,btn){ currentSort=sort; document.querySelectorAll('.sort-btn').forEach(b=>b.classList.remove('active')); btn.classList.add('active'); renderDungeonList(); }
         function debounceSearch(){ clearTimeout(searchTimeout); searchTimeout=setTimeout(()=>{ searchQuery=document.getElementById('searchInput').value; renderDungeonList(); },350); }
         function showToast(msg){ const c=document.getElementById('toastContainer'); const t=document.createElement('div'); t.className='toast'; t.textContent=msg; c.appendChild(t); setTimeout(()=>{if(t.parentNode)t.remove();},3200); }
+        document.addEventListener('click', event => {
+            const target = event.target instanceof Element ? event.target : null;
+            if (!target) return;
+            const leaderboardModeButton = target.closest('[data-leaderboard-mode]');
+            if (leaderboardModeButton) {
+                event.preventDefault();
+                setLeaderboardMode(leaderboardModeButton.dataset.leaderboardMode || 'overall');
+                return;
+            }
+            const leaderboardPathButton = target.closest('[data-leaderboard-path]');
+            if (leaderboardPathButton) {
+                event.preventDefault();
+                setLeaderboardPath(leaderboardPathButton.dataset.leaderboardPath || 'all');
+                return;
+            }
+            const replyButton = target.closest('[data-reply-comment-id]');
+            if (replyButton) {
+                event.preventDefault();
+                setReplyTarget(replyButton.dataset.replyCommentId || '', replyButton.dataset.replyAuthor || '匿名');
+                return;
+            }
+            const deleteCommentButton = target.closest('[data-delete-comment-id]');
+            if (deleteCommentButton) {
+                event.preventDefault();
+                deleteCommentUI(deleteCommentButton.dataset.deleteCommentId || '');
+            }
+        });
         document.addEventListener('keydown',e=>{ if(e.key==='Escape'){ const detailOverlay = document.getElementById('detailOverlay'); const profilePage = document.getElementById('profilePage'); if(document.getElementById('testimonyModalOverlay').style.display==='flex') closeTestimonyModal(); else if(document.getElementById('ratingModalOverlay').style.display==='flex') closeRatingModal(); else if(document.getElementById('inviteModalOverlay').style.display==='flex') closeInviteModal(); else if(profilePage && getComputedStyle(profilePage).display !== 'none') closeProfilePage(); else if(detailOverlay && getComputedStyle(detailOverlay).display !== 'none') closeDetail(); else if(document.getElementById('submitModalOverlay').style.display==='flex') closeSubmitModal(); } if(e.key==='Enter' && document.activeElement?.id === 'inviteCodeInput') submitInviteCode(); if(e.key==='Enter' && document.activeElement?.id === 'displayNameInput') saveDisplayName(); });
 
         (async function init(){
