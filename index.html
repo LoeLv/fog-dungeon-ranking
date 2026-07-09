@@ -3586,6 +3586,50 @@
                 z-index: 2;
             }
             .ritual-actions .btn { width: 100%; }
+            #testimonyModalOverlay {
+                align-items: flex-end;
+                padding: 0;
+                overflow: hidden;
+            }
+            #testimonyModalOverlay .ritual-modal {
+                width: 100vw;
+                max-height: 88dvh;
+                max-height: 88svh;
+                height: auto;
+                margin: 0;
+                border-radius: 18px 18px 0 0;
+                border-left: 0;
+                border-right: 0;
+                border-bottom: 0;
+                box-shadow: 0 -22px 70px rgba(0,0,0,0.86), 0 0 44px var(--god-glow);
+            }
+            #testimonyModalOverlay .ritual-modal-head {
+                position: sticky;
+                top: 0;
+                z-index: 3;
+                background:
+                    linear-gradient(180deg, rgba(18,19,29,0.98), rgba(18,19,29,0.92)),
+                    rgba(13,14,21,0.98);
+            }
+            #testimonyModalOverlay .ritual-scroll {
+                max-height: calc(88dvh - 178px);
+                max-height: calc(88svh - 178px);
+                overflow-y: auto;
+            }
+            #testimonyModalOverlay .ritual-record {
+                padding: 12px;
+                font-size: 0.86rem;
+            }
+            #testimonyModalOverlay .ritual-prayer {
+                display: none;
+            }
+            #testimonyModalOverlay .ritual-actions {
+                padding-bottom: max(16px, env(safe-area-inset-bottom));
+                background:
+                    linear-gradient(180deg, rgba(13,14,21,0.72), rgba(13,14,21,0.98)),
+                    rgba(13,14,21,0.98);
+                border-top: 1px solid rgba(255,255,255,0.08);
+            }
             .role-guide { grid-template-columns: 1fr; }
             .form-grid, .form-grid.compact { grid-template-columns: 1fr; }
             .form-span { grid-column: auto; }
