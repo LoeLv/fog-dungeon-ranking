@@ -80,7 +80,11 @@
         body.detail-view-open > .container,
         body.profile-view-open > .header,
         body.profile-view-open > .container,
-        body.profile-view-open > .detail-overlay {
+        body.profile-view-open > .detail-overlay,
+        body.leaderboard-view-open > .header,
+        body.leaderboard-view-open > .container,
+        body.leaderboard-view-open > .detail-overlay,
+        body.leaderboard-view-open > #profilePage {
             display: none;
         }
         body::before {
@@ -3164,6 +3168,111 @@
             flex-wrap: wrap;
             margin-top: 16px;
         }
+        .leaderboard-tabs,
+        .leaderboard-path-tabs {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-bottom: 16px;
+        }
+        .leaderboard-tab {
+            border: 1px solid rgba(255,255,255,0.08);
+            border-radius: 999px;
+            background: rgba(255,255,255,0.028);
+            color: var(--text);
+            padding: 8px 12px;
+            font-family: var(--font-body);
+            font-size: 0.8rem;
+            font-weight: 900;
+            cursor: pointer;
+            transition: all var(--transition);
+        }
+        .leaderboard-tab.active {
+            border-color: rgba(231,207,138,0.36);
+            background: rgba(231,207,138,0.12);
+            color: var(--gold-light);
+        }
+        .leaderboard-layout {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 18px;
+        }
+        .leaderboard-board {
+            border: 1px solid rgba(255,255,255,0.075);
+            border-radius: 16px;
+            background:
+                linear-gradient(135deg, rgba(255,255,255,0.036), rgba(255,255,255,0.012)),
+                rgba(9,10,15,0.66);
+            box-shadow: inset 0 1px 0 rgba(255,255,255,0.035);
+            padding: 16px;
+        }
+        .leaderboard-board.full {
+            grid-column: 1 / -1;
+        }
+        .leaderboard-list {
+            display: grid;
+            gap: 10px;
+        }
+        .leaderboard-row {
+            display: grid;
+            grid-template-columns: auto minmax(0, 1fr) auto;
+            gap: 12px;
+            align-items: center;
+            padding: 12px;
+            border: 1px solid rgba(255,255,255,0.06);
+            border-radius: 13px;
+            background: rgba(0,0,0,0.18);
+        }
+        .leaderboard-row.is-current {
+            border-color: rgba(231,207,138,0.34);
+            background:
+                linear-gradient(90deg, rgba(231,207,138,0.08), transparent 48%),
+                rgba(0,0,0,0.2);
+        }
+        .leaderboard-rank {
+            display: grid;
+            place-items: center;
+            width: 36px;
+            height: 36px;
+            border-radius: 12px;
+            border: 1px solid rgba(231,207,138,0.18);
+            color: var(--gold-light);
+            font-weight: 900;
+            background: rgba(231,207,138,0.06);
+        }
+        .leaderboard-name {
+            color: var(--text-bright);
+            font-weight: 900;
+            margin-bottom: 4px;
+        }
+        .leaderboard-meta {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+            color: var(--text-muted);
+            font-size: 0.75rem;
+        }
+        .leaderboard-score {
+            min-width: 86px;
+            text-align: right;
+        }
+        .leaderboard-score strong {
+            display: block;
+            color: var(--gold-light);
+            font-family: var(--font-display);
+            font-size: 1.35rem;
+            line-height: 1.1;
+        }
+        .leaderboard-score span {
+            color: var(--text-muted);
+            font-size: 0.68rem;
+        }
+        .leaderboard-summary {
+            margin-bottom: 14px;
+            color: var(--text-muted);
+            font-size: 0.82rem;
+            line-height: 1.6;
+        }
         .comment-identity {
             min-width: 160px;
             padding: 12px 16px;
@@ -3384,9 +3493,20 @@
                 border-radius: 18px;
             }
             .profile-grid,
+            .leaderboard-layout,
             .profile-form-grid,
             .profile-score-row {
                 grid-template-columns: 1fr;
+            }
+            .leaderboard-board.full {
+                grid-column: auto;
+            }
+            .leaderboard-row {
+                grid-template-columns: auto minmax(0, 1fr);
+            }
+            .leaderboard-score {
+                grid-column: 2;
+                text-align: left;
             }
             .profile-form-grid .full {
                 grid-column: auto;
@@ -3547,6 +3667,7 @@
         <nav class="path-nav" id="pathNav" aria-label="六大命途快速筛选"></nav>
         <div class="header-actions">
             <button type="button" class="role-badge" id="roleBadge" onclick="openProfilePage()">旁观者只读</button>
+            <button class="btn btn-outline" onclick="openLeaderboardPage()">🏛 觐见榜单</button>
             <button class="btn btn-outline" id="inviteButton" onclick="openInviteModal()">🎲 同契召引</button>
             <button class="btn btn-primary btn-folly" id="submitEntryButton" onclick="openSubmitModal()">🎭 构筑愚戏</button>
         </div>
@@ -3666,6 +3787,20 @@
             </div>
             <div id="profileContent" class="profile-content">
                 <div class="loading"><div class="spinner"></div><br>正在读取信徒名录...</div>
+            </div>
+        </div>
+    </main>
+
+    <!-- 排行榜独立页 -->
+    <main class="profile-page" id="leaderboardPage" style="display:none;">
+        <div class="profile-shell">
+            <div class="profile-toolbar">
+                <button class="detail-back" onclick="closeLeaderboardPage()">← 返回试炼列表</button>
+                <div class="detail-window-title">ASCENSION LEDGER · 登神觐见榜</div>
+                <button class="detail-close-icon" onclick="closeLeaderboardPage()" title="返回试炼列表" aria-label="返回试炼列表">✕</button>
+            </div>
+            <div id="leaderboardContent" class="profile-content">
+                <div class="loading"><div class="spinner"></div><br>正在整理登神与觐见名录...</div>
             </div>
         </div>
     </main>
@@ -4220,6 +4355,9 @@
         let currentSort = 'popular', searchQuery = '', selectedGod = 'all', selectedPath = 'all', selectedDifficulty = 'all', searchTimeout = null, currentDetailId = null;
         let archiveScrollY = 0;
         let profileScrollY = 0;
+        let leaderboardScrollY = 0;
+        let leaderboardMode = 'overall';
+        let leaderboardPath = 'all';
         let replyTarget = null;
         let testimonyTargetId = null;
         let pendingRating = { dungeonId: null, value: 5 };
@@ -4277,6 +4415,8 @@
 
         function getProfileDefaults() {
             return {
+                displayName: '',
+                role: '',
                 faithGod: '',
                 faithPath: '存在',
                 profession: '',
@@ -4295,6 +4435,8 @@
         function getCurrentProfile() {
             const allProfiles = getStoredProfiles();
             const stored = { ...getProfileDefaults(), ...(allProfiles[getProfileKey()] || {}) };
+            stored.displayName = cleanDisplayNameInput(stored.displayName || inviteSession?.name || '');
+            stored.role = normalizeRole(stored.role || inviteSession?.role || '') || '';
             stored.faithGod = cleanGodName(stored.faithGod || '');
             stored.faithPath = getGodInfo(stored.faithGod).known ? getGodInfo(stored.faithGod).path : (stored.faithPath || '存在');
             stored.profession = normalizeProfession(stored.profession || '');
@@ -4417,6 +4559,275 @@
             const items = splitProfileLines(value);
             if (!items.length) return `<div class="profile-empty">${escapeHtml(emptyText)}</div>`;
             return `<div class="profile-chip-row">${items.map(item => `<span class="metric-pill">${escapeHtml(item)}</span>`).join('')}</div>`;
+        }
+
+        function formatProfileScore(value) {
+            const score = normalizeProfileScore(value);
+            return Number.isInteger(score) ? String(score) : score.toFixed(1);
+        }
+
+        function getLeaderboardScore(entry, scoreType) {
+            if (scoreType === 'audience') return Number(entry.audienceScore || 0);
+            if (scoreType === 'total') return Number(entry.ascensionScore || 0) + Number(entry.audienceScore || 0);
+            return Number(entry.ascensionScore || 0);
+        }
+
+        function getLeaderboardScoreLabel(scoreType) {
+            if (scoreType === 'audience') return '觐见之梯';
+            if (scoreType === 'total') return '双榜总和';
+            return '登神之路';
+        }
+
+        function normalizeLeaderboardEntry(key, rawProfile) {
+            const profile = { ...getProfileDefaults(), ...(rawProfile || {}) };
+            const faithGod = cleanGodName(profile.faithGod || '');
+            const faithInfo = getGodInfo(faithGod);
+            const professionInfo = getProfessionInfo(profile.profession);
+            const displayName = cleanDisplayNameInput(profile.displayName || (key === getProfileKey() ? inviteSession?.name : '') || '');
+            return {
+                key,
+                displayName: displayName || '未命名信徒',
+                role: normalizeRole(profile.role || '') || '',
+                faithGod: faithInfo.known ? faithInfo.god : '',
+                faithPath: faithInfo.known ? faithInfo.path : (profile.faithPath || ''),
+                faithClass: faithInfo.known ? faithInfo.className : getPathClassByPath(profile.faithPath || '存在'),
+                profession: professionInfo.known ? professionInfo.name : '',
+                professionClass: professionInfo.known ? professionInfo.className : '',
+                ascensionScore: normalizeProfileScore(profile.ascensionScore),
+                audienceScore: normalizeProfileScore(profile.audienceScore),
+                updatedAt: profile.updatedAt || '',
+                isCurrent: key === getProfileKey()
+            };
+        }
+
+        function getLeaderboardEntries() {
+            return Object.entries(getStoredProfiles())
+                .map(([key, profile]) => normalizeLeaderboardEntry(key, profile))
+                .filter(entry => entry.faithGod || entry.profession || entry.ascensionScore || entry.audienceScore || entry.displayName !== '未命名信徒');
+        }
+
+        function mapCloudProfileToLocal(profile) {
+            if (!profile) return null;
+            return {
+                displayName: cleanDisplayNameInput(profile.display_name || profile.displayName || ''),
+                role: normalizeRole(profile.role || '') || '',
+                faithGod: cleanGodName(profile.faith_god || profile.faithGod || ''),
+                faithPath: profile.faith_path || profile.faithPath || '',
+                profession: normalizeProfession(profile.profession || ''),
+                ascensionScore: normalizeProfileScore(profile.ascension_score ?? profile.ascensionScore),
+                audienceScore: normalizeProfileScore(profile.audience_score ?? profile.audienceScore),
+                items: String(profile.items || '').trim().slice(0, 800),
+                talents: String(profile.talents || '').trim().slice(0, 800),
+                scoresLockedAt: profile.scores_locked_at || profile.scoresLockedAt || '',
+                updatedAt: profile.updated_at || profile.updatedAt || ''
+            };
+        }
+
+        function mapCloudLeaderboardEntry(profile, index) {
+            const localProfile = mapCloudProfileToLocal(profile);
+            return {
+                ...normalizeLeaderboardEntry(`cloud:${index}`, localProfile),
+                isCurrent: !!profile?.is_current
+            };
+        }
+
+        async function fetchLeaderboardEntries() {
+            const localEntries = getLeaderboardEntries();
+            if (USE_LOCAL_FALLBACK || !inviteSession?.code) return { entries: localEntries, source: 'local' };
+            try {
+                const { data, error } = await invokeDungeonAction('listProfiles', {});
+                if (error || !Array.isArray(data)) {
+                    console.warn('云端榜单读取失败，使用本地榜单:', error);
+                    return { entries: localEntries, source: 'local', error };
+                }
+                return { entries: data.map(mapCloudLeaderboardEntry), source: 'cloud' };
+            } catch (error) {
+                console.warn('云端榜单读取异常，使用本地榜单:', error);
+                return { entries: localEntries, source: 'local', error };
+            }
+        }
+
+        async function syncProfileToCloud(profile) {
+            if (USE_LOCAL_FALLBACK || !inviteSession?.code) return { data: null, error: null };
+            const { data, error } = await invokeDungeonAction('saveProfile', {
+                faithGod: profile.faithGod,
+                faithPath: profile.faithPath,
+                profession: profile.profession,
+                ascensionScore: profile.ascensionScore,
+                audienceScore: profile.audienceScore,
+                items: profile.items,
+                talents: profile.talents
+            });
+            if (error) return { data: null, error };
+            const cloudProfile = mapCloudProfileToLocal(data);
+            if (cloudProfile) saveCurrentProfile(cloudProfile);
+            return { data: cloudProfile, error: null };
+        }
+
+        function sortLeaderboardEntries(entries, scoreType) {
+            return [...entries].sort((a, b) =>
+                getLeaderboardScore(b, scoreType) - getLeaderboardScore(a, scoreType) ||
+                Number(b.audienceScore || 0) - Number(a.audienceScore || 0) ||
+                Number(b.ascensionScore || 0) - Number(a.ascensionScore || 0) ||
+                new Date(b.updatedAt || 0) - new Date(a.updatedAt || 0)
+            );
+        }
+
+        function renderLeaderboardRows(entries, scoreType, limit = 50) {
+            const ranked = sortLeaderboardEntries(entries, scoreType).slice(0, limit);
+            if (!ranked.length) return '<div class="profile-empty">暂无可入榜的个人档案。保存个人档案后，这里会出现榜单记录。</div>';
+            return ranked.map((entry, index) => {
+                const role = ROLE_LABELS[entry.role] || '入局信徒';
+                const faith = entry.faithGod ? `${entry.faithGod}之神 · ${entry.faithPath}命途` : '未立信仰';
+                const profession = entry.profession ? `${entry.professionClass} · ${entry.profession}` : '未定职业';
+                const score = getLeaderboardScore(entry, scoreType);
+                const scoreText = scoreType === 'total'
+                    ? `${formatProfileScore(entry.ascensionScore)} / ${formatProfileScore(entry.audienceScore)}`
+                    : formatProfileScore(score);
+                return `
+                    <article class="leaderboard-row ${entry.isCurrent ? 'is-current' : ''}" onclick="openProfileFromLeaderboard(${jsString(entry.key)})">
+                        <div class="leaderboard-rank">${index + 1}</div>
+                        <div>
+                            <div class="leaderboard-name">${escapeHtml(entry.displayName)}${entry.isCurrent ? ' · 你' : ''}</div>
+                            <div class="leaderboard-meta">
+                                <span class="mini-tag ${entry.faithClass}">${escapeHtml(faith)}</span>
+                                <span class="metric-pill">${escapeHtml(profession)}</span>
+                                <span class="metric-pill">${escapeHtml(role)}</span>
+                            </div>
+                        </div>
+                        <div class="leaderboard-score">
+                            <strong>${escapeHtml(scoreText)}</strong>
+                            <span>${escapeHtml(getLeaderboardScoreLabel(scoreType))}</span>
+                        </div>
+                    </article>`;
+            }).join('');
+        }
+
+        function renderLeaderboardBoard(title, entries, scoreType, options = {}) {
+            const boardClass = options.full ? 'leaderboard-board full' : 'leaderboard-board';
+            const subtitle = options.subtitle || `${entries.length} 位信徒`;
+            return `
+                <section class="${boardClass}">
+                    <div class="profile-panel-title">
+                        <span>${escapeHtml(title)}</span>
+                        <small>${escapeHtml(subtitle)}</small>
+                    </div>
+                    <div class="leaderboard-list">${renderLeaderboardRows(entries, scoreType, options.limit || 50)}</div>
+                </section>`;
+        }
+
+        function renderLeaderboardTabs() {
+            const tabs = [
+                ['overall', '总榜'],
+                ['path', '六大命途'],
+                ['ascension', '登神之路'],
+                ['audience', '觐见之梯']
+            ];
+            return `<div class="leaderboard-tabs">${tabs.map(([mode, label]) => `<button class="leaderboard-tab ${leaderboardMode === mode ? 'active' : ''}" onclick="setLeaderboardMode(${jsString(mode)})">${escapeHtml(label)}</button>`).join('')}</div>`;
+        }
+
+        function renderLeaderboardPathTabs() {
+            const tabs = [['all', '全部命途'], ...GOD_GROUPS.map(group => [group.path, `${getPathMetaByPath(group.path).sigil} ${group.path}`])];
+            return `<div class="leaderboard-path-tabs">${tabs.map(([path, label]) => `<button class="leaderboard-tab ${leaderboardPath === path ? 'active' : ''}" onclick="setLeaderboardPath(${jsString(path)})">${escapeHtml(label)}</button>`).join('')}</div>`;
+        }
+
+        function renderLeaderboardContent(entries) {
+            if (!entries.length) {
+                return '<div class="profile-empty">还没有任何个人档案进入榜单。先进入个人档案，保存昵称、信仰、职业与两项分数。</div>';
+            }
+            if (leaderboardMode === 'ascension') {
+                return `<div class="leaderboard-layout">${renderLeaderboardBoard('登神之路榜', entries, 'ascension', { full: true })}</div>`;
+            }
+            if (leaderboardMode === 'audience') {
+                return `<div class="leaderboard-layout">${renderLeaderboardBoard('觐见之梯榜', entries, 'audience', { full: true })}</div>`;
+            }
+            if (leaderboardMode === 'path') {
+                const pathTabs = renderLeaderboardPathTabs();
+                if (leaderboardPath !== 'all') {
+                    const pathEntries = entries.filter(entry => entry.faithPath === leaderboardPath);
+                    return `${pathTabs}<div class="leaderboard-layout">${renderLeaderboardBoard(`${leaderboardPath}命途独立榜`, pathEntries, 'total', { full: true, subtitle: `${pathEntries.length} 位信徒 · 按双榜总和排序` })}</div>`;
+                }
+                const boards = GOD_GROUPS.map(group => {
+                    const pathEntries = entries.filter(entry => entry.faithPath === group.path);
+                    return renderLeaderboardBoard(`${group.path}命途`, pathEntries, 'total', { limit: 10, subtitle: `${pathEntries.length} 位信徒` });
+                }).join('');
+                return `${pathTabs}<div class="leaderboard-layout">${boards}</div>`;
+            }
+            return `
+                <div class="leaderboard-layout">
+                    ${renderLeaderboardBoard('登神之路总榜', entries, 'ascension', { limit: 30 })}
+                    ${renderLeaderboardBoard('觐见之梯总榜', entries, 'audience', { limit: 30 })}
+                </div>`;
+        }
+
+        async function renderLeaderboardPage() {
+            const container = document.getElementById('leaderboardContent');
+            if (!container) return;
+            container.innerHTML = '<div class="loading"><div class="spinner"></div><br>正在整理登神与觐见名录...</div>';
+            const { entries, source, error } = await fetchLeaderboardEntries();
+            const currentEntry = entries.find(entry => entry.isCurrent);
+            const currentSummary = currentEntry
+                ? `<span class="metric-pill">你：<strong>${escapeHtml(currentEntry.displayName)}</strong></span><span class="metric-pill">登神 <strong>${formatProfileScore(currentEntry.ascensionScore)}</strong></span><span class="metric-pill">觐见 <strong>${formatProfileScore(currentEntry.audienceScore)}</strong></span>`
+                : '<span class="metric-pill">尚未保存个人档案</span>';
+            const sourceText = source === 'cloud' ? '云端榜单' : '本地记录';
+            const sourceHint = error?.message ? ` · ${error.message}` : '';
+            container.innerHTML = `
+                <section class="profile-hero">
+                    <div class="profile-avatar path-void">${renderGodSigil('命运', 'lg')}</div>
+                    <div>
+                        <div class="profile-kicker">ASCENSION LEDGER</div>
+                        <h1 class="profile-name">登神觐见榜</h1>
+                        <div class="profile-subline">
+                            ${currentSummary}
+                            <span class="metric-pill">${escapeHtml(sourceText)} <strong>${entries.length}</strong></span>
+                        </div>
+                    </div>
+                </section>
+                <section class="profile-panel">
+                    ${renderLeaderboardTabs()}
+                    <div class="leaderboard-summary">榜单读取已保存的个人档案；个人页保存后会自动联动刷新。${source === 'cloud' ? '当前为全站云端榜单。' : `当前为本地榜单，运行 Supabase 档案表并更新 Edge Function 后会切换为全站榜。${escapeHtml(sourceHint)}`}</div>
+                    ${renderLeaderboardContent(entries)}
+                </section>`;
+        }
+
+        async function setLeaderboardMode(mode) {
+            leaderboardMode = ['overall', 'path', 'ascension', 'audience'].includes(mode) ? mode : 'overall';
+            await renderLeaderboardPage();
+        }
+
+        async function setLeaderboardPath(path) {
+            const allowed = ['all', ...GOD_GROUPS.map(group => group.path)];
+            leaderboardPath = allowed.includes(path) ? path : 'all';
+            await renderLeaderboardPage();
+        }
+
+        async function openLeaderboardPage() {
+            leaderboardScrollY = window.scrollY || document.documentElement.scrollTop || 0;
+            const detailOverlay = document.getElementById('detailOverlay');
+            if (detailOverlay) detailOverlay.style.display = 'none';
+            const profilePage = document.getElementById('profilePage');
+            if (profilePage) profilePage.style.display = 'none';
+            document.body.classList.remove('detail-view-open', 'profile-view-open');
+            document.body.classList.add('leaderboard-view-open');
+            document.getElementById('leaderboardPage').style.display = 'block';
+            window.scrollTo(0, 0);
+            await renderLeaderboardPage();
+        }
+
+        function closeLeaderboardPage(restoreScroll = true) {
+            const page = document.getElementById('leaderboardPage');
+            if (page) page.style.display = 'none';
+            document.body.classList.remove('leaderboard-view-open');
+            if (restoreScroll !== false) requestAnimationFrame(() => window.scrollTo(0, leaderboardScrollY || 0));
+        }
+
+        async function openProfileFromLeaderboard(key) {
+            if (key === getProfileKey() && inviteSession) {
+                closeLeaderboardPage(false);
+                await openProfilePage();
+                return;
+            }
+            showToast('目前只能打开当前入局者的个人档案；全站档案页接入 Supabase 后开放。');
         }
 
         function isSameProfileName(value) {
@@ -4687,6 +5098,7 @@
                                 </div>
                             </div>
                             <div class="profile-tools">
+                                <button class="btn btn-outline btn-sm" onclick="openLeaderboardPage()">查看登神觐见榜</button>
                                 <button class="btn btn-primary btn-sm" onclick="saveProfilePage()">保存个人档案</button>
                             </div>
                         </section>
@@ -4735,7 +5147,9 @@
             profileScrollY = window.scrollY || document.documentElement.scrollTop || 0;
             const detailOverlay = document.getElementById('detailOverlay');
             if (detailOverlay) detailOverlay.style.display = 'none';
-            document.body.classList.remove('detail-view-open');
+            const leaderboardPage = document.getElementById('leaderboardPage');
+            if (leaderboardPage) leaderboardPage.style.display = 'none';
+            document.body.classList.remove('detail-view-open', 'leaderboard-view-open');
             document.body.classList.add('profile-view-open');
             document.getElementById('profilePage').style.display = 'block';
             window.scrollTo(0, 0);
@@ -4782,6 +5196,8 @@
                 ? ''
                 : (currentProfile.scoresLockedAt || new Date().toISOString());
             const profile = {
+                displayName: name,
+                role: getInviteRole() || '',
                 faithGod: selectedFaithInfo.god,
                 faithPath: selectedFaithInfo.path,
                 profession: selectedProfession,
@@ -4796,9 +5212,15 @@
                 if (error) { showToast(`❌ ${error.message || '昵称保存失败'}`); return; }
             }
             saveCurrentProfile(profile);
-            showToast('个人档案已保存');
+            const cloudSync = await syncProfileToCloud(profile);
+            if (cloudSync.error) {
+                showToast(`个人档案已本地保存，云端榜单未同步：${cloudSync.error.message || '请检查 Supabase 档案表'}`);
+            } else {
+                showToast('个人档案已保存');
+            }
             updateInviteUI();
             await renderProfilePage();
+            if (document.getElementById('leaderboardPage')?.style.display !== 'none') await renderLeaderboardPage();
             await renderDungeonList();
         }
 

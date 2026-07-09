@@ -59,6 +59,12 @@ function cleanDisplayName(value: unknown, role: InviteRole) {
   return { name };
 }
 
+function cleanScore(value: unknown) {
+  const number = Number(value);
+  if (!Number.isFinite(number)) return 0;
+  return Math.max(0, Math.min(999999, Math.round(number * 10) / 10));
+}
+
 function isUuid(value: string) {
   return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value);
 }
@@ -211,6 +217,81 @@ Deno.serve(async (req) => {
       if (error) return json({ error: error.message }, 400);
 
       return json({ role, label: roleLabels[role], name: data.display_name });
+    }
+
+    if (action === "saveProfile") {
+      if (!hasRole(role, ["player", "author", "admin"])) return json({ error: "需要入局谕令" }, 403);
+
+      const faithGod = cleanText(payload.faithGod, 20);
+      const faithPath = cleanText(payload.faithPath, 20);
+      const profession = cleanText(payload.profession, 40);
+      const items = cleanText(payload.items, 800);
+      const talents = cleanText(payload.talents, 800);
+      const ascensionScore = cleanScore(payload.ascensionScore);
+      const audienceScore = cleanScore(payload.audienceScore);
+      if (!faithGod || !faithPath || !profession) return json({ error: "个人档案缺少信仰或职业" }, 400);
+
+      const { data: existing, error: readError } = await supabase
+        .from("player_profiles")
+        .select("faith_god, faith_path, profession, ascension_score, audience_score, scores_locked_at")
+        .eq("invite_code_hash", identity.codeHash)
+        .maybeSingle();
+      if (readError?.code === "42P01") return json({ error: "请先运行 player_profiles_migration.sql" }, 400);
+      if (readError) return json({ error: readError.message }, 400);
+
+      const locked = existing?.faith_god && existing.faith_god !== "欺诈";
+      const nextFaithGod = locked ? existing.faith_god : faithGod;
+      const nextFaithPath = locked ? existing.faith_path : faithPath;
+      const nextProfession = locked ? existing.profession : profession;
+      const nextAscension = locked ? existing.ascension_score : ascensionScore;
+      const nextAudience = locked ? existing.audience_score : audienceScore;
+      const nextScoresLockedAt = nextFaithGod === "欺诈"
+        ? null
+        : (existing?.scores_locked_at || new Date().toISOString());
+
+      const { data, error } = await supabase
+        .from("player_profiles")
+        .upsert({
+          invite_code_hash: identity.codeHash,
+          display_name: identity.displayName,
+          role,
+          faith_god: nextFaithGod,
+          faith_path: nextFaithPath,
+          profession: nextProfession,
+          ascension_score: nextAscension,
+          audience_score: nextAudience,
+          items,
+          talents,
+          scores_locked_at: nextScoresLockedAt,
+          updated_at: new Date().toISOString(),
+        })
+        .select("display_name, role, faith_god, faith_path, profession, ascension_score, audience_score, items, talents, scores_locked_at, updated_at")
+        .single();
+      if (error?.code === "42P01") return json({ error: "请先运行 player_profiles_migration.sql" }, 400);
+      if (error) return json({ error: error.message }, 400);
+
+      return json({ role, name: identity.displayName, data });
+    }
+
+    if (action === "listProfiles") {
+      if (!hasRole(role, ["player", "author", "admin"])) return json({ error: "需要入局谕令" }, 403);
+
+      const { data, error } = await supabase
+        .from("player_profiles")
+        .select("invite_code_hash, display_name, role, faith_god, faith_path, profession, ascension_score, audience_score, updated_at")
+        .order("ascension_score", { ascending: false })
+        .limit(300);
+      if (error?.code === "42P01") return json({ error: "请先运行 player_profiles_migration.sql" }, 400);
+      if (error) return json({ error: error.message }, 400);
+
+      return json({
+        role,
+        name: identity.displayName,
+        data: (data || []).map(({ invite_code_hash: inviteCodeHash, ...profile }) => ({
+          ...profile,
+          is_current: inviteCodeHash === identity.codeHash,
+        })),
+      });
     }
 
     if (action === "submitDungeon") {
