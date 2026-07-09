@@ -5735,7 +5735,7 @@
         }
 
         function renderTrialOracle(d, godClass) {
-            return `<div class="trial-oracle ${godClass}" style="${getGodSkinStyle(d.type)}"><b>【专属谶语】</b>${escapeHtml(getGodOracle(d.type))}</div>`;
+            return `<div class="trial-oracle ${godClass}" style="${getGodSkinStyle(d.type)}">${escapeHtml(getGodOracle(d.type))}</div>`;
         }
 
         function isVeteranArchitect(d) {
@@ -6289,7 +6289,7 @@
                     <div class="trial-entry-body">
                         <p><strong>神明专属说明：</strong>${escapeHtml(skin.entryHint)}</p>
                         <p><strong>试炼说明：</strong>${escapeHtml(d.description || '此试炼尚未留下说明。')}</p>
-                        <p><strong>专属谶语：</strong>${escapeHtml(skin.oracle)}</p>
+                        <p>${escapeHtml(skin.oracle)}</p>
                     </div>
                 </section>
                 ${pinnedNoteHtml}
