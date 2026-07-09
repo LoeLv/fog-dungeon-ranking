@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>诸神愚戏 · 祈愿试炼留存地</title>
+    <link rel="icon" href='data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"%3E%3Crect width="64" height="64" rx="14" fill="%23101218"/%3E%3Cpath d="M15 26c4-11 30-11 34 0v7c0 10-8 18-17 18S15 43 15 33z" fill="none" stroke="%23e7cf8a" stroke-width="4"/%3E%3Cpath d="M23 31c3-3 7-3 10 0M31 31c3-3 7-3 10 0M24 41c5 3 11 3 16 0" fill="none" stroke="%238fd8cf" stroke-width="3" stroke-linecap="round"/%3E%3Ccircle cx="47" cy="17" r="7" fill="%23e7cf8a"/%3E%3Ccircle cx="45" cy="15" r="1.5" fill="%23101218"/%3E%3Ccircle cx="49" cy="19" r="1.5" fill="%23101218"/%3E%3C/svg%3E'>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2">
     </script>
     <style>
@@ -4351,6 +4352,8 @@
         ];
         const CLEAR_FEEDBACK_OPTIONS = ['机制清楚', '剧情好', '氛围强', '有挑战', '偏难', '想再跑', '需要修订'];
         const LEGACY_DIFFICULTY_MAP = { 凡尘: '新手', 觉醒: '低', 超凡: '中', 神话: '高', 愚者: '高' };
+        const DEFAULT_ASCENSION_SCORE = 1000;
+        const DEFAULT_AUDIENCE_SCORE = 0;
         let inviteSession = getLocalData(INVITE_STORAGE_KEY, null);
         let currentSort = 'popular', searchQuery = '', selectedGod = 'all', selectedPath = 'all', selectedDifficulty = 'all', searchTimeout = null, currentDetailId = null;
         let archiveScrollY = 0;
@@ -4367,6 +4370,9 @@
         function canInteract() { return canUseRole(['player', 'author', 'admin']); }
         function canSubmit() { return canUseRole(['author', 'admin']); }
         function isAdmin() { return getInviteRole() === 'admin'; }
+        function canOverrideProfileLocks() { return isAdmin(); }
+        function canEditProfileScores() { return canOverrideProfileLocks(); }
+        function canEditProfileTalents() { return canOverrideProfileLocks(); }
         function shouldAutoFocusModalInput() {
             return !window.matchMedia('(max-width: 720px), (pointer: coarse)').matches;
         }
@@ -4420,8 +4426,8 @@
                 faithGod: '',
                 faithPath: '存在',
                 profession: '',
-                ascensionScore: 0,
-                audienceScore: 0,
+                ascensionScore: DEFAULT_ASCENSION_SCORE,
+                audienceScore: DEFAULT_AUDIENCE_SCORE,
                 scoresLockedAt: '',
                 items: '',
                 talents: ''
@@ -4470,9 +4476,9 @@
             setLocalData(PROFILE_NOTICE_SEEN_KEY, seen);
         }
 
-        function normalizeProfileScore(value) {
+        function normalizeProfileScore(value, fallback = 0) {
             const number = Number(value);
-            if (!Number.isFinite(number)) return 0;
+            if (!Number.isFinite(number)) return fallback;
             return Math.max(0, Math.min(999999, Math.round(number * 10) / 10));
         }
 
@@ -4504,6 +4510,7 @@
         }
 
         function isFaithLocked(profile) {
+            if (canOverrideProfileLocks()) return false;
             const god = getProfileFaithGod(profile);
             return !!god && god !== '欺诈';
         }
@@ -4513,11 +4520,12 @@
         }
 
         function isProfessionLocked(profile) {
+            if (canOverrideProfileLocks()) return false;
             return !isTrickeryProfile(profile) && getProfessionInfo(profile?.profession).known;
         }
 
         function areProfileScoresLocked(profile) {
-            return !isTrickeryProfile(profile) && !!profile?.scoresLockedAt;
+            return !canEditProfileScores();
         }
 
         function getProfileDisplayFaith(profile) {
@@ -4614,8 +4622,8 @@
                 faithGod: cleanGodName(profile.faith_god || profile.faithGod || ''),
                 faithPath: profile.faith_path || profile.faithPath || '',
                 profession: normalizeProfession(profile.profession || ''),
-                ascensionScore: normalizeProfileScore(profile.ascension_score ?? profile.ascensionScore),
-                audienceScore: normalizeProfileScore(profile.audience_score ?? profile.audienceScore),
+                ascensionScore: normalizeProfileScore(profile.ascension_score ?? profile.ascensionScore, DEFAULT_ASCENSION_SCORE),
+                audienceScore: normalizeProfileScore(profile.audience_score ?? profile.audienceScore, DEFAULT_AUDIENCE_SCORE),
                 items: String(profile.items || '').trim().slice(0, 800),
                 talents: String(profile.talents || '').trim().slice(0, 800),
                 scoresLockedAt: profile.scores_locked_at || profile.scoresLockedAt || '',
@@ -5013,6 +5021,7 @@
             const faithLocked = isFaithLocked(profile);
             const professionLocked = isProfessionLocked(profile);
             const scoresLocked = areProfileScoresLocked(profile);
+            const talentsLocked = !canEditProfileTalents();
             const profession = getProfessionInfo(profile.profession);
             const roleLabel = ROLE_LABELS[getInviteRole()] || '入局信徒';
             const authorPanel = (authored.length || canSubmit()) ? `
@@ -5081,12 +5090,12 @@
                                 </div>
                                 <div class="form-group">
                                     <label for="profileAscensionScore">登神之路分数</label>
-                                    <input id="profileAscensionScore" type="number" min="0" step="0.1" value="${Number(profile.ascensionScore || 0)}" ${scoresLocked ? 'disabled' : ''}>
+                                    <input id="profileAscensionScore" type="number" min="0" step="0.1" value="${Number(profile.ascensionScore ?? DEFAULT_ASCENSION_SCORE)}" ${scoresLocked ? 'disabled' : ''}>
                                 </div>
                                 <div class="form-group">
                                     <label for="profileAudienceScore">觐见之梯分数</label>
-                                    <input id="profileAudienceScore" type="number" min="0" step="0.1" value="${Number(profile.audienceScore || 0)}" ${scoresLocked ? 'disabled' : ''}>
-                                    <div class="identity-help">${scoresLocked ? '两项分数已封存，后续不可自改。' : (faith.god === '欺诈' ? '欺诈信徒可以改写分数记录。嘻嘻。' : '两项分数只在首次保存时自填，保存后封存。')}</div>
+                                    <input id="profileAudienceScore" type="number" min="0" step="0.1" value="${Number(profile.audienceScore ?? DEFAULT_AUDIENCE_SCORE)}" ${scoresLocked ? 'disabled' : ''}>
+                                    <div class="identity-help">${scoresLocked ? `初始登神 ${DEFAULT_ASCENSION_SCORE}、觐见 ${DEFAULT_AUDIENCE_SCORE}；后续由上分系统调整，不可自行填写。` : '馆主测试权限：可临时调整分数，用于二测验证。'}</div>
                                 </div>
                                 <div class="form-group full">
                                     <label for="profileItems">个人道具</label>
@@ -5094,7 +5103,8 @@
                                 </div>
                                 <div class="form-group full">
                                     <label for="profileTalents">个人天赋</label>
-                                    <textarea id="profileTalents" maxlength="800" placeholder="每行一个天赋">${escapeHtml(profile.talents)}</textarea>
+                                    <textarea id="profileTalents" maxlength="800" placeholder="${talentsLocked ? '天赋池/抽取系统未开放，暂不可自行填写' : '馆主测试权限：每行一个天赋'}" ${talentsLocked ? 'disabled' : ''}>${escapeHtml(profile.talents)}</textarea>
+                                    <div class="identity-help">${talentsLocked ? '天赋将来自后续天赋池抽取系统，现在不会让玩家手填。' : '馆主测试权限：可编辑天赋，用于验证后续管理能力。'}</div>
                                 </div>
                             </div>
                             <div class="profile-tools">
@@ -5190,10 +5200,14 @@
                 return;
             }
             const scoresLocked = areProfileScoresLocked(currentProfile);
-            const ascensionScore = scoresLocked ? currentProfile.ascensionScore : normalizeProfileScore(document.getElementById('profileAscensionScore')?.value);
-            const audienceScore = scoresLocked ? currentProfile.audienceScore : normalizeProfileScore(document.getElementById('profileAudienceScore')?.value);
-            const nextScoresLockedAt = selectedFaithInfo.god === '欺诈'
-                ? ''
+            const ascensionScore = scoresLocked
+                ? (currentProfile.ascensionScore ?? DEFAULT_ASCENSION_SCORE)
+                : normalizeProfileScore(document.getElementById('profileAscensionScore')?.value, DEFAULT_ASCENSION_SCORE);
+            const audienceScore = scoresLocked
+                ? (currentProfile.audienceScore ?? DEFAULT_AUDIENCE_SCORE)
+                : normalizeProfileScore(document.getElementById('profileAudienceScore')?.value, DEFAULT_AUDIENCE_SCORE);
+            const nextScoresLockedAt = canEditProfileScores()
+                ? (currentProfile.scoresLockedAt || '')
                 : (currentProfile.scoresLockedAt || new Date().toISOString());
             const profile = {
                 displayName: name,
@@ -5205,7 +5219,9 @@
                 audienceScore,
                 scoresLockedAt: nextScoresLockedAt,
                 items: String(document.getElementById('profileItems')?.value || '').trim().slice(0, 800),
-                talents: String(document.getElementById('profileTalents')?.value || '').trim().slice(0, 800)
+                talents: canEditProfileTalents()
+                    ? String(document.getElementById('profileTalents')?.value || '').trim().slice(0, 800)
+                    : String(currentProfile.talents || '').trim().slice(0, 800)
             };
             if (name !== inviteSession.name) {
                 const { error } = await updateDisplayName(name);
@@ -5280,19 +5296,11 @@
             if (USE_LOCAL_FALLBACK) return getLocalData('dungeons', []);
             const { data, error } = await supabaseClient
                 .from('dungeons')
-                .select('id,name,creator,difficulty,type,description,pinned_note,participant_count,run_count,clear_count,clear_rate,invite_name,avg_rating,rating_count,comment_count,created_at')
+                .select('id,name,creator,difficulty,type,description,participant_count,run_count,clear_count,clear_rate,invite_name,avg_rating,rating_count,comment_count,created_at')
                 .order('avg_rating', { ascending: false })
                 .order('created_at', { ascending: false });
-            if (error) {
-                const fallback = await supabaseClient
-                    .from('dungeons')
-                    .select('id,name,creator,difficulty,type,description,participant_count,run_count,clear_count,clear_rate,invite_name,avg_rating,rating_count,comment_count,created_at')
-                    .order('avg_rating', { ascending: false })
-                    .order('created_at', { ascending: false });
-                if (fallback.error) { showToast('❌ 获取数据失败'); return []; }
-                return (fallback.data || []).map(d => ({ ...d, pinned_note: '' }));
-            }
-            return data || [];
+            if (error) { showToast('❌ 获取数据失败'); return []; }
+            return (data || []).map(d => ({ ...d, pinned_note: '' }));
         }
 
         async function fetchComments(dungeonId) {
@@ -5302,12 +5310,10 @@
             }
             const { data, error } = await supabaseClient
                 .from('comments')
-                .select('id,dungeon_id,parent_comment_id,author,content,invite_name,is_deleted,created_at,deleted_at')
+                .select('id,dungeon_id,author,content,invite_name,created_at')
                 .eq('dungeon_id', dungeonId)
                 .order('created_at', { ascending: true });
-            if (!error) return data || [];
-            const fallback = await supabaseClient.from('comments').select('id,dungeon_id,author,content,invite_name,created_at').eq('dungeon_id', dungeonId).order('created_at', { ascending: true });
-            return fallback.error ? [] : (fallback.data || []).map(c => ({ ...c, parent_comment_id: null, is_deleted: false }));
+            return error ? [] : (data || []).map(c => ({ ...c, parent_comment_id: null, is_deleted: false }));
         }
 
         async function fetchLatestComments(limit = 3) {
@@ -5321,22 +5327,17 @@
             }
             const { data, error } = await supabaseClient
                 .from('comments')
-                .select('id,dungeon_id,parent_comment_id,author,content,is_deleted,created_at,dungeons(name,type,difficulty)')
-                .eq('is_deleted', false)
+                .select('id,dungeon_id,author,content,invite_name,created_at')
                 .order('created_at', { ascending: false })
                 .limit(limit);
-            if (!error) return (data || []).map(c => ({ ...c, dungeon: c.dungeons || null }));
-
-            const fallback = await supabaseClient
-                .from('comments')
-                .select('*')
-                .order('created_at', { ascending: false })
-                .limit(limit);
-            if (fallback.error) return [];
+            if (error) return [];
             const dungeons = await fetchDungeons();
-            return (fallback.data || [])
-                .filter(c => !c.is_deleted)
-                .map(c => ({ ...c, dungeon: dungeons.find(d => d.id === c.dungeon_id) || null }));
+            return (data || []).map(c => ({
+                ...c,
+                parent_comment_id: null,
+                is_deleted: false,
+                dungeon: dungeons.find(d => d.id === c.dungeon_id) || null
+            }));
         }
 
         async function fetchClearFeedbackSummary(dungeonId) {

@@ -27,6 +27,9 @@ const roleLabels: Record<InviteRole, string> = {
   admin: "馆主",
 };
 
+const defaultAscensionScore = 1000;
+const defaultAudienceScore = 0;
+
 const feedbackTagAllowlist = new Set([
   "机制清楚",
   "剧情好",
@@ -85,11 +88,12 @@ async function getInviteIdentity(
   if (!code) return null;
   const codeHash = await sha256Hex(code);
 
-  const { data } = await supabase
+  const { data, error } = await supabase
     .from("invite_codes")
     .select("id, role, display_name, is_active")
     .eq("code_hash", codeHash)
     .maybeSingle();
+  if (error) return null;
 
   const roleFromTable = data?.role as InviteRole | undefined;
   if (data?.is_active && roleFromTable && ["player", "author", "admin"].includes(roleFromTable)) {
@@ -104,14 +108,6 @@ async function getInviteIdentity(
       inviteId: data.id,
     };
   }
-
-  const adminCode = Deno.env.get("DUNGEON_ADMIN_CODE")?.trim();
-  const authorCode = Deno.env.get("DUNGEON_AUTHOR_CODE")?.trim();
-  const playerCode = Deno.env.get("DUNGEON_PLAYER_CODE")?.trim();
-
-  if (adminCode && code === adminCode) return { role: "admin", codeHash, displayName: "共享馆主码" };
-  if (authorCode && code === authorCode) return { role: "author", codeHash, displayName: "共享作者码" };
-  if (playerCode && code === playerCode) return { role: "player", codeHash, displayName: "共享玩家码" };
   return null;
 }
 
@@ -233,20 +229,26 @@ Deno.serve(async (req) => {
 
       const { data: existing, error: readError } = await supabase
         .from("player_profiles")
-        .select("faith_god, faith_path, profession, ascension_score, audience_score, scores_locked_at")
+        .select("faith_god, faith_path, profession, ascension_score, audience_score, items, talents, scores_locked_at")
         .eq("invite_code_hash", identity.codeHash)
         .maybeSingle();
       if (readError?.code === "42P01") return json({ error: "请先运行 player_profiles_migration.sql" }, 400);
       if (readError) return json({ error: readError.message }, 400);
 
-      const locked = existing?.faith_god && existing.faith_god !== "欺诈";
+      const canOverride = role === "admin";
+      const locked = !canOverride && existing?.faith_god && existing.faith_god !== "欺诈";
       const nextFaithGod = locked ? existing.faith_god : faithGod;
       const nextFaithPath = locked ? existing.faith_path : faithPath;
       const nextProfession = locked ? existing.profession : profession;
-      const nextAscension = locked ? existing.ascension_score : ascensionScore;
-      const nextAudience = locked ? existing.audience_score : audienceScore;
-      const nextScoresLockedAt = nextFaithGod === "欺诈"
-        ? null
+      const nextAscension = canOverride
+        ? ascensionScore
+        : (existing?.ascension_score ?? defaultAscensionScore);
+      const nextAudience = canOverride
+        ? audienceScore
+        : (existing?.audience_score ?? defaultAudienceScore);
+      const nextTalents = canOverride ? talents : (existing?.talents ?? "");
+      const nextScoresLockedAt = canOverride
+        ? (existing?.scores_locked_at ?? null)
         : (existing?.scores_locked_at || new Date().toISOString());
 
       const { data, error } = await supabase
@@ -261,7 +263,7 @@ Deno.serve(async (req) => {
           ascension_score: nextAscension,
           audience_score: nextAudience,
           items,
-          talents,
+          talents: nextTalents,
           scores_locked_at: nextScoresLockedAt,
           updated_at: new Date().toISOString(),
         })
@@ -524,6 +526,21 @@ Deno.serve(async (req) => {
         return json({ role, name: identity.displayName, data: retry.data });
       }
       if (isMissingForumColumn(error)) {
+        if (!parentCommentId) {
+          const retry = await supabase
+            .from("comments")
+            .insert({
+              dungeon_id: dungeonId,
+              author,
+              content,
+              invite_code_hash: identity.codeHash,
+              invite_name: identity.displayName,
+            })
+            .select()
+            .single();
+          if (retry.error) return json({ error: retry.error.message }, 400);
+          return json({ role, name: identity.displayName, data: retry.data });
+        }
         return json({ error: "请先运行论坛功能数据库升级 SQL" }, 400);
       }
       if (error) return json({ error: error.message }, 400);

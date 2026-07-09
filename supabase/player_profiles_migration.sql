@@ -8,7 +8,7 @@ create table if not exists public.player_profiles (
   faith_god text not null check (char_length(trim(faith_god)) between 1 and 20),
   faith_path text not null check (char_length(trim(faith_path)) between 1 and 20),
   profession text not null check (char_length(trim(profession)) between 1 and 40),
-  ascension_score numeric(8, 1) not null default 0 check (ascension_score >= 0 and ascension_score <= 999999),
+  ascension_score numeric(8, 1) not null default 1000 check (ascension_score >= 0 and ascension_score <= 999999),
   audience_score numeric(8, 1) not null default 0 check (audience_score >= 0 and audience_score <= 999999),
   items text not null default '',
   talents text not null default '',
@@ -29,3 +29,6 @@ alter table public.player_profiles enable row level security;
 
 grant usage on schema public to service_role;
 grant select, insert, update, delete on public.player_profiles to service_role;
+
+alter table public.player_profiles alter column ascension_score set default 1000;
+alter table public.player_profiles alter column audience_score set default 0;
