@@ -137,7 +137,7 @@
             box-shadow: 0 4px 30px rgba(0, 0, 0, 0.6);
         }
         .header::after {
-            content: "生命 ✦ 存在 ◇ 文明 ▣ 虚无 ◈ 混沌 ✺ 湮灭 ◒";
+            content: "生命 ✦ 存在 ◇ 文明 ▣ 虚无 ◈ 混沌 ✺ 沉沦 ◒";
             position: absolute;
             left: 0;
             right: 0;
@@ -3959,10 +3959,10 @@
             { path: '存在', className: 'path-exist', gods: ['记忆', '时间'] },
             { path: '文明', className: 'path-civil', gods: ['秩序', '真理', '战争'] },
             { path: '虚无', className: 'path-void', gods: ['欺诈', '命运'] },
-            { path: '混沌', className: 'path-chaos', gods: ['混乱', '痴愚'] },
-            { path: '湮灭', className: 'path-fall', gods: ['污堕', '腐朽', '湮灭', '沉默'] }
+            { path: '混沌', className: 'path-chaos', gods: ['混乱', '沉默', '痴愚'] },
+            { path: '沉沦', className: 'path-fall', gods: ['污堕', '腐朽', '湮灭'] }
         ];
-        const GOD_ALIASES = { 沉沦: '沉默' };
+        const GOD_ALIASES = {};
         const GOD_PRAYERS = {
             诞育: '感孕生命，衍育自然',
             繁荣: '万物滋生，亦繁亦荣',
@@ -4337,9 +4337,9 @@
         };
         const PATH_META = {
             生命: { sigil: '✦', emblem: '芽印', tone: '苔青 / 腐木暗绿 / 浅琥珀柔光', edict: '感孕生命，衍育自然；万物滋生，亦繁亦荣' },
-            湮灭: { sigil: '◒', emblem: '◒', tone: '深墨黑 / 暗灰浊雾', edict: '众生应腐，万物将朽；万物归寂，寰宇无音' },
+            沉沦: { sigil: '◒', emblem: '◒', tone: '深墨黑 / 暗灰浊雾', edict: '纵情沉溺，自溺欢愉；万物凋零，腐朽长存；归于虚无，万事湮灭' },
             文明: { sigil: '▣', emblem: '▣', tone: '赭红 / 暗铜 / 岩浆橙', edict: '文明火起，秩序长存；何以求存，唯血与火' },
-            混沌: { sigil: '✺', emblem: '✺', tone: '灰黄雾霭 / 破碎黑纹', edict: '虚构规律，寰宇笑谈；生命皆痴，文明皆愚' },
+            混沌: { sigil: '✺', emblem: '✺', tone: '灰黄雾霭 / 破碎黑纹', edict: '虚构规律，寰宇笑谈；万物归寂，寰宇无音；生命皆痴，文明皆愚' },
             存在: { sigil: '◇', emblem: '流痕', tone: '冷银灰 / 雾蓝 / 暗紫流光', edict: '昔我长铭，流光拓影；时光如隙，我亦如风' },
             虚无: { sigil: '◈', emblem: '虚印', tone: '暗鎏金 / 螺旋迷纹紫 / 小丑灰', edict: '不辨真伪，勿论虚实；来途去路，尽皆命定' }
         };
@@ -6716,7 +6716,7 @@
                     { id:'s1',name:'深渊回廊',creator:'灰袍叙事者',difficulty:'中',type:'记忆',description:'在无尽深渊边缘，一座古老回廊静静等待。封印着陨落神祇的记忆碎片，踏入者将直面内心最深的恐惧……',pinned_note:'建议 6 人满员进入，第二幕需要有人记录线索。',participant_count:6,run_count:2,clear_count:6,clear_rate:50,avg_rating:4.7,rating_count:23,comment_count:8,created_at:new Date(Date.now()-7*86400000).toISOString()},
                     { id:'s2',name:'愚者之塔',creator:'星辰旅人',difficulty:'高',type:'痴愚',description:'倒悬于天空的巨塔，每一层都蕴含悖论与谜题。唯有拥抱荒诞之人，方能窥见塔顶的真相。',pinned_note:'高难解谜本，建议预留 2 小时以上。',participant_count:4,run_count:3,clear_count:9,clear_rate:75,avg_rating:4.9,rating_count:41,comment_count:15,created_at:new Date(Date.now()-3*86400000).toISOString()},
                     { id:'s3',name:'血色竞技场',creator:'铁腕判官',difficulty:'高',type:'战争',description:'上古诸神取乐的竞技场，回荡着古老战吼。策略与力量并重，每一战都可能揭开神戏一角。',participant_count:8,run_count:1,clear_count:3,clear_rate:37.5,avg_rating:4.3,rating_count:17,comment_count:5,created_at:new Date(Date.now()-14*86400000).toISOString()},
-                    { id:'s4',name:'雾隐村',creator:'迷雾行者',difficulty:'低',type:'沉沦',description:'永远被浓雾笼罩的村庄，平静生活之下，每个夜晚雾中都会出现不可名状之物。',participant_count:5,run_count:2,clear_count:4,clear_rate:40,avg_rating:4.1,rating_count:12,comment_count:4,created_at:new Date(Date.now()-5*86400000).toISOString()},
+                    { id:'s4',name:'雾隐村',creator:'迷雾行者',difficulty:'低',type:'污堕',description:'永远被浓雾笼罩的村庄，平静生活之下，每个夜晚雾中都会出现不可名状之物。',participant_count:5,run_count:2,clear_count:4,clear_rate:40,avg_rating:4.1,rating_count:12,comment_count:4,created_at:new Date(Date.now()-5*86400000).toISOString()},
                     { id:'s5',name:'诸神棋盘',creator:'执棋人',difficulty:'中',type:'命运',description:'整场试炼就是一张巨大的棋盘，参与者成为诸神的棋子。每一步都可能改变命运。',participant_count:6,run_count:4,clear_count:18,clear_rate:75,avg_rating:4.6,rating_count:30,comment_count:11,created_at:new Date(Date.now()-10*86400000).toISOString()}
                 ];
                 setLocalData('dungeons',samples);
