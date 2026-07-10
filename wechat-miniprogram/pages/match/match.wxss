@@ -45,6 +45,19 @@
   line-height: 1.35;
 }
 
+.flow-panel {
+  background: #fff4dc;
+}
+
+.flow-list {
+  display: grid;
+  gap: 10rpx;
+  margin-top: 18rpx;
+  color: #5f432b;
+  font-size: 25rpx;
+  line-height: 1.5;
+}
+
 .list-head {
   margin-top: 8rpx;
   margin-bottom: 14rpx;
@@ -119,6 +132,40 @@
   align-items: flex-start;
 }
 
+.full-button {
+  margin-top: 22rpx;
+  width: 100%;
+}
+
+.muster-panel {
+  background: #fff9ee;
+}
+
+.countdown-box {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 20rpx;
+  margin-top: 24rpx;
+  padding: 24rpx;
+  border: 1rpx solid rgba(126, 70, 26, 0.22);
+  border-radius: 8rpx;
+  background: #fff1d2;
+}
+
+.countdown-label {
+  color: #765c42;
+  font-size: 24rpx;
+  font-weight: 700;
+}
+
+.countdown-number {
+  color: #7a3b16;
+  font-size: 54rpx;
+  font-weight: 900;
+  line-height: 1;
+}
+
 .state-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -142,6 +189,16 @@
   color: #28190f;
   font-size: 38rpx;
   font-weight: 800;
+}
+
+.one-shot-note {
+  margin-top: 18rpx;
+  padding: 16rpx 18rpx;
+  border-radius: 8rpx;
+  background: #f7dfc0;
+  color: #69351b;
+  font-size: 24rpx;
+  line-height: 1.55;
 }
 
 .subhead {
@@ -174,19 +231,4 @@
   border-bottom: 0;
   border-radius: 8rpx;
   background: #fff1d2;
-}
-
-.room-block {
-  padding: 18rpx 0;
-  border-top: 1rpx solid rgba(72, 45, 25, 0.12);
-}
-
-.room-block:first-of-type {
-  border-top: 0;
-}
-
-.room-title {
-  color: #382316;
-  font-size: 26rpx;
-  font-weight: 700;
 }

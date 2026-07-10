@@ -231,6 +231,19 @@ function isMissingMatchSystem(error: LooseError) {
   return error?.code === "42P01" || error?.code === "42883";
 }
 
+function isMissingMatchMusterSystem(error: LooseError) {
+  return (
+    error?.code === "42P01" ||
+    error?.code === "42883" ||
+    (error?.code === "42703" && (
+      error.message?.includes("is_one_shot") ||
+      error.message?.includes("muster_id") ||
+      error.message?.includes("match_musters") ||
+      error.message?.includes("match_muster_participants")
+    ))
+  );
+}
+
 function getEarnedDraws(ascensionScore: unknown) {
   const score = cleanScore(ascensionScore);
   return Math.max(0, Math.floor((score - defaultAscensionScore) / drawScoreStep));
@@ -694,6 +707,90 @@ async function getMatchState(
       queue: queue || [],
       queuedCount: queue?.length || 0,
       rooms: rooms || [],
+    },
+  };
+}
+
+async function getMatchMusterState(
+  supabase: ReturnType<typeof createClient>,
+  musterId: string,
+  identity: InviteIdentity,
+) {
+  const readMuster = () => supabase
+    .from("match_musters")
+    .select("id, dungeon_id, creator_name, target_player_count, status, opens_at, closes_at, room_id, created_at, drawn_at")
+    .eq("id", musterId)
+    .single();
+
+  let { data: muster, error: musterError } = await readMuster();
+  if (musterError) return { error: musterError };
+
+  const closesAt = new Date(String(muster.closes_at || "")).getTime();
+  if (muster.status === "open" && Number.isFinite(closesAt) && closesAt <= Date.now()) {
+    const { error: drawError } = await supabase.rpc("draw_match_muster", {
+      p_muster_id: musterId,
+    });
+    if (drawError && !String(drawError.message || "").includes("召集尚未截止")) return { error: drawError };
+
+    const reread = await readMuster();
+    muster = reread.data;
+    musterError = reread.error;
+    if (musterError) return { error: musterError };
+  }
+
+  const dungeonId = String(muster.dungeon_id || "");
+  const { data: dungeon, error: dungeonError } = await supabase
+    .from("dungeons")
+    .select("id, name, creator, difficulty, type, participant_count, run_count, clear_rate, avg_rating, rating_count, comment_count, is_one_shot")
+    .eq("id", dungeonId)
+    .single();
+  if (dungeonError) return { error: dungeonError };
+
+  const { data: participants, error: participantError } = await supabase
+    .from("match_muster_participants")
+    .select("id, player_name, status, joined_at, selected_at")
+    .eq("muster_id", musterId)
+    .order("joined_at", { ascending: true })
+    .order("id", { ascending: true });
+  if (participantError) return { error: participantError };
+
+  let room = null;
+  if (muster.room_id) {
+    const { data: roomData, error: roomError } = await supabase
+      .from("match_rooms")
+      .select("id, dungeon_id, target_player_count, room_status, created_at, finished_at")
+      .eq("id", String(muster.room_id))
+      .maybeSingle();
+    if (roomError) return { error: roomError };
+
+    const { data: players, error: playerError } = await supabase
+      .from("match_room_players")
+      .select("id, player_name, finish_status, joined_at")
+      .eq("room_id", String(muster.room_id))
+      .order("joined_at", { ascending: true })
+      .order("id", { ascending: true });
+    if (playerError) return { error: playerError };
+
+    room = roomData ? { ...roomData, players: players || [] } : null;
+  }
+
+  const participantRows = participants || [];
+  const joinedCount = participantRows.filter((player) => player.status === "joined").length;
+  const selectedCount = participantRows.filter((player) => player.status === "selected").length;
+  const myName = identity.displayName.trim().toLowerCase();
+  const myParticipant = participantRows.find((player) => String(player.player_name || "").trim().toLowerCase() === myName);
+  const secondsRemaining = Math.max(0, Math.ceil((new Date(String(muster.closes_at || "")).getTime() - Date.now()) / 1000));
+
+  return {
+    data: {
+      muster,
+      dungeon,
+      participants: participantRows,
+      joinedCount,
+      selectedCount,
+      room,
+      myStatus: myParticipant?.status || "none",
+      secondsRemaining,
     },
   };
 }
@@ -1572,9 +1669,10 @@ Deno.serve(async (req) => {
       const limit = Math.max(1, Math.min(Number(payload.limit) || 80, 200));
       const { data: dungeons, error: dungeonError } = await supabase
         .from("dungeons")
-        .select("id, name, creator, difficulty, type, participant_count, run_count, clear_rate, avg_rating, rating_count, comment_count, created_at")
+        .select("id, name, creator, difficulty, type, participant_count, run_count, clear_rate, avg_rating, rating_count, comment_count, created_at, is_one_shot")
         .order("created_at", { ascending: false })
         .limit(limit);
+      if (isMissingMatchMusterSystem(dungeonError)) return json({ error: "请先运行 match_muster_migration.sql" }, 400);
       if (dungeonError) return json({ error: dungeonError.message }, 400);
 
       const dungeonIds = (dungeons || []).map((dungeon) => String(dungeon.id)).filter(Boolean);
@@ -1674,6 +1772,99 @@ Deno.serve(async (req) => {
       return json({ role, name: identity.displayName, data: { result, state: state.data } });
     }
 
+    if (action === "startMatchMuster") {
+      if (!hasRole(role, ["player", "author", "reviewer", "admin"])) return json({ error: "需要入局谕令" }, 403);
+
+      const dungeonId = cleanText(payload.dungeonId, 80);
+      if (!isUuid(dungeonId)) return json({ error: "副本 ID 不正确" }, 400);
+
+      const durationSeconds = Math.max(10, Math.min(Number(payload.durationSeconds) || 60, 3600));
+      const { data: result, error } = await supabase.rpc("start_match_muster", {
+        p_dungeon_id: dungeonId,
+        p_creator_code_hash: identity.codeHash,
+        p_creator_name: identity.displayName,
+        p_duration_seconds: durationSeconds,
+      });
+      if (isMissingMatchMusterSystem(error)) return json({ error: "请先运行 match_muster_migration.sql" }, 400);
+      if (error) return json({ error: error.message }, 400);
+
+      const musterId = cleanText((result as Record<string, unknown> | null)?.musterId, 80);
+      if (!isUuid(musterId)) return json({ error: "召集创建失败" }, 400);
+      const state = await getMatchMusterState(supabase, musterId, identity);
+      if (isMissingMatchMusterSystem(state.error)) return json({ error: "请先运行 match_muster_migration.sql" }, 400);
+      if (state.error) return json({ error: state.error.message }, 400);
+      return json({ role, name: identity.displayName, data: { result, state: state.data } });
+    }
+
+    if (action === "getMatchMuster") {
+      if (!hasRole(role, ["player", "author", "reviewer", "admin"])) return json({ error: "需要入局谕令" }, 403);
+
+      const musterId = cleanText(payload.musterId, 80);
+      if (!isUuid(musterId)) return json({ error: "召集 ID 不正确" }, 400);
+
+      const state = await getMatchMusterState(supabase, musterId, identity);
+      if (isMissingMatchMusterSystem(state.error)) return json({ error: "请先运行 match_muster_migration.sql" }, 400);
+      if (state.error) return json({ error: state.error.message }, 400);
+      return json({ role, name: identity.displayName, data: state.data });
+    }
+
+    if (action === "joinMatchMuster") {
+      if (!hasRole(role, ["player", "author", "reviewer", "admin"])) return json({ error: "需要入局谕令" }, 403);
+
+      const musterId = cleanText(payload.musterId, 80);
+      if (!isUuid(musterId)) return json({ error: "召集 ID 不正确" }, 400);
+
+      const { data: result, error } = await supabase.rpc("join_match_muster", {
+        p_muster_id: musterId,
+        p_player_code_hash: identity.codeHash,
+        p_player_name: identity.displayName,
+      });
+      if (isMissingMatchMusterSystem(error)) return json({ error: "请先运行 match_muster_migration.sql" }, 400);
+      if (error) return json({ error: error.message }, 400);
+
+      const state = await getMatchMusterState(supabase, musterId, identity);
+      if (isMissingMatchMusterSystem(state.error)) return json({ error: "请先运行 match_muster_migration.sql" }, 400);
+      if (state.error) return json({ error: state.error.message }, 400);
+      return json({ role, name: identity.displayName, data: { result, state: state.data } });
+    }
+
+    if (action === "cancelMatchMuster") {
+      if (!hasRole(role, ["player", "author", "reviewer", "admin"])) return json({ error: "需要入局谕令" }, 403);
+
+      const musterId = cleanText(payload.musterId, 80);
+      if (!isUuid(musterId)) return json({ error: "召集 ID 不正确" }, 400);
+
+      const { data: result, error } = await supabase.rpc("cancel_match_muster_join", {
+        p_muster_id: musterId,
+        p_player_code_hash: identity.codeHash,
+      });
+      if (isMissingMatchMusterSystem(error)) return json({ error: "请先运行 match_muster_migration.sql" }, 400);
+      if (error) return json({ error: error.message }, 400);
+
+      const state = await getMatchMusterState(supabase, musterId, identity);
+      if (isMissingMatchMusterSystem(state.error)) return json({ error: "请先运行 match_muster_migration.sql" }, 400);
+      if (state.error) return json({ error: state.error.message }, 400);
+      return json({ role, name: identity.displayName, data: { result, state: state.data } });
+    }
+
+    if (action === "drawMatchMuster") {
+      if (!hasRole(role, ["player", "author", "reviewer", "admin"])) return json({ error: "需要入局谕令" }, 403);
+
+      const musterId = cleanText(payload.musterId, 80);
+      if (!isUuid(musterId)) return json({ error: "召集 ID 不正确" }, 400);
+
+      const { data: result, error } = await supabase.rpc("draw_match_muster", {
+        p_muster_id: musterId,
+      });
+      if (isMissingMatchMusterSystem(error)) return json({ error: "请先运行 match_muster_migration.sql" }, 400);
+      if (error) return json({ error: error.message }, 400);
+
+      const state = await getMatchMusterState(supabase, musterId, identity);
+      if (isMissingMatchMusterSystem(state.error)) return json({ error: "请先运行 match_muster_migration.sql" }, 400);
+      if (state.error) return json({ error: state.error.message }, 400);
+      return json({ role, name: identity.displayName, data: { result, state: state.data } });
+    }
+
     if (action === "submitDungeon") {
       if (!hasRole(role, ["author", "admin"])) return json({ error: "需要作者邀请码" }, 403);
 
@@ -1685,6 +1876,7 @@ Deno.serve(async (req) => {
       const type = cleanText(payload.type, 20) || "综合";
       const participantCount = Number(payload.participantCount ?? payload.participant_count);
       const runCount = Number(payload.runCount ?? payload.run_count ?? 1);
+      const isOneShot = payload.isOneShot === true || payload.is_one_shot === true || cleanText(payload.dungeonMode, 20) === "one_shot";
       if (!name || !creator || !description) return json({ error: "请填写完整副本信息" }, 400);
       if (
         !Number.isInteger(participantCount) ||
@@ -1706,6 +1898,7 @@ Deno.serve(async (req) => {
           pinned_note: pinnedNote,
           participant_count: participantCount,
           run_count: runCount,
+          is_one_shot: isOneShot,
           clear_count: 0,
           clear_rate: 0,
           invite_code_hash: identity.codeHash,

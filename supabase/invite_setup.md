@@ -18,6 +18,7 @@ supabase/score_system_migration.sql
 supabase/talent_pool_migration.sql
 supabase/talent_inventory_migration.sql
 supabase/match_system_migration.sql
+supabase/match_muster_migration.sql
 ```
 
 说明：

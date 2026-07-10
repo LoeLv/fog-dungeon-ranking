@@ -7,10 +7,11 @@ Page({
     loading: false
   },
 
-  onLoad: function() {
+  onLoad: function(options) {
+    this.pendingMusterId = options && options.musterId ? String(options.musterId) : "";
     const current = session.getSession();
     if (current && current.code && current.role) {
-      wx.redirectTo({ url: "/pages/match/match" });
+      wx.redirectTo({ url: this.pendingMusterId ? "/pages/match/match?musterId=" + this.pendingMusterId : "/pages/match/match" });
     }
   },
 
@@ -35,7 +36,7 @@ Page({
           savedAt: Date.now()
         };
         session.setSession(nextSession);
-        wx.redirectTo({ url: "/pages/match/match" });
+        wx.redirectTo({ url: this.pendingMusterId ? "/pages/match/match?musterId=" + this.pendingMusterId : "/pages/match/match" });
       })
       .catch(function(error) {
         wx.showToast({ title: error.message || "验证失败", icon: "none" });

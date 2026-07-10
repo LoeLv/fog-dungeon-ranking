@@ -4260,6 +4260,7 @@
                     <div class="form-group"><label>固定人数 *</label><input type="number" id="participantCount" min="1" max="99" value="6" required></div>
                     <div class="form-group"><label>当前局数 *</label><input type="number" id="runCount" min="1" max="999" value="1" required></div>
                 </div>
+                <label class="profile-checkline" style="margin:10px 0 16px;"><input type="checkbox" id="isOneShotDungeon"> 一次副本：被抽中参与后不可再次报名该副本</label>
                 <div class="form-group"><label>难度标签</label><select id="dungeonDifficulty"><option value="新手">新手本 —— 第一次入场也能跑</option><option value="低">低难 —— 轻量机制与短流程</option><option value="中" selected>中难 —— 标准挑战强度</option><option value="高">高难 —— 需要配合或硬核机制</option></select></div>
                 <div class="form-group"><label>试炼简介 *</label><textarea id="dungeonDesc" placeholder="【写下这场试炼的谶语，供入局信徒见证】" required maxlength="1500"></textarea></div>
                 <div class="form-group"><label>构筑者置顶神谕（可选）</label><textarea id="pinnedNoteInput" placeholder="可以写开本时间、注意事项、车卡要求、构筑者补充神谕..." maxlength="800"></textarea></div>
@@ -6596,7 +6597,7 @@
             if (USE_LOCAL_FALLBACK) return getLocalData('dungeons', []);
             const { data, error } = await supabaseClient
                 .from('dungeons')
-                .select('id,name,creator,difficulty,type,description,participant_count,run_count,clear_count,clear_rate,invite_name,avg_rating,rating_count,comment_count,created_at')
+                .select('id,name,creator,difficulty,type,description,participant_count,run_count,clear_count,clear_rate,invite_name,avg_rating,rating_count,comment_count,created_at,is_one_shot')
                 .order('avg_rating', { ascending: false })
                 .order('created_at', { ascending: false });
             if (error) { showToast('❌ 获取数据失败'); return []; }
@@ -7997,13 +7998,14 @@
             const runCount=Number(document.getElementById('runCount').value);
             const desc=document.getElementById('dungeonDesc').value.trim();
             const pinnedNote=document.getElementById('pinnedNoteInput')?.value.trim() || '';
+            const isOneShot=!!document.getElementById('isOneShotDungeon')?.checked;
             if(!name||!creator||!desc){showToast('请填写所有必填项');return;}
             if(!Number.isInteger(participantCount)||participantCount<1||participantCount>99){showToast('请检查固定人数');return;}
             if(!Number.isInteger(runCount)||runCount<1||runCount>999){showToast('请检查当前局数');return;}
             const btn=e.target.querySelector('button[type="submit"]');
             btn.disabled=true;
             btn.textContent='献祭中...';
-            const {error}=await addDungeon({name,creator,difficulty,type,participantCount,runCount,description:desc,pinnedNote});
+            const {error}=await addDungeon({name,creator,difficulty,type,participantCount,runCount,description:desc,pinnedNote,isOneShot});
             btn.disabled=false;
             btn.textContent='献祭试炼至圣殿';
             if(error){showToast(`❌ ${error.message || '失败'}`);return;}

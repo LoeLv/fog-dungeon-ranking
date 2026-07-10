@@ -3,7 +3,7 @@
     <view>
       <text class="kicker">TRIAL MUSTER</text>
       <text class="title">试炼召集厅</text>
-      <text class="muted">满员自动成房；队列状态与网站同步。</text>
+      <text class="muted">发起者选择副本并分享到群；1 分钟报名结束后随机抽选。</text>
     </view>
     <button class="mini-action" bindtap="logout">退出</button>
   </view>
@@ -21,14 +21,24 @@
   <view wx:elif="{{errorMessage}}" class="panel">
     <text class="muted">{{errorMessage}}</text>
     <view class="button-row">
-      <button class="btn btn-primary" bindtap="loadDungeons">重试</button>
+      <button class="btn btn-primary" bindtap="refreshCurrent">重试</button>
       <button class="btn btn-ghost" bindtap="logout">重新验证</button>
     </view>
   </view>
 
-  <view wx:else>
+  <view wx:elif="{{!activeMusterId}}">
+    <view class="section panel flow-panel">
+      <text class="panel-title">发起流程</text>
+      <view class="flow-list">
+        <text>1. 选择要开的试炼</text>
+        <text>2. 发起 1 分钟召集</text>
+        <text>3. 分享到微信群</text>
+        <text>4. 到点随机抽出固定人数</text>
+      </view>
+    </view>
+
     <view class="section row list-head">
-      <text class="panel-title">可召集试炼</text>
+      <text class="panel-title">选择要发起的试炼</text>
       <button class="mini-action" loading="{{refreshing}}" bindtap="loadDungeons">刷新</button>
     </view>
 
@@ -44,8 +54,8 @@
           <text class="dungeon-name">{{item.name}}</text>
           <text class="dungeon-meta">{{item.typeLabel}} · {{item.difficultyLabel}}</text>
           <view class="metric-row">
-            <text class="metric">队列 {{item.queuedCount}}/{{item.targetCount}}</text>
-            <text class="metric">房间 {{item.runningRoomCount}}</text>
+            <text class="metric">{{item.targetCount}} 人</text>
+            <text class="metric">{{item.isOneShot ? "一次副本" : "常规副本"}}</text>
           </view>
         </view>
       </view>
@@ -53,60 +63,104 @@
 
     <view wx:if="{{!dungeons.length}}" class="empty">暂无可召集的试炼。</view>
 
-    <view wx:if="{{selectedState}}" class="section panel state-panel">
+    <view wx:if="{{selectedDungeon}}" class="section panel state-panel">
       <view class="row state-head">
         <view>
-          <text class="panel-title">{{selectedState.dungeon.name}}</text>
-          <text class="muted">{{selectedState.dungeon.typeLabel}} · {{selectedState.dungeon.difficultyLabel}} · {{selectedState.dungeon.creator}}</text>
+          <text class="panel-title">{{selectedDungeon.name}}</text>
+          <text class="muted">{{selectedDungeon.typeLabel}} · {{selectedDungeon.difficultyLabel}} · {{selectedDungeon.creator}}</text>
         </view>
-        <view class="pill">{{myStatus}}</view>
+        <view class="pill">{{selectedDungeon.targetCount}} 人</view>
+      </view>
+      <view class="one-shot-note" wx:if="{{selectedDungeon.isOneShot}}">一次副本：被抽中参与过的玩家不能再次报名该副本。</view>
+      <button class="btn btn-primary full-button" loading="{{actionLoading}}" bindtap="startMuster">发起 1 分钟召集</button>
+    </view>
+  </view>
+
+  <view wx:else>
+    <view class="section panel muster-panel">
+      <view class="row state-head">
+        <view>
+          <text class="panel-title">{{activeDungeon.name}}</text>
+          <text class="muted">{{activeDungeon.typeLabel}} · {{activeDungeon.difficultyLabel}} · {{activeDungeon.creator}}</text>
+        </view>
+        <view class="pill">{{musterStatusLabel}}</view>
+      </view>
+
+      <view class="countdown-box">
+        <text class="countdown-label">{{activeMuster.status === "open" ? "报名倒计时" : "抽选结果"}}</text>
+        <text class="countdown-number">{{activeMuster.status === "open" ? countdownText : selectedCount + "/" + activeDungeon.targetCount}}</text>
       </view>
 
       <view class="state-grid">
         <view class="state-tile">
-          <text>排队人数</text>
-          <text class="state-number">{{selectedState.queuedCount}}/{{selectedState.dungeon.targetCount}}</text>
+          <text>报名人数</text>
+          <text class="state-number">{{joinedCount}}</text>
         </view>
         <view class="state-tile">
-          <text>运行房间</text>
-          <text class="state-number">{{selectedState.rooms.length}}</text>
+          <text>固定人数</text>
+          <text class="state-number">{{activeDungeon.targetCount}}</text>
         </view>
+      </view>
+
+      <view class="one-shot-note" wx:if="{{activeDungeon.isOneShot}}">一次副本限制已启用：已被抽中过的人不能再次报名。</view>
+
+      <view class="button-row">
+        <button wx:if="{{canJoin}}" class="btn btn-primary" loading="{{actionLoading}}" bindtap="joinMuster">参与报名</button>
+        <button wx:if="{{canCancel}}" class="btn btn-danger" loading="{{actionLoading}}" bindtap="cancelMuster">取消报名</button>
+        <button wx:if="{{canShare}}" class="btn btn-ghost" open-type="share">分享到群</button>
       </view>
 
       <view class="button-row">
-        <button wx:if="{{!currentInRoom}}" class="btn btn-primary" loading="{{actionLoading}}" bindtap="joinQueue">{{currentQueued ? "更新排队" : "加入排队"}}</button>
-        <button wx:if="{{currentQueued}}" class="btn btn-danger" loading="{{actionLoading}}" bindtap="cancelQueue">取消排队</button>
-        <button class="btn btn-ghost" loading="{{stateLoading}}" bindtap="refreshState">刷新状态</button>
+        <button class="btn btn-ghost" loading="{{stateLoading}}" bindtap="refreshCurrent">刷新状态</button>
+        <button wx:if="{{canDraw}}" class="btn btn-primary" loading="{{actionLoading}}" bindtap="drawMuster">立即抽选</button>
+        <button class="btn btn-ghost" bindtap="backToCreate">发起新召集</button>
       </view>
     </view>
 
-    <view wx:if="{{selectedState}}" class="section panel">
+    <view class="section panel">
       <view class="row subhead">
-        <text class="panel-title">当前队列</text>
-        <text class="muted">{{selectedState.queuedCount}} 人</text>
+        <text class="panel-title">我的状态</text>
+        <text class="pill">{{myStatusLabel}}</text>
       </view>
-      <view wx:if="{{!selectedState.queue.length}}" class="empty queue-empty">当前无人排队。</view>
-      <view wx:for="{{selectedState.queue}}" wx:key="id" class="player-row {{item.isMe ? 'me' : ''}}">
+      <text class="muted" wx:if="{{myStatus === 'none'}}">你还没有参与这场召集。</text>
+      <text class="muted" wx:elif="{{myStatus === 'joined'}}">你已进入本场报名池，等待倒计时结束随机抽选。</text>
+      <text class="muted" wx:elif="{{myStatus === 'selected'}}">你已入选本场试炼。</text>
+      <text class="muted" wx:elif="{{myStatus === 'not_selected'}}">这次没有被抽中，可以等待下一场召集。</text>
+      <text class="muted" wx:else>你已取消这场报名。</text>
+    </view>
+
+    <view class="section panel">
+      <view class="row subhead">
+        <text class="panel-title">当前报名池</text>
+        <text class="muted">{{joinedCount}} 人</text>
+      </view>
+      <view wx:if="{{!joinedParticipants.length}}" class="empty queue-empty">当前无人报名。</view>
+      <view wx:for="{{joinedParticipants}}" wx:key="id" class="player-row">
         <text>{{index + 1}}. {{item.player_name}}</text>
-        <text class="muted">{{item.timeLabel}}{{item.isMe ? " · 你" : ""}}</text>
+        <text class="muted">{{item.timeLabel}}</text>
       </view>
     </view>
 
-    <view wx:if="{{selectedState}}" class="section panel">
+    <view wx:if="{{activeMuster.status === 'drawn'}}" class="section panel">
       <view class="row subhead">
-        <text class="panel-title">运行房间</text>
-        <text class="muted">{{selectedState.rooms.length}} 间</text>
+        <text class="panel-title">入选玩家</text>
+        <text class="muted">{{selectedCount}}/{{activeDungeon.targetCount}}</text>
       </view>
-      <view wx:if="{{!selectedState.rooms.length}}" class="empty queue-empty">暂无已成房队伍。</view>
-      <view wx:for="{{selectedState.rooms}}" wx:key="id" class="room-block">
-        <view class="row">
-          <text class="room-title">房间 {{index + 1}}</text>
-          <text class="muted">{{item.players.length}}/{{item.target_player_count}} 人</text>
-        </view>
-        <view wx:for="{{item.players}}" wx:key="id" wx:for-item="player" class="player-row {{player.isMe ? 'me' : ''}}">
-          <text>{{player.player_name}}</text>
-          <text class="muted">{{player.finish_status ? "已完成" : "进行中"}}{{player.isMe ? " · 你" : ""}}</text>
-        </view>
+      <view wx:if="{{!selectedPlayers.length}}" class="empty queue-empty">本场没有可抽选玩家。</view>
+      <view wx:for="{{selectedPlayers}}" wx:key="id" class="player-row me">
+        <text>{{index + 1}}. {{item.player_name}}</text>
+        <text class="muted">入选</text>
+      </view>
+    </view>
+
+    <view wx:if="{{activeMuster.status === 'drawn' && notSelectedPlayers.length}}" class="section panel">
+      <view class="row subhead">
+        <text class="panel-title">未入选</text>
+        <text class="muted">{{notSelectedPlayers.length}} 人</text>
+      </view>
+      <view wx:for="{{notSelectedPlayers}}" wx:key="id" class="player-row">
+        <text>{{item.player_name}}</text>
+        <text class="muted">未入选</text>
       </view>
     </view>
   </view>

@@ -64,11 +64,39 @@ function cancelMatchQueue(inviteCode, dungeonId) {
   return invokeDungeonAction("cancelMatchQueue", inviteCode, { dungeonId: dungeonId });
 }
 
+function startMatchMuster(inviteCode, dungeonId, durationSeconds) {
+  return invokeDungeonAction("startMatchMuster", inviteCode, {
+    dungeonId: dungeonId,
+    durationSeconds: durationSeconds || 60
+  });
+}
+
+function getMatchMuster(inviteCode, musterId) {
+  return invokeDungeonAction("getMatchMuster", inviteCode, { musterId: musterId });
+}
+
+function joinMatchMuster(inviteCode, musterId) {
+  return invokeDungeonAction("joinMatchMuster", inviteCode, { musterId: musterId });
+}
+
+function cancelMatchMuster(inviteCode, musterId) {
+  return invokeDungeonAction("cancelMatchMuster", inviteCode, { musterId: musterId });
+}
+
+function drawMatchMuster(inviteCode, musterId) {
+  return invokeDungeonAction("drawMatchMuster", inviteCode, { musterId: musterId });
+}
+
 module.exports = {
   invokeDungeonAction: invokeDungeonAction,
   verifyInvite: verifyInvite,
   listMatchDungeons: listMatchDungeons,
   getMatchState: getMatchState,
   joinMatchQueue: joinMatchQueue,
-  cancelMatchQueue: cancelMatchQueue
+  cancelMatchQueue: cancelMatchQueue,
+  startMatchMuster: startMatchMuster,
+  getMatchMuster: getMatchMuster,
+  joinMatchMuster: joinMatchMuster,
+  cancelMatchMuster: cancelMatchMuster,
+  drawMatchMuster: drawMatchMuster
 };
