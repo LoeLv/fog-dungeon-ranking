@@ -1,0 +1,25 @@
+<view class="page login-page">
+  <view class="section login-hero">
+    <text class="kicker">TRIAL MUSTER</text>
+    <text class="title">试炼召集入局</text>
+    <text class="muted">输入你的个人邀请码，验证后即可查看副本队列并加入召集。</text>
+  </view>
+
+  <view class="panel">
+    <text class="field-label">入局邀请码</text>
+    <input
+      class="input"
+      password="{{true}}"
+      placeholder="粘贴个人邀请码"
+      value="{{inviteCode}}"
+      bindinput="onCodeInput"
+      confirm-type="done"
+      bindconfirm="submitInvite"
+    />
+    <button class="btn btn-primary login-button" loading="{{loading}}" bindtap="submitInvite">验证并进入</button>
+  </view>
+
+  <view class="login-note">
+    <text>邀请码只保存在本机，用于向现有 Edge Function 发起身份校验。</text>
+  </view>
+</view>

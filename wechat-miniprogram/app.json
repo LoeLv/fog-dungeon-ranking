@@ -1,0 +1,15 @@
+{
+  "pages": [
+    "pages/match/match",
+    "pages/login/login"
+  ],
+  "window": {
+    "navigationBarTitleText": "试炼召集",
+    "navigationBarBackgroundColor": "#20170f",
+    "navigationBarTextStyle": "white",
+    "backgroundColor": "#f7f1e6",
+    "backgroundTextStyle": "dark"
+  },
+  "style": "v2",
+  "sitemapLocation": "sitemap.json"
+}

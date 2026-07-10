@@ -1,0 +1,113 @@
+<view class="page match-page">
+  <view class="section hero">
+    <view>
+      <text class="kicker">TRIAL MUSTER</text>
+      <text class="title">试炼召集厅</text>
+      <text class="muted">满员自动成房；队列状态与网站同步。</text>
+    </view>
+    <button class="mini-action" bindtap="logout">退出</button>
+  </view>
+
+  <view class="section panel identity-panel">
+    <view>
+      <text class="muted">当前身份</text>
+      <text class="identity-name">{{sessionName}}</text>
+    </view>
+    <view class="pill">{{sessionRoleLabel}}</view>
+  </view>
+
+  <view wx:if="{{loading}}" class="empty">正在监听试炼召集...</view>
+
+  <view wx:elif="{{errorMessage}}" class="panel">
+    <text class="muted">{{errorMessage}}</text>
+    <view class="button-row">
+      <button class="btn btn-primary" bindtap="loadDungeons">重试</button>
+      <button class="btn btn-ghost" bindtap="logout">重新验证</button>
+    </view>
+  </view>
+
+  <view wx:else>
+    <view class="section row list-head">
+      <text class="panel-title">可召集试炼</text>
+      <button class="mini-action" loading="{{refreshing}}" bindtap="loadDungeons">刷新</button>
+    </view>
+
+    <scroll-view class="dungeon-scroll section" scroll-x enhanced show-scrollbar="{{false}}">
+      <view class="dungeon-row">
+        <view
+          wx:for="{{dungeons}}"
+          wx:key="id"
+          class="dungeon-card {{item.id === selectedDungeonId ? 'active' : ''}}"
+          data-id="{{item.id}}"
+          bindtap="selectDungeon"
+        >
+          <text class="dungeon-name">{{item.name}}</text>
+          <text class="dungeon-meta">{{item.typeLabel}} · {{item.difficultyLabel}}</text>
+          <view class="metric-row">
+            <text class="metric">队列 {{item.queuedCount}}/{{item.targetCount}}</text>
+            <text class="metric">房间 {{item.runningRoomCount}}</text>
+          </view>
+        </view>
+      </view>
+    </scroll-view>
+
+    <view wx:if="{{!dungeons.length}}" class="empty">暂无可召集的试炼。</view>
+
+    <view wx:if="{{selectedState}}" class="section panel state-panel">
+      <view class="row state-head">
+        <view>
+          <text class="panel-title">{{selectedState.dungeon.name}}</text>
+          <text class="muted">{{selectedState.dungeon.typeLabel}} · {{selectedState.dungeon.difficultyLabel}} · {{selectedState.dungeon.creator}}</text>
+        </view>
+        <view class="pill">{{myStatus}}</view>
+      </view>
+
+      <view class="state-grid">
+        <view class="state-tile">
+          <text>排队人数</text>
+          <text class="state-number">{{selectedState.queuedCount}}/{{selectedState.dungeon.targetCount}}</text>
+        </view>
+        <view class="state-tile">
+          <text>运行房间</text>
+          <text class="state-number">{{selectedState.rooms.length}}</text>
+        </view>
+      </view>
+
+      <view class="button-row">
+        <button wx:if="{{!currentInRoom}}" class="btn btn-primary" loading="{{actionLoading}}" bindtap="joinQueue">{{currentQueued ? "更新排队" : "加入排队"}}</button>
+        <button wx:if="{{currentQueued}}" class="btn btn-danger" loading="{{actionLoading}}" bindtap="cancelQueue">取消排队</button>
+        <button class="btn btn-ghost" loading="{{stateLoading}}" bindtap="refreshState">刷新状态</button>
+      </view>
+    </view>
+
+    <view wx:if="{{selectedState}}" class="section panel">
+      <view class="row subhead">
+        <text class="panel-title">当前队列</text>
+        <text class="muted">{{selectedState.queuedCount}} 人</text>
+      </view>
+      <view wx:if="{{!selectedState.queue.length}}" class="empty queue-empty">当前无人排队。</view>
+      <view wx:for="{{selectedState.queue}}" wx:key="id" class="player-row {{item.isMe ? 'me' : ''}}">
+        <text>{{index + 1}}. {{item.player_name}}</text>
+        <text class="muted">{{item.timeLabel}}{{item.isMe ? " · 你" : ""}}</text>
+      </view>
+    </view>
+
+    <view wx:if="{{selectedState}}" class="section panel">
+      <view class="row subhead">
+        <text class="panel-title">运行房间</text>
+        <text class="muted">{{selectedState.rooms.length}} 间</text>
+      </view>
+      <view wx:if="{{!selectedState.rooms.length}}" class="empty queue-empty">暂无已成房队伍。</view>
+      <view wx:for="{{selectedState.rooms}}" wx:key="id" class="room-block">
+        <view class="row">
+          <text class="room-title">房间 {{index + 1}}</text>
+          <text class="muted">{{item.players.length}}/{{item.target_player_count}} 人</text>
+        </view>
+        <view wx:for="{{item.players}}" wx:key="id" wx:for-item="player" class="player-row {{player.isMe ? 'me' : ''}}">
+          <text>{{player.player_name}}</text>
+          <text class="muted">{{player.finish_status ? "已完成" : "进行中"}}{{player.isMe ? " · 你" : ""}}</text>
+        </view>
+      </view>
+    </view>
+  </view>
+</view>

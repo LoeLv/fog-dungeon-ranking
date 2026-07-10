@@ -1,0 +1,192 @@
+.hero {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 20rpx;
+  padding: 18rpx 2rpx 6rpx;
+}
+
+.hero .title {
+  margin-bottom: 8rpx;
+}
+
+.mini-action {
+  min-width: 112rpx;
+  height: 58rpx;
+  padding: 0 18rpx;
+  border: 1rpx solid rgba(64, 41, 22, 0.22);
+  border-radius: 8rpx;
+  background: #fff9ef;
+  color: #4b3020;
+  font-size: 24rpx;
+  line-height: 56rpx;
+}
+
+.identity-panel {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18rpx;
+}
+
+.identity-name {
+  display: block;
+  margin-top: 4rpx;
+  color: #2c1a10;
+  font-size: 32rpx;
+  font-weight: 700;
+}
+
+.panel-title {
+  display: block;
+  color: #2c1a10;
+  font-size: 30rpx;
+  font-weight: 700;
+  line-height: 1.35;
+}
+
+.list-head {
+  margin-top: 8rpx;
+  margin-bottom: 14rpx;
+}
+
+.dungeon-scroll {
+  width: 100%;
+  white-space: nowrap;
+}
+
+.dungeon-row {
+  display: flex;
+  gap: 18rpx;
+  padding: 2rpx 2rpx 12rpx;
+}
+
+.dungeon-card {
+  display: inline-flex;
+  flex-direction: column;
+  justify-content: space-between;
+  width: 520rpx;
+  min-height: 190rpx;
+  padding: 22rpx;
+  border: 1rpx solid rgba(72, 45, 25, 0.18);
+  border-radius: 8rpx;
+  background: #fffaf0;
+  vertical-align: top;
+}
+
+.dungeon-card.active {
+  border-color: #8c4b1e;
+  background: #fff4dc;
+  box-shadow: inset 0 0 0 2rpx rgba(140, 75, 30, 0.16);
+}
+
+.dungeon-name {
+  display: block;
+  color: #2c1a10;
+  font-size: 30rpx;
+  font-weight: 700;
+  line-height: 1.35;
+  white-space: normal;
+}
+
+.dungeon-meta {
+  display: block;
+  margin-top: 8rpx;
+  color: #755f4d;
+  font-size: 23rpx;
+  line-height: 1.4;
+  white-space: normal;
+}
+
+.metric-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10rpx;
+  margin-top: 18rpx;
+}
+
+.metric {
+  min-height: 42rpx;
+  padding: 0 14rpx;
+  border-radius: 999rpx;
+  background: rgba(88, 56, 29, 0.09);
+  color: #5c3b22;
+  font-size: 22rpx;
+  line-height: 42rpx;
+}
+
+.state-head {
+  align-items: flex-start;
+}
+
+.state-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16rpx;
+  margin-top: 22rpx;
+}
+
+.state-tile {
+  min-height: 120rpx;
+  padding: 18rpx;
+  border: 1rpx solid rgba(72, 45, 25, 0.14);
+  border-radius: 8rpx;
+  background: #fff7e7;
+  color: #755f4d;
+  font-size: 23rpx;
+}
+
+.state-number {
+  display: block;
+  margin-top: 8rpx;
+  color: #28190f;
+  font-size: 38rpx;
+  font-weight: 800;
+}
+
+.subhead {
+  margin-bottom: 16rpx;
+}
+
+.queue-empty {
+  margin-top: 8rpx;
+}
+
+.player-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16rpx;
+  min-height: 68rpx;
+  padding: 14rpx 0;
+  border-bottom: 1rpx solid rgba(72, 45, 25, 0.1);
+  color: #2b1c12;
+  font-size: 26rpx;
+}
+
+.player-row:last-child {
+  border-bottom: 0;
+}
+
+.player-row.me {
+  padding-left: 14rpx;
+  padding-right: 14rpx;
+  border-bottom: 0;
+  border-radius: 8rpx;
+  background: #fff1d2;
+}
+
+.room-block {
+  padding: 18rpx 0;
+  border-top: 1rpx solid rgba(72, 45, 25, 0.12);
+}
+
+.room-block:first-of-type {
+  border-top: 0;
+}
+
+.room-title {
+  color: #382316;
+  font-size: 26rpx;
+  font-weight: 700;
+}
