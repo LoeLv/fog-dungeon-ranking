@@ -4044,7 +4044,6 @@
         <div class="header-actions">
             <button type="button" class="role-badge" id="roleBadge" onclick="openProfilePage()">旁观者只读</button>
             <button class="btn btn-outline" onclick="openLeaderboardPage()">🏛 觐见榜单</button>
-            <button class="btn btn-outline" onclick="openMatchPage()">🧭 试炼召集</button>
             <button class="btn btn-outline" id="scoreDeskButton" onclick="openScorePage()" style="display:none;">⚖ 分数结算</button>
             <button class="btn btn-outline" id="inviteButton" onclick="openInviteModal()">🎲 同契召引</button>
             <button class="btn btn-primary btn-folly" id="submitEntryButton" onclick="openSubmitModal()">🎭 构筑愚戏</button>
@@ -4828,7 +4827,10 @@
                 roleBadge.title = role ? '打开个人档案' : '验入局谕令后查看个人档案';
             }
             if (inviteButton) inviteButton.textContent = '🎲 同契召引';
-            if (scoreButton) scoreButton.style.display = canSettleScores() ? '' : 'none';
+            if (scoreButton) {
+                scoreButton.style.display = canSettleScores() ? '' : 'none';
+                scoreButton.title = canSettleScores() ? '审核员分数结算工作台' : '仅审核员可见';
+            }
             if (submitButton) {
                 submitButton.textContent = '🎭 构筑愚戏';
                 submitButton.title = canSubmit() ? '构筑愚戏' : '需要构筑者谕令';
@@ -7272,7 +7274,6 @@
                         <span class="trial-data-pill">归档：<strong>${escapeHtml(formatTrialArchive(d))}</strong></span>
                         <span class="trial-data-pill">通关留存率：<strong>${formatClearRate(d)}</strong></span>
                         <span class="trial-data-pill">证言条数：<strong>${testimonyCount}</strong></span>
-                        <button class="btn btn-outline btn-xs match-card-button" onclick='event.stopPropagation(); openMatchPage(${jsString(d.id)})'>加入召集</button>
                     </div>
                     ${renderTrialOracle(d, godClass)}
                 </div>`;
@@ -7556,7 +7557,6 @@
                         <span class="trial-data-pill">归档：${escapeHtml(formatTrialArchive(d))}</span>
                         <span class="trial-data-pill">通关留存率：${formatClearRate(d)}</span>
                         <span class="trial-data-pill">证言条数：${activeCommentCount}</span>
-                        <button class="btn btn-outline btn-xs" onclick='openMatchPage(${jsString(id)})'>加入召集</button>
                         ${canUseRole(['author','admin']) ? `<button class="btn btn-outline btn-xs" onclick="advanceRunUI('${escapeHtml(id)}')">重掷下一局</button>` : ''}
                         ${isAdmin() ? `<button class="btn btn-danger btn-xs" onclick="deleteDungeon('${escapeHtml(id)}')">封存试炼</button>` : ''}
                     </div>
