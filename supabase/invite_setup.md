@@ -17,6 +17,7 @@ supabase/player_profiles_migration.sql
 supabase/score_system_migration.sql
 supabase/talent_pool_migration.sql
 supabase/talent_inventory_migration.sql
+supabase/match_system_migration.sql
 ```
 
 说明：
@@ -27,6 +28,7 @@ supabase/talent_inventory_migration.sql
 - `score_system_migration.sql`：审核员、分数结算、补分、撤销、结算信封。
 - `talent_pool_migration.sql`：天赋池、抽取记录、碎片兑换。
 - `talent_inventory_migration.sql`：8 格天赋仓库、3 个携带槽、溢出取舍。
+- `match_system_migration.sql`：试炼匹配排队、自动成房、房间成员记录，供网站和微信小程序共用。
 
 不要在正式数据上执行 `second_beta_reset.sql`，除非你明确要重置第二轮测试数据。
 

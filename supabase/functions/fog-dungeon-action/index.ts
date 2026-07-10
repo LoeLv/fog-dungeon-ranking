@@ -227,6 +227,10 @@ function isMissingTalentTable(error: LooseError) {
   return error?.code === "42P01";
 }
 
+function isMissingMatchSystem(error: LooseError) {
+  return error?.code === "42P01" || error?.code === "42883";
+}
+
 function getEarnedDraws(ascensionScore: unknown) {
   const score = cleanScore(ascensionScore);
   return Math.max(0, Math.floor((score - defaultAscensionScore) / drawScoreStep));
@@ -640,6 +644,58 @@ async function recalculateClearStats(
     .single();
 
   return { data, error };
+}
+
+async function getMatchState(
+  supabase: ReturnType<typeof createClient>,
+  dungeonId: string,
+) {
+  const { data: dungeon, error: dungeonError } = await supabase
+    .from("dungeons")
+    .select("id, name, creator, difficulty, type, participant_count, run_count, clear_rate, avg_rating, rating_count")
+    .eq("id", dungeonId)
+    .single();
+  if (dungeonError) return { error: dungeonError };
+
+  const { data: queue, error: queueError } = await supabase
+    .from("match_queue")
+    .select("id, player_name, created_at")
+    .eq("dungeon_id", dungeonId)
+    .eq("status", "queued")
+    .order("created_at", { ascending: true })
+    .order("id", { ascending: true });
+  if (queueError) return { error: queueError };
+
+  const { data: rooms, error: roomsError } = await supabase
+    .from("match_rooms")
+    .select(`
+      id,
+      dungeon_id,
+      target_player_count,
+      room_status,
+      created_at,
+      finished_at,
+      match_room_players (
+        id,
+        player_name,
+        finish_status,
+        joined_at
+      )
+    `)
+    .eq("dungeon_id", dungeonId)
+    .eq("room_status", "running")
+    .order("created_at", { ascending: false })
+    .limit(10);
+  if (roomsError) return { error: roomsError };
+
+  return {
+    data: {
+      dungeon,
+      queue: queue || [],
+      queuedCount: queue?.length || 0,
+      rooms: rooms || [],
+    },
+  };
 }
 
 async function commitScoreSettlement(
@@ -1508,6 +1564,114 @@ Deno.serve(async (req) => {
       const state = await buildTalentState(supabase, identity);
       if (state.error) return json({ error: state.error.message }, 400);
       return json({ role, name: identity.displayName, data: { state: state.data } });
+    }
+
+    if (action === "listMatchDungeons") {
+      if (!hasRole(role, ["player", "author", "reviewer", "admin"])) return json({ error: "需要入局谕令" }, 403);
+
+      const limit = Math.max(1, Math.min(Number(payload.limit) || 80, 200));
+      const { data: dungeons, error: dungeonError } = await supabase
+        .from("dungeons")
+        .select("id, name, creator, difficulty, type, participant_count, run_count, clear_rate, avg_rating, rating_count, comment_count, created_at")
+        .order("created_at", { ascending: false })
+        .limit(limit);
+      if (dungeonError) return json({ error: dungeonError.message }, 400);
+
+      const dungeonIds = (dungeons || []).map((dungeon) => String(dungeon.id)).filter(Boolean);
+      const queueCountByDungeon = new Map<string, number>();
+      const roomCountByDungeon = new Map<string, number>();
+
+      if (dungeonIds.length) {
+        const { data: queueRows, error: queueError } = await supabase
+          .from("match_queue")
+          .select("dungeon_id")
+          .in("dungeon_id", dungeonIds)
+          .eq("status", "queued");
+        if (isMissingMatchSystem(queueError)) return json({ error: "请先运行 match_system_migration.sql" }, 400);
+        if (queueError) return json({ error: queueError.message }, 400);
+
+        for (const row of queueRows || []) {
+          const dungeonId = String(row.dungeon_id);
+          queueCountByDungeon.set(dungeonId, (queueCountByDungeon.get(dungeonId) || 0) + 1);
+        }
+
+        const { data: roomRows, error: roomError } = await supabase
+          .from("match_rooms")
+          .select("dungeon_id")
+          .in("dungeon_id", dungeonIds)
+          .eq("room_status", "running");
+        if (isMissingMatchSystem(roomError)) return json({ error: "请先运行 match_system_migration.sql" }, 400);
+        if (roomError) return json({ error: roomError.message }, 400);
+
+        for (const row of roomRows || []) {
+          const dungeonId = String(row.dungeon_id);
+          roomCountByDungeon.set(dungeonId, (roomCountByDungeon.get(dungeonId) || 0) + 1);
+        }
+      }
+
+      return json({
+        role,
+        name: identity.displayName,
+        data: (dungeons || []).map((dungeon) => {
+          const dungeonId = String(dungeon.id);
+          return {
+            ...dungeon,
+            queuedCount: queueCountByDungeon.get(dungeonId) || 0,
+            runningRoomCount: roomCountByDungeon.get(dungeonId) || 0,
+          };
+        }),
+      });
+    }
+
+    if (action === "getMatchState") {
+      if (!hasRole(role, ["player", "author", "reviewer", "admin"])) return json({ error: "需要入局谕令" }, 403);
+
+      const dungeonId = cleanText(payload.dungeonId, 80);
+      if (!isUuid(dungeonId)) return json({ error: "副本 ID 不正确" }, 400);
+
+      const state = await getMatchState(supabase, dungeonId);
+      if (isMissingMatchSystem(state.error)) return json({ error: "请先运行 match_system_migration.sql" }, 400);
+      if (state.error) return json({ error: state.error.message }, 400);
+      return json({ role, name: identity.displayName, data: state.data });
+    }
+
+    if (action === "joinMatchQueue") {
+      if (!hasRole(role, ["player", "author", "reviewer", "admin"])) return json({ error: "需要入局谕令" }, 403);
+
+      const dungeonId = cleanText(payload.dungeonId, 80);
+      if (!isUuid(dungeonId)) return json({ error: "副本 ID 不正确" }, 400);
+
+      const { data: result, error } = await supabase.rpc("join_match_queue", {
+        p_dungeon_id: dungeonId,
+        p_player_code_hash: identity.codeHash,
+        p_player_name: identity.displayName,
+      });
+      if (isMissingMatchSystem(error)) return json({ error: "请先运行 match_system_migration.sql" }, 400);
+      if (error) return json({ error: error.message }, 400);
+
+      const state = await getMatchState(supabase, dungeonId);
+      if (isMissingMatchSystem(state.error)) return json({ error: "请先运行 match_system_migration.sql" }, 400);
+      if (state.error) return json({ error: state.error.message }, 400);
+      return json({ role, name: identity.displayName, data: { result, state: state.data } });
+    }
+
+    if (action === "cancelMatchQueue") {
+      if (!hasRole(role, ["player", "author", "reviewer", "admin"])) return json({ error: "需要入局谕令" }, 403);
+
+      const dungeonId = cleanText(payload.dungeonId, 80);
+      if (!isUuid(dungeonId)) return json({ error: "副本 ID 不正确" }, 400);
+
+      const { data: result, error } = await supabase.rpc("cancel_match_queue", {
+        p_dungeon_id: dungeonId,
+        p_player_code_hash: identity.codeHash,
+      });
+      if (isMissingMatchSystem(error)) return json({ error: "请先运行 match_system_migration.sql" }, 400);
+      if (error) return json({ error: error.message }, 400);
+
+      const state = await getMatchState(supabase, dungeonId);
+      if (isMissingMatchSystem(state.error)) return json({ error: "请先运行 match_system_migration.sql" }, 400);
+      if (state.error) return json({ error: state.error.message }, 400);
+      return json({ role, name: identity.displayName, data: { result, state: state.data } });
     }
 
     if (action === "submitDungeon") {

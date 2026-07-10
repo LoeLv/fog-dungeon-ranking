@@ -82,15 +82,27 @@
         body.profile-view-open > .header,
         body.profile-view-open > .container,
         body.profile-view-open > .detail-overlay,
+        body.profile-view-open > #leaderboardPage,
+        body.profile-view-open > #scorePage,
+        body.profile-view-open > #matchPage,
         body.leaderboard-view-open > .header,
         body.leaderboard-view-open > .container,
         body.leaderboard-view-open > .detail-overlay,
         body.leaderboard-view-open > #profilePage,
+        body.leaderboard-view-open > #scorePage,
+        body.leaderboard-view-open > #matchPage,
         body.score-view-open > .header,
         body.score-view-open > .container,
         body.score-view-open > .detail-overlay,
         body.score-view-open > #profilePage,
-        body.score-view-open > #leaderboardPage {
+        body.score-view-open > #leaderboardPage,
+        body.score-view-open > #matchPage,
+        body.match-view-open > .header,
+        body.match-view-open > .container,
+        body.match-view-open > .detail-overlay,
+        body.match-view-open > #profilePage,
+        body.match-view-open > #leaderboardPage,
+        body.match-view-open > #scorePage {
             display: none;
         }
         body::before {
@@ -3355,6 +3367,121 @@
             border-color: rgba(231,207,138,0.28);
             background: rgba(231,207,138,0.06);
         }
+        .match-layout {
+            display: grid;
+            grid-template-columns: minmax(300px, 0.9fr) minmax(360px, 1.1fr);
+            gap: 18px;
+            align-items: start;
+        }
+        .match-list {
+            display: grid;
+            gap: 10px;
+        }
+        .match-card {
+            position: relative;
+            display: grid;
+            gap: 9px;
+            padding: 13px;
+            border: 1px solid rgba(255,255,255,0.07);
+            border-radius: 14px;
+            background:
+                radial-gradient(circle at 9% 14%, rgba(231,207,138,0.08), transparent 46%),
+                rgba(0,0,0,0.19);
+            cursor: pointer;
+            transition: border-color var(--transition), background var(--transition), transform var(--transition);
+        }
+        .match-card:hover,
+        .match-card.active {
+            border-color: rgba(231,207,138,0.30);
+            background:
+                radial-gradient(circle at 10% 18%, rgba(231,207,138,0.13), transparent 50%),
+                rgba(0,0,0,0.22);
+            transform: translateY(-1px);
+        }
+        .match-card-head {
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            gap: 10px;
+        }
+        .match-card-title {
+            color: var(--text-bright);
+            font-weight: 900;
+            line-height: 1.35;
+        }
+        .match-card-meta,
+        .match-player-note {
+            color: var(--text-muted);
+            font-size: 0.75rem;
+            line-height: 1.55;
+        }
+        .match-state-grid {
+            display: grid;
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+            gap: 10px;
+            margin: 12px 0;
+        }
+        .match-state-tile {
+            border: 1px solid rgba(255,255,255,0.07);
+            border-radius: 12px;
+            background: rgba(0,0,0,0.18);
+            padding: 11px;
+        }
+        .match-state-tile span {
+            display: block;
+            color: var(--text-muted);
+            font-size: 0.68rem;
+            font-weight: 800;
+            letter-spacing: 0.08em;
+            margin-bottom: 4px;
+        }
+        .match-state-tile strong {
+            color: var(--gold-light);
+            font-family: var(--font-display);
+            font-size: 1.36rem;
+            line-height: 1.1;
+        }
+        .match-room-list,
+        .match-player-list {
+            display: grid;
+            gap: 10px;
+            margin-top: 10px;
+        }
+        .match-room-card {
+            border: 1px solid rgba(122,174,194,0.16);
+            border-radius: 13px;
+            background:
+                linear-gradient(135deg, rgba(122,174,194,0.07), transparent 45%),
+                rgba(0,0,0,0.18);
+            padding: 12px;
+        }
+        .match-room-head,
+        .match-player-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 10px;
+        }
+        .match-room-head strong,
+        .match-player-row strong {
+            color: var(--text-bright);
+        }
+        .match-player-row {
+            border: 1px solid rgba(255,255,255,0.055);
+            border-radius: 11px;
+            background: rgba(0,0,0,0.16);
+            padding: 8px 10px;
+        }
+        .match-inline-actions {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+            justify-content: flex-end;
+        }
+        .match-card-button {
+            align-self: center;
+            white-space: nowrap;
+        }
         .leaderboard-tabs,
         .leaderboard-path-tabs {
             display: flex;
@@ -3681,6 +3808,7 @@
             }
             .profile-grid,
             .leaderboard-layout,
+            .match-layout,
             .profile-form-grid,
             .profile-score-row {
                 grid-template-columns: 1fr;
@@ -3711,6 +3839,19 @@
                 gap: 3px;
             }
             .profile-tools .btn {
+                width: 100%;
+            }
+            .match-state-grid {
+                grid-template-columns: 1fr;
+            }
+            .match-card-head,
+            .match-room-head,
+            .match-player-row {
+                align-items: flex-start;
+                flex-direction: column;
+            }
+            .match-inline-actions,
+            .match-card-button {
                 width: 100%;
             }
             .talent-control-row,
@@ -3903,6 +4044,7 @@
         <div class="header-actions">
             <button type="button" class="role-badge" id="roleBadge" onclick="openProfilePage()">旁观者只读</button>
             <button class="btn btn-outline" onclick="openLeaderboardPage()">🏛 觐见榜单</button>
+            <button class="btn btn-outline" onclick="openMatchPage()">🧭 试炼召集</button>
             <button class="btn btn-outline" id="scoreDeskButton" onclick="openScorePage()" style="display:none;">⚖ 分数结算</button>
             <button class="btn btn-outline" id="inviteButton" onclick="openInviteModal()">🎲 同契召引</button>
             <button class="btn btn-primary btn-folly" id="submitEntryButton" onclick="openSubmitModal()">🎭 构筑愚戏</button>
@@ -4037,6 +4179,20 @@
             </div>
             <div id="leaderboardContent" class="profile-content">
                 <div class="loading"><div class="spinner"></div><br>正在整理登神与觐见名录...</div>
+            </div>
+        </div>
+    </main>
+
+    <!-- 试炼匹配独立页 -->
+    <main class="profile-page" id="matchPage" style="display:none;">
+        <div class="profile-shell">
+            <div class="profile-toolbar">
+                <button class="detail-back" onclick="closeMatchPage()">← 返回试炼列表</button>
+                <div class="detail-window-title">TRIAL MUSTER · 试炼召集厅</div>
+                <button class="detail-close-icon" onclick="closeMatchPage()" title="返回试炼列表" aria-label="返回试炼列表">✕</button>
+            </div>
+            <div id="matchContent" class="profile-content">
+                <div class="loading"><div class="spinner"></div><br>正在监听试炼召集...</div>
             </div>
         </div>
     </main>
@@ -4204,6 +4360,10 @@
         const PROFILE_STORAGE_KEY = 'personal_profiles_v1';
         const PROFILE_NOTICE_SEEN_KEY = 'profile_notice_seen_v1';
         const ROLE_LABELS = { player: '入局信徒', author: '试炼构筑者', reviewer: '结算审核员', admin: '神谕馆主' };
+        const scoreDengMin = -20;
+        const scoreDengMax = 20;
+        const scoreJinMin = 0;
+        const scoreJinMax = 3;
         const GOD_GROUPS = [
             { path: '生命', className: 'path-life', gods: ['诞育', '繁荣', '死亡'] },
             { path: '存在', className: 'path-exist', gods: ['记忆', '时间'] },
@@ -4609,9 +4769,14 @@
         let archiveScrollY = 0;
         let profileScrollY = 0;
         let leaderboardScrollY = 0;
+        let matchScrollY = 0;
         let scoreScrollY = 0;
         let leaderboardMode = 'overall';
         let leaderboardPath = 'all';
+        let selectedMatchDungeonId = null;
+        let matchDungeonsCache = [];
+        let matchStateCache = null;
+        let matchStateError = null;
         let scorePreviewState = null;
         let selectedTalentPool = '';
         let lastTalentDrawResult = [];
@@ -4634,7 +4799,7 @@
         }
 
         function normalizeRole(role) {
-            return ['player', 'author', 'admin'].includes(role) ? role : null;
+            return ['player', 'author', 'reviewer', 'admin'].includes(role) ? role : null;
         }
 
         function saveInviteSession(session) {
@@ -5295,7 +5460,7 @@
                     ? `${formatProfileScore(entry.ascensionScore)} / ${formatProfileScore(entry.audienceScore)}`
                     : formatProfileScore(score);
                 return `
-                    <article class="leaderboard-row ${entry.isCurrent ? 'is-current' : ''}" onclick="openProfileFromLeaderboard(${jsString(entry.key)})">
+                    <article class="leaderboard-row ${entry.isCurrent ? 'is-current' : ''}" onclick='openProfileFromLeaderboard(${jsString(entry.key)})'>
                         <div class="leaderboard-rank">${index + 1}</div>
                         <div>
                             <div class="leaderboard-name">${escapeHtml(entry.displayName)}${entry.isCurrent ? ' · 你' : ''}</div>
@@ -5418,7 +5583,11 @@
             if (detailOverlay) detailOverlay.style.display = 'none';
             const profilePage = document.getElementById('profilePage');
             if (profilePage) profilePage.style.display = 'none';
-            document.body.classList.remove('detail-view-open', 'profile-view-open');
+            const scorePage = document.getElementById('scorePage');
+            if (scorePage) scorePage.style.display = 'none';
+            const matchPage = document.getElementById('matchPage');
+            if (matchPage) matchPage.style.display = 'none';
+            document.body.classList.remove('detail-view-open', 'profile-view-open', 'score-view-open', 'match-view-open');
             document.body.classList.add('leaderboard-view-open');
             document.getElementById('leaderboardPage').style.display = 'block';
             window.scrollTo(0, 0);
@@ -5569,7 +5738,7 @@
                         <span class="metric-pill">觐见 <strong>${escapeHtml(formatScoreNumber(item.total_audience, true))}</strong></span>
                         <span class="metric-pill">总变化 <strong>${escapeHtml(formatScoreNumber(item.total_score, true))}</strong></span>
                     </div>
-                    ${item.is_revoked ? `<div class="profile-list-meta">撤销备注：${escapeHtml(item.revoke_remark || '')}</div>` : `<div class="profile-tools" style="margin-top:10px;"><button class="btn btn-outline btn-sm" onclick="revokeScoreSettlementUI(${jsString(item.id)})">撤销本场结算</button></div>`}
+                    ${item.is_revoked ? `<div class="profile-list-meta">撤销备注：${escapeHtml(item.revoke_remark || '')}</div>` : `<div class="profile-tools" style="margin-top:10px;"><button class="btn btn-outline btn-sm" onclick='revokeScoreSettlementUI(${jsString(item.id)})'>撤销本场结算</button></div>`}
                 </article>`).join('')}</div>`;
         }
 
@@ -5648,7 +5817,9 @@
             if (profilePage) profilePage.style.display = 'none';
             const leaderboardPage = document.getElementById('leaderboardPage');
             if (leaderboardPage) leaderboardPage.style.display = 'none';
-            document.body.classList.remove('detail-view-open', 'profile-view-open', 'leaderboard-view-open');
+            const matchPage = document.getElementById('matchPage');
+            if (matchPage) matchPage.style.display = 'none';
+            document.body.classList.remove('detail-view-open', 'profile-view-open', 'leaderboard-view-open', 'match-view-open');
             document.body.classList.add('score-view-open');
             document.getElementById('scorePage').style.display = 'block';
             window.scrollTo(0, 0);
@@ -5660,6 +5831,294 @@
             if (page) page.style.display = 'none';
             document.body.classList.remove('score-view-open');
             if (restoreScroll !== false) requestAnimationFrame(() => window.scrollTo(0, scoreScrollY || 0));
+        }
+
+        function getMatchTargetCount(dungeon) {
+            const count = Number(dungeon?.participant_count ?? dungeon?.participantCount ?? dungeon?.target_player_count ?? dungeon?.targetPlayerCount);
+            return Number.isFinite(count) && count > 0 ? count : 1;
+        }
+
+        function getCurrentMatchName() {
+            return cleanDisplayNameInput(inviteSession?.name || ROLE_LABELS[getInviteRole()] || '本地入局者') || '本地入局者';
+        }
+
+        function isCurrentMatchPlayer(name) {
+            const current = getCurrentMatchName().trim().toLowerCase();
+            return current && String(name || '').trim().toLowerCase() === current;
+        }
+
+        async function fetchMatchDungeons(limit = 80) {
+            if (USE_LOCAL_FALLBACK) {
+                const localQueue = getLocalData('match_queue_v1', {});
+                const dungeons = await fetchDungeons();
+                return {
+                    dungeons: dungeons.map(dungeon => ({
+                        ...dungeon,
+                        queuedCount: (localQueue[dungeon.id] || []).length,
+                        runningRoomCount: 0
+                    })),
+                    error: null
+                };
+            }
+            if (!canInteract()) return { dungeons: [], error: { message: '需要入局谕令后才能查看试炼召集。' } };
+            const { data, error } = await invokeDungeonAction('listMatchDungeons', { limit });
+            return { dungeons: Array.isArray(data) ? data : [], error };
+        }
+
+        async function fetchMatchState(dungeonId) {
+            if (USE_LOCAL_FALLBACK) {
+                const dungeons = await fetchDungeons();
+                const dungeon = dungeons.find(item => String(item.id) === String(dungeonId));
+                const localQueue = getLocalData('match_queue_v1', {});
+                return {
+                    state: dungeon ? {
+                        dungeon,
+                        queue: localQueue[dungeonId] || [],
+                        queuedCount: (localQueue[dungeonId] || []).length,
+                        rooms: []
+                    } : null,
+                    error: dungeon ? null : { message: '试炼未找到' }
+                };
+            }
+            const { data, error } = await invokeDungeonAction('getMatchState', { dungeonId });
+            return { state: data || null, error };
+        }
+
+        function renderMatchDungeonCards(dungeons) {
+            if (!dungeons.length) return '<div class="profile-empty">暂无可召集的试炼。</div>';
+            return `<div class="match-list">${dungeons.map(dungeon => {
+                const active = String(dungeon.id) === String(selectedMatchDungeonId);
+                const queued = Number(dungeon.queuedCount || 0);
+                const rooms = Number(dungeon.runningRoomCount || 0);
+                const target = getMatchTargetCount(dungeon);
+                return `
+                    <article class="match-card ${active ? 'active' : ''}" onclick='openMatchDungeon(${jsString(dungeon.id)})'>
+                        <div class="match-card-head">
+                            <div>
+                                <div class="match-card-title">${renderGodSigil(dungeon.type, 'xs')} ${escapeHtml(dungeon.name || '未命名试炼')}</div>
+                                <div class="match-card-meta">${escapeHtml(formatGodName(dungeon.type))} · ${escapeHtml(formatDifficulty(dungeon.difficulty))} · ${escapeHtml(dungeon.creator || '匿名构筑者')}</div>
+                            </div>
+                            <button class="btn btn-outline btn-xs match-card-button" onclick='event.stopPropagation(); openMatchDungeon(${jsString(dungeon.id)})'>查看召集</button>
+                        </div>
+                        <div class="metric-strip">
+                            <span class="metric-pill">队列 <strong>${queued}/${target}</strong></span>
+                            <span class="metric-pill">房间 <strong>${rooms}</strong></span>
+                            <span class="metric-pill">轮回 <strong>${escapeHtml(getTrialCycle(dungeon))}</strong></span>
+                        </div>
+                    </article>`;
+            }).join('')}</div>`;
+        }
+
+        function renderMatchQueue(queue) {
+            if (!queue.length) return '<div class="profile-empty">当前无人排队。成为第一个召集者吧。</div>';
+            return `<div class="match-player-list">${queue.map((player, index) => `
+                <div class="match-player-row ${isCurrentMatchPlayer(player.player_name) ? 'profile-notice' : ''}">
+                    <strong>${index + 1}. ${escapeHtml(player.player_name || '未命名信徒')}</strong>
+                    <span class="match-player-note">${escapeHtml(formatDate(player.created_at))}${isCurrentMatchPlayer(player.player_name) ? ' · 你' : ''}</span>
+                </div>`).join('')}</div>`;
+        }
+
+        function renderMatchRooms(rooms) {
+            if (!rooms.length) return '<div class="profile-empty">暂无已成房队伍；队列满员后会自动生成房间。</div>';
+            return `<div class="match-room-list">${rooms.map((room, index) => {
+                const players = room.match_room_players || room.players || [];
+                return `
+                    <article class="match-room-card">
+                        <div class="match-room-head">
+                            <strong>房间 ${index + 1} · ${escapeHtml(String(room.id || '').slice(0, 8))}</strong>
+                            <span class="match-player-note">${players.length}/${Number(room.target_player_count || 0) || players.length} 人 · ${escapeHtml(formatDate(room.created_at))}</span>
+                        </div>
+                        <div class="match-player-list">
+                            ${players.map(player => `
+                                <div class="match-player-row ${isCurrentMatchPlayer(player.player_name) ? 'profile-notice' : ''}">
+                                    <strong>${escapeHtml(player.player_name || '未命名信徒')}</strong>
+                                    <span class="match-player-note">${player.finish_status ? '已完成' : '进行中'}${isCurrentMatchPlayer(player.player_name) ? ' · 你' : ''}</span>
+                                </div>`).join('') || '<div class="profile-empty">房间成员读取中。</div>'}
+                        </div>
+                    </article>`;
+            }).join('')}</div>`;
+        }
+
+        function renderMatchStatePanel(state, error) {
+            if (error) return `<div class="profile-empty">${escapeHtml(error.message || '试炼召集暂不可用。')}</div>`;
+            const dungeon = state?.dungeon || matchDungeonsCache.find(item => String(item.id) === String(selectedMatchDungeonId));
+            if (!dungeon) return '<div class="profile-empty">从左侧选择一个试炼，查看当前召集状态。</div>';
+            const queue = Array.isArray(state?.queue) ? state.queue : [];
+            const rooms = Array.isArray(state?.rooms) ? state.rooms : [];
+            const target = getMatchTargetCount(dungeon);
+            const queuedCount = Number(state?.queuedCount ?? queue.length ?? 0);
+            const currentQueued = queue.some(player => isCurrentMatchPlayer(player.player_name));
+            const currentInRoom = rooms.some(room => (room.match_room_players || room.players || []).some(player => isCurrentMatchPlayer(player.player_name)));
+            const godClass = getGodClass(dungeon.type);
+            return `
+                <section class="profile-panel">
+                    <div class="profile-panel-title">
+                        <span>${renderGodSigil(dungeon.type, 'sm')} ${escapeHtml(dungeon.name || '未命名试炼')}</span>
+                        <small>${escapeHtml(formatGodName(dungeon.type))} · ${escapeHtml(formatDifficulty(dungeon.difficulty))}</small>
+                    </div>
+                    <div class="leaderboard-summary">召集按副本固定人数自动成房；已成房成员会留在房间记录里，方便后续网页或小程序继续接入。</div>
+                    <div class="match-state-grid">
+                        <div class="match-state-tile"><span>排队人数</span><strong>${queuedCount}/${target}</strong></div>
+                        <div class="match-state-tile"><span>运行房间</span><strong>${rooms.length}</strong></div>
+                        <div class="match-state-tile"><span>我的状态</span><strong>${currentInRoom ? '已成房' : currentQueued ? '排队中' : '未加入'}</strong></div>
+                    </div>
+                    <div class="match-inline-actions">
+                        ${currentInRoom ? '<span class="metric-pill">你已在运行房间中</span>' : `<button class="btn btn-primary btn-sm" onclick='joinMatchQueueUI(${jsString(dungeon.id)})'>${currentQueued ? '更新排队' : '加入排队'}</button>`}
+                        ${currentQueued ? `<button class="btn btn-outline btn-sm" onclick='cancelMatchQueueUI(${jsString(dungeon.id)})'>取消排队</button>` : ''}
+                        <button class="btn btn-outline btn-sm" onclick='refreshMatchStateUI(${jsString(dungeon.id)})'>刷新状态</button>
+                        <button class="btn btn-outline btn-sm" onclick='openDetailFromMatch(${jsString(dungeon.id)})'>查看详情</button>
+                    </div>
+                </section>
+                <div class="profile-grid" style="margin-top:18px;">
+                    <section class="profile-panel">
+                        <div class="profile-panel-title"><span>当前队列</span><small>${queuedCount}/${target}</small></div>
+                        ${renderMatchQueue(queue)}
+                    </section>
+                    <section class="profile-panel">
+                        <div class="profile-panel-title"><span>运行房间</span><small>${rooms.length} 间</small></div>
+                        ${renderMatchRooms(rooms)}
+                    </section>
+                </div>
+                <div class="trial-oracle ${godClass}" style="${getGodSkinStyle(dungeon.type)};margin-top:18px;">${escapeHtml(getGodOracle(dungeon.type))}</div>`;
+        }
+
+        async function renderMatchPage() {
+            const container = document.getElementById('matchContent');
+            if (!container) return;
+            if (!USE_LOCAL_FALLBACK && !canInteract()) {
+                container.innerHTML = `
+                    <section class="profile-panel">
+                        <div class="profile-empty">需要入局谕令后才能进入试炼召集。</div>
+                        <div class="profile-tools"><button class="btn btn-primary btn-sm" onclick="openInviteModal('验入局谕令后可进入试炼召集。')">掷骰入局</button></div>
+                    </section>`;
+                return;
+            }
+            container.innerHTML = '<div class="loading"><div class="spinner"></div><br>正在监听试炼召集...</div>';
+            const { dungeons, error } = await fetchMatchDungeons(80);
+            matchDungeonsCache = dungeons;
+            if (error) {
+                container.innerHTML = `<div class="profile-empty">${escapeHtml(error.message || '试炼召集读取失败。')}</div>`;
+                return;
+            }
+            if (!selectedMatchDungeonId || !dungeons.some(dungeon => String(dungeon.id) === String(selectedMatchDungeonId))) {
+                selectedMatchDungeonId = dungeons[0]?.id || null;
+            }
+            matchStateCache = null;
+            matchStateError = null;
+            if (selectedMatchDungeonId) {
+                const stateResult = await fetchMatchState(selectedMatchDungeonId);
+                matchStateCache = stateResult.state;
+                matchStateError = stateResult.error;
+            }
+            container.innerHTML = `
+                <section class="profile-hero">
+                    <div class="profile-avatar path-void">${renderGodSigil('命运', 'lg')}</div>
+                    <div>
+                        <div class="profile-kicker">TRIAL MUSTER</div>
+                        <h1 class="profile-name">试炼召集厅</h1>
+                        <div class="profile-subline">
+                            <span class="metric-pill">当前身份 <strong>${escapeHtml(inviteSession?.name || ROLE_LABELS[getInviteRole()] || '本地入局者')}</strong></span>
+                            <span class="metric-pill">可召集试炼 <strong>${dungeons.length}</strong></span>
+                            <span class="metric-pill">自动成房 <strong>满员触发</strong></span>
+                        </div>
+                    </div>
+                </section>
+                <div class="match-layout">
+                    <section class="profile-panel">
+                        <div class="profile-panel-title"><span>可召集试炼</span><small>选择副本查看队列</small></div>
+                        ${renderMatchDungeonCards(dungeons)}
+                    </section>
+                    <div>
+                        ${renderMatchStatePanel(matchStateCache, matchStateError)}
+                    </div>
+                </div>`;
+        }
+
+        async function openMatchDungeon(dungeonId) {
+            selectedMatchDungeonId = String(dungeonId || '');
+            await renderMatchPage();
+        }
+
+        async function openMatchPage(initialDungeonId = null) {
+            if (!USE_LOCAL_FALLBACK && !canInteract()) {
+                openInviteModal('验入局谕令后可进入试炼召集。');
+                return;
+            }
+            if (initialDungeonId) selectedMatchDungeonId = String(initialDungeonId);
+            matchScrollY = window.scrollY || document.documentElement.scrollTop || 0;
+            const detailOverlay = document.getElementById('detailOverlay');
+            if (detailOverlay) detailOverlay.style.display = 'none';
+            const profilePage = document.getElementById('profilePage');
+            if (profilePage) profilePage.style.display = 'none';
+            const leaderboardPage = document.getElementById('leaderboardPage');
+            if (leaderboardPage) leaderboardPage.style.display = 'none';
+            const scorePage = document.getElementById('scorePage');
+            if (scorePage) scorePage.style.display = 'none';
+            document.body.classList.remove('detail-view-open', 'profile-view-open', 'leaderboard-view-open', 'score-view-open');
+            document.body.classList.add('match-view-open');
+            document.getElementById('matchPage').style.display = 'block';
+            window.scrollTo(0, 0);
+            await renderMatchPage();
+        }
+
+        function closeMatchPage(restoreScroll = true) {
+            const page = document.getElementById('matchPage');
+            if (page) page.style.display = 'none';
+            document.body.classList.remove('match-view-open');
+            if (restoreScroll !== false) requestAnimationFrame(() => window.scrollTo(0, matchScrollY || 0));
+        }
+
+        async function openDetailFromMatch(id) {
+            closeMatchPage(false);
+            await openDetail(id);
+        }
+
+        async function refreshMatchStateUI(dungeonId = selectedMatchDungeonId) {
+            if (!dungeonId) return;
+            const { state, error } = await fetchMatchState(dungeonId);
+            matchStateCache = state;
+            matchStateError = error;
+            if (error) showToast(`❌ ${error.message || '刷新失败'}`);
+            await renderMatchPage();
+        }
+
+        async function joinMatchQueueUI(dungeonId) {
+            if (!requireInvite(['player', 'author', 'reviewer', 'admin'], '验入局谕令后可加入试炼召集。')) return;
+            if (USE_LOCAL_FALLBACK) {
+                const queueByDungeon = getLocalData('match_queue_v1', {});
+                const list = (queueByDungeon[dungeonId] || []).filter(player => !isCurrentMatchPlayer(player.player_name));
+                list.push({ player_name: getCurrentMatchName(), created_at: new Date().toISOString() });
+                queueByDungeon[dungeonId] = list;
+                setLocalData('match_queue_v1', queueByDungeon);
+                showToast('已加入本地试炼召集');
+                await renderMatchPage();
+                return;
+            }
+            const { data, error } = await invokeDungeonAction('joinMatchQueue', { dungeonId });
+            if (error) { showToast(`❌ ${error.message || '加入失败'}`); return; }
+            matchStateCache = data?.state || null;
+            matchStateError = null;
+            const status = data?.result?.status;
+            showToast(status === 'matched' || status === 'already_matched' ? '试炼召集已成房' : '已加入试炼召集队列');
+            await renderMatchPage();
+        }
+
+        async function cancelMatchQueueUI(dungeonId) {
+            if (!requireInvite(['player', 'author', 'reviewer', 'admin'], '验入局谕令后可取消试炼召集。')) return;
+            if (USE_LOCAL_FALLBACK) {
+                const queueByDungeon = getLocalData('match_queue_v1', {});
+                queueByDungeon[dungeonId] = (queueByDungeon[dungeonId] || []).filter(player => !isCurrentMatchPlayer(player.player_name));
+                setLocalData('match_queue_v1', queueByDungeon);
+                showToast('已取消本地排队');
+                await renderMatchPage();
+                return;
+            }
+            const { data, error } = await invokeDungeonAction('cancelMatchQueue', { dungeonId });
+            if (error) { showToast(`❌ ${error.message || '取消失败'}`); return; }
+            matchStateCache = data?.state || null;
+            matchStateError = null;
+            showToast(data?.result?.cancelled ? '已取消试炼召集排队' : '当前没有排队记录');
+            await renderMatchPage();
         }
 
         function isSameProfileName(value) {
@@ -5781,7 +6240,7 @@
                 const note = record.feedback_note ? `反馈：${record.feedback_note}` : '本设备或神谕记录已登记通过。';
                 const tags = Array.isArray(record.feedback_tags) && record.feedback_tags.length ? ` · ${record.feedback_tags.join(' / ')}` : '';
                 return `
-                    <article class="profile-list-item clickable" onclick="openDetailFromProfile(${jsString(record.dungeon_id)})">
+                    <article class="profile-list-item clickable" onclick='openDetailFromProfile(${jsString(record.dungeon_id)})'>
                         <div class="profile-list-title">
                             <span>《${escapeHtml(title)}》</span>
                             <small>${escapeHtml(formatDate(record.created_at))}</small>
@@ -5795,7 +6254,7 @@
         function renderProfileAuthoredDungeons(authored) {
             if (!authored.length) return '<div class="profile-empty">当前身份还没有构筑过试炼。作者投稿后，会在这里形成构筑者记录。</div>';
             return authored.slice(0, 18).map(d => `
-                <article class="profile-list-item clickable" onclick="openDetailFromProfile(${jsString(d.id)})">
+                <article class="profile-list-item clickable" onclick='openDetailFromProfile(${jsString(d.id)})'>
                     <div class="profile-list-title">
                         <span>《${escapeHtml(d.name || '未命名试炼')}》</span>
                         <small>神格 ${Number(d.avg_rating || 0).toFixed(1)}</small>
@@ -5810,7 +6269,7 @@
             return notices.slice(0, 12).map(notice => {
                 const d = notice.dungeon || {};
                 return `
-                    <article class="profile-list-item profile-notice ${notice.unread ? 'unread' : ''} clickable" onclick="openDetailFromProfile(${jsString(notice.dungeon_id)})">
+                    <article class="profile-list-item profile-notice ${notice.unread ? 'unread' : ''} clickable" onclick='openDetailFromProfile(${jsString(notice.dungeon_id)})'>
                         <div class="profile-list-title">
                             <span>${notice.unread ? '<span class="profile-notice-mark">未读</span> ' : ''}${escapeHtml(notice.author || notice.invite_name || '匿名信徒')}</span>
                             <small>${escapeHtml(formatDate(notice.created_at))}</small>
@@ -5995,7 +6454,11 @@
             if (detailOverlay) detailOverlay.style.display = 'none';
             const leaderboardPage = document.getElementById('leaderboardPage');
             if (leaderboardPage) leaderboardPage.style.display = 'none';
-            document.body.classList.remove('detail-view-open', 'leaderboard-view-open');
+            const scorePage = document.getElementById('scorePage');
+            if (scorePage) scorePage.style.display = 'none';
+            const matchPage = document.getElementById('matchPage');
+            if (matchPage) matchPage.style.display = 'none';
+            document.body.classList.remove('detail-view-open', 'leaderboard-view-open', 'score-view-open', 'match-view-open');
             document.body.classList.add('profile-view-open');
             document.getElementById('profilePage').style.display = 'block';
             window.scrollTo(0, 0);
@@ -6794,6 +7257,7 @@
                         <span class="trial-data-pill">试炼轮回：<strong>${escapeHtml(getTrialCycle(d))}</strong></span>
                         <span class="trial-data-pill">通关留存率：<strong>${formatClearRate(d)}</strong></span>
                         <span class="trial-data-pill">证言条数：<strong>${testimonyCount}</strong></span>
+                        <button class="btn btn-outline btn-xs match-card-button" onclick='event.stopPropagation(); openMatchPage(${jsString(d.id)})'>加入召集</button>
                     </div>
                     ${renderTrialOracle(d, godClass)}
                 </div>`;
@@ -6815,7 +7279,7 @@
                     .sort((a,b) => (Number(b.avg_rating || 0) - Number(a.avg_rating || 0)) || (Number(b.rating_count || 0) - Number(a.rating_count || 0)))
                     .slice(0, 4);
                 supreme.innerHTML = top.length ? top.map((d, index) => `
-                    <div class="oracle-item" onclick="openDetail(${jsString(d.id)})">
+                    <div class="oracle-item" onclick='openDetail(${jsString(d.id)})'>
                         <strong>${index + 1}. ${renderGodSigil(d.type, 'xs', 'oracle-sigil')} ${escapeHtml(d.name || '未命名试炼')}</strong>
                         <span>${escapeHtml(getRatingTier(d.avg_rating))} · 神格判定 ${Number(d.avg_rating || 0).toFixed(1)} · ${escapeHtml(formatGodName(d.type))}</span>
                     </div>`).join('') : '<div class="oracle-item"><span>暂无诸神注目的试炼。</span></div>';
@@ -6823,7 +7287,7 @@
             if (testimony) {
                 const latest = await fetchLatestComments(4);
                 testimony.innerHTML = latest.length ? latest.map(item => `
-                    <div class="oracle-item" onclick="openDetail(${jsString(item.dungeon_id)})">
+                    <div class="oracle-item" onclick='openDetail(${jsString(item.dungeon_id)})'>
                         <strong>${escapeHtml(item.author || '匿名信徒')}</strong>
                         <span>${escapeHtml(truncateText(item.content, 46))}</span>
                     </div>`).join('') : '<div class="oracle-item"><span>暂无可采信证言。</span></div>';
@@ -6840,7 +7304,7 @@
                     })
                     .slice(0, 4);
                 architects.innerHTML = newest.length ? newest.map(d => `
-                    <div class="oracle-item" onclick="openDetail(${jsString(d.id)})">
+                    <div class="oracle-item" onclick='openDetail(${jsString(d.id)})'>
                         <strong>${escapeHtml(d.creator || '匿名筑戏人')}</strong>
                         <span>献祭《${escapeHtml(d.name || '未命名试炼')}》 · ${escapeHtml(formatDate(d.created_at))}</span>
                     </div>`).join('') : '<div class="oracle-item"><span>等待新的构筑者献祭试炼。</span></div>';
@@ -6977,7 +7441,7 @@
                 const difficultyLabel = dungeon.difficulty ? formatDifficulty(dungeon.difficulty) : '难度未定';
                 const difficultyClass = dungeon.difficulty ? getDiffClass(dungeon.difficulty) : 'path-unknown';
                 return `
-                    <article class="feed-item" onclick="openDetail(${jsString(comment.dungeon_id)})">
+                    <article class="feed-item" onclick='openDetail(${jsString(comment.dungeon_id)})'>
                         <div class="feed-sigil"><span>${feedGlyphs[index % feedGlyphs.length]}</span><small>${feedMarks[index] || index + 1}</small></div>
                         <div class="feed-main">
                             <div class="feed-row">
@@ -7075,6 +7539,7 @@
                         <span class="trial-data-pill">${formatRunCount(d)}</span>
                         <span class="trial-data-pill">通关留存率：${formatClearRate(d)}</span>
                         <span class="trial-data-pill">证言条数：${activeCommentCount}</span>
+                        <button class="btn btn-outline btn-xs" onclick='openMatchPage(${jsString(id)})'>加入召集</button>
                         ${canUseRole(['author','admin']) ? `<button class="btn btn-outline btn-xs" onclick="advanceRunUI('${escapeHtml(id)}')">重掷下一局</button>` : ''}
                         ${isAdmin() ? `<button class="btn btn-danger btn-xs" onclick="deleteDungeon('${escapeHtml(id)}')">封存试炼</button>` : ''}
                     </div>
@@ -7196,6 +7661,7 @@
             closeInviteModal();
             showToast(`✅ ${name || ROLE_LABELS[role]}已入局：${ROLE_LABELS[role]}`);
             if (currentDetailId) await openDetail(currentDetailId);
+            if (document.getElementById('matchPage')?.style.display !== 'none') await renderMatchPage();
             await updateProfileNoticeBadge();
         }
 
@@ -7216,6 +7682,7 @@
             if (currentDetailId) await openDetail(currentDetailId);
             await renderDungeonList();
             if (document.getElementById('profilePage')?.style.display !== 'none') await renderProfilePage();
+            if (document.getElementById('matchPage')?.style.display !== 'none') await renderMatchPage();
         }
 
         function clearInviteSession() {
@@ -7223,6 +7690,9 @@
             localStorage.removeItem('fog_' + INVITE_STORAGE_KEY);
             updateInviteUI();
             closeProfilePage(false);
+            closeLeaderboardPage(false);
+            closeScorePage(false);
+            closeMatchPage(false);
             closeInviteModal();
             showToast('已退出邀请身份');
             if (currentDetailId) openDetail(currentDetailId);
@@ -7238,7 +7708,7 @@
         }
 
         async function openTestimonyModal(id, options = {}) {
-            if(!requireInvite(['player','author','admin'], '验入局谕令后可递交试炼证言。')) return;
+            if(!requireInvite(['player','author','reviewer','admin'], '验入局谕令后可递交试炼证言。')) return;
             testimonyTargetId = id;
             const dungeons = await fetchDungeons();
             const d = dungeons.find(item => item.id === id);
@@ -7355,7 +7825,7 @@
         }
 
         async function openRatingModal(id) {
-            if(!requireInvite(['player','author','admin'], '验入局谕令后可为试炼降下神格判定。')) return;
+            if(!requireInvite(['player','author','reviewer','admin'], '验入局谕令后可为试炼降下神格判定。')) return;
             if (await checkHasRated(id)) {
                 showToast('你已经封存过这场试炼的神格评议。');
                 if (currentDetailId === id) await openDetail(id);
@@ -7408,7 +7878,7 @@
         }
 
         async function rateDungeon(id, val){
-            if(!requireInvite(['player','author','admin'], '验入局谕令后可为试炼降下神格判定。')) return;
+            if(!requireInvite(['player','author','reviewer','admin'], '验入局谕令后可为试炼降下神格判定。')) return;
             if (await checkHasRated(id)) {
                 showToast('你已经封存过这场试炼的神格评议。');
                 if(currentDetailId===id) await openDetail(id);
@@ -7432,7 +7902,7 @@
         }
 
         async function submitComment(id){
-            if(!requireInvite(['player','author','admin'], '验入局谕令后可递交试炼证言。')) return;
+            if(!requireInvite(['player','author','reviewer','admin'], '验入局谕令后可递交试炼证言。')) return;
             const a=inviteSession?.name || ROLE_LABELS[getInviteRole()] || '';
             const input = document.getElementById('testimonyContentInput') || document.getElementById('commentContentInput');
             const c=input?.value.trim();
@@ -7451,7 +7921,7 @@
         }
 
         async function deleteCommentUI(commentId){
-            if(!requireInvite(['player','author','admin'], '验入局谕令后才可抹去自己的证言。')) return;
+            if(!requireInvite(['player','author','reviewer','admin'], '验入局谕令后才可抹去自己的证言。')) return;
             if(!confirm('确定抹去这条证言吗？')) return;
             const {error}=await removeComment(commentId);
             if(error){showToast(`❌ ${error.message || '删除失败'}`);return;}
@@ -7464,7 +7934,7 @@
         }
 
         async function markClearedUI(id){
-            if(!requireInvite(['player','author','admin'], '验入局谕令后可登记通关。')) return;
+            if(!requireInvite(['player','author','reviewer','admin'], '验入局谕令后可登记通关。')) return;
             const feedbackTags = getSelectedFeedbackTags();
             const feedbackNote = document.getElementById('clearFeedbackNote')?.value || '';
             const {error}=await markDungeonCleared(id, feedbackTags, feedbackNote);
@@ -7587,7 +8057,26 @@
                 deleteCommentUI(deleteCommentButton.dataset.deleteCommentId || '');
             }
         });
-        document.addEventListener('keydown',e=>{ if(e.key==='Escape'){ const detailOverlay = document.getElementById('detailOverlay'); const profilePage = document.getElementById('profilePage'); if(document.getElementById('testimonyModalOverlay').style.display==='flex') closeTestimonyModal(); else if(document.getElementById('ratingModalOverlay').style.display==='flex') closeRatingModal(); else if(document.getElementById('inviteModalOverlay').style.display==='flex') closeInviteModal(); else if(profilePage && getComputedStyle(profilePage).display !== 'none') closeProfilePage(); else if(detailOverlay && getComputedStyle(detailOverlay).display !== 'none') closeDetail(); else if(document.getElementById('submitModalOverlay').style.display==='flex') closeSubmitModal(); } if(e.key==='Enter' && document.activeElement?.id === 'inviteCodeInput') submitInviteCode(); if(e.key==='Enter' && document.activeElement?.id === 'displayNameInput') saveDisplayName(); });
+        document.addEventListener('keydown', e => {
+            if (e.key === 'Escape') {
+                const detailOverlay = document.getElementById('detailOverlay');
+                const profilePage = document.getElementById('profilePage');
+                const leaderboardPage = document.getElementById('leaderboardPage');
+                const matchPage = document.getElementById('matchPage');
+                const scorePage = document.getElementById('scorePage');
+                if (document.getElementById('testimonyModalOverlay').style.display === 'flex') closeTestimonyModal();
+                else if (document.getElementById('ratingModalOverlay').style.display === 'flex') closeRatingModal();
+                else if (document.getElementById('inviteModalOverlay').style.display === 'flex') closeInviteModal();
+                else if (profilePage && getComputedStyle(profilePage).display !== 'none') closeProfilePage();
+                else if (leaderboardPage && getComputedStyle(leaderboardPage).display !== 'none') closeLeaderboardPage();
+                else if (matchPage && getComputedStyle(matchPage).display !== 'none') closeMatchPage();
+                else if (scorePage && getComputedStyle(scorePage).display !== 'none') closeScorePage();
+                else if (detailOverlay && getComputedStyle(detailOverlay).display !== 'none') closeDetail();
+                else if (document.getElementById('submitModalOverlay').style.display === 'flex') closeSubmitModal();
+            }
+            if (e.key === 'Enter' && document.activeElement?.id === 'inviteCodeInput') submitInviteCode();
+            if (e.key === 'Enter' && document.activeElement?.id === 'displayNameInput') saveDisplayName();
+        });
 
         (async function init(){
             const searchInput = document.getElementById('searchInput');
