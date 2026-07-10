@@ -1,8 +1,36 @@
-# 邀请码权限设置
+# 邀请码权限和 Supabase 部署设置
 
 这个站点的公开页面只负责展示和输入。真正的权限判断在 Supabase Edge Function 里完成，邀请码不要写进 `index.html`。
 
-## 1. 创建 Edge Function
+当前主流程使用 `invite_codes` 表里的每人独立邀请码；旧的 `DUNGEON_PLAYER_CODE`、`DUNGEON_AUTHOR_CODE`、`DUNGEON_ADMIN_CODE` 共享码流程不再作为主流程使用。
+
+## 1. 准备数据库
+
+第一次部署或重建环境时，在 Supabase `SQL Editor` 按顺序执行：
+
+```text
+supabase/dungeon_setup.sql
+supabase/per_person_invites_migration.sql
+supabase/forum_features_migration.sql
+supabase/nickname_binding_migration.sql
+supabase/player_profiles_migration.sql
+supabase/score_system_migration.sql
+supabase/talent_pool_migration.sql
+supabase/talent_inventory_migration.sql
+```
+
+说明：
+
+- `forum_features_migration.sql`：最新评论流、楼中楼回复、评论删除、作者置顶说明、通关反馈标签。
+- `nickname_binding_migration.sql`：每个邀请码绑定唯一昵称。
+- `player_profiles_migration.sql`：个人档案、神格榜单、登神之路、觐见之梯。
+- `score_system_migration.sql`：审核员、分数结算、补分、撤销、结算信封。
+- `talent_pool_migration.sql`：天赋池、抽取记录、碎片兑换。
+- `talent_inventory_migration.sql`：8 格天赋仓库、3 个携带槽、溢出取舍。
+
+不要在正式数据上执行 `second_beta_reset.sql`，除非你明确要重置第二轮测试数据。
+
+## 2. 创建 Edge Function
 
 在 Supabase 后台打开 `Edge Functions`，新建函数：
 
@@ -10,52 +38,23 @@
 fog-dungeon-action
 ```
 
-把 `supabase/functions/fog-dungeon-action/index.ts` 的内容粘贴进去并部署。
+把 `supabase/functions/fog-dungeon-action/index.ts` 的内容部署到这个函数。
 
-## 2. 设置 Secrets
-
-在 `Edge Functions` 的 `Secrets` 页面新增三条：
+确认函数 Secrets 中有：
 
 ```text
-DUNGEON_PLAYER_CODE=你的玩家邀请码
-DUNGEON_AUTHOR_CODE=你的作者邀请码
-DUNGEON_ADMIN_CODE=你的馆主邀请码
+SUPABASE_URL
+SUPABASE_SERVICE_ROLE_KEY
 ```
 
-权限含义：
+函数会用 service role 访问 `invite_codes`、副本表、档案表、结算表和天赋表。
+
+## 3. 生成每人独立邀请码
+
+在本地生成邀请：
 
 ```text
-玩家：评分、评论
-作者：投稿、评分、评论
-馆主：投稿、评分、评论、删除副本
-```
-
-这三条共享码可以作为应急码。正式发给群友时，推荐使用 `invite_codes` 表里的每人独立邀请码。
-
-## 3. 启用每人一个邀请码
-
-先在 `SQL Editor` 执行：
-
-```text
-supabase/per_person_invites_migration.sql
-```
-
-如果要启用副本论坛增强功能（最新评论流、楼中楼回复、评论删除、作者置顶说明、通关反馈标签），继续执行：
-
-```text
-supabase/forum_features_migration.sql
-```
-
-如果要启用“每个邀请码绑定唯一昵称”，继续执行：
-
-```text
-supabase/nickname_binding_migration.sql
-```
-
-再在本地生成邀请：
-
-```text
-node scripts/generate_invites.js --players 80 --authors 10
+node scripts/generate_invites.js --players 80 --authors 10 --reviewers 2 --admins 1
 ```
 
 生成结果会放在 `private_invites/`：
@@ -65,24 +64,39 @@ invite_codes_时间.csv  发给群友的明文邀请码
 invite_codes_时间.sql  粘贴进 Supabase SQL Editor 的哈希导入脚本
 ```
 
+把生成的 `.sql` 文件内容放进 Supabase `SQL Editor` 执行。
+
 不要把 `private_invites/` 里的文件上传到 GitHub。
 
-每个专属码登录后，可以在“邀请权限”弹窗里保存自己的身份昵称。保存后，这个码之后评论、评分、投稿都会使用绑定昵称；共享应急码不能绑定个人昵称。
-
-通关率不是作者手填。副本保存固定人数和当前周目，玩家点击“我已通过本周目”后生成通过记录：
+权限含义：
 
 ```text
-通关率 = 已通过人次 / (固定人数 × 当前周目) × 100%
+玩家：评分、评论、登记通关、保存个人档案、使用天赋池
+作者：玩家权限 + 上传副本、开启下一周目、维护作者置顶说明
+审核员：玩家权限 + 批量结算、单人补分、撤销结算
+馆主：全部权限 + 删除副本和管理内容
 ```
-
-例如 6 人副本，第 2 周目时有 6 人登记通过，通关率就是 `6 / (6 × 2) = 50%`。
 
 ## 4. 锁住公开写入
 
-确认函数部署成功后，在 `SQL Editor` 执行：
+确认函数部署成功、邀请码导入成功后，在 `SQL Editor` 执行：
 
 ```text
 supabase/dungeon_invite_lockdown.sql
 ```
 
-执行后，任何人仍然可以浏览排行榜，但没有邀请码就不能投稿、评分或评论。
+执行后，任何人仍然可以浏览副本，但没有邀请码就不能投稿、评分、评论或登记通关。
+
+## 5. 上线后检查
+
+建议至少检查这几件事：
+
+1. 无邀请码访问：只能浏览。
+2. 玩家码：能评分、评论、登记通关、保存个人档案。
+3. 作者码：能看到并使用「构筑愚戏」。
+4. 审核员码：能看到并使用「分数结算」。
+5. 馆主码：能管理副本，并能进入分数结算。
+6. 个人档案保存信仰神明和职业后，天赋池会显示可选池子。
+7. 审核员结算后，玩家档案能收到结算信封。
+
+如果页面提示「请先运行 score_system_migration.sql」或「请先运行 talent_pool_migration.sql」，说明对应 SQL 还没有在当前 Supabase 项目里执行。

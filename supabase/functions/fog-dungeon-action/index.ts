@@ -6,7 +6,7 @@ const corsHeaders = {
   "Access-Control-Allow-Methods": "POST, OPTIONS",
 };
 
-type InviteRole = "player" | "author" | "admin";
+type InviteRole = "player" | "author" | "reviewer" | "admin";
 
 type RequestBody = {
   action?: string;
@@ -22,10 +22,17 @@ type InviteIdentity = {
 };
 
 type LooseError = { code?: string; message?: string } | null | undefined;
+type TalentPoolItem = {
+  pool_key: string;
+  talent_id: number;
+  talent_name: string;
+  rank: string;
+};
 
 const roleLabels: Record<InviteRole, string> = {
   player: "玩家",
   author: "作者",
+  reviewer: "审核员",
   admin: "馆主",
 };
 
@@ -36,6 +43,10 @@ const repeatFragmentGain = 5;
 const targetTalentExchangeCost = 100;
 const inventorySlotLimit = 8;
 const equippedSlotLimit = 3;
+const scoreDengMin = -20;
+const scoreDengMax = 20;
+const scoreJinMin = 0;
+const scoreJinMax = 3;
 const knownTalentPools = [
   "Pool战士",
   "Pool法师",
@@ -174,7 +185,7 @@ async function getInviteIdentity(
   if (error) return null;
 
   const roleFromTable = data?.role as InviteRole | undefined;
-  if (data?.is_active && roleFromTable && ["player", "author", "admin"].includes(roleFromTable)) {
+  if (data?.is_active && roleFromTable && ["player", "author", "reviewer", "admin"].includes(roleFromTable)) {
     await supabase
       .from("invite_codes")
       .update({ last_used_at: new Date().toISOString() })
@@ -231,7 +242,99 @@ function getAllowedTalentPools(profile: Record<string, unknown>) {
   return [...poolSet].filter((poolKey) => knownTalentPools.includes(poolKey));
 }
 
-function weightedPickTalent<T extends { talent_id: number }>(items: T[]) {
+function canSettleScores(role: InviteRole) {
+  return hasRole(role, ["reviewer", "admin"]);
+}
+
+function cleanSettlementScore(value: unknown) {
+  const number = Number(value);
+  if (!Number.isFinite(number)) return Number.NaN;
+  return Math.round(number * 10) / 10;
+}
+
+function checkSettlementScoreRange(deng: number, jin: number) {
+  if (!Number.isFinite(deng) || !Number.isFinite(jin)) return "分数格式不正确";
+  if (deng < scoreDengMin || deng > scoreDengMax) return `登神之路分数必须在 ${scoreDengMin}~${scoreDengMax} 之间`;
+  if (jin < scoreJinMin || jin > scoreJinMax) return `觐见之梯分数必须在 ${scoreJinMin}~${scoreJinMax} 之间`;
+  return "";
+}
+
+function parseScoreSettlementText(textContent: unknown) {
+  const text = cleanText(textContent, 20000);
+  const entries: { nick: string; deng: number; jin: number; total: number; line: number; raw: string }[] = [];
+  const invalidLines: { line: number; raw: string; msg: string }[] = [];
+  text.split(/\r?\n/u).forEach((lineText, index) => {
+    const raw = lineText.trim();
+    if (!raw) return;
+    const match = raw.match(/^(.+?)[：:]\s*([+-]?\d+(?:\.\d+)?)\s*\+\s*([+-]?\d+(?:\.\d+)?)\s*$/u);
+    if (!match) {
+      invalidLines.push({ line: index + 1, raw, msg: "格式应为 昵称:+登神+觐见" });
+      return;
+    }
+    const nick = cleanText(match[1], 40);
+    const deng = cleanSettlementScore(match[2]);
+    const jin = cleanSettlementScore(match[3]);
+    if (!nick) {
+      invalidLines.push({ line: index + 1, raw, msg: "昵称不能为空" });
+      return;
+    }
+    entries.push({ nick, deng, jin, total: Math.round((deng + jin) * 10) / 10, line: index + 1, raw });
+  });
+  return { entries, invalidLines };
+}
+
+async function getProfilesByNames(
+  supabase: ReturnType<typeof createClient>,
+  names: string[],
+) {
+  const uniqueNames = [...new Set(names.map((name) => cleanText(name, 40)).filter(Boolean))];
+  if (!uniqueNames.length) return { profiles: new Map<string, Record<string, unknown>>() };
+  const { data, error } = await supabase
+    .from("player_profiles")
+    .select("invite_code_hash, display_name, role, ascension_score, audience_score")
+    .in("display_name", uniqueNames);
+  if (error) return { error };
+  const profiles = new Map<string, Record<string, unknown>>();
+  (data || []).forEach((profile) => profiles.set(String(profile.display_name), profile));
+  return { profiles };
+}
+
+async function buildScorePreview(
+  supabase: ReturnType<typeof createClient>,
+  entries: { nick: string; deng: number; jin: number; total: number; line: number; raw: string }[],
+  invalidLines: { line: number; raw: string; msg: string }[],
+) {
+  const scoreErrList = entries
+    .map((entry) => ({ ...entry, msg: checkSettlementScoreRange(entry.deng, entry.jin) }))
+    .filter((entry) => entry.msg);
+  const nickCounts = new Map<string, number>();
+  entries.forEach((entry) => nickCounts.set(entry.nick, (nickCounts.get(entry.nick) || 0) + 1));
+  const duplicateNick = [...nickCounts.entries()]
+    .filter(([, count]) => count > 1)
+    .map(([nick]) => nick);
+  const profileResult = await getProfilesByNames(supabase, entries.map((entry) => entry.nick));
+  if (profileResult.error) return { error: profileResult.error };
+  const profiles = profileResult.profiles || new Map<string, Record<string, unknown>>();
+  const missingNick = [...new Set(entries.map((entry) => entry.nick).filter((nick) => !profiles.has(nick)))];
+  const totalDeng = entries.reduce((sum, entry) => sum + (Number.isFinite(entry.deng) ? entry.deng : 0), 0);
+  const totalJin = entries.reduce((sum, entry) => sum + (Number.isFinite(entry.jin) ? entry.jin : 0), 0);
+  return {
+    data: {
+      allList: entries,
+      invalidLines,
+      scoreErrList,
+      missingNick,
+      duplicateNick,
+      totalPlayers: entries.length,
+      totalDeng: Math.round(totalDeng * 10) / 10,
+      totalJin: Math.round(totalJin * 10) / 10,
+      totalScore: Math.round((totalDeng + totalJin) * 10) / 10,
+      valid: entries.length > 0 && invalidLines.length === 0 && scoreErrList.length === 0 && missingNick.length === 0 && duplicateNick.length === 0,
+    },
+  };
+}
+
+function weightedPickTalent<T extends { talent_id: number }>(items: T[]): T {
   let totalWeight = 0;
   const weighted = items.map((item) => {
     totalWeight += Math.max(1, Number(item.talent_id) || 1) ** 2;
@@ -539,6 +642,112 @@ async function recalculateClearStats(
   return { data, error };
 }
 
+async function commitScoreSettlement(
+  supabase: ReturnType<typeof createClient>,
+  identity: InviteIdentity,
+  sourceType: "batch" | "single",
+  dungeonNameInput: unknown,
+  entries: { nick: string; deng: number; jin: number; total: number; line: number; raw: string }[],
+  options: { rawText?: string; remark?: string } = {},
+) {
+  const dungeonName = cleanText(dungeonNameInput, 80);
+  const rawText = cleanText(options.rawText ?? "", 20000);
+  const remark = cleanText(options.remark ?? "", 500);
+  if (!dungeonName) return { error: { message: "请填写副本名称" } };
+
+  const preview = await buildScorePreview(supabase, entries, []);
+  if (preview.error) return { error: preview.error };
+  if (!preview.data?.valid) return { error: { message: "预校验未通过", preview: preview.data } };
+
+  const profileResult = await getProfilesByNames(supabase, entries.map((entry) => entry.nick));
+  if (profileResult.error) return { error: profileResult.error };
+  const profiles = profileResult.profiles || new Map<string, Record<string, unknown>>();
+  const totalDeng = entries.reduce((sum, entry) => sum + entry.deng, 0);
+  const totalJin = entries.reduce((sum, entry) => sum + entry.jin, 0);
+
+  const { data: settlement, error: settlementError } = await supabase
+    .from("score_settlements")
+    .insert({
+      dungeon_name: dungeonName,
+      source_type: sourceType,
+      operator_code_hash: identity.codeHash,
+      operator_name: identity.displayName,
+      raw_text: rawText,
+      remark,
+      total_players: entries.length,
+      total_ascension: Math.round(totalDeng * 10) / 10,
+      total_audience: Math.round(totalJin * 10) / 10,
+      total_score: Math.round((totalDeng + totalJin) * 10) / 10,
+    })
+    .select()
+    .single();
+  if (settlementError) return { error: settlementError };
+
+  const entryRows = entries.map((entry) => {
+    const profile = profiles.get(entry.nick) || {};
+    return {
+      settlement_id: settlement.id,
+      player_code_hash: String(profile.invite_code_hash || ""),
+      player_name: entry.nick,
+      score_deng: entry.deng,
+      score_jin: entry.jin,
+    };
+  });
+  const { error: entryError } = await supabase.from("score_settlement_entries").insert(entryRows);
+  if (entryError) return { error: entryError };
+
+  for (const entry of entries) {
+    const profile = profiles.get(entry.nick) || {};
+    const codeHash = String(profile.invite_code_hash || "");
+    const currentAscension = cleanScore(profile.ascension_score);
+    const currentAudience = cleanScore(profile.audience_score);
+    const nextAscension = Math.max(0, Math.round((currentAscension + entry.deng) * 10) / 10);
+    const nextAudience = Math.max(0, Math.round((currentAudience + entry.jin) * 10) / 10);
+    const { error: updateError } = await supabase
+      .from("player_profiles")
+      .update({
+        ascension_score: nextAscension,
+        audience_score: nextAudience,
+        updated_at: new Date().toISOString(),
+      })
+      .eq("invite_code_hash", codeHash);
+    if (updateError) return { error: updateError };
+  }
+
+  const logRows = entries.map((entry) => {
+    const profile = profiles.get(entry.nick) || {};
+    return {
+      player_code_hash: String(profile.invite_code_hash || ""),
+      player_name: entry.nick,
+      change_deng: entry.deng,
+      change_jin: entry.jin,
+      source_type: sourceType,
+      settlement_id: settlement.id,
+      operator_code_hash: identity.codeHash,
+      operator_name: identity.displayName,
+    };
+  });
+  const { error: logError } = await supabase.from("score_change_logs").insert(logRows);
+  if (logError) return { error: logError };
+
+  const messageRows = entries.map((entry) => {
+    const profile = profiles.get(entry.nick) || {};
+    const typeName = sourceType === "single" ? "漏分补发" : "批量结算";
+    const content = `【${typeName}｜副本：${dungeonName}】\n审核员：${identity.displayName}\n登神之路：${entry.deng >= 0 ? "+" : ""}${entry.deng}\n觐见之梯：+${entry.jin}\n本次总变化：${entry.total >= 0 ? "+" : ""}${entry.total}${remark ? `\n备注：${remark}` : ""}`;
+    return {
+      player_code_hash: String(profile.invite_code_hash || ""),
+      player_name: entry.nick,
+      settlement_id: settlement.id,
+      msg_type: sourceType,
+      content,
+    };
+  });
+  const { error: messageError } = await supabase.from("score_messages").insert(messageRows);
+  if (messageError) return { error: messageError };
+
+  return { data: { settlement, entries: entryRows } };
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
   if (req.method !== "POST") return json({ error: "只接受 POST 请求" }, 405);
@@ -588,7 +797,7 @@ Deno.serve(async (req) => {
     }
 
     if (action === "saveProfile") {
-      if (!hasRole(role, ["player", "author", "admin"])) return json({ error: "需要入局谕令" }, 403);
+      if (!hasRole(role, ["player", "author", "reviewer", "admin"])) return json({ error: "需要入局谕令" }, 403);
 
       const faithGod = cleanText(payload.faithGod, 20);
       const faithPath = cleanText(payload.faithPath, 20);
@@ -647,7 +856,7 @@ Deno.serve(async (req) => {
     }
 
     if (action === "listProfiles") {
-      if (!hasRole(role, ["player", "author", "admin"])) return json({ error: "需要入局谕令" }, 403);
+      if (!hasRole(role, ["player", "author", "reviewer", "admin"])) return json({ error: "需要入局谕令" }, 403);
 
       const { data, error } = await supabase
         .from("player_profiles")
@@ -667,8 +876,197 @@ Deno.serve(async (req) => {
       });
     }
 
+    if (action === "checkScorePreview") {
+      if (!canSettleScores(role)) return json({ error: "需要审核员权限" }, 403);
+      const { entries, invalidLines } = parseScoreSettlementText(payload.textContent);
+      const preview = await buildScorePreview(supabase, entries, invalidLines);
+      if (preview.error?.code === "42P01") return json({ error: "请先运行 score_system_migration.sql" }, 400);
+      if (preview.error) return json({ error: preview.error.message }, 400);
+      return json({ role, name: identity.displayName, data: preview.data });
+    }
+
+    if (action === "submitScoreBatch") {
+      if (!canSettleScores(role)) return json({ error: "需要审核员权限" }, 403);
+      const { entries, invalidLines } = parseScoreSettlementText(payload.textContent);
+      if (invalidLines.length) return json({ error: "结算文本格式有误", data: { invalidLines } }, 400);
+      const result = await commitScoreSettlement(
+        supabase,
+        identity,
+        "batch",
+        payload.dungeonName,
+        entries,
+        { rawText: cleanText(payload.textContent, 20000), remark: cleanText(payload.remark, 500) },
+      );
+      if (result.error?.code === "42P01") return json({ error: "请先运行 score_system_migration.sql" }, 400);
+      if (result.error) return json({ error: result.error.message || "结算失败", data: result.error.preview || null }, 400);
+      return json({ role, name: identity.displayName, data: result.data });
+    }
+
+    if (action === "submitScoreSingle") {
+      if (!canSettleScores(role)) return json({ error: "需要审核员权限" }, 403);
+      const nick = cleanText(payload.playerName, 40);
+      const deng = cleanSettlementScore(payload.dengScore);
+      const jin = cleanSettlementScore(payload.jinScore);
+      const rangeMessage = checkSettlementScoreRange(deng, jin);
+      if (!nick || rangeMessage) return json({ error: rangeMessage || "请填写玩家昵称" }, 400);
+      const result = await commitScoreSettlement(
+        supabase,
+        identity,
+        "single",
+        payload.dungeonName,
+        [{ nick, deng, jin, total: Math.round((deng + jin) * 10) / 10, line: 1, raw: `${nick}:${deng}+${jin}` }],
+        { remark: cleanText(payload.remark, 500) },
+      );
+      if (result.error?.code === "42P01") return json({ error: "请先运行 score_system_migration.sql" }, 400);
+      if (result.error) return json({ error: result.error.message || "补分失败", data: result.error.preview || null }, 400);
+      return json({ role, name: identity.displayName, data: result.data });
+    }
+
+    if (action === "listScoreSettlements") {
+      if (!canSettleScores(role)) return json({ error: "需要审核员权限" }, 403);
+      const limit = Math.max(1, Math.min(100, Number(payload.limit || 30)));
+      const { data, error } = await supabase
+        .from("score_settlements")
+        .select("id, dungeon_name, source_type, operator_name, total_players, total_ascension, total_audience, total_score, is_revoked, revoke_remark, created_at")
+        .order("created_at", { ascending: false })
+        .limit(limit);
+      if (error?.code === "42P01") return json({ error: "请先运行 score_system_migration.sql" }, 400);
+      if (error) return json({ error: error.message }, 400);
+      return json({ role, name: identity.displayName, data: data || [] });
+    }
+
+    if (action === "getScoreSettlementDetail") {
+      if (!canSettleScores(role)) return json({ error: "需要审核员权限" }, 403);
+      const settlementId = cleanText(payload.settlementId, 80);
+      if (!isUuid(settlementId)) return json({ error: "结算 ID 不正确" }, 400);
+      const { data: settlement, error: settlementError } = await supabase
+        .from("score_settlements")
+        .select("*")
+        .eq("id", settlementId)
+        .single();
+      if (settlementError) return json({ error: settlementError.message }, 400);
+      const { data: entries, error: entriesError } = await supabase
+        .from("score_settlement_entries")
+        .select("player_name, score_deng, score_jin, total_add")
+        .eq("settlement_id", settlementId)
+        .order("id", { ascending: true });
+      if (entriesError) return json({ error: entriesError.message }, 400);
+      return json({ role, name: identity.displayName, data: { settlement, entries: entries || [] } });
+    }
+
+    if (action === "revokeScoreSettlement") {
+      if (!canSettleScores(role)) return json({ error: "需要审核员权限" }, 403);
+      const settlementId = cleanText(payload.settlementId, 80);
+      const revokeRemark = cleanText(payload.revokeRemark, 500);
+      if (!isUuid(settlementId)) return json({ error: "结算 ID 不正确" }, 400);
+      if (!revokeRemark) return json({ error: "请填写撤销备注" }, 400);
+
+      const { data: settlement, error: settlementError } = await supabase
+        .from("score_settlements")
+        .select("id, dungeon_name, source_type, operator_code_hash, operator_name, is_revoked")
+        .eq("id", settlementId)
+        .single();
+      if (settlementError) return json({ error: settlementError.message }, 400);
+      if (settlement.is_revoked) return json({ error: "这场结算已经撤销过" }, 409);
+      if (role !== "admin" && settlement.operator_code_hash !== identity.codeHash) {
+        return json({ error: "审核员只能撤销自己提交的结算" }, 403);
+      }
+
+      const { data: entries, error: entriesError } = await supabase
+        .from("score_settlement_entries")
+        .select("player_code_hash, player_name, score_deng, score_jin, total_add")
+        .eq("settlement_id", settlementId);
+      if (entriesError) return json({ error: entriesError.message }, 400);
+
+      for (const entry of entries || []) {
+        const { data: profile, error: profileError } = await supabase
+          .from("player_profiles")
+          .select("ascension_score, audience_score")
+          .eq("invite_code_hash", entry.player_code_hash)
+          .single();
+        if (profileError) return json({ error: profileError.message }, 400);
+        const nextAscension = Math.max(0, Math.round((cleanScore(profile.ascension_score) - Number(entry.score_deng || 0)) * 10) / 10);
+        const nextAudience = Math.max(0, Math.round((cleanScore(profile.audience_score) - Number(entry.score_jin || 0)) * 10) / 10);
+        const { error: updateError } = await supabase
+          .from("player_profiles")
+          .update({
+            ascension_score: nextAscension,
+            audience_score: nextAudience,
+            updated_at: new Date().toISOString(),
+          })
+          .eq("invite_code_hash", entry.player_code_hash);
+        if (updateError) return json({ error: updateError.message }, 400);
+      }
+
+      const { error: revokeError } = await supabase
+        .from("score_settlements")
+        .update({
+          is_revoked: true,
+          revoke_remark: revokeRemark,
+          revoked_by_hash: identity.codeHash,
+          revoked_by_name: identity.displayName,
+          revoked_at: new Date().toISOString(),
+        })
+        .eq("id", settlementId);
+      if (revokeError) return json({ error: revokeError.message }, 400);
+
+      const revokeLogs = (entries || []).map((entry) => ({
+        player_code_hash: entry.player_code_hash,
+        player_name: entry.player_name,
+        change_deng: -Number(entry.score_deng || 0),
+        change_jin: -Number(entry.score_jin || 0),
+        source_type: "revoke",
+        settlement_id: settlementId,
+        operator_code_hash: identity.codeHash,
+        operator_name: identity.displayName,
+        revoke_remark: revokeRemark,
+      }));
+      if (revokeLogs.length) {
+        const { error: logError } = await supabase.from("score_change_logs").insert(revokeLogs);
+        if (logError) return json({ error: logError.message }, 400);
+        const revokeMessages = (entries || []).map((entry) => ({
+          player_code_hash: entry.player_code_hash,
+          player_name: entry.player_name,
+          settlement_id: settlementId,
+          msg_type: "revoke",
+          content: `【结算撤销｜副本：${settlement.dungeon_name}】\n撤销人：${identity.displayName}\n登神回滚：${-Number(entry.score_deng || 0)}\n觐见回滚：${-Number(entry.score_jin || 0)}\n备注：${revokeRemark}`,
+        }));
+        const { error: messageError } = await supabase.from("score_messages").insert(revokeMessages);
+        if (messageError) return json({ error: messageError.message }, 400);
+      }
+
+      return json({ role, name: identity.displayName, data: { id: settlementId } });
+    }
+
+    if (action === "listMyScoreMessages") {
+      if (!hasRole(role, ["player", "author", "reviewer", "admin"])) return json({ error: "需要入局谕令" }, 403);
+      const limit = Math.max(1, Math.min(100, Number(payload.limit || 30)));
+      const { data, error } = await supabase
+        .from("score_messages")
+        .select("id, settlement_id, msg_type, content, is_read, created_at")
+        .eq("player_code_hash", identity.codeHash)
+        .order("created_at", { ascending: false })
+        .limit(limit);
+      if (error?.code === "42P01") return json({ error: "请先运行 score_system_migration.sql" }, 400);
+      if (error) return json({ error: error.message }, 400);
+      return json({ role, name: identity.displayName, data: data || [] });
+    }
+
+    if (action === "markScoreMessageRead") {
+      if (!hasRole(role, ["player", "author", "reviewer", "admin"])) return json({ error: "需要入局谕令" }, 403);
+      const messageId = cleanBigIntId(payload.messageId);
+      if (!messageId) return json({ error: "信封 ID 不正确" }, 400);
+      const { error } = await supabase
+        .from("score_messages")
+        .update({ is_read: true })
+        .eq("id", messageId)
+        .eq("player_code_hash", identity.codeHash);
+      if (error) return json({ error: error.message }, 400);
+      return json({ role, name: identity.displayName, data: { id: messageId } });
+    }
+
     if (action === "getTalentState") {
-      if (!hasRole(role, ["player", "author", "admin"])) return json({ error: "需要入局谕令" }, 403);
+      if (!hasRole(role, ["player", "author", "reviewer", "admin"])) return json({ error: "需要入局谕令" }, 403);
 
       const state = await buildTalentState(supabase, identity);
       if (isMissingTalentTable(state.error ?? null)) return json({ error: "请先运行 talent_pool_migration.sql" }, 400);
@@ -677,7 +1075,7 @@ Deno.serve(async (req) => {
     }
 
     if (action === "drawTalent") {
-      if (!hasRole(role, ["player", "author", "admin"])) return json({ error: "需要入局谕令" }, 403);
+      if (!hasRole(role, ["player", "author", "reviewer", "admin"])) return json({ error: "需要入局谕令" }, 403);
 
       const poolKey = cleanPoolKey(payload.poolKey);
       const drawType = cleanText(payload.drawType, 12) === "ten" ? "ten" : "single";
@@ -716,7 +1114,8 @@ Deno.serve(async (req) => {
       if (poolError) return json({ error: poolError.message }, 400);
       if (!poolItems?.length) return json({ error: "该天赋池暂无天赋" }, 400);
 
-      const bItems = poolItems.filter((item) => item.rank === "B");
+      const talentItems = (poolItems || []) as TalentPoolItem[];
+      const bItems = talentItems.filter((item) => item.rank === "B");
       const { data: counterRow, error: counterError } = await supabase
         .from("talent_pool_counters")
         .select("continue_draw")
@@ -729,7 +1128,7 @@ Deno.serve(async (req) => {
       let fragmentGainTotal = 0;
 
       for (let i = 0; i < drawCount; i += 1) {
-        let target = weightedPickTalent(poolItems);
+        let target = weightedPickTalent(talentItems);
         let isForcedGuarantee = false;
         if (bItems.length > 0 && continueDraw >= 9) {
           target = bItems[Math.floor(Math.random() * bItems.length)];
@@ -850,7 +1249,7 @@ Deno.serve(async (req) => {
     }
 
     if (action === "exchangeTalent") {
-      if (!hasRole(role, ["player", "author", "admin"])) return json({ error: "需要入局谕令" }, 403);
+      if (!hasRole(role, ["player", "author", "reviewer", "admin"])) return json({ error: "需要入局谕令" }, 403);
 
       const poolKey = cleanPoolKey(payload.poolKey);
       const targetTalentId = cleanTalentId(payload.targetTalentId);
@@ -953,7 +1352,7 @@ Deno.serve(async (req) => {
     }
 
     if (action === "resolveTalentOverflow") {
-      if (!hasRole(role, ["player", "author", "admin"])) return json({ error: "需要入局谕令" }, 403);
+      if (!hasRole(role, ["player", "author", "reviewer", "admin"])) return json({ error: "需要入局谕令" }, 403);
 
       const choiceId = cleanBigIntId(payload.choiceId);
       const decision = cleanText(payload.decision, 12);
@@ -1043,7 +1442,7 @@ Deno.serve(async (req) => {
     }
 
     if (action === "setEquippedTalent") {
-      if (!hasRole(role, ["player", "author", "admin"])) return json({ error: "需要入局谕令" }, 403);
+      if (!hasRole(role, ["player", "author", "reviewer", "admin"])) return json({ error: "需要入局谕令" }, 403);
 
       const equippedSlot = cleanSlot(payload.equippedSlot, equippedSlotLimit);
       const ownedTalentId = cleanBigIntId(payload.ownedTalentId);
@@ -1092,7 +1491,7 @@ Deno.serve(async (req) => {
     }
 
     if (action === "discardOwnedTalent") {
-      if (!hasRole(role, ["player", "author", "admin"])) return json({ error: "需要入局谕令" }, 403);
+      if (!hasRole(role, ["player", "author", "reviewer", "admin"])) return json({ error: "需要入局谕令" }, 403);
 
       const ownedTalentId = cleanBigIntId(payload.ownedTalentId);
       if (!ownedTalentId) return json({ error: "仓库天赋不正确" }, 400);
@@ -1185,7 +1584,7 @@ Deno.serve(async (req) => {
     }
 
     if (action === "markCleared") {
-      if (!hasRole(role, ["player", "author", "admin"])) return json({ error: "需要玩家或作者邀请码" }, 403);
+      if (!hasRole(role, ["player", "author", "reviewer", "admin"])) return json({ error: "需要入局谕令" }, 403);
 
       const dungeonId = cleanText(payload.dungeonId, 80);
       if (!isUuid(dungeonId)) return json({ error: "副本 ID 不正确" }, 400);
@@ -1263,7 +1662,7 @@ Deno.serve(async (req) => {
     }
 
     if (action === "addRating") {
-      if (!hasRole(role, ["player", "author", "admin"])) return json({ error: "需要玩家或作者邀请码" }, 403);
+      if (!hasRole(role, ["player", "author", "reviewer", "admin"])) return json({ error: "需要入局谕令" }, 403);
 
       const dungeonId = cleanText(payload.dungeonId, 80);
       const rating = Number(payload.rating);
@@ -1296,7 +1695,7 @@ Deno.serve(async (req) => {
     }
 
     if (action === "addComment") {
-      if (!hasRole(role, ["player", "author", "admin"])) return json({ error: "需要玩家或作者邀请码" }, 403);
+      if (!hasRole(role, ["player", "author", "reviewer", "admin"])) return json({ error: "需要入局谕令" }, 403);
 
       const dungeonId = cleanText(payload.dungeonId, 80);
       const authorInput = cleanText(payload.author, 40);
@@ -1363,7 +1762,7 @@ Deno.serve(async (req) => {
     }
 
     if (action === "deleteComment") {
-      if (!hasRole(role, ["player", "author", "admin"])) return json({ error: "需要邀请码" }, 403);
+      if (!hasRole(role, ["player", "author", "reviewer", "admin"])) return json({ error: "需要邀请码" }, 403);
 
       const commentId = cleanText(payload.commentId, 80);
       if (!isUuid(commentId)) return json({ error: "评论 ID 不正确" }, 400);

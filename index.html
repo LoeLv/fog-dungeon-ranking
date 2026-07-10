@@ -85,7 +85,12 @@
         body.leaderboard-view-open > .header,
         body.leaderboard-view-open > .container,
         body.leaderboard-view-open > .detail-overlay,
-        body.leaderboard-view-open > #profilePage {
+        body.leaderboard-view-open > #profilePage,
+        body.score-view-open > .header,
+        body.score-view-open > .container,
+        body.score-view-open > .detail-overlay,
+        body.score-view-open > #profilePage,
+        body.score-view-open > #leaderboardPage {
             display: none;
         }
         body::before {
@@ -334,6 +339,11 @@
             color: var(--gold-light);
             border-color: rgba(213,178,91,0.42);
             background: rgba(213,178,91,0.11);
+        }
+        .role-badge[data-role="reviewer"] {
+            color: #8fd8cf;
+            border-color: rgba(143,216,207,0.42);
+            background: rgba(143,216,207,0.10);
         }
         .role-badge[data-role="admin"] {
             color: #f1d9ff;
@@ -3306,6 +3316,45 @@
             gap: 10px;
             margin-top: 12px;
         }
+        .score-preview-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 12px;
+            overflow: hidden;
+            border-radius: 10px;
+        }
+        .score-preview-table th,
+        .score-preview-table td {
+            border-bottom: 1px solid rgba(255,255,255,0.07);
+            padding: 8px 10px;
+            text-align: left;
+            font-size: 0.78rem;
+        }
+        .score-preview-table th {
+            color: var(--text-muted);
+            background: rgba(255,255,255,0.035);
+            font-weight: 700;
+        }
+        .score-preview-table tr:last-child td {
+            border-bottom: none;
+        }
+        .score-error-list {
+            display: grid;
+            gap: 8px;
+            margin-top: 12px;
+        }
+        .score-error-item {
+            border: 1px solid rgba(215,107,74,0.32);
+            border-radius: 10px;
+            padding: 8px 10px;
+            color: #f0b59f;
+            background: rgba(215,107,74,0.08);
+            font-size: 0.78rem;
+        }
+        .score-message-card.unread {
+            border-color: rgba(231,207,138,0.28);
+            background: rgba(231,207,138,0.06);
+        }
         .leaderboard-tabs,
         .leaderboard-path-tabs {
             display: flex;
@@ -3854,6 +3903,7 @@
         <div class="header-actions">
             <button type="button" class="role-badge" id="roleBadge" onclick="openProfilePage()">旁观者只读</button>
             <button class="btn btn-outline" onclick="openLeaderboardPage()">🏛 觐见榜单</button>
+            <button class="btn btn-outline" id="scoreDeskButton" onclick="openScorePage()" style="display:none;">⚖ 分数结算</button>
             <button class="btn btn-outline" id="inviteButton" onclick="openInviteModal()">🎲 同契召引</button>
             <button class="btn btn-primary btn-folly" id="submitEntryButton" onclick="openSubmitModal()">🎭 构筑愚戏</button>
         </div>
@@ -3991,19 +4041,34 @@
         </div>
     </main>
 
+    <!-- 审核员分数结算页 -->
+    <main class="profile-page" id="scorePage" style="display:none;">
+        <div class="profile-shell">
+            <div class="profile-toolbar">
+                <button class="detail-back" onclick="closeScorePage()">← 返回试炼列表</button>
+                <div class="detail-window-title">SCORE SANCTUM · 分数结算工作台</div>
+                <button class="detail-close-icon" onclick="closeScorePage()" title="返回试炼列表" aria-label="返回试炼列表">✕</button>
+            </div>
+            <div id="scoreContent" class="profile-content">
+                <div class="loading"><div class="spinner"></div><br>正在读取结算神谕...</div>
+            </div>
+        </div>
+    </main>
+
     <!-- 邀请弹窗 -->
     <div class="modal-overlay" id="inviteModalOverlay" style="display:none;" onclick="closeInviteModal(event)">
         <div class="modal" id="inviteModal" onclick="event.stopPropagation()">
             <button class="close-btn" style="position:absolute;top:16px;right:20px;" onclick="closeInviteModal()">✕</button>
             <h2>🎲 入局谕令</h2>
-            <p class="modal-note" id="inviteHint">输入群内谕令后，才能参与神格判定、试炼证言或构筑愚戏。</p>
+            <p class="modal-note" id="inviteHint">输入群内谕令后，才能参与神格判定、试炼证言、构筑愚戏或分数结算。</p>
             <div class="form-group">
                 <label>入局谕令</label>
-                <input type="password" id="inviteCodeInput" placeholder="输入信徒或构筑者谕令" autocomplete="off">
+                <input type="password" id="inviteCodeInput" placeholder="输入你的同契谕令" autocomplete="off">
             </div>
             <div class="role-guide">
                 <div class="role-card"><strong>入局信徒</strong><span>神格判定、递交证言，不能构筑。</span></div>
                 <div class="role-card"><strong>试炼构筑者</strong><span>构筑愚戏、判定、证言。</span></div>
+                <div class="role-card"><strong>结算审核员</strong><span>审核副本分数、补分与撤销。</span></div>
                 <div class="role-card"><strong>神谕馆主</strong><span>封存与管理祈愿试炼。</span></div>
             </div>
             <div class="identity-card" id="identityCard">
@@ -4015,7 +4080,7 @@
                     <input type="text" id="displayNameInput" maxlength="16" placeholder="绑定你的昵称，例如：无我">
                     <button type="button" class="btn btn-primary btn-sm" id="displayNameButton" onclick="saveDisplayName()">保存昵称</button>
                 </div>
-                <div class="identity-help">保存后，这枚谕令在证言、判定、构筑愚戏时都会显示这个昵称。</div>
+                <div class="identity-help">保存后，这枚谕令在证言、判定、构筑愚戏和分数结算时都会显示这个昵称。</div>
             </div>
             <div class="form-actions">
                 <button type="button" class="btn btn-outline" onclick="clearInviteSession()">退出身份</button>
@@ -4138,7 +4203,7 @@
         const INVITE_STORAGE_KEY = 'invite_session_v1';
         const PROFILE_STORAGE_KEY = 'personal_profiles_v1';
         const PROFILE_NOTICE_SEEN_KEY = 'profile_notice_seen_v1';
-        const ROLE_LABELS = { player: '入局信徒', author: '试炼构筑者', admin: '神谕馆主' };
+        const ROLE_LABELS = { player: '入局信徒', author: '试炼构筑者', reviewer: '结算审核员', admin: '神谕馆主' };
         const GOD_GROUPS = [
             { path: '生命', className: 'path-life', gods: ['诞育', '繁荣', '死亡'] },
             { path: '存在', className: 'path-exist', gods: ['记忆', '时间'] },
@@ -4544,8 +4609,10 @@
         let archiveScrollY = 0;
         let profileScrollY = 0;
         let leaderboardScrollY = 0;
+        let scoreScrollY = 0;
         let leaderboardMode = 'overall';
         let leaderboardPath = 'all';
+        let scorePreviewState = null;
         let selectedTalentPool = '';
         let lastTalentDrawResult = [];
         let currentTalentState = normalizeTalentState(null);
@@ -4556,9 +4623,10 @@
 
         function getInviteRole() { return inviteSession?.role || null; }
         function canUseRole(roles) { return roles.includes(getInviteRole()); }
-        function canInteract() { return canUseRole(['player', 'author', 'admin']); }
+        function canInteract() { return canUseRole(['player', 'author', 'reviewer', 'admin']); }
         function canSubmit() { return canUseRole(['author', 'admin']); }
         function isAdmin() { return getInviteRole() === 'admin'; }
+        function canSettleScores() { return canUseRole(['reviewer', 'admin']); }
         function canOverrideProfileLocks() { return isAdmin(); }
         function canEditProfileScores() { return canOverrideProfileLocks(); }
         function shouldAutoFocusModalInput() {
@@ -4580,11 +4648,12 @@
             const roleBadge = document.getElementById('roleBadge');
             const inviteButton = document.getElementById('inviteButton');
             const submitButton = document.getElementById('submitEntryButton');
+            const scoreButton = document.getElementById('scoreDeskButton');
             const identityCard = document.getElementById('identityCard');
             const identityRoleText = document.getElementById('identityRoleText');
             const displayNameInput = document.getElementById('displayNameInput');
             if (roleBadge) {
-                const registry = role === 'admin' ? '神谕馆册' : role === 'author' ? '构筑者名录' : '信徒名录';
+                const registry = role === 'admin' ? '神谕馆册' : role === 'reviewer' ? '审核席' : role === 'author' ? '构筑者名录' : '信徒名录';
                 roleBadge.textContent = role ? `${registry} · ${inviteSession?.name || ROLE_LABELS[role]}` : '旁观者只读';
                 roleBadge.classList.toggle('active', !!role);
                 roleBadge.dataset.role = role || 'guest';
@@ -4593,6 +4662,7 @@
                 roleBadge.title = role ? '打开个人档案' : '验入局谕令后查看个人档案';
             }
             if (inviteButton) inviteButton.textContent = '🎲 同契召引';
+            if (scoreButton) scoreButton.style.display = canSettleScores() ? '' : 'none';
             if (submitButton) {
                 submitButton.textContent = '🎭 构筑愚戏';
                 submitButton.title = canSubmit() ? '构筑愚戏' : '需要构筑者谕令';
@@ -5371,6 +5441,227 @@
             showToast('目前只能打开当前入局者的个人档案；全站档案页接入 Supabase 后开放。');
         }
 
+        function formatScoreNumber(value, sign = false) {
+            const number = Number(value || 0);
+            const text = Number.isInteger(number) ? String(number) : number.toFixed(1);
+            return sign && number > 0 ? `+${text}` : text;
+        }
+
+        async function fetchMyScoreMessages(limit = 8) {
+            if (USE_LOCAL_FALLBACK || !inviteSession?.code) return { messages: [], unread: [], error: null };
+            const { data, error } = await invokeDungeonAction('listMyScoreMessages', { limit });
+            if (error) return { messages: [], unread: [], error };
+            const messages = Array.isArray(data) ? data : [];
+            return { messages, unread: messages.filter(message => !message.is_read), error: null };
+        }
+
+        function renderScoreMessages(messages, error) {
+            if (error) return `<div class="profile-empty">${escapeHtml(error.message || '结算信封暂不可用。')}</div>`;
+            if (!messages?.length) return '<div class="profile-empty">暂无结算信封。</div>';
+            return `<div class="profile-list">${messages.map(message => `
+                <article class="profile-list-item score-message-card ${message.is_read ? '' : 'unread'}">
+                    <div class="profile-list-title">
+                        <span>${message.is_read ? '' : '<span class="profile-notice-mark">未读</span> '}${escapeHtml(message.msg_type || 'score')}</span>
+                        <small>${escapeHtml(formatDate(message.created_at))}</small>
+                    </div>
+                    <div class="profile-list-meta">${escapeHtml(message.content || '')}</div>
+                    ${message.is_read ? '' : `<div class="profile-tools" style="margin-top:10px;"><button class="btn btn-outline btn-sm" onclick="markScoreMessageReadUI(${Number(message.id)})">标记已读</button></div>`}
+                </article>`).join('')}</div>`;
+        }
+
+        async function markScoreMessageReadUI(messageId) {
+            const { error } = await invokeDungeonAction('markScoreMessageRead', { messageId: Number(messageId) });
+            if (error) { showToast(`❌ ${error.message || '标记失败'}`); return; }
+            showToast('结算信封已读');
+            if (document.getElementById('profilePage')?.style.display !== 'none') await renderProfilePage();
+        }
+
+        function renderScorePreview(preview) {
+            if (!preview) return '<div class="profile-empty">粘贴结算文本后先预览校验。</div>';
+            const errors = [
+                ...(preview.invalidLines || []).map(item => `第 ${item.line} 行：${item.msg}｜${item.raw}`),
+                ...(preview.scoreErrList || []).map(item => `${item.nick}：${item.msg}`),
+                ...(preview.missingNick || []).map(nick => `${nick}：未找到已保存个人档案`),
+                ...(preview.duplicateNick || []).map(nick => `${nick}：本次结算中重复出现`)
+            ];
+            const rows = (preview.allList || []).slice(0, 80).map(item => `
+                <tr>
+                    <td>${escapeHtml(item.nick)}</td>
+                    <td>${escapeHtml(formatScoreNumber(item.deng, true))}</td>
+                    <td>${escapeHtml(formatScoreNumber(item.jin, true))}</td>
+                    <td>${escapeHtml(formatScoreNumber(item.total, true))}</td>
+                </tr>`).join('');
+            return `
+                <div class="metric-strip">
+                    <span class="metric-pill">人数 <strong>${Number(preview.totalPlayers || 0)}</strong></span>
+                    <span class="metric-pill">登神合计 <strong>${escapeHtml(formatScoreNumber(preview.totalDeng, true))}</strong></span>
+                    <span class="metric-pill">觐见合计 <strong>${escapeHtml(formatScoreNumber(preview.totalJin, true))}</strong></span>
+                    <span class="metric-pill">${preview.valid ? '可结算' : '需修正'} <strong>${errors.length}</strong></span>
+                </div>
+                ${errors.length ? `<div class="score-error-list">${errors.map(error => `<div class="score-error-item">${escapeHtml(error)}</div>`).join('')}</div>` : ''}
+                <table class="score-preview-table">
+                    <thead><tr><th>玩家</th><th>登神</th><th>觐见</th><th>合计</th></tr></thead>
+                    <tbody>${rows || '<tr><td colspan="4">暂无有效条目</td></tr>'}</tbody>
+                </table>`;
+        }
+
+        async function checkScorePreviewUI() {
+            const textContent = document.getElementById('scoreBatchText')?.value || '';
+            const { data, error } = await invokeDungeonAction('checkScorePreview', { textContent });
+            if (error) { showToast(`❌ ${error.message || '预览失败'}`); return; }
+            scorePreviewState = data;
+            const panel = document.getElementById('scorePreviewPanel');
+            if (panel) panel.innerHTML = renderScorePreview(scorePreviewState);
+        }
+
+        async function submitScoreBatchUI() {
+            const dungeonName = document.getElementById('scoreDungeonName')?.value || '';
+            const textContent = document.getElementById('scoreBatchText')?.value || '';
+            const remark = document.getElementById('scoreBatchRemark')?.value || '';
+            const { data, error } = await invokeDungeonAction('submitScoreBatch', { dungeonName, textContent, remark });
+            if (error) {
+                if (error.data) {
+                    scorePreviewState = error.data;
+                    const panel = document.getElementById('scorePreviewPanel');
+                    if (panel) panel.innerHTML = renderScorePreview(scorePreviewState);
+                }
+                showToast(`❌ ${error.message || '结算失败'}`);
+                return;
+            }
+            scorePreviewState = null;
+            showToast(`结算完成：${data?.entries?.length || 0} 人`);
+            await renderScorePage();
+        }
+
+        async function submitScoreSingleUI() {
+            const payload = {
+                dungeonName: document.getElementById('singleDungeonName')?.value || '',
+                playerName: document.getElementById('singlePlayerName')?.value || '',
+                dengScore: document.getElementById('singleDengScore')?.value || 0,
+                jinScore: document.getElementById('singleJinScore')?.value || 0,
+                remark: document.getElementById('singleRemark')?.value || ''
+            };
+            const { data, error } = await invokeDungeonAction('submitScoreSingle', payload);
+            if (error) { showToast(`❌ ${error.message || '补分失败'}`); return; }
+            showToast(`补分完成：${data?.entries?.[0]?.player_name || payload.playerName}`);
+            await renderScorePage();
+        }
+
+        async function fetchScoreSettlements(limit = 30) {
+            if (!canSettleScores()) return { settlements: [], error: { message: '需要审核员权限' } };
+            const { data, error } = await invokeDungeonAction('listScoreSettlements', { limit });
+            if (error) return { settlements: [], error };
+            return { settlements: Array.isArray(data) ? data : [], error: null };
+        }
+
+        function renderScoreSettlements(settlements, error) {
+            if (error) return `<div class="profile-empty">${escapeHtml(error.message || '结算记录暂不可用。')}</div>`;
+            if (!settlements.length) return '<div class="profile-empty">暂无结算记录。</div>';
+            return `<div class="profile-list">${settlements.map(item => `
+                <article class="profile-list-item">
+                    <div class="profile-list-title">
+                        <span>${item.is_revoked ? '<span class="profile-notice-mark">已撤销</span> ' : ''}${escapeHtml(item.dungeon_name || '未命名副本')}</span>
+                        <small>${escapeHtml(formatDate(item.created_at))}</small>
+                    </div>
+                    <div class="profile-list-meta">审核员 ${escapeHtml(item.operator_name || '')} · ${escapeHtml(item.source_type || '')} · ${Number(item.total_players || 0)} 人</div>
+                    <div class="metric-strip">
+                        <span class="metric-pill">登神 <strong>${escapeHtml(formatScoreNumber(item.total_ascension, true))}</strong></span>
+                        <span class="metric-pill">觐见 <strong>${escapeHtml(formatScoreNumber(item.total_audience, true))}</strong></span>
+                        <span class="metric-pill">总变化 <strong>${escapeHtml(formatScoreNumber(item.total_score, true))}</strong></span>
+                    </div>
+                    ${item.is_revoked ? `<div class="profile-list-meta">撤销备注：${escapeHtml(item.revoke_remark || '')}</div>` : `<div class="profile-tools" style="margin-top:10px;"><button class="btn btn-outline btn-sm" onclick="revokeScoreSettlementUI(${jsString(item.id)})">撤销本场结算</button></div>`}
+                </article>`).join('')}</div>`;
+        }
+
+        async function revokeScoreSettlementUI(settlementId) {
+            const revokeRemark = window.prompt('请输入撤销备注');
+            if (!revokeRemark) return;
+            const { error } = await invokeDungeonAction('revokeScoreSettlement', { settlementId, revokeRemark });
+            if (error) { showToast(`❌ ${error.message || '撤销失败'}`); return; }
+            showToast('结算已撤销并回滚分数');
+            await renderScorePage();
+        }
+
+        async function renderScorePage() {
+            const container = document.getElementById('scoreContent');
+            if (!container) return;
+            if (!canSettleScores()) {
+                container.innerHTML = '<div class="profile-empty">需要审核员或馆主权限。</div>';
+                return;
+            }
+            const { settlements, error } = await fetchScoreSettlements(30);
+            container.innerHTML = `
+                <section class="profile-hero">
+                    <div class="profile-avatar path-exist">${renderGodSigil('真理', 'lg')}</div>
+                    <div>
+                        <div class="profile-kicker">SCORE SANCTUM</div>
+                        <h1 class="profile-name">分数结算工作台</h1>
+                        <div class="profile-subline">
+                            <span class="metric-pill">审核员 <strong>${escapeHtml(inviteSession?.name || '')}</strong></span>
+                            <span class="metric-pill">登神 ${scoreDengMin}~${scoreDengMax} <strong>觐见 ${scoreJinMin}~${scoreJinMax}</strong></span>
+                        </div>
+                    </div>
+                </section>
+                <div class="profile-grid">
+                    <div>
+                        <section class="profile-panel">
+                            <div class="profile-panel-title"><span>批量结算</span><small>格式：昵称:+登神+觐见</small></div>
+                            <div class="form-group"><label>副本名称</label><input id="scoreDungeonName" maxlength="80" placeholder="例如：雾中档案室"></div>
+                            <div class="form-group"><label>结算文本</label><textarea id="scoreBatchText" maxlength="20000" placeholder="无我:+12+2&#10;某玩家:-3+1"></textarea></div>
+                            <div class="form-group"><label>备注</label><input id="scoreBatchRemark" maxlength="500" placeholder="可选，写结算来源或说明"></div>
+                            <div class="profile-tools">
+                                <button class="btn btn-outline btn-sm" onclick="checkScorePreviewUI()">预览校验</button>
+                                <button class="btn btn-primary btn-sm" onclick="submitScoreBatchUI()">确认结算</button>
+                            </div>
+                            <div id="scorePreviewPanel" style="margin-top:14px;">${renderScorePreview(scorePreviewState)}</div>
+                        </section>
+                        <section class="profile-panel">
+                            <div class="profile-panel-title"><span>单人补分</span><small>漏分补发</small></div>
+                            <div class="profile-form-grid">
+                                <div class="form-group"><label>副本名称</label><input id="singleDungeonName" maxlength="80"></div>
+                                <div class="form-group"><label>玩家昵称</label><input id="singlePlayerName" maxlength="40"></div>
+                                <div class="form-group"><label>登神之路</label><input id="singleDengScore" type="number" min="${scoreDengMin}" max="${scoreDengMax}" step="0.1" value="0"></div>
+                                <div class="form-group"><label>觐见之梯</label><input id="singleJinScore" type="number" min="${scoreJinMin}" max="${scoreJinMax}" step="0.1" value="0"></div>
+                                <div class="form-group full"><label>备注</label><input id="singleRemark" maxlength="500" placeholder="补发原因"></div>
+                            </div>
+                            <div class="profile-tools"><button class="btn btn-primary btn-sm" onclick="submitScoreSingleUI()">提交补分</button></div>
+                        </section>
+                    </div>
+                    <div>
+                        <section class="profile-panel">
+                            <div class="profile-panel-title"><span>最近结算</span><small>可撤销回滚</small></div>
+                            ${renderScoreSettlements(settlements, error)}
+                        </section>
+                    </div>
+                </div>`;
+        }
+
+        async function openScorePage() {
+            if (!canSettleScores()) {
+                openInviteModal('需要审核员谕令后才能进入分数结算。');
+                return;
+            }
+            scoreScrollY = window.scrollY || document.documentElement.scrollTop || 0;
+            const detailOverlay = document.getElementById('detailOverlay');
+            if (detailOverlay) detailOverlay.style.display = 'none';
+            const profilePage = document.getElementById('profilePage');
+            if (profilePage) profilePage.style.display = 'none';
+            const leaderboardPage = document.getElementById('leaderboardPage');
+            if (leaderboardPage) leaderboardPage.style.display = 'none';
+            document.body.classList.remove('detail-view-open', 'profile-view-open', 'leaderboard-view-open');
+            document.body.classList.add('score-view-open');
+            document.getElementById('scorePage').style.display = 'block';
+            window.scrollTo(0, 0);
+            await renderScorePage();
+        }
+
+        function closeScorePage(restoreScroll = true) {
+            const page = document.getElementById('scorePage');
+            if (page) page.style.display = 'none';
+            document.body.classList.remove('score-view-open');
+            if (restoreScroll !== false) requestAnimationFrame(() => window.scrollTo(0, scoreScrollY || 0));
+        }
+
         function isSameProfileName(value) {
             const currentName = String(inviteSession?.name || '').trim().toLowerCase();
             return currentName && String(value || '').trim().toLowerCase() === currentName;
@@ -5546,6 +5837,11 @@
             const clearRecords = await fetchMyClearRecords(dungeons);
             const authored = getAuthoredDungeons(dungeons);
             const { notices, unread } = await getAuthorCommentNotices(dungeons);
+            const {
+                messages: scoreMessages,
+                unread: unreadScoreMessages,
+                error: scoreMessageError
+            } = await fetchMyScoreMessages(8);
             const uniqueCleared = new Set(clearRecords.map(record => String(record.dungeon_id))).size;
             const totalAuthoredComments = authored.reduce((sum, d) => sum + Number(d.comment_count || 0), 0);
             const avgAuthorRating = authored.length
@@ -5597,6 +5893,7 @@
                             <span class="mini-tag ${faithClass}">${escapeHtml(roleLabel)}</span>
                             <span class="metric-pill">职业 <strong>${escapeHtml(profile.profession || '未填写')}</strong></span>
                             ${profession.known ? `<span class="metric-pill">${escapeHtml(profession.god)}之神 <strong>${escapeHtml(profession.className)}</strong></span>` : ''}
+                            ${unreadScoreMessages.length ? `<span class="metric-pill">结算信封 <strong>${unreadScoreMessages.length}</strong></span>` : ''}
                             ${unread.length ? `<span class="metric-pill">楼主提醒 <strong>${unread.length}</strong></span>` : ''}
                         </div>
                     </div>
@@ -5659,7 +5956,7 @@
                         <section class="profile-panel">
                             <div class="profile-panel-title">
                                 <span>个人数值</span>
-                                <small>先做功能，UI 后续细化</small>
+                                <small>${unreadScoreMessages.length ? `${unreadScoreMessages.length} 封未读` : '结算同步'}</small>
                             </div>
                             <div class="profile-score-row">
                                 <div class="profile-score-card"><span>登神之路</span><strong>${Number(profile.ascensionScore || 0)}</strong></div>
@@ -5670,6 +5967,13 @@
                                 <span class="metric-pill">通关记录 <strong>${clearRecords.length}</strong></span>
                                 <span class="metric-pill">当前身份 <strong>${escapeHtml(roleLabel)}</strong></span>
                             </div>
+                        </section>
+                        <section class="profile-panel">
+                            <div class="profile-panel-title">
+                                <span>结算信封</span>
+                                <small>${unreadScoreMessages.length ? `${unreadScoreMessages.length} 封未读` : '暂无未读'}</small>
+                            </div>
+                            ${renderScoreMessages(scoreMessages, scoreMessageError)}
                         </section>
                         <section class="profile-panel">
                             <div class="profile-panel-title"><span>个人道具</span></div>
@@ -5804,7 +6108,10 @@
                 body: JSON.stringify({ action, inviteCode, payload })
             });
             const result = await response.json().catch(() => ({}));
-            if (!response.ok) return { data: null, error: { message: result.error || '请求失败' } };
+            if (!response.ok) {
+                const errorData = result.data ?? null;
+                return { data: errorData, error: { message: result.error || '请求失败', data: errorData } };
+            }
             const role = normalizeRole(result.role);
             if (role && inviteCode) saveInviteSession({ role, code: inviteCode, name: result.name || result.label || ROLE_LABELS[role] });
             return { data: result.data ?? null, error: null, role, name: result.name };
@@ -6860,7 +7167,7 @@
         function openInviteModal(message) {
             const overlay = document.getElementById('inviteModalOverlay');
             const hint = document.getElementById('inviteHint');
-            if (hint) hint.textContent = message || '输入群内谕令后，才能参与神格判定、试炼证言或构筑愚戏。';
+            if (hint) hint.textContent = message || '输入群内谕令后，才能参与神格判定、试炼证言、构筑愚戏或分数结算。';
             updateInviteUI();
             overlay.style.display='flex';
             document.body.style.overflow='hidden';

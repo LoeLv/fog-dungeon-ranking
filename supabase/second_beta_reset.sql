@@ -16,7 +16,7 @@ alter table public.clear_records add column if not exists feedback_note text;
 create table if not exists public.player_profiles (
   invite_code_hash text primary key check (char_length(invite_code_hash) = 64),
   display_name text not null check (char_length(trim(display_name)) between 1 and 40),
-  role text not null check (role in ('player', 'author', 'admin')),
+  role text not null check (role in ('player', 'author', 'reviewer', 'admin')),
   faith_god text not null check (char_length(trim(faith_god)) between 1 and 20),
   faith_path text not null check (char_length(trim(faith_path)) between 1 and 20),
   profession text not null check (char_length(trim(profession)) between 1 and 40),

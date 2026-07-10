@@ -35,6 +35,7 @@ function pad(index, total) {
 
 const players = readNumber("players", 80);
 const authors = readNumber("authors", 0);
+const reviewers = readNumber("reviewers", 0);
 const admins = readNumber("admins", 0);
 const prefix = readString("prefix", "诸神愚戏");
 
@@ -44,6 +45,9 @@ for (let i = 1; i <= players; i += 1) {
 }
 for (let i = 1; i <= authors; i += 1) {
   rows.push({ role: "author", displayName: `作者${pad(i, authors)}`, code: codeFor("author") });
+}
+for (let i = 1; i <= reviewers; i += 1) {
+  rows.push({ role: "reviewer", displayName: `审核员${pad(i, reviewers)}`, code: codeFor("reviewer") });
 }
 for (let i = 1; i <= admins; i += 1) {
   rows.push({ role: "admin", displayName: `馆主${pad(i, admins)}`, code: codeFor("admin") });

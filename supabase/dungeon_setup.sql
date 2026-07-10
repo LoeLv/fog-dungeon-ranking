@@ -56,7 +56,7 @@ create table if not exists public.invite_codes (
   id uuid primary key default gen_random_uuid(),
   code_hash text not null unique check (char_length(code_hash) = 64),
   display_name text not null check (char_length(trim(display_name)) between 1 and 40),
-  role text not null check (role in ('player', 'author', 'admin')),
+  role text not null check (role in ('player', 'author', 'reviewer', 'admin')),
   is_active boolean not null default true,
   note text,
   created_at timestamptz not null default now(),
