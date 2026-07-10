@@ -3169,6 +3169,85 @@
             flex-wrap: wrap;
             margin-top: 16px;
         }
+        .talent-pool-card {
+            border: 1px solid rgba(122,174,194,0.18);
+            border-radius: 14px;
+            background:
+                radial-gradient(circle at 12% 18%, rgba(122,174,194,0.10), transparent 42%),
+                linear-gradient(135deg, rgba(255,255,255,0.035), rgba(0,0,0,0.16));
+            padding: 14px;
+        }
+        .talent-control-row {
+            display: grid;
+            grid-template-columns: minmax(180px, 1fr) auto auto;
+            gap: 10px;
+            align-items: end;
+            margin-top: 12px;
+        }
+        .talent-result-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+            gap: 9px;
+            margin-top: 12px;
+        }
+        .talent-card {
+            border: 1px solid rgba(255,255,255,0.08);
+            border-radius: 12px;
+            padding: 10px 11px;
+            background: rgba(0,0,0,0.20);
+            min-height: 74px;
+        }
+        .talent-card.rank-B {
+            border-color: rgba(231,207,138,0.30);
+            background:
+                radial-gradient(circle at 16% 20%, rgba(231,207,138,0.14), transparent 50%),
+                rgba(0,0,0,0.24);
+        }
+        .talent-card.rank-C {
+            border-color: rgba(122,174,194,0.20);
+        }
+        .talent-card strong {
+            display: block;
+            color: var(--text-bright);
+            font-size: 0.9rem;
+            margin-bottom: 5px;
+        }
+        .talent-card small {
+            color: var(--text-muted);
+            font-size: 0.72rem;
+            line-height: 1.45;
+        }
+        .talent-card.repeat small {
+            color: var(--gold-light);
+        }
+        .talent-log-list {
+            display: grid;
+            gap: 8px;
+            margin-top: 10px;
+            max-height: 260px;
+            overflow: auto;
+            padding-right: 3px;
+        }
+        .talent-log-item {
+            display: flex;
+            justify-content: space-between;
+            gap: 10px;
+            padding: 8px 10px;
+            border: 1px solid rgba(255,255,255,0.055);
+            border-radius: 10px;
+            color: var(--text-muted);
+            background: rgba(0,0,0,0.16);
+            font-size: 0.78rem;
+        }
+        .talent-log-item strong {
+            color: var(--text-bright);
+        }
+        .talent-exchange-row {
+            display: grid;
+            grid-template-columns: minmax(180px, 1fr) auto;
+            gap: 10px;
+            margin-top: 12px;
+        }
         .leaderboard-tabs,
         .leaderboard-path-tabs {
             display: flex;
@@ -3526,6 +3605,10 @@
             }
             .profile-tools .btn {
                 width: 100%;
+            }
+            .talent-control-row,
+            .talent-exchange-row {
+                grid-template-columns: 1fr;
             }
             .detail-hero { padding: 14px; }
             .detail-hero-main {
@@ -4405,6 +4488,8 @@
         let leaderboardScrollY = 0;
         let leaderboardMode = 'overall';
         let leaderboardPath = 'all';
+        let selectedTalentPool = '';
+        let lastTalentDrawResult = [];
         let replyTarget = null;
         let testimonyTargetId = null;
         let pendingRating = { dungeonId: null, value: 5 };
@@ -4416,7 +4501,6 @@
         function isAdmin() { return getInviteRole() === 'admin'; }
         function canOverrideProfileLocks() { return isAdmin(); }
         function canEditProfileScores() { return canOverrideProfileLocks(); }
-        function canEditProfileTalents() { return canOverrideProfileLocks(); }
         function shouldAutoFocusModalInput() {
             return !window.matchMedia('(max-width: 720px), (pointer: coarse)').matches;
         }
@@ -4707,13 +4791,195 @@
                 profession: profile.profession,
                 ascensionScore: profile.ascensionScore,
                 audienceScore: profile.audienceScore,
-                items: profile.items,
-                talents: profile.talents
+                items: profile.items
             });
             if (error) return { data: null, error };
             const cloudProfile = mapCloudProfileToLocal(data);
             if (cloudProfile) saveCurrentProfile(cloudProfile);
             return { data: cloudProfile, error: null };
+        }
+
+        function formatTalentPoolLabel(poolKey) {
+            return String(poolKey || '').replace(/^Pool/u, '') || '未知池';
+        }
+
+        function normalizeTalentState(rawState) {
+            const state = rawState || {};
+            return {
+                profile: state.profile || null,
+                totalDrawsEarned: Number(state.totalDrawsEarned || 0),
+                spentDraws: Number(state.spentDraws || 0),
+                availableDraws: Number(state.availableDraws || 0),
+                fragmentTotal: Number(state.fragmentTotal || 0),
+                pools: Array.isArray(state.pools) ? state.pools : [],
+                poolItems: Array.isArray(state.poolItems) ? state.poolItems : [],
+                counters: Array.isArray(state.counters) ? state.counters : [],
+                ownedTalents: Array.isArray(state.ownedTalents) ? state.ownedTalents : [],
+                drawLogs: Array.isArray(state.drawLogs) ? state.drawLogs : [],
+                exchangeLogs: Array.isArray(state.exchangeLogs) ? state.exchangeLogs : []
+            };
+        }
+
+        function applyTalentStateProfile(state) {
+            const profile = mapCloudProfileToLocal(state?.profile);
+            if (profile) saveCurrentProfile(profile);
+        }
+
+        async function fetchTalentState() {
+            if (USE_LOCAL_FALLBACK || !inviteSession?.code) {
+                return { state: normalizeTalentState(null), error: { message: '天赋池需要云端 Supabase 支持，本地模式仅显示个人档案。' } };
+            }
+            const { data, error } = await invokeDungeonAction('getTalentState', {});
+            if (error) return { state: normalizeTalentState(null), error };
+            const state = normalizeTalentState(data);
+            applyTalentStateProfile(state);
+            return { state, error: null };
+        }
+
+        function getSelectedTalentPool(profile, state) {
+            const poolKeys = state.pools.map(pool => pool.poolKey).filter(Boolean);
+            if (selectedTalentPool && poolKeys.includes(selectedTalentPool)) return selectedTalentPool;
+            const preferred = `Pool${getProfileFaithGod(profile) || '欺诈'}`;
+            selectedTalentPool = poolKeys.includes(preferred) ? preferred : (poolKeys[0] || preferred);
+            return selectedTalentPool;
+        }
+
+        function getTalentPoolCounter(state, poolKey) {
+            return Number((state.counters || []).find(item => item.pool_key === poolKey)?.continue_draw || 0);
+        }
+
+        function renderTalentPoolOptions(state, selected) {
+            const pools = state.pools || [];
+            if (!pools.length) return '<option value="">暂无天赋池</option>';
+            return pools.map(pool => {
+                const disabled = Number(pool.total || 0) <= 0 ? 'disabled' : '';
+                const label = `${formatTalentPoolLabel(pool.poolKey)}池 · B${Number(pool.bCount || 0)} / C${Number(pool.cCount || 0)}`;
+                return `<option value="${escapeHtml(pool.poolKey)}" ${pool.poolKey === selected ? 'selected' : ''} ${disabled}>${escapeHtml(label)}</option>`;
+            }).join('');
+        }
+
+        function renderTalentCards(talents, emptyText = '还没有抽到天赋。') {
+            if (!talents?.length) return `<div class="profile-empty">${escapeHtml(emptyText)}</div>`;
+            return `<div class="talent-result-grid">${talents.map(talent => {
+                const name = talent.talentName || talent.talent_name || '未知天赋';
+                const rank = talent.rank || 'C';
+                const pool = formatTalentPoolLabel(talent.poolKey || talent.pool_key);
+                const repeat = talent.isRepeat || talent.is_repeat;
+                const fragment = Number(talent.fragmentGain ?? talent.fragment_gain ?? 0);
+                const source = talent.acquired_from === 'exchange' ? '碎片兑换' : (talent.acquired_from === 'draw' ? '天赋池抽取' : pool);
+                return `
+                    <div class="talent-card rank-${escapeHtml(rank)} ${repeat ? 'repeat' : ''}">
+                        <strong>${escapeHtml(name)}</strong>
+                        <small>${escapeHtml(rank)}级 · ${escapeHtml(pool || source)}${repeat ? ` · 重复转化 +${fragment} 碎片` : ''}</small>
+                    </div>`;
+            }).join('')}</div>`;
+        }
+
+        function renderTalentLogs(state) {
+            const logs = state.drawLogs || [];
+            if (!logs.length) return '<div class="profile-empty">暂无抽取记录。</div>';
+            return `<div class="talent-log-list">${logs.slice(0, 12).map(log => {
+                const label = `${formatTalentPoolLabel(log.pool_key)}池 · ${log.draw_type === 'ten' ? '十连' : '单抽'}`;
+                const repeat = log.is_repeat ? ` · 重复 +${Number(log.fragment_gain || 0)}碎片` : '';
+                return `<div class="talent-log-item"><span><strong>${escapeHtml(log.talent_name)}</strong> ${escapeHtml(log.rank)}级${escapeHtml(repeat)}</span><span>${escapeHtml(label)}</span></div>`;
+            }).join('')}</div>`;
+        }
+
+        function renderTalentExchangeOptions(state, poolKey) {
+            const ownedKeys = new Set((state.ownedTalents || []).map(t => `${t.pool_key}:${t.talent_id}`));
+            const options = (state.poolItems || [])
+                .filter(item => item.pool_key === poolKey && item.rank === 'B')
+                .map(item => {
+                    const owned = ownedKeys.has(`${item.pool_key}:${item.talent_id}`);
+                    return `<option value="${Number(item.talent_id)}" ${owned ? 'disabled' : ''}>${escapeHtml(item.talent_name)}${owned ? '（已拥有）' : ''}</option>`;
+                });
+            return options.length ? options.join('') : '<option value="">该池暂无可兑换 B 天赋</option>';
+        }
+
+        function renderTalentPoolPanel(state, error, profile) {
+            if (error) {
+                return `
+                    <section class="profile-panel">
+                        <div class="profile-panel-title"><span>天赋池</span><small>待启用</small></div>
+                        <div class="profile-empty">${escapeHtml(error.message || '天赋池暂不可用。请先运行天赋池 SQL 并部署后端函数。')}</div>
+                    </section>`;
+            }
+            const selectedPool = getSelectedTalentPool(profile, state);
+            const selectedPoolMeta = (state.pools || []).find(pool => pool.poolKey === selectedPool) || {};
+            const selectedPoolReady = Number(selectedPoolMeta.total || 0) > 0;
+            const poolCounter = getTalentPoolCounter(state, selectedPool);
+            const latestResults = lastTalentDrawResult.length ? renderTalentCards(lastTalentDrawResult, '') : '';
+            const ownedInPool = (state.ownedTalents || []).filter(talent => talent.pool_key === selectedPool);
+            return `
+                <section class="profile-panel">
+                    <div class="profile-panel-title">
+                        <span>天赋池</span>
+                        <small>登神每 +5 分获得 1 抽，抽数可攒</small>
+                    </div>
+                    <div class="talent-pool-card">
+                        <div class="profile-score-row">
+                            <div class="profile-stat-card"><span>可用抽数</span><strong>${Number(state.availableDraws || 0)}</strong></div>
+                            <div class="profile-stat-card"><span>天赋碎片</span><strong>${Number(state.fragmentTotal || 0)}</strong></div>
+                        </div>
+                        <div class="metric-strip">
+                            <span class="metric-pill">累计获得抽数 <strong>${Number(state.totalDrawsEarned || 0)}</strong></span>
+                            <span class="metric-pill">已用抽数 <strong>${Number(state.spentDraws || 0)}</strong></span>
+                            <span class="metric-pill">当前池保底 <strong>${poolCounter}/10</strong></span>
+                        </div>
+                        <div class="talent-control-row">
+                            <div class="form-group" style="margin:0;">
+                                <label for="talentPoolSelect">选择天赋池</label>
+                                <select id="talentPoolSelect" onchange="selectTalentPoolUI(this.value)">${renderTalentPoolOptions(state, selectedPool)}</select>
+                            </div>
+                            <button type="button" class="btn btn-outline btn-sm" onclick="drawTalentUI('single')" ${!selectedPoolReady || state.availableDraws < 1 ? 'disabled' : ''}>单抽</button>
+                            <button type="button" class="btn btn-primary btn-sm" onclick="drawTalentUI('ten')" ${!selectedPoolReady || state.availableDraws < 10 ? 'disabled' : ''}>十连</button>
+                        </div>
+                        ${selectedPoolReady ? '' : '<div class="identity-help">当前天赋池暂无配置，等补完池子后就能抽取。</div>'}
+                        ${latestResults ? `<div class="profile-list-meta" style="margin-top:12px;">本次抽取</div>${latestResults}` : ''}
+                    </div>
+                    <div class="profile-panel-title" style="margin-top:16px;"><span>已拥有天赋</span><small>${ownedInPool.length} 个来自当前池</small></div>
+                    ${renderTalentCards(ownedInPool, '当前池还没有已拥有天赋。')}
+                    <div class="talent-exchange-row">
+                        <select id="talentExchangeSelect">${renderTalentExchangeOptions(state, selectedPool)}</select>
+                        <button type="button" class="btn btn-outline btn-sm" onclick="exchangeTalentUI()" ${!selectedPoolReady ? 'disabled' : ''}>100 碎片兑换</button>
+                    </div>
+                    <div class="profile-panel-title" style="margin-top:16px;"><span>抽取记录</span></div>
+                    ${renderTalentLogs(state)}
+                </section>`;
+        }
+
+        async function selectTalentPoolUI(poolKey) {
+            selectedTalentPool = poolKey;
+            lastTalentDrawResult = [];
+            await renderProfilePage();
+        }
+
+        async function drawTalentUI(drawType) {
+            if (!inviteSession?.code) { openInviteModal('先验入局谕令后可开启天赋池。'); return; }
+            const poolKey = document.getElementById('talentPoolSelect')?.value || selectedTalentPool;
+            const { data, error } = await invokeDungeonAction('drawTalent', { poolKey, drawType });
+            if (error) { showToast(`❌ ${error.message || '抽取失败'}`); return; }
+            selectedTalentPool = poolKey;
+            lastTalentDrawResult = Array.isArray(data?.results) ? data.results : [];
+            if (data?.state) applyTalentStateProfile(normalizeTalentState(data.state));
+            showToast(drawType === 'ten' ? '十连完成' : '单抽完成');
+            await renderProfilePage();
+            if (document.getElementById('leaderboardPage')?.style.display !== 'none') await renderLeaderboardPage();
+        }
+
+        async function exchangeTalentUI() {
+            if (!inviteSession?.code) { openInviteModal('先验入局谕令后可兑换天赋。'); return; }
+            const poolKey = document.getElementById('talentPoolSelect')?.value || selectedTalentPool;
+            const targetTalentId = Number(document.getElementById('talentExchangeSelect')?.value || 0);
+            if (!targetTalentId) { showToast('请选择可兑换的 B 级天赋'); return; }
+            const { data, error } = await invokeDungeonAction('exchangeTalent', { poolKey, targetTalentId });
+            if (error) { showToast(`❌ ${error.message || '兑换失败'}`); return; }
+            selectedTalentPool = poolKey;
+            lastTalentDrawResult = data?.talent ? [data.talent] : [];
+            if (data?.state) applyTalentStateProfile(normalizeTalentState(data.state));
+            showToast('碎片兑换完成');
+            await renderProfilePage();
+            if (document.getElementById('leaderboardPage')?.style.display !== 'none') await renderLeaderboardPage();
         }
 
         function sortLeaderboardEntries(entries, scoreType) {
@@ -5050,7 +5316,9 @@
                 return;
             }
             container.innerHTML = '<div class="loading"><div class="spinner"></div><br>正在读取个人档案...</div>';
-            const profile = getCurrentProfile();
+            let profile = getCurrentProfile();
+            const { state: talentState, error: talentError } = await fetchTalentState();
+            if (!talentError) profile = getCurrentProfile();
             const dungeons = await fetchDungeons();
             const clearRecords = await fetchMyClearRecords(dungeons);
             const authored = getAuthoredDungeons(dungeons);
@@ -5066,7 +5334,6 @@
             const faithLocked = isFaithLocked(profile);
             const professionLocked = isProfessionLocked(profile);
             const scoresLocked = areProfileScoresLocked(profile);
-            const talentsLocked = !canEditProfileTalents();
             const profession = getProfessionInfo(profile.profession);
             const roleLabel = ROLE_LABELS[getInviteRole()] || '入局信徒';
             const authorPanel = (authored.length || canSubmit()) ? `
@@ -5147,9 +5414,8 @@
                                     <textarea id="profileItems" maxlength="800" placeholder="每行一个道具">${escapeHtml(profile.items)}</textarea>
                                 </div>
                                 <div class="form-group full">
-                                    <label for="profileTalents">个人天赋</label>
-                                    <textarea id="profileTalents" maxlength="800" placeholder="${talentsLocked ? '天赋池/抽取系统未开放，暂不可自行填写' : '馆主测试权限：每行一个天赋'}" ${talentsLocked ? 'disabled' : ''}>${escapeHtml(profile.talents)}</textarea>
-                                    <div class="identity-help">${talentsLocked ? '天赋将来自后续天赋池抽取系统，现在不会让玩家手填。' : '馆主测试权限：可编辑天赋，用于验证后续管理能力。'}</div>
+                                    <label>个人天赋</label>
+                                    <div class="profile-empty">个人天赋已由天赋池接管，不能手动填写。登神之路每获得 5 分会累积 1 抽，抽到或兑换后会自动写入档案。</div>
                                 </div>
                             </div>
                             <div class="profile-tools">
@@ -5185,10 +5451,7 @@
                             <div class="profile-panel-title"><span>个人道具</span></div>
                             ${renderProfileChips(profile.items, '还没有填写个人道具。')}
                         </section>
-                        <section class="profile-panel">
-                            <div class="profile-panel-title"><span>个人天赋</span></div>
-                            ${renderProfileChips(profile.talents, '还没有填写个人天赋。')}
-                        </section>
+                        ${renderTalentPoolPanel(talentState, talentError, profile)}
                         ${authorPanel}
                     </div>
                 </div>`;
@@ -5264,9 +5527,7 @@
                 audienceScore,
                 scoresLockedAt: nextScoresLockedAt,
                 items: String(document.getElementById('profileItems')?.value || '').trim().slice(0, 800),
-                talents: canEditProfileTalents()
-                    ? String(document.getElementById('profileTalents')?.value || '').trim().slice(0, 800)
-                    : String(currentProfile.talents || '').trim().slice(0, 800)
+                talents: String(currentProfile.talents || '').trim().slice(0, 800)
             };
             if (name !== inviteSession.name) {
                 const { error } = await updateDisplayName(name);
