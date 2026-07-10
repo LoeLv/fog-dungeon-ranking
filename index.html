@@ -3179,7 +3179,7 @@
         }
         .talent-control-row {
             display: grid;
-            grid-template-columns: minmax(180px, 1fr) auto auto;
+            grid-template-columns: minmax(180px, 1fr) auto auto auto;
             gap: 10px;
             align-items: end;
             margin-top: 12px;
@@ -4490,6 +4490,8 @@
         let leaderboardPath = 'all';
         let selectedTalentPool = '';
         let lastTalentDrawResult = [];
+        let currentTalentState = normalizeTalentState(null);
+        let currentTalentError = null;
         let replyTarget = null;
         let testimonyTargetId = null;
         let pendingRating = { dungeonId: null, value: 5 };
@@ -4812,6 +4814,7 @@
                 availableDraws: Number(state.availableDraws || 0),
                 fragmentTotal: Number(state.fragmentTotal || 0),
                 pools: Array.isArray(state.pools) ? state.pools : [],
+                allowedPoolKeys: Array.isArray(state.allowedPoolKeys) ? state.allowedPoolKeys : [],
                 poolItems: Array.isArray(state.poolItems) ? state.poolItems : [],
                 counters: Array.isArray(state.counters) ? state.counters : [],
                 ownedTalents: Array.isArray(state.ownedTalents) ? state.ownedTalents : [],
@@ -4834,6 +4837,17 @@
             const state = normalizeTalentState(data);
             applyTalentStateProfile(state);
             return { state, error: null };
+        }
+
+        function setCurrentTalentState(state, error = null) {
+            currentTalentState = normalizeTalentState(state);
+            currentTalentError = error;
+        }
+
+        function replaceTalentPoolPanel(profile = getCurrentProfile()) {
+            const panel = document.getElementById('talentPoolPanel');
+            if (!panel) return;
+            panel.outerHTML = renderTalentPoolPanel(currentTalentState, currentTalentError, profile);
         }
 
         function getSelectedTalentPool(profile, state) {
@@ -4899,7 +4913,7 @@
         function renderTalentPoolPanel(state, error, profile) {
             if (error) {
                 return `
-                    <section class="profile-panel">
+                    <section class="profile-panel" id="talentPoolPanel">
                         <div class="profile-panel-title"><span>天赋池</span><small>待启用</small></div>
                         <div class="profile-empty">${escapeHtml(error.message || '天赋池暂不可用。请先运行天赋池 SQL 并部署后端函数。')}</div>
                     </section>`;
@@ -4910,11 +4924,12 @@
             const poolCounter = getTalentPoolCounter(state, selectedPool);
             const latestResults = lastTalentDrawResult.length ? renderTalentCards(lastTalentDrawResult, '') : '';
             const ownedInPool = (state.ownedTalents || []).filter(talent => talent.pool_key === selectedPool);
+            const allowedPoolText = (state.pools || []).map(pool => formatTalentPoolLabel(pool.poolKey)).join(' / ') || '未绑定';
             return `
-                <section class="profile-panel">
+                <section class="profile-panel" id="talentPoolPanel">
                     <div class="profile-panel-title">
                         <span>天赋池</span>
-                        <small>登神每 +5 分获得 1 抽，抽数可攒</small>
+                        <small>仅开放信仰池与职业池</small>
                     </div>
                     <div class="talent-pool-card">
                         <div class="profile-score-row">
@@ -4925,12 +4940,14 @@
                             <span class="metric-pill">累计获得抽数 <strong>${Number(state.totalDrawsEarned || 0)}</strong></span>
                             <span class="metric-pill">已用抽数 <strong>${Number(state.spentDraws || 0)}</strong></span>
                             <span class="metric-pill">当前池保底 <strong>${poolCounter}/10</strong></span>
+                            <span class="metric-pill">可选池 <strong>${escapeHtml(allowedPoolText)}</strong></span>
                         </div>
                         <div class="talent-control-row">
                             <div class="form-group" style="margin:0;">
                                 <label for="talentPoolSelect">选择天赋池</label>
                                 <select id="talentPoolSelect" onchange="selectTalentPoolUI(this.value)">${renderTalentPoolOptions(state, selectedPool)}</select>
                             </div>
+                            <button type="button" class="btn btn-outline btn-sm" onclick="refreshTalentPoolUI()">刷新池子</button>
                             <button type="button" class="btn btn-outline btn-sm" onclick="drawTalentUI('single')" ${!selectedPoolReady || state.availableDraws < 1 ? 'disabled' : ''}>单抽</button>
                             <button type="button" class="btn btn-primary btn-sm" onclick="drawTalentUI('ten')" ${!selectedPoolReady || state.availableDraws < 10 ? 'disabled' : ''}>十连</button>
                         </div>
@@ -4951,7 +4968,16 @@
         async function selectTalentPoolUI(poolKey) {
             selectedTalentPool = poolKey;
             lastTalentDrawResult = [];
-            await renderProfilePage();
+            replaceTalentPoolPanel();
+        }
+
+        async function refreshTalentPoolUI(showToastOnSuccess = true) {
+            const { state, error } = await fetchTalentState();
+            setCurrentTalentState(state, error);
+            lastTalentDrawResult = [];
+            replaceTalentPoolPanel();
+            if (error) showToast(`❌ ${error.message || '刷新失败'}`);
+            else if (showToastOnSuccess) showToast('天赋池已刷新');
         }
 
         async function drawTalentUI(drawType) {
@@ -4961,9 +4987,13 @@
             if (error) { showToast(`❌ ${error.message || '抽取失败'}`); return; }
             selectedTalentPool = poolKey;
             lastTalentDrawResult = Array.isArray(data?.results) ? data.results : [];
-            if (data?.state) applyTalentStateProfile(normalizeTalentState(data.state));
+            if (data?.state) {
+                const nextState = normalizeTalentState(data.state);
+                setCurrentTalentState(nextState, null);
+                applyTalentStateProfile(nextState);
+            }
             showToast(drawType === 'ten' ? '十连完成' : '单抽完成');
-            await renderProfilePage();
+            replaceTalentPoolPanel();
             if (document.getElementById('leaderboardPage')?.style.display !== 'none') await renderLeaderboardPage();
         }
 
@@ -4976,9 +5006,13 @@
             if (error) { showToast(`❌ ${error.message || '兑换失败'}`); return; }
             selectedTalentPool = poolKey;
             lastTalentDrawResult = data?.talent ? [data.talent] : [];
-            if (data?.state) applyTalentStateProfile(normalizeTalentState(data.state));
+            if (data?.state) {
+                const nextState = normalizeTalentState(data.state);
+                setCurrentTalentState(nextState, null);
+                applyTalentStateProfile(nextState);
+            }
             showToast('碎片兑换完成');
-            await renderProfilePage();
+            replaceTalentPoolPanel();
             if (document.getElementById('leaderboardPage')?.style.display !== 'none') await renderLeaderboardPage();
         }
 
@@ -5319,6 +5353,7 @@
             let profile = getCurrentProfile();
             const { state: talentState, error: talentError } = await fetchTalentState();
             if (!talentError) profile = getCurrentProfile();
+            setCurrentTalentState(talentState, talentError);
             const dungeons = await fetchDungeons();
             const clearRecords = await fetchMyClearRecords(dungeons);
             const authored = getAuthoredDungeons(dungeons);

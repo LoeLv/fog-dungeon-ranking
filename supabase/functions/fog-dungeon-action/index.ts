@@ -59,6 +59,31 @@ const knownTalentPools = [
   "Pool混乱",
 ];
 
+const professionGroups = [
+  { path: "文明", god: "秩序", careers: { 战士: "秩序骑士", 法师: "元素法官", 牧师: "公正官", 刺客: "行刑官", 猎人: "搜查官", 歌者: "律者" } },
+  { path: "文明", god: "真理", careers: { 战士: "格斗专家", 法师: "博士学者", 牧师: "外科医生", 刺客: "暗杀博士", 猎人: "陷阱大师", 歌者: "博闻诗人" } },
+  { path: "文明", god: "战争", careers: { 战士: "陷阵勇士", 法师: "炼狱主教", 牧师: "督战官", 刺客: "隙光铁刺", 猎人: "鹰眼斥候", 歌者: "风暴之嗓" } },
+  { path: "混沌", god: "混乱", careers: { 战士: "异血同袍", 法师: "灾祸之源", 牧师: "理智蚀者", 刺客: "折光诡影", 猎人: "渔夫", 歌者: "失律琴师" } },
+  { path: "混沌", god: "痴愚", careers: { 战士: "坚壁骑士", 法师: "幕后戏师", 牧师: "祛愚专家", 刺客: "解构之眼", 猎人: "猎愚人", 歌者: "独奏家" } },
+  { path: "混沌", god: "沉默", careers: { 战士: "苦行僧", 法师: "默剧大师", 牧师: "守夜人", 刺客: "偃偶师", 猎人: "变色龙", 歌者: "囚徒" } },
+  { path: "生命", god: "诞育", careers: { 战士: "酋长", 法师: "生命贤者", 牧师: "子嗣牧", 刺客: "借诞之婴", 猎人: "创生猎人", 歌者: "生灵吟者" } },
+  { path: "生命", god: "繁荣", careers: { 战士: "德鲁伊", 法师: "木精灵", 牧师: "园丁", 刺客: "荆棘之冠", 猎人: "美食家", 歌者: "不朽乐章" } },
+  { path: "生命", god: "死亡", careers: { 战士: "剔骨工", 法师: "死灵法师", 牧师: "守墓人", 刺客: "死亡编织者", 猎人: "猩红猎手", 歌者: "撞钟人" } },
+  { path: "沉沦", god: "污堕", careers: { 战士: "尖啸伯爵", 法师: "欲望主宰", 牧师: "悲悯领主", 刺客: "恶孽", 猎人: "感官追猎者", 歌者: "塞王" } },
+  { path: "沉沦", god: "腐朽", careers: { 战士: "木乃伊", 法师: "瘟疫枢机", 牧师: "凋零祭司", 刺客: "疮瘢之目", 猎人: "黄昏猎人", 歌者: "腐烂颂唱者" } },
+  { path: "沉沦", god: "湮灭", careers: { 战士: "环卫工", 法师: "炬灭者", 牧师: "焚化工", 刺客: "寂灭使徒", 猎人: "终焉行者", 歌者: "毁灭宣誓" } },
+  { path: "存在", god: "时间", careers: { 战士: "指针骑士", 法师: "时间行者", 牧师: "遗忘医生", 刺客: "另日刺客", 猎人: "驯风游侠", 歌者: "吟游诗人" } },
+  { path: "存在", god: "记忆", careers: { 战士: "镜中人", 法师: "回忆旅者", 牧师: "见证者", 刺客: "旧日追猎者", 猎人: "痴梦游侠", 歌者: "史学家" } },
+  { path: "虚无", god: "命运", careers: { 战士: "今日勇者", 法师: "编剧", 牧师: "织命师", 刺客: "窃命之贼", 猎人: "终末之笔", 歌者: "预言家" } },
+  { path: "虚无", god: "欺诈", careers: { 战士: "杂技演员", 法师: "诡术大师", 牧师: "小丑", 刺客: "受害者", 猎人: "驭兽师", 歌者: "魔术师" } },
+];
+
+const professionClassByName = new Map(
+  professionGroups.flatMap((group) =>
+    Object.entries(group.careers).map(([className, professionName]) => [professionName, className]),
+  ),
+);
+
 const feedbackTagAllowlist = new Set([
   "机制清楚",
   "剧情好",
@@ -182,6 +207,16 @@ function getEarnedDraws(ascensionScore: unknown) {
   return Math.max(0, Math.floor((score - defaultAscensionScore) / drawScoreStep));
 }
 
+function getAllowedTalentPools(profile: Record<string, unknown>) {
+  const poolSet = new Set<string>();
+  const faithGod = cleanText(profile.faith_god, 20);
+  const profession = cleanText(profile.profession, 40);
+  const professionClass = professionClassByName.get(profession);
+  if (faithGod) poolSet.add(`Pool${faithGod}`);
+  if (professionClass) poolSet.add(`Pool${professionClass}`);
+  return [...poolSet].filter((poolKey) => knownTalentPools.includes(poolKey));
+}
+
 function weightedPickTalent<T extends { talent_id: number }>(items: T[]) {
   let totalWeight = 0;
   const weighted = items.map((item) => {
@@ -269,55 +304,104 @@ async function buildTalentState(
   const totalDrawsEarned = getEarnedDraws(profile.ascension_score);
   const spentDraws = drawState.spentDraws;
   const availableDraws = Math.max(0, totalDrawsEarned - spentDraws);
+  const allowedPoolKeys = getAllowedTalentPools(profile);
 
-  const { data: poolItems, error: poolError } = await supabase
-    .from("talent_pool_items")
-    .select("pool_key, talent_id, talent_name, rank")
-    .order("pool_key", { ascending: true })
-    .order("rank", { ascending: true })
-    .order("talent_id", { ascending: true });
-  if (poolError) return { error: poolError };
+  let poolItems: { pool_key: string; talent_id: number; talent_name: string; rank: string }[] = [];
+  if (allowedPoolKeys.length > 0) {
+    const poolResult = await supabase
+      .from("talent_pool_items")
+      .select("pool_key, talent_id, talent_name, rank")
+      .in("pool_key", allowedPoolKeys)
+      .order("pool_key", { ascending: true })
+      .order("rank", { ascending: true })
+      .order("talent_id", { ascending: true });
+    if (poolResult.error) return { error: poolResult.error };
+    poolItems = poolResult.data || [];
+  }
 
   const poolMap = new Map<string, { poolKey: string; total: number; bCount: number; cCount: number }>();
-  (poolItems || []).forEach((item) => {
+  allowedPoolKeys.forEach((poolKey) => {
+    poolMap.set(poolKey, { poolKey, total: 0, bCount: 0, cCount: 0 });
+  });
+  poolItems.forEach((item) => {
     const existing = poolMap.get(item.pool_key) || { poolKey: item.pool_key, total: 0, bCount: 0, cCount: 0 };
     existing.total += 1;
     if (item.rank === "B") existing.bCount += 1;
     if (item.rank === "C") existing.cCount += 1;
     poolMap.set(item.pool_key, existing);
   });
-  knownTalentPools.forEach((poolKey) => {
-    if (!poolMap.has(poolKey)) poolMap.set(poolKey, { poolKey, total: 0, bCount: 0, cCount: 0 });
-  });
 
-  const { data: counters, error: countersError } = await supabase
-    .from("talent_pool_counters")
-    .select("pool_key, continue_draw")
-    .eq("invite_code_hash", identity.codeHash);
-  if (countersError) return { error: countersError };
+  let counters: { pool_key: string; continue_draw: number }[] = [];
+  if (allowedPoolKeys.length > 0) {
+    const countersResult = await supabase
+      .from("talent_pool_counters")
+      .select("pool_key, continue_draw")
+      .eq("invite_code_hash", identity.codeHash)
+      .in("pool_key", allowedPoolKeys);
+    if (countersResult.error) return { error: countersResult.error };
+    counters = countersResult.data || [];
+  }
 
-  const { data: ownedTalents, error: ownedError } = await supabase
-    .from("owned_talents")
-    .select("pool_key, talent_id, talent_name, rank, acquired_from, acquired_at")
-    .eq("invite_code_hash", identity.codeHash)
-    .order("acquired_at", { ascending: false });
-  if (ownedError) return { error: ownedError };
+  let ownedTalents: {
+    pool_key: string;
+    talent_id: number;
+    talent_name: string;
+    rank: string;
+    acquired_from: string;
+    acquired_at: string;
+  }[] = [];
+  if (allowedPoolKeys.length > 0) {
+    const ownedResult = await supabase
+      .from("owned_talents")
+      .select("pool_key, talent_id, talent_name, rank, acquired_from, acquired_at")
+      .eq("invite_code_hash", identity.codeHash)
+      .in("pool_key", allowedPoolKeys)
+      .order("acquired_at", { ascending: false });
+    if (ownedResult.error) return { error: ownedResult.error };
+    ownedTalents = ownedResult.data || [];
+  }
 
-  const { data: drawLogs, error: logError } = await supabase
-    .from("talent_draw_logs")
-    .select("pool_key, draw_type, talent_id, talent_name, rank, is_guarantee, is_repeat, fragment_gain, draw_time")
-    .eq("invite_code_hash", identity.codeHash)
-    .order("draw_time", { ascending: false })
-    .limit(50);
-  if (logError) return { error: logError };
+  let drawLogs: {
+    pool_key: string;
+    draw_type: string;
+    talent_id: number;
+    talent_name: string;
+    rank: string;
+    is_guarantee: boolean;
+    is_repeat: boolean;
+    fragment_gain: number;
+    draw_time: string;
+  }[] = [];
+  if (allowedPoolKeys.length > 0) {
+    const logResult = await supabase
+      .from("talent_draw_logs")
+      .select("pool_key, draw_type, talent_id, talent_name, rank, is_guarantee, is_repeat, fragment_gain, draw_time")
+      .eq("invite_code_hash", identity.codeHash)
+      .in("pool_key", allowedPoolKeys)
+      .order("draw_time", { ascending: false })
+      .limit(50);
+    if (logResult.error) return { error: logResult.error };
+    drawLogs = logResult.data || [];
+  }
 
-  const { data: exchangeLogs, error: exchangeLogError } = await supabase
-    .from("talent_exchange_logs")
-    .select("pool_key, target_talent_id, target_talent_name, cost_fragment, exchange_time")
-    .eq("invite_code_hash", identity.codeHash)
-    .order("exchange_time", { ascending: false })
-    .limit(30);
-  if (exchangeLogError) return { error: exchangeLogError };
+  let exchangeLogs: {
+    pool_key: string;
+    target_talent_id: number;
+    target_talent_name: string;
+    cost_fragment: number;
+    exchange_time: string;
+  }[] = [];
+  if (allowedPoolKeys.length > 0) {
+    const exchangeResult = await supabase
+      .from("talent_exchange_logs")
+      .select("pool_key, target_talent_id, target_talent_name, cost_fragment, exchange_time")
+      .eq("invite_code_hash", identity.codeHash)
+      .in("pool_key", allowedPoolKeys)
+      .order("exchange_time", { ascending: false })
+      .limit(30);
+    if (exchangeResult.error) return { error: exchangeResult.error };
+    exchangeLogs = exchangeResult.data || [];
+  }
 
   return {
     data: {
@@ -327,11 +411,12 @@ async function buildTalentState(
       availableDraws,
       fragmentTotal: fragmentState.fragmentTotal,
       pools: [...poolMap.values()],
-      poolItems: poolItems || [],
-      counters: counters || [],
-      ownedTalents: ownedTalents || [],
-      drawLogs: drawLogs || [],
-      exchangeLogs: exchangeLogs || [],
+      allowedPoolKeys,
+      poolItems,
+      counters,
+      ownedTalents,
+      drawLogs,
+      exchangeLogs,
     },
   };
 }
@@ -520,6 +605,11 @@ Deno.serve(async (req) => {
         return json({ error: profileResult.error.message }, 400);
       }
       const profile = profileResult.data;
+      const allowedPoolKeys = getAllowedTalentPools(profile);
+      if (!allowedPoolKeys.length) return json({ error: "请先保存信仰神明和个人职业" }, 400);
+      if (!allowedPoolKeys.includes(poolKey)) {
+        return json({ error: "只能抽取你的信仰池和职业池" }, 403);
+      }
       const drawState = await getTalentDrawState(supabase, identity.codeHash);
       if (isMissingTalentTable(drawState.error ?? null)) return json({ error: "请先运行 talent_pool_migration.sql" }, 400);
       if (drawState.error) return json({ error: drawState.error.message }, 400);
@@ -678,6 +768,11 @@ Deno.serve(async (req) => {
       if (profileResult.error) {
         if (isMissingTalentTable(profileResult.error)) return json({ error: "请先保存个人档案" }, 400);
         return json({ error: profileResult.error.message }, 400);
+      }
+      const allowedPoolKeys = getAllowedTalentPools(profileResult.data);
+      if (!allowedPoolKeys.length) return json({ error: "请先保存信仰神明和个人职业" }, 400);
+      if (!allowedPoolKeys.includes(poolKey)) {
+        return json({ error: "只能兑换你的信仰池和职业池天赋" }, 403);
       }
 
       const { data: targetTalent, error: targetError } = await supabase
