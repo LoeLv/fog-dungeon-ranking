@@ -4260,7 +4260,7 @@
                     <div class="form-group"><label>固定人数 *</label><input type="number" id="participantCount" min="1" max="99" value="6" required></div>
                     <div class="form-group"><label>当前局数 *</label><input type="number" id="runCount" min="1" max="999" value="1" required></div>
                 </div>
-                <label class="profile-checkline" style="margin:10px 0 16px;"><input type="checkbox" id="isOneShotDungeon"> 一次副本：被抽中参与后不可再次报名该副本</label>
+                <div class="form-group"><label>试炼归档</label><select id="dungeonMode"><option value="cycle" selected>轮回试炼 —— 可反复召集入局</option><option value="one_shot">绝响试炼 —— 被抽中参与后不可再入局</option></select></div>
                 <div class="form-group"><label>难度标签</label><select id="dungeonDifficulty"><option value="新手">新手本 —— 第一次入场也能跑</option><option value="低">低难 —— 轻量机制与短流程</option><option value="中" selected>中难 —— 标准挑战强度</option><option value="高">高难 —— 需要配合或硬核机制</option></select></div>
                 <div class="form-group"><label>试炼简介 *</label><textarea id="dungeonDesc" placeholder="【写下这场试炼的谶语，供入局信徒见证】" required maxlength="1500"></textarea></div>
                 <div class="form-group"><label>构筑者置顶神谕（可选）</label><textarea id="pinnedNoteInput" placeholder="可以写开本时间、注意事项、车卡要求、构筑者补充神谕..." maxlength="800"></textarea></div>
@@ -6977,6 +6977,18 @@
             return count ? `${count} 人组队` : '人数未定';
         }
 
+        function isOneShotDungeon(d) {
+            return !!(d?.is_one_shot || d?.isOneShot);
+        }
+
+        function formatTrialArchive(d) {
+            return isOneShotDungeon(d) ? '绝响试炼' : '轮回试炼';
+        }
+
+        function formatTrialArchiveNote(d) {
+            return isOneShotDungeon(d) ? '绝响试炼：被抽中参与后不可再入局' : '轮回试炼：可反复发起召集';
+        }
+
         function getTestimonyPlaceholder(type) {
             const info = getGodInfo(type);
             if (info.path === '生命') return '【敬献你在繁衍试炼中的见闻】';
@@ -7250,12 +7262,14 @@
                         <span class="tag god-tag lore-tag ${godClass}" data-prayer="${escapeHtml(getGodPrayer(d.type))}">${escapeHtml(godLabel)}</span>
                         <span class="tag path-tag lore-tag ${godClass}" data-prayer="${escapeHtml(pathMeta.edict)}">${escapeHtml(godPath)}命途</span>
                         <span class="tag danger-stamp ${getDiffClass(d.difficulty)} ${godClass}-difficulty">${escapeHtml(difficultyLabel)}</span>
+                        <span class="tag lore-tag ${isOneShotDungeon(d) ? 'divine-tag' : ''}">${escapeHtml(formatTrialArchive(d))}</span>
                         ${isDivineTrial(d) ? '<span class="tag divine-tag">神级愚戏</span>' : ''}
                         <span class="trial-data-pill">🎲 ${formatDate(d.created_at)}降下</span>
                     </div>
                     <div class="trial-data-row">
                         <span class="trial-data-pill">同契人数：<strong>${formatContractSize(d)}</strong></span>
                         <span class="trial-data-pill">试炼轮回：<strong>${escapeHtml(getTrialCycle(d))}</strong></span>
+                        <span class="trial-data-pill">归档：<strong>${escapeHtml(formatTrialArchive(d))}</strong></span>
                         <span class="trial-data-pill">通关留存率：<strong>${formatClearRate(d)}</strong></span>
                         <span class="trial-data-pill">证言条数：<strong>${testimonyCount}</strong></span>
                         <button class="btn btn-outline btn-xs match-card-button" onclick='event.stopPropagation(); openMatchPage(${jsString(d.id)})'>加入召集</button>
@@ -7535,9 +7549,11 @@
                         <span class="tag god-tag ${godClass}">${escapeHtml(godLabel)}</span>
                         <span class="tag path-tag ${godClass}">${escapeHtml(godPath)}命途</span>
                         <span class="tag ${getDiffClass(d.difficulty)} ${godClass}-difficulty">${escapeHtml(difficultyLabel)}</span>
+                        <span class="tag ${isOneShotDungeon(d) ? 'divine-tag' : ''}">${escapeHtml(formatTrialArchive(d))}</span>
                         ${isDivineTrial(d) ? '<span class="tag divine-tag">神级愚戏</span>' : ''}
                         <span class="trial-data-pill">${formatParticipants(d)}</span>
                         <span class="trial-data-pill">${formatRunCount(d)}</span>
+                        <span class="trial-data-pill">归档：${escapeHtml(formatTrialArchive(d))}</span>
                         <span class="trial-data-pill">通关留存率：${formatClearRate(d)}</span>
                         <span class="trial-data-pill">证言条数：${activeCommentCount}</span>
                         <button class="btn btn-outline btn-xs" onclick='openMatchPage(${jsString(id)})'>加入召集</button>
@@ -7975,8 +7991,10 @@
         function resetSubmitDefaults() {
             const godSelect = document.getElementById('dungeonType');
             const diffSelect = document.getElementById('dungeonDifficulty');
+            const modeSelect = document.getElementById('dungeonMode');
             if (godSelect) godSelect.value = '记忆';
             if (diffSelect) diffSelect.value = '中';
+            if (modeSelect) modeSelect.value = 'cycle';
         }
 
         function closeSubmitModal(e){
@@ -7998,14 +8016,15 @@
             const runCount=Number(document.getElementById('runCount').value);
             const desc=document.getElementById('dungeonDesc').value.trim();
             const pinnedNote=document.getElementById('pinnedNoteInput')?.value.trim() || '';
-            const isOneShot=!!document.getElementById('isOneShotDungeon')?.checked;
+            const dungeonMode=document.getElementById('dungeonMode')?.value || 'cycle';
+            const isOneShot=dungeonMode==='one_shot';
             if(!name||!creator||!desc){showToast('请填写所有必填项');return;}
             if(!Number.isInteger(participantCount)||participantCount<1||participantCount>99){showToast('请检查固定人数');return;}
             if(!Number.isInteger(runCount)||runCount<1||runCount>999){showToast('请检查当前局数');return;}
             const btn=e.target.querySelector('button[type="submit"]');
             btn.disabled=true;
             btn.textContent='献祭中...';
-            const {error}=await addDungeon({name,creator,difficulty,type,participantCount,runCount,description:desc,pinnedNote,isOneShot});
+            const {error}=await addDungeon({name,creator,difficulty,type,participantCount,runCount,description:desc,pinnedNote,isOneShot,dungeonMode});
             btn.disabled=false;
             btn.textContent='献祭试炼至圣殿';
             if(error){showToast(`❌ ${error.message || '失败'}`);return;}

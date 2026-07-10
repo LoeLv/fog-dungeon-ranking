@@ -55,7 +55,7 @@
           <text class="dungeon-meta">{{item.typeLabel}} · {{item.difficultyLabel}}</text>
           <view class="metric-row">
             <text class="metric">{{item.targetCount}} 人</text>
-            <text class="metric">{{item.isOneShot ? "一次副本" : "常规副本"}}</text>
+            <text class="metric">{{item.isOneShot ? "绝响试炼" : "轮回试炼"}}</text>
           </view>
         </view>
       </view>
@@ -71,7 +71,7 @@
         </view>
         <view class="pill">{{selectedDungeon.targetCount}} 人</view>
       </view>
-      <view class="one-shot-note" wx:if="{{selectedDungeon.isOneShot}}">一次副本：被抽中参与过的玩家不能再次报名该副本。</view>
+      <view class="one-shot-note" wx:if="{{selectedDungeon.isOneShot}}">绝响试炼：被抽中参与过的玩家不能再次报名该试炼。</view>
       <button class="btn btn-primary full-button" loading="{{actionLoading}}" bindtap="startMuster">发起 1 分钟召集</button>
     </view>
   </view>
@@ -102,7 +102,7 @@
         </view>
       </view>
 
-      <view class="one-shot-note" wx:if="{{activeDungeon.isOneShot}}">一次副本限制已启用：已被抽中过的人不能再次报名。</view>
+      <view class="one-shot-note" wx:if="{{activeDungeon.isOneShot}}">绝响试炼限制已启用：已被抽中过的人不能再次报名。</view>
 
       <view class="button-row">
         <button wx:if="{{canJoin}}" class="btn btn-primary" loading="{{actionLoading}}" bindtap="joinMuster">参与报名</button>

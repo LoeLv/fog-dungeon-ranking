@@ -116,7 +116,7 @@ begin
   end if;
 
   if one_shot and public.has_player_joined_one_shot_dungeon(p_dungeon_id, p_creator_code_hash) then
-    raise exception '你已经参与过该一次副本，不能再次发起或报名';
+    raise exception '你已经参与过该绝响试炼，不能再次发起或报名';
   end if;
 
   duration_seconds := greatest(10, least(coalesce(p_duration_seconds, 60), 3600));
@@ -217,7 +217,7 @@ begin
   end if;
 
   if one_shot and public.has_player_joined_one_shot_dungeon(target_dungeon_id, p_player_code_hash) then
-    raise exception '你已经参与过该一次副本，不能再次报名';
+    raise exception '你已经参与过该绝响试炼，不能再次报名';
   end if;
 
   insert into public.match_muster_participants (
