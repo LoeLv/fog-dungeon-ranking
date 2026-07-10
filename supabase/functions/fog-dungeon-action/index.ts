@@ -718,7 +718,7 @@ async function getMatchMusterState(
 ) {
   const readMuster = () => supabase
     .from("match_musters")
-    .select("id, dungeon_id, creator_name, target_player_count, status, opens_at, closes_at, room_id, created_at, drawn_at")
+    .select("id, dungeon_id, creator_code_hash, creator_name, target_player_count, status, opens_at, closes_at, room_id, created_at, drawn_at")
     .eq("id", musterId)
     .single();
 
@@ -779,17 +779,30 @@ async function getMatchMusterState(
   const selectedCount = participantRows.filter((player) => player.status === "selected").length;
   const myName = identity.displayName.trim().toLowerCase();
   const myParticipant = participantRows.find((player) => String(player.player_name || "").trim().toLowerCase() === myName);
+  const isCreator = String(muster.creator_code_hash || "") === identity.codeHash;
   const secondsRemaining = Math.max(0, Math.ceil((new Date(String(muster.closes_at || "")).getTime() - Date.now()) / 1000));
 
   return {
     data: {
-      muster,
+      muster: {
+        id: muster.id,
+        dungeon_id: muster.dungeon_id,
+        creator_name: muster.creator_name,
+        target_player_count: muster.target_player_count,
+        status: muster.status,
+        opens_at: muster.opens_at,
+        closes_at: muster.closes_at,
+        room_id: muster.room_id,
+        created_at: muster.created_at,
+        drawn_at: muster.drawn_at,
+      },
       dungeon,
       participants: participantRows,
       joinedCount,
       selectedCount,
       room,
       myStatus: myParticipant?.status || "none",
+      isCreator,
       secondsRemaining,
     },
   };

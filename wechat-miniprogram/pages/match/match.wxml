@@ -3,7 +3,7 @@
     <view>
       <text class="kicker">TRIAL MUSTER</text>
       <text class="title">试炼召集厅</text>
-      <text class="muted">发起者选择副本并分享到群；1 分钟报名结束后随机抽选。</text>
+      <text class="muted">发起者选择副本并分享到群；1 分钟后从报名池随机抽选。</text>
     </view>
     <button class="mini-action" bindtap="logout">退出</button>
   </view>
@@ -32,8 +32,8 @@
       <view class="flow-list">
         <text>1. 选择要开的试炼</text>
         <text>2. 发起 1 分钟召集</text>
-        <text>3. 分享到微信群</text>
-        <text>4. 到点随机抽出固定人数</text>
+        <text>3. 分享到微信群，发起者不占报名名额</text>
+        <text>4. 到点从报名池随机抽出固定人数</text>
       </view>
     </view>
 
@@ -122,11 +122,17 @@
         <text class="panel-title">我的状态</text>
         <text class="pill">{{myStatusLabel}}</text>
       </view>
-      <text class="muted" wx:if="{{myStatus === 'none'}}">你还没有参与这场召集。</text>
-      <text class="muted" wx:elif="{{myStatus === 'joined'}}">你已进入本场报名池，等待倒计时结束随机抽选。</text>
-      <text class="muted" wx:elif="{{myStatus === 'selected'}}">你已入选本场试炼。</text>
-      <text class="muted" wx:elif="{{myStatus === 'not_selected'}}">这次没有被抽中，可以等待下一场召集。</text>
-      <text class="muted" wx:else>你已取消这场报名。</text>
+      <block wx:if="{{isCreator}}">
+        <text class="muted">你是本场召集发起者，只主持召集，不进入报名池，也不参与抽选。</text>
+        <text class="muted" wx:if="{{activeMuster.status === 'drawn'}}">本场结果已生成，下方「成功参与试炼」就是最终入局名单。</text>
+      </block>
+      <block wx:else>
+        <text class="muted" wx:if="{{myStatus === 'none'}}">你还没有参与这场召集。</text>
+        <text class="muted" wx:elif="{{myStatus === 'joined'}}">你已进入本场报名池，等待倒计时结束随机抽选。</text>
+        <text class="muted" wx:elif="{{myStatus === 'selected'}}">你已入选本场试炼。</text>
+        <text class="muted" wx:elif="{{myStatus === 'not_selected'}}">这次没有被抽中，可以等待下一场召集。</text>
+        <text class="muted" wx:else>你已取消这场报名。</text>
+      </block>
     </view>
 
     <view class="section panel">
@@ -143,7 +149,7 @@
 
     <view wx:if="{{activeMuster.status === 'drawn'}}" class="section panel">
       <view class="row subhead">
-        <text class="panel-title">入选玩家</text>
+        <text class="panel-title">成功参与试炼</text>
         <text class="muted">{{selectedCount}}/{{activeDungeon.targetCount}}</text>
       </view>
       <view wx:if="{{!selectedPlayers.length}}" class="empty queue-empty">本场没有可抽选玩家。</view>

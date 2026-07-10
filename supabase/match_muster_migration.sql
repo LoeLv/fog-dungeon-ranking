@@ -140,27 +140,12 @@ begin
   )
   returning id into new_muster_id;
 
-  insert into public.match_muster_participants (
-    muster_id,
-    dungeon_id,
-    player_code_hash,
-    player_name,
-    status
-  )
-  values (
-    new_muster_id,
-    p_dungeon_id,
-    p_creator_code_hash,
-    clean_creator_name,
-    'joined'
-  );
-
   return jsonb_build_object(
     'status', 'open',
     'musterId', new_muster_id,
     'targetPlayerCount', target_count,
     'closesAt', close_time,
-    'creatorJoined', true
+    'creatorJoined', false
   );
 end;
 $$;
@@ -182,6 +167,7 @@ declare
   close_time timestamptz;
   target_dungeon_id uuid;
   one_shot boolean;
+  target_creator_code_hash text;
   clean_player_name text;
 begin
   if p_muster_id is null then
@@ -197,8 +183,8 @@ begin
     raise exception '玩家昵称不能为空';
   end if;
 
-  select m.dungeon_id, m.status, m.closes_at, m.target_player_count, coalesce(d.is_one_shot, false)
-    into target_dungeon_id, muster_status, close_time, target_count, one_shot
+  select m.dungeon_id, m.status, m.closes_at, m.target_player_count, m.creator_code_hash, coalesce(d.is_one_shot, false)
+    into target_dungeon_id, muster_status, close_time, target_count, target_creator_code_hash, one_shot
   from public.match_musters m
   join public.dungeons d on d.id = m.dungeon_id
   where m.id = p_muster_id
@@ -214,6 +200,10 @@ begin
 
   if now() >= close_time then
     raise exception '报名已截止，等待抽选结果';
+  end if;
+
+  if p_player_code_hash = target_creator_code_hash then
+    raise exception '发起者只主持本场召集，不进入报名池';
   end if;
 
   if one_shot and public.has_player_joined_one_shot_dungeon(target_dungeon_id, p_player_code_hash) then

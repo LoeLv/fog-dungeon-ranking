@@ -98,6 +98,7 @@ function normalizeMusterState(rawState) {
     joinedCount: toNumber(rawState.joinedCount, joinedParticipants.length),
     selectedCount: toNumber(rawState.selectedCount, selectedPlayers.length),
     myStatus: rawState.myStatus || "none",
+    isCreator: !!rawState.isCreator,
     secondsRemaining: secondsRemaining,
     countdownText: formatCountdown(secondsRemaining)
   };
@@ -123,6 +124,7 @@ Page({
     secondsRemaining: 0,
     countdownText: "1:00",
     myStatus: "none",
+    isCreator: false,
     myStatusLabel: "未报名",
     musterStatusLabel: "未发起",
     canJoin: false,
@@ -224,6 +226,7 @@ Page({
           joinedCount: 0,
           selectedCount: 0,
           myStatus: "none",
+          isCreator: false,
           myStatusLabel: "未报名",
           musterStatusLabel: "未发起",
           canJoin: false,
@@ -259,8 +262,11 @@ Page({
     if (!state) return;
     const status = state.muster.status || "open";
     const myStatus = state.myStatus || "none";
+    const isCreator = !!state.isCreator;
     const isOpen = status === "open" && state.secondsRemaining > 0;
-    const myStatusLabel = myStatus === "joined"
+    const myStatusLabel = isCreator
+      ? "发起者"
+      : myStatus === "joined"
       ? "已报名"
       : myStatus === "selected"
         ? "已入选"
@@ -291,9 +297,10 @@ Page({
       secondsRemaining: state.secondsRemaining,
       countdownText: state.countdownText,
       myStatus: myStatus,
+      isCreator: isCreator,
       myStatusLabel: myStatusLabel,
       musterStatusLabel: musterStatusLabel,
-      canJoin: isOpen && myStatus !== "joined",
+      canJoin: isOpen && !isCreator && myStatus !== "joined",
       canCancel: isOpen && myStatus === "joined",
       canShare: status === "open",
       canDraw: status === "open" && state.secondsRemaining <= 0,

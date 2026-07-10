@@ -37,7 +37,7 @@ Page({
         };
         session.setSession(nextSession);
         wx.redirectTo({ url: this.pendingMusterId ? "/pages/match/match?musterId=" + this.pendingMusterId : "/pages/match/match" });
-      })
+      }.bind(this))
       .catch(function(error) {
         wx.showToast({ title: error.message || "验证失败", icon: "none" });
       })
