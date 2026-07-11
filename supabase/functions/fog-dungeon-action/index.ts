@@ -854,22 +854,11 @@ async function recalculateClearStats(
 
 async function confirmClearRecordsFromSettlement(
   supabase: ReturnType<typeof createClient>,
-  dungeonName: string,
+  dungeon: { id: unknown; name: unknown; run_count: unknown },
   entries: { nick: string; deng: number; jin: number; total: number; line: number; raw: string }[],
   profiles: Map<string, Record<string, unknown>>,
   operatorName: string,
 ) {
-  const cleanDungeonName = cleanText(dungeonName, 80);
-  if (!cleanDungeonName) return { confirmed: 0 };
-
-  const { data: dungeon, error: dungeonError } = await supabase
-    .from("dungeons")
-    .select("id, name, run_count")
-    .eq("name", cleanDungeonName)
-    .maybeSingle();
-  if (dungeonError) return { error: dungeonError };
-  if (!dungeon) return { error: { message: `未找到副本：${cleanDungeonName}` } };
-
   let confirmed = 0;
   const runNumber = Number(dungeon.run_count) || 1;
   for (const entry of entries) {
@@ -907,6 +896,29 @@ async function confirmClearRecordsFromSettlement(
   const stats = await recalculateClearStats(supabase, String(dungeon.id));
   if (stats.error) return { error: stats.error };
   return { confirmed, dungeon: stats.data };
+}
+
+async function resolveSettlementDungeon(
+  supabase: ReturnType<typeof createClient>,
+  dungeonIdInput: unknown,
+  dungeonNameInput: unknown,
+) {
+  const dungeonId = cleanText(dungeonIdInput, 80);
+  const dungeonName = cleanText(dungeonNameInput, 80);
+  let query = supabase
+    .from("dungeons")
+    .select("id, name, run_count");
+  if (isUuid(dungeonId)) {
+    query = query.eq("id", dungeonId);
+  } else if (dungeonName) {
+    query = query.eq("name", dungeonName);
+  } else {
+    return { error: { message: "请选择副本" } };
+  }
+  const { data, error } = await query.maybeSingle();
+  if (error) return { error };
+  if (!data) return { error: { message: "未找到所选副本，请从副本列表中选择" } };
+  return { data };
 }
 
 async function getMatchState(
@@ -1064,13 +1076,15 @@ async function commitScoreSettlement(
   sourceType: "batch" | "single",
   dungeonNameInput: unknown,
   entries: { nick: string; deng: number; jin: number; total: number; line: number; raw: string }[],
-  options: { rawText?: string; remark?: string; confirmClear?: boolean } = {},
+  options: { rawText?: string; remark?: string; confirmClear?: boolean; dungeonId?: unknown } = {},
 ) {
-  const dungeonName = cleanText(dungeonNameInput, 80);
   const rawText = cleanText(options.rawText ?? "", 20000);
   const remark = cleanText(options.remark ?? "", 500);
   const confirmClear = !!options.confirmClear;
-  if (!dungeonName) return { error: { message: "请填写副本名称" } };
+  const dungeonResult = await resolveSettlementDungeon(supabase, options.dungeonId, dungeonNameInput);
+  if (dungeonResult.error) return { error: dungeonResult.error };
+  const dungeon = dungeonResult.data;
+  const dungeonName = cleanText(dungeon.name, 80);
 
   const preview = await buildScorePreview(supabase, entries, []);
   if (preview.error) return { error: preview.error };
@@ -1148,7 +1162,7 @@ async function commitScoreSettlement(
   if (logError) return { error: logError };
 
   const clearResult = confirmClear
-    ? await confirmClearRecordsFromSettlement(supabase, dungeonName, entries, profiles, identity.displayName)
+    ? await confirmClearRecordsFromSettlement(supabase, dungeon, entries, profiles, identity.displayName)
     : { confirmed: 0 };
   if (clearResult.error) return { error: clearResult.error };
 
@@ -1468,7 +1482,12 @@ Deno.serve(async (req) => {
         "batch",
         payload.dungeonName,
         entries,
-        { rawText: cleanText(payload.textContent, 20000), remark: cleanText(payload.remark, 500) },
+        {
+          rawText: cleanText(payload.textContent, 20000),
+          remark: cleanText(payload.remark, 500),
+          confirmClear: payload.confirmClear === true,
+          dungeonId: payload.dungeonId,
+        },
       );
       if (result.error?.code === "42P01") return json({ error: "请先运行 score_system_migration.sql" }, 400);
       if (result.error) return json({ error: result.error.message || "结算失败", data: result.error.preview || null }, 400);
@@ -1488,7 +1507,11 @@ Deno.serve(async (req) => {
         "single",
         payload.dungeonName,
         [{ nick, deng, jin, total: Math.round((deng + jin) * 10) / 10, line: 1, raw: `${nick}:${deng}+${jin}` }],
-        { remark: cleanText(payload.remark, 500) },
+        {
+          remark: cleanText(payload.remark, 500),
+          confirmClear: payload.confirmClear === true,
+          dungeonId: payload.dungeonId,
+        },
       );
       if (result.error?.code === "42P01") return json({ error: "请先运行 score_system_migration.sql" }, 400);
       if (result.error) return json({ error: result.error.message || "补分失败", data: result.error.preview || null }, 400);

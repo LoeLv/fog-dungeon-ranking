@@ -6328,7 +6328,7 @@
                     <div class="form-group"><label>试炼名 *</label><input type="text" id="dungeonName" placeholder="为这枚切片宇宙命名..." required maxlength="60"></div>
                     <div class="form-group"><label>构筑者 *</label><input type="text" id="dungeonCreator" placeholder="你的神名或代号..." required maxlength="30"></div>
                 </div>
-                <div class="form-group"><label>共创者（可选）</label><input type="text" id="dungeonCoCreators" placeholder="多人共创时填写昵称，用顿号、逗号或换行分隔" maxlength="240"></div>
+                <div class="form-group"><label>同契共筑者（可选）</label><input type="text" id="dungeonCoCreators" placeholder="多人共同构筑时填写昵称，用顿号、逗号或换行分隔" maxlength="240"></div>
                 <div class="form-grid compact">
                     <div class="form-group full"><label>神明标签 *（可多选）</label><select id="dungeonType" multiple required size="6"></select></div>
                     <div class="form-group"><label>固定人数 *</label><input type="number" id="participantCount" min="1" max="99" value="6" required></div>
@@ -8408,11 +8408,13 @@
         }
 
         async function submitScoreBatchUI() {
-            const dungeonName = document.getElementById('scoreDungeonName')?.value || '';
+            const dungeonSelect = document.getElementById('scoreDungeonId');
+            const dungeonId = dungeonSelect?.value || '';
+            const dungeonName = dungeonSelect?.selectedOptions?.[0]?.dataset?.name || '';
             const textContent = document.getElementById('scoreBatchText')?.value || '';
             const remark = document.getElementById('scoreBatchRemark')?.value || '';
             const confirmClear = !!document.getElementById('scoreBatchConfirmClear')?.checked;
-            const { data, error } = await invokeDungeonAction('submitScoreBatch', { dungeonName, textContent, remark, confirmClear });
+            const { data, error } = await invokeDungeonAction('submitScoreBatch', { dungeonId, dungeonName, textContent, remark, confirmClear });
             if (error) {
                 if (error.data) {
                     scorePreviewState = error.data;
@@ -8428,8 +8430,10 @@
         }
 
         async function submitScoreSingleUI() {
+            const dungeonSelect = document.getElementById('singleDungeonId');
             const payload = {
-                dungeonName: document.getElementById('singleDungeonName')?.value || '',
+                dungeonId: dungeonSelect?.value || '',
+                dungeonName: dungeonSelect?.selectedOptions?.[0]?.dataset?.name || '',
                 playerName: document.getElementById('singlePlayerName')?.value || '',
                 dengScore: document.getElementById('singleDengScore')?.value || 0,
                 jinScore: document.getElementById('singleJinScore')?.value || 0,
@@ -8440,6 +8444,15 @@
             if (error) { showToast(`❌ ${error.message || '补分失败'}`); return; }
             showToast(`补分完成：${data?.entries?.[0]?.player_name || payload.playerName}${data?.clearConfirmed ? '，通关已确认' : ''}`);
             await renderScorePage();
+        }
+
+        function renderScoreDungeonOptions(dungeons) {
+            if (!dungeons?.length) return '<option value="">暂无可结算副本</option>';
+            return '<option value="">选择要结算的副本</option>' + dungeons.map(dungeon => {
+                const name = dungeon.name || '未命名试炼';
+                const meta = `${formatDifficulty(dungeon.difficulty)} · ${formatGodName(dungeon.type)} · ${formatCreatorLine(dungeon)}`;
+                return `<option value="${escapeHtml(dungeon.id)}" data-name="${escapeHtml(name)}">${escapeHtml(name)}｜${escapeHtml(meta)}</option>`;
+            }).join('');
         }
 
         async function fetchScoreSettlements(limit = 30) {
@@ -8485,6 +8498,8 @@
                 container.innerHTML = renderRitualEmpty('此页只对结算审核员与神谕馆主开放；未持审核席权限的身份不会进入分数结算。', '真理', '需要审核席权限');
                 return;
             }
+            const dungeons = await fetchDungeons();
+            const dungeonOptions = renderScoreDungeonOptions(dungeons);
             const { settlements, error } = await fetchScoreSettlements(30);
             container.innerHTML = `
                 <section class="profile-hero" data-god="真理" data-motif="${escapeHtml(getGodSkin('真理').motif)}" style="${getGodSkinStyle('真理')}">
@@ -8512,7 +8527,7 @@
                     <div>
                         <section class="profile-panel" data-god="真理" style="${getGodSkinStyle('真理')}">
                             <div class="profile-panel-title"><span>批量结算</span><small>格式：昵称:+登神+觐见</small></div>
-                            <div class="form-group"><label>副本名称</label><input id="scoreDungeonName" maxlength="80" placeholder="例如：雾中档案室"></div>
+                            <div class="form-group"><label>副本圣名</label><select id="scoreDungeonId">${dungeonOptions}</select></div>
                             <div class="form-group"><label>结算文本</label><textarea id="scoreBatchText" maxlength="20000" placeholder="无我:+12+2&#10;某玩家:-3+1"></textarea></div>
                             <div class="form-group"><label>备注</label><input id="scoreBatchRemark" maxlength="500" placeholder="可选，写结算来源或说明"></div>
                             <label class="identity-help" style="display:flex;align-items:center;gap:8px;margin-bottom:12px;"><input id="scoreBatchConfirmClear" type="checkbox" style="width:auto;"> 本次结算同时确认这些玩家通过该副本</label>
@@ -8525,7 +8540,7 @@
                         <section class="profile-panel" data-god="真理" style="${getGodSkinStyle('真理')}">
                             <div class="profile-panel-title"><span>单人补分</span><small>漏分补发</small></div>
                             <div class="profile-form-grid">
-                                <div class="form-group"><label>副本名称</label><input id="singleDungeonName" maxlength="80"></div>
+                                <div class="form-group full"><label>副本圣名</label><select id="singleDungeonId">${dungeonOptions}</select></div>
                                 <div class="form-group"><label>玩家昵称</label><input id="singlePlayerName" maxlength="40"></div>
                                 <div class="form-group"><label>登神之路</label><input id="singleDengScore" type="number" min="${scoreDengMin}" max="${scoreDengMax}" step="0.1" value="0"></div>
                                 <div class="form-group"><label>觐见之梯</label><input id="singleJinScore" type="number" min="${scoreJinMin}" max="${scoreJinMax}" step="0.1" value="0"></div>
@@ -9996,7 +10011,7 @@
         function formatCreatorLine(d) {
             const creator = d?.creator || '匿名';
             const coCreators = getCoCreators(d).filter(name => normalizeNameKey(name) !== normalizeNameKey(creator));
-            return coCreators.length ? `${creator} ｜ 共创：${coCreators.join('、')}` : creator;
+            return coCreators.length ? `${creator} ｜ 同契共筑：${coCreators.join('、')}` : creator;
         }
 
         function getPathDisplayColor(path) {
@@ -10937,7 +10952,7 @@
             const runCount = getRunCount(d);
             const clearLocalKey = `${id}:${runCount}:${inviteSession?.code || 'guest'}`;
             const clearDone = !!getLocalData('cleared_supabase', {})[clearLocalKey];
-            const clearButtonText = clearDone ? '本局已由审核确认' : '等待审核员确认';
+            const clearButtonText = clearDone ? '通关名已入神谕' : '待审核刻名';
             const clearRateNumber = Number.parseFloat(formatClearRate(d)) || 0;
             const godLabel = formatGodName(d.type);
             const godPath = formatGodPath(d.type);
