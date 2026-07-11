@@ -154,8 +154,6 @@
         }
         body.visual-effects-muted::before,
         body.visual-effects-muted::after,
-        body.visual-effects-muted .era-wall,
-        body.visual-effects-muted .ambient-mask,
         body.visual-effects-muted .dungeon-card::after,
         body.visual-effects-muted .forum-feed::after,
         body.visual-effects-muted .role-insight-panel::after,
@@ -165,6 +163,7 @@
             opacity: 0 !important;
             animation: none !important;
         }
+        body.visual-effects-muted .edge-particle-stream,
         body.visual-effects-muted .void-constellation-orbit,
         body.visual-effects-muted .dungeon-card.divine-trial::before {
             animation: none !important;
@@ -173,23 +172,19 @@
             position: fixed;
             top: 0;
             bottom: 0;
-            width: clamp(54px, 6vw, 92px);
+            width: clamp(78px, 7vw, 104px);
             z-index: 0;
             pointer-events: none;
-            opacity: var(--era-mural-opacity);
+            opacity: 0.07;
             background:
-                radial-gradient(ellipse at 52% 8%, rgba(111,168,121,0.9), transparent 17%),
-                radial-gradient(ellipse at 48% 26%, rgba(120,47,64,0.85), transparent 18%),
-                radial-gradient(ellipse at 56% 43%, rgba(159,73,56,0.78), transparent 17%),
-                radial-gradient(ellipse at 44% 60%, rgba(166,155,105,0.72), transparent 17%),
-                radial-gradient(ellipse at 55% 77%, rgba(122,174,194,0.82), transparent 17%),
-                radial-gradient(ellipse at 48% 94%, rgba(211,175,97,0.92), transparent 18%),
-                repeating-linear-gradient(90deg, transparent 0 14px, rgba(231,207,138,0.32) 14px 15px, transparent 15px 27px),
-                repeating-linear-gradient(0deg, transparent 0 38px, rgba(231,207,138,0.28) 38px 39px, transparent 39px 76px);
-            filter: grayscale(0.72) blur(0.15px);
+                var(--edge-mural-glyphs),
+                repeating-linear-gradient(90deg, transparent 0 15px, var(--edge-accent-soft) 15px 16px, transparent 16px 31px),
+                repeating-linear-gradient(0deg, transparent 0 42px, rgba(231,207,138,0.14) 42px 43px, transparent 43px 84px);
+            background-size: auto, auto, auto;
+            filter: grayscale(0.28) blur(0.05px);
             mix-blend-mode: screen;
             transform: translateY(0);
-            animation: muralDrift 32s ease-in-out infinite alternate;
+            animation: muralDrift 44s ease-in-out infinite alternate;
         }
         .era-wall::before,
         .era-wall::after {
@@ -199,13 +194,13 @@
             background:
                 linear-gradient(90deg, transparent 0 34%, rgba(231,207,138,0.34) 34.7%, transparent 36%),
                 linear-gradient(90deg, transparent 0 66%, rgba(231,207,138,0.24) 66.7%, transparent 68%);
-            opacity: 0.42;
+            opacity: 0.35;
         }
         .era-wall::after {
             background:
                 repeating-linear-gradient(118deg, transparent 0 24px, rgba(231,207,138,0.34) 24px 25px, transparent 25px 52px),
                 radial-gradient(circle at 50% 94%, rgba(231,207,138,0.8) 0 1px, transparent 2px 14px);
-            opacity: 0.24;
+            opacity: 0.18;
         }
         .era-wall-left { left: 0; }
         .era-wall-right { right: 0; transform: scaleX(-1); animation-delay: -14s; }
@@ -242,6 +237,103 @@
         .ambient-mask-right {
             right: 0;
             transform: translateX(-1px) rotate(8deg) scaleX(-1);
+        }
+        .edge-atmosphere {
+            --edge-primary: rgba(211,175,97,1);
+            --edge-secondary: rgba(122,174,194,1);
+            --edge-accent-soft: rgba(211,175,97,0.18);
+            --edge-mural-glyphs:
+                radial-gradient(ellipse at 48% 8%, rgba(111,168,121,0.60), transparent 17%),
+                radial-gradient(ellipse at 52% 24%, rgba(120,47,64,0.60), transparent 18%),
+                radial-gradient(ellipse at 48% 40%, rgba(159,73,56,0.58), transparent 17%),
+                radial-gradient(ellipse at 54% 56%, rgba(166,155,105,0.58), transparent 17%),
+                radial-gradient(ellipse at 47% 72%, rgba(122,174,194,0.60), transparent 17%),
+                radial-gradient(ellipse at 52% 89%, rgba(211,175,97,0.68), transparent 18%);
+            position: fixed;
+            inset: 0;
+            z-index: 0;
+            pointer-events: none;
+            overflow: hidden;
+        }
+        .edge-atmosphere[data-era="生命"] { --edge-primary: rgba(111,168,121,1); --edge-secondary: rgba(231,207,138,1); --edge-accent-soft: rgba(111,168,121,0.20); }
+        .edge-atmosphere[data-era="沉沦"] { --edge-primary: rgba(198,90,136,1); --edge-secondary: rgba(103,109,118,1); --edge-accent-soft: rgba(198,90,136,0.20); }
+        .edge-atmosphere[data-era="文明"] { --edge-primary: rgba(224,100,78,1); --edge-secondary: rgba(192,120,85,1); --edge-accent-soft: rgba(224,100,78,0.18); }
+        .edge-atmosphere[data-era="混沌"] { --edge-primary: rgba(201,185,103,1); --edge-secondary: rgba(212,139,85,1); --edge-accent-soft: rgba(201,185,103,0.18); }
+        .edge-atmosphere[data-era="存在"] { --edge-primary: rgba(122,174,194,1); --edge-secondary: rgba(154,120,224,1); --edge-accent-soft: rgba(122,174,194,0.19); }
+        .edge-atmosphere[data-era="虚无"] { --edge-primary: rgba(211,175,97,1); --edge-secondary: rgba(122,174,194,1); --edge-accent-soft: rgba(211,175,97,0.20); }
+        .edge-silhouette {
+            position: fixed;
+            width: clamp(160px, 19vw, 310px);
+            height: clamp(160px, 19vw, 310px);
+            opacity: 0.06;
+            color: var(--edge-primary);
+            background:
+                radial-gradient(circle at 50% 50%, currentColor 0 1.5px, transparent 2px 100%),
+                conic-gradient(from var(--silhouette-turn, 0deg), transparent 0 16%, currentColor 16% 24%, transparent 24% 52%, currentColor 52% 59%, transparent 59% 100%);
+            mask: var(--edge-mask);
+            -webkit-mask: var(--edge-mask);
+            filter: blur(0.2px) drop-shadow(0 0 18px currentColor);
+            transform: rotate(var(--silhouette-rotate, 0deg));
+        }
+        .edge-silhouette.tl { top: 88px; left: clamp(16px, 3vw, 54px); --silhouette-rotate: -8deg; --silhouette-turn: 12deg; }
+        .edge-silhouette.tr { top: 118px; right: clamp(16px, 3vw, 54px); --silhouette-rotate: 16deg; --silhouette-turn: 54deg; }
+        .edge-silhouette.bl { bottom: 42px; left: clamp(18px, 3vw, 62px); --silhouette-rotate: 18deg; --silhouette-turn: 104deg; }
+        .edge-silhouette.br { bottom: 58px; right: clamp(18px, 3vw, 62px); --silhouette-rotate: -14deg; --silhouette-turn: 164deg; }
+        .edge-atmosphere[data-era="虚无"] .edge-silhouette {
+            --edge-mask: radial-gradient(ellipse at 42% 42%, #000 0 28%, transparent 29%),
+                radial-gradient(ellipse at 63% 61%, #000 0 19%, transparent 20%),
+                linear-gradient(135deg, transparent 0 41%, #000 42% 50%, transparent 51%);
+        }
+        .edge-atmosphere[data-era="生命"] .edge-silhouette {
+            --edge-mask: radial-gradient(ellipse at 50% 62%, #000 0 24%, transparent 25%),
+                linear-gradient(68deg, transparent 0 35%, #000 36% 43%, transparent 44%),
+                linear-gradient(112deg, transparent 0 42%, #000 43% 49%, transparent 50%);
+        }
+        .edge-atmosphere[data-era="沉沦"] .edge-silhouette {
+            --edge-mask: radial-gradient(ellipse at 50% 57%, #000 0 20%, transparent 21%),
+                repeating-conic-gradient(from 18deg at 50% 50%, #000 0deg 8deg, transparent 8deg 22deg);
+        }
+        .edge-atmosphere[data-era="文明"] .edge-silhouette {
+            --edge-mask: linear-gradient(90deg, transparent 0 38%, #000 39% 45%, transparent 46%),
+                linear-gradient(0deg, transparent 0 50%, #000 51% 58%, transparent 59%),
+                radial-gradient(ellipse at 54% 30%, #000 0 19%, transparent 20%);
+        }
+        .edge-atmosphere[data-era="混沌"] .edge-silhouette {
+            --edge-mask: repeating-conic-gradient(from 10deg at 50% 50%, #000 0deg 11deg, transparent 11deg 27deg),
+                radial-gradient(circle at 50% 50%, transparent 0 18%, #000 19% 34%, transparent 35%);
+        }
+        .edge-atmosphere[data-era="存在"] .edge-silhouette {
+            --edge-mask: radial-gradient(ellipse at 47% 54%, #000 0 24%, transparent 25%),
+                linear-gradient(100deg, transparent 0 43%, #000 44% 50%, transparent 51%),
+                radial-gradient(ellipse at 63% 31%, #000 0 14%, transparent 15%);
+        }
+        .edge-particle-stream {
+            position: fixed;
+            top: -8vh;
+            bottom: -8vh;
+            width: clamp(56px, 6vw, 90px);
+            opacity: 0.065;
+            background:
+                radial-gradient(circle at 24% 12%, var(--edge-primary) 0 1.5px, transparent 2.5px),
+                radial-gradient(circle at 72% 29%, var(--edge-secondary) 0 1.2px, transparent 2.4px),
+                radial-gradient(circle at 46% 48%, var(--edge-primary) 0 1.4px, transparent 2.5px),
+                radial-gradient(circle at 18% 67%, var(--edge-secondary) 0 1px, transparent 2.2px),
+                radial-gradient(circle at 78% 84%, var(--edge-primary) 0 1.5px, transparent 2.5px);
+            background-size: 42px 180px;
+            animation: edgeParticleDrift 18s linear infinite;
+            mix-blend-mode: screen;
+        }
+        .edge-particle-stream.left { left: 0; }
+        .edge-particle-stream.right { right: 0; animation-delay: -9s; transform: scaleX(-1); }
+        @keyframes edgeParticleDrift {
+            from { background-position: 0 0; }
+            to { background-position: 0 180px; }
+        }
+        body.visual-effects-muted .edge-particle-stream { display: none; }
+        body.visual-effects-muted .edge-silhouette { opacity: 0.035; }
+        @media (max-width: 1199px) {
+            .edge-silhouette,
+            .edge-particle-stream { display: none; }
         }
 
         /* ========== 顶部导航 ========== */
@@ -4872,6 +4964,21 @@
             align-content: center;
             padding: 2px 1px;
         }
+        .void-chronicle strong {
+            display: block;
+            color: var(--gold-light);
+            font-size: 0.9rem;
+            font-weight: 900;
+            line-height: 1.55;
+            text-shadow: 0 0 16px rgba(231,207,138,0.18);
+        }
+        .void-chronicle span {
+            display: block;
+            margin-top: 6px;
+            color: rgba(234,234,242,0.54);
+            font-size: 0.7rem;
+            line-height: 1.65;
+        }
         .void-chronicle.is-rotating strong,
         .void-chronicle.is-rotating span { animation: chronicleReveal 0.48s ease both; }
         .void-chronicle.is-rotating span { animation-delay: 0.05s; }
@@ -5307,10 +5414,18 @@
     </style>
 </head>
 <body>
-    <div class="era-wall era-wall-left" aria-hidden="true"></div>
-    <div class="era-wall era-wall-right" aria-hidden="true"></div>
-    <div class="ambient-mask ambient-mask-left" aria-hidden="true">◒</div>
-    <div class="ambient-mask ambient-mask-right" aria-hidden="true">◈</div>
+    <div class="edge-atmosphere" id="edgeAtmosphere" data-era="虚无" aria-hidden="true">
+        <div class="era-wall era-wall-left"></div>
+        <div class="era-wall era-wall-right"></div>
+        <div class="ambient-mask ambient-mask-left">◒</div>
+        <div class="ambient-mask ambient-mask-right">◈</div>
+        <div class="edge-silhouette tl"></div>
+        <div class="edge-silhouette tr"></div>
+        <div class="edge-silhouette bl"></div>
+        <div class="edge-silhouette br"></div>
+        <div class="edge-particle-stream left"></div>
+        <div class="edge-particle-stream right"></div>
+    </div>
     <header class="header">
         <div class="logo">
             <span class="brand-emblem" aria-hidden="true">
@@ -6161,6 +6276,39 @@
             '命若繁星，望而不及。当前现世仍由假面与星轨共同注视。',
             '虚无纪元降临，所有试炼切片都在等待下一位入局信徒。'
         ];
+        const ERA_CHRONICLE_LIBRARY = {
+            生命: [
+                { lead: '感孕生命，衍育自然。', note: '藤蔓沿着试炼档案缓慢生长，生与死在同一页上互相校订。' },
+                { lead: '万物滋生，亦繁亦荣。', note: '每一次通关登记都是一枚新芽，每一次失败也会回到泥土。' },
+                { lead: '灵魂安眠，生命终焉。', note: '生命纪元并不拒绝死亡，它只要求终点也留下可被后来者读取的纹理。' }
+            ],
+            沉沦: [
+                { lead: '纵情沉溺，自溺欢愉。', note: '玫红浊气贴着边缘游走，腐化与欢愉同时在试炼记录里发酵。' },
+                { lead: '万物凋零，腐朽长存。', note: '沉沦纪元的证言不会立刻消失，它们先变暗，再变成更顽固的污痕。' },
+                { lead: '归于虚无，万事湮灭。', note: '每个被抹去的名字都会在空白处留下轮廓，等待下一位入局者看见。' }
+            ],
+            文明: [
+                { lead: '天地循规，万序恒定。', note: '石碑、兵器与刻度线垂在两侧，所有试炼都被纳入可审阅的秩序。' },
+                { lead: '穷究本源，洞悉真相。', note: '文明纪元把证言装订成法典，也把每一次争执铸成新的规则。' },
+                { lead: '纷争不止，以战证道。', note: '战火没有离开档案馆，只是被压成一枚枚静默的红铜印。' }
+            ],
+            混沌: [
+                { lead: '虚构规律，寰宇笑谈。', note: '边缘漩涡缓慢扭曲，所有稳定排序都只是暂时同意的幻觉。' },
+                { lead: '生命皆痴，文明皆愚。', note: '混沌纪元把严肃判词折成笑话，再把笑话重新钉回试炼墙。' },
+                { lead: '无序碎光正在漂移。', note: '你看见的每一条路径都可能反过来读取你。' }
+            ],
+            存在: [
+                { lead: '昔我长铭，流光拓影。', note: '书页与沙漏在边缘翻动，记忆不是过去，而是仍在发光的证据。' },
+                { lead: '时光如隙，我亦如风。', note: '存在纪元把试炼切成可回看的片段，让每一次选择都留下时间纹。' },
+                { lead: '记忆不会静止。', note: '它只是在不同信徒的证言之间换一种速度继续流动。' }
+            ],
+            虚无: [
+                { lead: '命若繁星，望而不及。', note: '当前现世仍由假面与星轨共同注视。' },
+                { lead: '欺诈假面垂落。', note: '命运骰子于裂隙之中永不停歇转动。' },
+                { lead: '不辨真伪，勿论虚实。', note: '此为虚无纪元的愚戏法则。' },
+                { lead: '时间退散，欺诈来袭。', note: '每一条证言都会成为愚戏的一枚筹码。' }
+            ]
+        };
         const GOD_TALENT_POOL_NAMES = {
             诞育: '繁衍孕育池',
             繁荣: '丰收繁荣池',
@@ -6234,6 +6382,7 @@
         let chronicleRotationTimer = null;
         let chronicleRotationDungeons = [];
         let chronicleRotationIndex = 0;
+        let currentAtmosphereEra = '虚无';
         let selectedMatchDungeonId = null;
         let matchDungeonsCache = [];
         let matchStateCache = null;
@@ -9050,6 +9199,18 @@
             showToast(visualEffectsEnabled ? '视觉粒子已开启' : '视觉粒子已静默');
         }
 
+        function getActiveAtmosphereEra() {
+            if (selectedGod !== 'all') return getGodInfo(selectedGod).path;
+            if (selectedPath !== 'all') return selectedPath;
+            return '虚无';
+        }
+
+        function updateEdgeAtmosphere(path) {
+            currentAtmosphereEra = ERA_CHRONICLE_LIBRARY[path] ? path : '虚无';
+            const layer = document.getElementById('edgeAtmosphere');
+            if (layer) layer.dataset.era = currentAtmosphereEra;
+        }
+
         function populateGodSelect() {
             const select = document.getElementById('dungeonType');
             if (!select) return;
@@ -9061,6 +9222,7 @@
             selectedGod = god;
             selectedPath = 'all';
             archivePage = 1;
+            updateEdgeAtmosphere(getActiveAtmosphereEra());
             renderGodFilters();
             renderPathNav();
             updateFilterSummary();
@@ -9071,6 +9233,7 @@
             selectedPath = selectedPath === path ? 'all' : path;
             selectedGod = 'all';
             archivePage = 1;
+            updateEdgeAtmosphere(getActiveAtmosphereEra());
             renderPathNav();
             renderGodFilters();
             updateFilterSummary();
@@ -9080,6 +9243,7 @@
         function setDifficultyFilter(difficulty) {
             selectedDifficulty = difficulty;
             archivePage = 1;
+            updateEdgeAtmosphere(getActiveAtmosphereEra());
             renderDifficultyFilters();
             updateFilterSummary();
             renderDungeonList();
@@ -9115,6 +9279,7 @@
             selectedPath = 'all';
             selectedDifficulty = 'all';
             archivePage = 1;
+            updateEdgeAtmosphere(getActiveAtmosphereEra());
             const input = document.getElementById('searchInput');
             if (input) input.value = '';
             renderPathNav();
@@ -9212,11 +9377,14 @@
             const chronicle = document.getElementById('voidChronicle');
             if (!chronicle) return;
             const pathCounts = countByPath(dungeons, dungeon => getGodInfo(dungeon.type).path);
-            const voidCount = Number(pathCounts['虚无'] || 0);
+            const era = getActiveAtmosphereEra();
+            const library = ERA_CHRONICLE_LIBRARY[era] || ERA_CHRONICLE_LIBRARY['虚无'];
+            const entry = library[index % library.length];
+            const eraCount = Number(pathCounts[era] || 0);
             chronicle.classList.remove('is-rotating');
             chronicle.innerHTML = `
-                <strong>${escapeHtml(VOID_CHRONICLES[index % VOID_CHRONICLES.length])}</strong>
-                <span>当前视野收录 ${dungeons.length} 个试炼，其中虚无命途 ${voidCount} 个。网站端试炼召集入口已隐藏，召集主入口保留在小程序。</span>`;
+                <strong>${escapeHtml(entry.lead)}</strong>
+                <span>${escapeHtml(entry.note)} 当前视野收录 ${dungeons.length} 个试炼，其中${escapeHtml(era)}命途 ${eraCount} 个。</span>`;
             requestAnimationFrame(() => chronicle.classList.add('is-rotating'));
         }
 
@@ -9226,16 +9394,20 @@
                 clearInterval(chronicleRotationTimer);
                 chronicleRotationTimer = null;
             }
+            const era = getActiveAtmosphereEra();
+            updateEdgeAtmosphere(era);
+            const library = ERA_CHRONICLE_LIBRARY[era] || ERA_CHRONICLE_LIBRARY['虚无'];
             chronicleRotationIndex = chronicleRotationDungeons.length
-                ? chronicleRotationDungeons.length % VOID_CHRONICLES.length
-                : new Date().getMinutes() % VOID_CHRONICLES.length;
+                ? chronicleRotationDungeons.length % library.length
+                : new Date().getMinutes() % library.length;
             renderVoidChronicle(chronicleRotationDungeons, chronicleRotationIndex);
             const reducedMotion = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
-            if (reducedMotion || VOID_CHRONICLES.length < 2) return;
+            if (reducedMotion || library.length < 2) return;
             chronicleRotationTimer = window.setInterval(() => {
-                chronicleRotationIndex = (chronicleRotationIndex + 1) % VOID_CHRONICLES.length;
+                const activeLibrary = ERA_CHRONICLE_LIBRARY[getActiveAtmosphereEra()] || ERA_CHRONICLE_LIBRARY['虚无'];
+                chronicleRotationIndex = (chronicleRotationIndex + 1) % activeLibrary.length;
                 renderVoidChronicle(chronicleRotationDungeons, chronicleRotationIndex);
-            }, 10000);
+            }, 15000);
         }
 
         function renderEraSidebar(dungeons = []) {
