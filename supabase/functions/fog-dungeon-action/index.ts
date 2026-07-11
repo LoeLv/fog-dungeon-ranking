@@ -169,6 +169,49 @@ async function sha256Hex(value: string) {
     .join("");
 }
 
+async function getPublicProfileKey(inviteCodeHash: unknown) {
+  const codeHash = cleanText(inviteCodeHash, 64);
+  if (!codeHash) return "";
+  return await sha256Hex(`public-profile:${codeHash}`);
+}
+
+function toPublicDungeonSummary(dungeon: Record<string, unknown> | null | undefined) {
+  if (!dungeon) return null;
+  return {
+    id: cleanText(dungeon.id, 80),
+    name: cleanText(dungeon.name, 80),
+    creator: cleanText(dungeon.creator, 40),
+    difficulty: cleanText(dungeon.difficulty, 20),
+    type: cleanText(dungeon.type, 20),
+    participant_count: Number(dungeon.participant_count || 0),
+    run_count: Number(dungeon.run_count || 0),
+    clear_count: Number(dungeon.clear_count || 0),
+    clear_rate: Number(dungeon.clear_rate || 0),
+    avg_rating: Number(dungeon.avg_rating || 0),
+    rating_count: Number(dungeon.rating_count || 0),
+    comment_count: Number(dungeon.comment_count || 0),
+    created_at: cleanText(dungeon.created_at, 80),
+    is_one_shot: dungeon.is_one_shot === true,
+  };
+}
+
+function toPublicProfile(profile: Record<string, unknown>, profileKey: string, isCurrent: boolean) {
+  return {
+    profile_key: profileKey,
+    display_name: cleanText(profile.display_name, 40),
+    role: cleanText(profile.role, 20),
+    faith_god: cleanText(profile.faith_god, 20),
+    faith_path: cleanText(profile.faith_path, 20),
+    profession: cleanText(profile.profession, 40),
+    ascension_score: cleanScore(profile.ascension_score),
+    audience_score: cleanScore(profile.audience_score),
+    items: cleanText(profile.items, 800),
+    talents: cleanText(profile.talents, 800),
+    updated_at: cleanText(profile.updated_at, 80),
+    is_current: isCurrent,
+  };
+}
+
 async function getInviteIdentity(
   supabase: ReturnType<typeof createClient>,
   inviteCode: unknown,
@@ -1032,13 +1075,150 @@ Deno.serve(async (req) => {
       if (error?.code === "42P01") return json({ error: "请先运行 player_profiles_migration.sql" }, 400);
       if (error) return json({ error: error.message }, 400);
 
+      const publicProfiles = await Promise.all((data || []).map(async (profile: Record<string, unknown>) => {
+        const inviteCodeHash = cleanText(profile.invite_code_hash, 64);
+        const { invite_code_hash: _hiddenInviteHash, ...rest } = profile;
+        return {
+          ...rest,
+          profile_key: await getPublicProfileKey(inviteCodeHash),
+          is_current: inviteCodeHash === identity.codeHash,
+        };
+      }));
+
       return json({
         role,
         name: identity.displayName,
-        data: (data || []).map(({ invite_code_hash: inviteCodeHash, ...profile }) => ({
-          ...profile,
-          is_current: inviteCodeHash === identity.codeHash,
-        })),
+        data: publicProfiles,
+      });
+    }
+
+    if (action === "getPublicProfile") {
+      if (!hasRole(role, ["player", "author", "reviewer", "admin"])) return json({ error: "需要入局谕令" }, 403);
+
+      const profileKey = cleanText(payload.profileKey ?? payload.profile_key, 96);
+      if (!/^[a-f0-9]{64}$/i.test(profileKey)) return json({ error: "公开档案标识不正确" }, 400);
+
+      const { data: profiles, error: profileError } = await supabase
+        .from("player_profiles")
+        .select("invite_code_hash, display_name, role, faith_god, faith_path, profession, ascension_score, audience_score, items, talents, updated_at")
+        .order("ascension_score", { ascending: false })
+        .limit(1000);
+      if (profileError?.code === "42P01") return json({ error: "请先运行 player_profiles_migration.sql" }, 400);
+      if (profileError) return json({ error: profileError.message }, 400);
+
+      let targetProfile: Record<string, unknown> | null = null;
+      let matchedProfileKey = "";
+      for (const profile of profiles || []) {
+        const nextProfileKey = await getPublicProfileKey((profile as Record<string, unknown>).invite_code_hash);
+        if (nextProfileKey === profileKey) {
+          targetProfile = profile as Record<string, unknown>;
+          matchedProfileKey = nextProfileKey;
+          break;
+        }
+      }
+      if (!targetProfile) return json({ error: "公开档案不存在或尚未保存" }, 404);
+
+      const targetInviteHash = cleanText(targetProfile.invite_code_hash, 64);
+      const targetDisplayName = cleanText(targetProfile.display_name, 40);
+      let clearRecords: Record<string, unknown>[] = [];
+      const clearResult = await supabase
+        .from("clear_records")
+        .select("id, dungeon_id, run_number, feedback_tags, feedback_note, created_at")
+        .eq("invite_code_hash", targetInviteHash)
+        .order("created_at", { ascending: false })
+        .limit(12);
+      if (clearResult.error) {
+        if (clearResult.error.code !== "42P01") return json({ error: clearResult.error.message }, 400);
+      } else {
+        clearRecords = (clearResult.data || []) as Record<string, unknown>[];
+      }
+
+      const dungeonFields = "id, name, creator, difficulty, type, participant_count, run_count, clear_count, clear_rate, avg_rating, rating_count, comment_count, created_at, is_one_shot";
+      const clearDungeonIds = [...new Set(clearRecords.map((record) => cleanText(record.dungeon_id, 80)).filter(isUuid))];
+      const clearDungeonById = new Map<string, Record<string, unknown>>();
+      if (clearDungeonIds.length) {
+        const { data: clearDungeons, error: clearDungeonError } = await supabase
+          .from("dungeons")
+          .select(dungeonFields)
+          .in("id", clearDungeonIds);
+        if (clearDungeonError) return json({ error: clearDungeonError.message }, 400);
+        for (const dungeon of clearDungeons || []) {
+          clearDungeonById.set(cleanText((dungeon as Record<string, unknown>).id, 80), dungeon as Record<string, unknown>);
+        }
+      }
+
+      const authoredById = new Map<string, Record<string, unknown>>();
+      const addAuthoredRows = (rows: Record<string, unknown>[] | null | undefined) => {
+        for (const dungeon of rows || []) {
+          const id = cleanText(dungeon.id, 80);
+          if (id && !authoredById.has(id)) authoredById.set(id, dungeon);
+        }
+      };
+      if (targetDisplayName) {
+        const byInviteName = await supabase
+          .from("dungeons")
+          .select(dungeonFields)
+          .eq("invite_name", targetDisplayName)
+          .order("created_at", { ascending: false })
+          .limit(12);
+        if (byInviteName.error) {
+          if (byInviteName.error.code !== "42703") return json({ error: byInviteName.error.message }, 400);
+        } else {
+          addAuthoredRows((byInviteName.data || []) as Record<string, unknown>[]);
+        }
+
+        const byCreator = await supabase
+          .from("dungeons")
+          .select(dungeonFields)
+          .eq("creator", targetDisplayName)
+          .order("created_at", { ascending: false })
+          .limit(12);
+        if (byCreator.error) return json({ error: byCreator.error.message }, 400);
+        addAuthoredRows((byCreator.data || []) as Record<string, unknown>[]);
+      }
+
+      const publicClearRecords = clearRecords.map((record) => {
+        const dungeonId = cleanText(record.dungeon_id, 80);
+        const tags = Array.isArray(record.feedback_tags)
+          ? record.feedback_tags.map((tag) => cleanText(tag, 20)).filter(Boolean)
+          : [];
+        return {
+          id: cleanText(record.id, 80),
+          dungeon_id: dungeonId,
+          run_number: Number(record.run_number || 1),
+          feedback_tags: tags,
+          feedback_note: cleanText(record.feedback_note, 160),
+          created_at: cleanText(record.created_at, 80),
+          dungeon: toPublicDungeonSummary(clearDungeonById.get(dungeonId)),
+        };
+      });
+      const authoredDungeons = [...authoredById.values()]
+        .sort((a, b) => String(b.created_at || "").localeCompare(String(a.created_at || "")))
+        .slice(0, 12)
+        .map(toPublicDungeonSummary)
+        .filter(Boolean);
+      const uniqueClearDungeonCount = new Set(publicClearRecords.map((record) => record.dungeon_id).filter(Boolean)).size;
+      const authoredCommentCount = authoredDungeons.reduce((sum, dungeon) => sum + Number((dungeon as Record<string, unknown>).comment_count || 0), 0);
+      const avgAuthoredRating = authoredDungeons.length
+        ? authoredDungeons.reduce((sum, dungeon) => sum + Number((dungeon as Record<string, unknown>).avg_rating || 0), 0) / authoredDungeons.length
+        : 0;
+
+      return json({
+        role,
+        name: identity.displayName,
+        data: {
+          profileKey: matchedProfileKey,
+          profile: toPublicProfile(targetProfile, matchedProfileKey, targetInviteHash === identity.codeHash),
+          clearRecords: publicClearRecords,
+          authoredDungeons,
+          stats: {
+            clearRecordCount: publicClearRecords.length,
+            uniqueClearDungeonCount,
+            authoredCount: authoredDungeons.length,
+            authoredCommentCount,
+            avgAuthoredRating,
+          },
+        },
       });
     }
 

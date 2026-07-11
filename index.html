@@ -3117,6 +3117,34 @@
             position: relative;
         }
         .modal h2 { font-family: var(--font-display); font-size: 1.5rem; color: var(--text-bright); margin-bottom: 24px; }
+        .public-profile-modal {
+            max-width: 1040px;
+            padding: 0;
+            overflow: hidden;
+            border-color: color-mix(in srgb, var(--god-primary, #e7cf8a) 22%, rgba(255,255,255,0.08));
+            background:
+                radial-gradient(circle at 12% 8%, color-mix(in srgb, var(--god-primary, #e7cf8a) 9%, transparent), transparent 38%),
+                linear-gradient(135deg, rgba(255,255,255,0.035), rgba(0,0,0,0.22)),
+                var(--bg-card);
+        }
+        .public-profile-content {
+            display: grid;
+            gap: 16px;
+            max-height: min(86dvh, 820px);
+            overflow-y: auto;
+            padding: 22px;
+        }
+        .public-profile-grid {
+            display: grid;
+            grid-template-columns: minmax(0, 1.05fr) minmax(300px, 0.95fr);
+            gap: 18px;
+            align-items: start;
+        }
+        .public-profile-note {
+            color: var(--text-muted);
+            font-size: 0.78rem;
+            line-height: 1.7;
+        }
         .modal-note {
             color: var(--text-muted);
             margin: -12px 0 20px;
@@ -4605,6 +4633,7 @@
                 border-radius: 18px;
             }
             .profile-grid,
+            .public-profile-grid,
             .leaderboard-layout,
             .match-layout,
             .profile-form-grid,
@@ -4626,6 +4655,10 @@
             }
             .profile-panel {
                 padding: 15px;
+            }
+            .public-profile-content {
+                padding: 14px;
+                max-height: calc(100dvh - 24px);
             }
             .profile-empty.ritual-empty {
                 grid-template-columns: 1fr;
@@ -5011,6 +5044,16 @@
             </div>
         </div>
     </main>
+
+    <!-- 榜单公开档案弹窗 -->
+    <div class="modal-overlay" id="publicProfileModalOverlay" style="display:none;" onclick="closePublicProfileModal(event)">
+        <div class="modal public-profile-modal" id="publicProfileModal" onclick="event.stopPropagation()">
+            <button class="close-btn" style="position:absolute;top:16px;right:20px;z-index:2;" onclick="closePublicProfileModal()" title="关闭公开档案" aria-label="关闭公开档案">✕</button>
+            <div id="publicProfileModalContent" class="public-profile-content">
+                <div class="loading"><div class="spinner"></div><br>正在读取公开档案...</div>
+            </div>
+        </div>
+    </div>
 
     <!-- 试炼匹配独立页 -->
     <main class="profile-page" id="matchPage" style="display:none;">
@@ -6027,8 +6070,11 @@
 
         function mapCloudLeaderboardEntry(profile, index) {
             const localProfile = mapCloudProfileToLocal(profile);
+            const publicProfileKey = profile?.profile_key || profile?.profileKey || `cloud:${index}`;
+            const key = profile?.is_current ? getProfileKey() : publicProfileKey;
             return {
-                ...normalizeLeaderboardEntry(`cloud:${index}`, localProfile),
+                ...normalizeLeaderboardEntry(key, localProfile),
+                publicProfileKey,
                 isCurrent: !!profile?.is_current
             };
         }
@@ -6608,13 +6654,237 @@
             if (restoreScroll !== false) requestAnimationFrame(() => window.scrollTo(0, leaderboardScrollY || 0));
         }
 
+        function closePublicProfileModal(e) {
+            const overlay = document.getElementById('publicProfileModalOverlay');
+            if (!overlay) return;
+            if (e && e.target !== overlay) return;
+            overlay.style.display = 'none';
+            document.body.style.overflow = '';
+        }
+
+        function buildLocalPublicProfilePreview(key) {
+            const storedProfile = getStoredProfiles()[key];
+            if (!storedProfile) return { data: null, error: { message: '这份本地档案已经不存在。' } };
+            const profile = { ...getProfileDefaults(), ...storedProfile };
+            const displayName = cleanDisplayNameInput(profile.displayName || '') || '未命名信徒';
+            const nameKey = displayName.trim().toLowerCase();
+            const dungeons = getLocalData('dungeons', []);
+            const authoredDungeons = (dungeons || [])
+                .filter(d => nameKey && [d.invite_name, d.creator].some(value => String(value || '').trim().toLowerCase() === nameKey))
+                .slice(0, 12);
+            const authoredCommentCount = authoredDungeons.reduce((sum, d) => sum + Number(d.comment_count || 0), 0);
+            const avgAuthoredRating = authoredDungeons.length
+                ? authoredDungeons.reduce((sum, d) => sum + Number(d.avg_rating || 0), 0) / authoredDungeons.length
+                : 0;
+            return {
+                data: {
+                    profileKey: key,
+                    profile: {
+                        display_name: displayName,
+                        role: profile.role,
+                        faith_god: profile.faithGod,
+                        faith_path: profile.faithPath,
+                        profession: profile.profession,
+                        ascension_score: profile.ascensionScore,
+                        audience_score: profile.audienceScore,
+                        items: profile.items,
+                        talents: profile.talents,
+                        updated_at: profile.updatedAt,
+                        is_current: key === getProfileKey()
+                    },
+                    clearRecords: [],
+                    authoredDungeons,
+                    stats: {
+                        clearRecordCount: 0,
+                        uniqueClearDungeonCount: 0,
+                        authoredCount: authoredDungeons.length,
+                        authoredCommentCount,
+                        avgAuthoredRating
+                    }
+                },
+                error: null
+            };
+        }
+
+        async function fetchPublicProfilePreview(key) {
+            if (USE_LOCAL_FALLBACK || !inviteSession?.code) return buildLocalPublicProfilePreview(key);
+            if (!/^[a-f0-9]{64}$/i.test(String(key || ''))) {
+                return { data: null, error: { message: '这条榜单记录缺少公开档案标识，请刷新榜单后重试。' } };
+            }
+            const { data, error } = await invokeDungeonAction('getPublicProfile', { profileKey: key });
+            return { data, error };
+        }
+
+        function normalizePublicProfilePayload(payload) {
+            const profile = mapCloudProfileToLocal(payload?.profile) || getProfileDefaults();
+            return {
+                profileKey: payload?.profileKey || payload?.profile_key || payload?.profile?.profile_key || '',
+                profile,
+                isCurrent: !!(payload?.profile?.is_current || payload?.is_current),
+                clearRecords: Array.isArray(payload?.clearRecords) ? payload.clearRecords : [],
+                authoredDungeons: Array.isArray(payload?.authoredDungeons) ? payload.authoredDungeons : [],
+                stats: payload?.stats || {}
+            };
+        }
+
+        function renderPublicProfileClearRecords(records, faithGod = '命运') {
+            if (!records.length) return renderRitualEmpty(`${getGodOracle(faithGod)} 尚未公开通关履迹。`, faithGod, '公开履迹暂空');
+            return records.slice(0, 12).map(record => {
+                const d = record.dungeon || {};
+                const targetId = record.dungeon_id || d.id || '';
+                const title = d.name || '未知试炼';
+                const god = d.type ? `${formatGodName(d.type)} · ${formatGodPath(d.type)}命途` : '未归档神明';
+                const note = record.feedback_note ? `反馈：${record.feedback_note}` : '已登记通过。';
+                const tags = Array.isArray(record.feedback_tags) && record.feedback_tags.length ? ` · ${record.feedback_tags.join(' / ')}` : '';
+                const clickAttr = targetId ? ` onclick='openDetailFromPublicProfile(${jsString(targetId)})'` : '';
+                return `
+                    <article class="profile-list-item${targetId ? ' clickable' : ''}"${clickAttr}>
+                        <div class="profile-list-title">
+                            <span>《${escapeHtml(title)}》</span>
+                            <small>${escapeHtml(formatDate(record.created_at))}</small>
+                        </div>
+                        <div class="profile-list-meta">试炼轮回：第 ${Number(record.run_number || 1)} 周目 · ${escapeHtml(god)}</div>
+                        <div class="profile-list-meta">${escapeHtml(note)}${escapeHtml(tags)}</div>
+                    </article>`;
+            }).join('');
+        }
+
+        function renderPublicProfileAuthoredDungeons(authored, faithGod = '命运') {
+            if (!authored.length) return renderRitualEmpty(`${getGodOracle(faithGod)} 尚未留下公开构筑记录。`, faithGod, '构筑记录暂空');
+            return authored.slice(0, 12).map(d => {
+                const clickAttr = d.id ? ` onclick='openDetailFromPublicProfile(${jsString(d.id)})'` : '';
+                return `
+                    <article class="profile-list-item${d.id ? ' clickable' : ''}"${clickAttr}>
+                        <div class="profile-list-title">
+                            <span>《${escapeHtml(d.name || '未命名试炼')}》</span>
+                            <small>神格 ${Number(d.avg_rating || 0).toFixed(1)}</small>
+                        </div>
+                        <div class="profile-list-meta">${escapeHtml(formatGodName(d.type))} · ${escapeHtml(formatGodPath(d.type))}命途 · ${escapeHtml(formatDifficulty(d.difficulty))}</div>
+                        <div class="profile-list-meta">证言 ${Number(d.comment_count || 0)} · 通关留存率 ${formatClearRate(d)} · ${formatDate(d.created_at)}</div>
+                    </article>`;
+            }).join('');
+        }
+
+        function renderPublicProfileDossier(payload) {
+            const data = normalizePublicProfilePayload(payload);
+            const profile = data.profile;
+            const faith = getProfileDisplayFaith(profile);
+            const faithGod = getProfileFaithGod(profile) || faith.god || '命运';
+            const faithSkin = getGodSkin(faithGod);
+            const faithStyle = getGodSkinStyle(faithGod);
+            const faithClass = faith.className || getPathClassByPath(faith.path || '虚无');
+            const profession = getProfessionInfo(profile.profession);
+            const roleLabel = ROLE_LABELS[normalizeRole(profile.role) || 'player'] || '入局信徒';
+            const displayName = cleanDisplayNameInput(profile.displayName || '') || '未命名信徒';
+            const clearRecords = data.clearRecords;
+            const authored = data.authoredDungeons;
+            const uniqueCleared = Number(data.stats.uniqueClearDungeonCount ?? new Set(clearRecords.map(record => String(record.dungeon_id || record.dungeon?.id || ''))).size);
+            const clearCount = Number(data.stats.clearRecordCount ?? clearRecords.length);
+            const authoredCount = Number(data.stats.authoredCount ?? authored.length);
+            const authoredCommentCount = Number(data.stats.authoredCommentCount ?? authored.reduce((sum, d) => sum + Number(d.comment_count || 0), 0));
+            const avgAuthoredRating = Number(data.stats.avgAuthoredRating ?? (authored.length ? authored.reduce((sum, d) => sum + Number(d.avg_rating || 0), 0) / authored.length : 0));
+            const faithProgress = Math.min(100, Math.max(6, Math.round(uniqueCleared * 12 + authoredCount * 8 + Number(profile.audienceScore || 0))));
+            return `
+                <section class="profile-hero" data-god="${escapeHtml(faithGod)}" data-motif="${escapeHtml(faithSkin.motif)}" style="${faithStyle}">
+                    <div class="profile-avatar ${faithClass}" style="${faithStyle}">${renderGodSigil(faithGod, 'lg')}</div>
+                    <div class="profile-hero-copy">
+                        <div class="profile-kicker">PUBLIC PILGRIM DOSSIER</div>
+                        <h1 class="profile-name">${escapeHtml(displayName)}</h1>
+                        <div class="profile-subline">
+                            <span class="mini-tag ${faithClass}">${escapeHtml(faith.label)}</span>
+                            <span class="mini-tag ${faithClass}">${escapeHtml(faith.path)}命途</span>
+                            <span class="metric-pill">${escapeHtml(roleLabel)}</span>
+                            <span class="metric-pill">职业 <strong>${escapeHtml(profile.profession || '未填写')}</strong></span>
+                            ${profession.known ? `<span class="metric-pill">${escapeHtml(profession.god)}之神 <strong>${escapeHtml(profession.className)}</strong></span>` : ''}
+                        </div>
+                        <div class="profile-faith-prayer">${escapeHtml(getGodPrayer(faithGod))} · ${escapeHtml(faithSkin.pattern)}</div>
+                    </div>
+                    <div class="profile-hero-stats">
+                        <div class="profile-hero-score"><span>登神之路</span><strong>${formatProfileScore(profile.ascensionScore)}</strong></div>
+                        <div class="profile-hero-score"><span>觐见之梯</span><strong>${formatProfileScore(profile.audienceScore)}</strong></div>
+                    </div>
+                    <div class="faith-progress-card">
+                        <div class="faith-progress-label"><span>公开履历</span><strong>${escapeHtml(faithSkin.motif)} · ${faithProgress}%</strong></div>
+                        <div class="faith-progress-track"><div class="faith-progress-fill" style="--faith-progress:${faithProgress}%"></div></div>
+                    </div>
+                </section>
+                <div class="public-profile-grid">
+                    <div>
+                        <section class="profile-panel" data-god="${escapeHtml(faithGod)}" style="${faithStyle}">
+                            <div class="profile-panel-title">
+                                <span>公开数值</span>
+                                <small>${escapeHtml(formatDate(profile.updatedAt))} 更新</small>
+                            </div>
+                            <div class="profile-score-row">
+                                <div class="profile-score-card"><span>登神之路</span><strong>${formatProfileScore(profile.ascensionScore)}</strong></div>
+                                <div class="profile-score-card"><span>觐见之梯</span><strong>${formatProfileScore(profile.audienceScore)}</strong></div>
+                            </div>
+                            <div class="metric-strip">
+                                <span class="metric-pill">通关副本 <strong>${uniqueCleared}</strong></span>
+                                <span class="metric-pill">通关记录 <strong>${clearCount}</strong></span>
+                                <span class="metric-pill">构筑试炼 <strong>${authoredCount}</strong></span>
+                            </div>
+                            <div class="public-profile-note">公开档案只展示榜单字段、履迹摘要和构筑摘要；入局谕令、内部结算明细和邀请码哈希不会公开。</div>
+                        </section>
+                        <section class="profile-panel" data-god="${escapeHtml(faithGod)}" style="${faithStyle}">
+                            <div class="profile-panel-title">
+                                <span>试炼履迹录</span>
+                                <small>${uniqueCleared} 个副本 / ${clearCount} 条记录</small>
+                            </div>
+                            <div class="profile-list">${renderPublicProfileClearRecords(clearRecords, faithGod)}</div>
+                        </section>
+                    </div>
+                    <div>
+                        ${renderProfileFaithObservatory(clearRecords, authored, faithGod, profile)}
+                        <section class="profile-panel" data-god="${escapeHtml(faithGod)}" style="${faithStyle}">
+                            <div class="profile-panel-title">
+                                <span>构筑者记录</span>
+                                <small>神格均值 ${authoredCount ? avgAuthoredRating.toFixed(1) : '—'}</small>
+                            </div>
+                            <div class="metric-strip">
+                                <span class="metric-pill">构筑试炼 <strong>${authoredCount}</strong></span>
+                                <span class="metric-pill">证言总数 <strong>${authoredCommentCount}</strong></span>
+                            </div>
+                            <div class="profile-list" style="margin-top:14px;">${renderPublicProfileAuthoredDungeons(authored, faithGod)}</div>
+                        </section>
+                        <section class="profile-panel" data-god="${escapeHtml(faithGod)}" style="${faithStyle}">
+                            <div class="profile-panel-title"><span>公开携带</span><small>道具 / 天赋</small></div>
+                            ${renderProfileChips(profile.items, getGodEmptyText(faithGod, 'items', '未公开个人道具。'), faithGod)}
+                            <div style="height:12px;"></div>
+                            ${renderProfileChips(profile.talents, getGodEmptyText(faithGod, 'talents', '未公开个人天赋。'), faithGod)}
+                        </section>
+                    </div>
+                </div>`;
+        }
+
         async function openProfileFromLeaderboard(key) {
             if (key === getProfileKey() && inviteSession) {
                 closeLeaderboardPage(false);
                 await openProfilePage();
                 return;
             }
-            showToast('目前只能打开当前入局者的个人档案；全站档案页接入 Supabase 后开放。');
+            if (!inviteSession?.code && !USE_LOCAL_FALLBACK) {
+                openInviteModal('先验入局谕令后可查看榜单公开档案。');
+                return;
+            }
+            const overlay = document.getElementById('publicProfileModalOverlay');
+            const content = document.getElementById('publicProfileModalContent');
+            if (!overlay || !content) return;
+            overlay.style.display = 'flex';
+            document.body.style.overflow = 'hidden';
+            content.innerHTML = '<div class="loading"><div class="spinner"></div><br>正在读取公开档案...</div>';
+            const { data, error } = await fetchPublicProfilePreview(key);
+            if (error || !data) {
+                content.innerHTML = renderRitualEmpty(error?.message || '公开档案暂不可读。', '命运', '档案读取失败');
+                return;
+            }
+            content.innerHTML = renderPublicProfileDossier(data);
+        }
+
+        async function openDetailFromPublicProfile(id) {
+            closePublicProfileModal();
+            closeLeaderboardPage(false);
+            await openDetail(id);
         }
 
         function formatScoreNumber(value, sign = false) {
@@ -9312,9 +9582,11 @@
                 const leaderboardPage = document.getElementById('leaderboardPage');
                 const matchPage = document.getElementById('matchPage');
                 const scorePage = document.getElementById('scorePage');
+                const publicProfileOverlay = document.getElementById('publicProfileModalOverlay');
                 if (document.getElementById('testimonyModalOverlay').style.display === 'flex') closeTestimonyModal();
                 else if (document.getElementById('ratingModalOverlay').style.display === 'flex') closeRatingModal();
                 else if (document.getElementById('inviteModalOverlay').style.display === 'flex') closeInviteModal();
+                else if (publicProfileOverlay && publicProfileOverlay.style.display === 'flex') closePublicProfileModal();
                 else if (profilePage && getComputedStyle(profilePage).display !== 'none') closeProfilePage();
                 else if (leaderboardPage && getComputedStyle(leaderboardPage).display !== 'none') closeLeaderboardPage();
                 else if (matchPage && getComputedStyle(matchPage).display !== 'none') closeMatchPage();
