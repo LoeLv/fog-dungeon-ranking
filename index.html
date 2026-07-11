@@ -4191,6 +4191,44 @@
             letter-spacing: 0.04em;
             margin-bottom: 8px;
         }
+        .profile-name-row {
+            position: relative;
+            z-index: 1;
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 8px;
+        }
+        .profile-name-row .profile-name {
+            margin-bottom: 0;
+        }
+        .divine-title-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            max-width: 100%;
+            border: 1px solid color-mix(in srgb, var(--god-primary, #e7cf8a) 40%, rgba(255,255,255,0.08));
+            border-radius: 999px;
+            background:
+                linear-gradient(90deg, color-mix(in srgb, var(--god-primary, #e7cf8a) 18%, transparent), rgba(0,0,0,0.20)),
+                rgba(231,207,138,0.08);
+            color: var(--gold-light);
+            padding: 5px 10px;
+            font-size: 0.72rem;
+            font-weight: 900;
+            line-height: 1.25;
+            box-shadow: 0 0 18px color-mix(in srgb, var(--god-primary, #e7cf8a) 18%, transparent);
+        }
+        .divine-title-badge small {
+            color: var(--text-muted);
+            font-size: 0.66rem;
+            font-weight: 700;
+        }
+        .leaderboard-title-badge {
+            padding: 3px 8px;
+            font-size: 0.66rem;
+        }
         .profile-subline {
             position: relative;
             z-index: 1;
@@ -7222,7 +7260,8 @@
                 audienceScore: DEFAULT_AUDIENCE_SCORE,
                 scoresLockedAt: '',
                 items: '',
-                talents: ''
+                talents: '',
+                activeTitle: null
             };
         }
 
@@ -7361,6 +7400,40 @@
             return `<div class="profile-chip-row">${items.map(item => `<span class="metric-pill">${escapeHtml(item)}</span>`).join('')}</div>`;
         }
 
+        function normalizeProfileTitle(value) {
+            if (!value) return null;
+            const titleText = String(value.title_text || value.titleText || '').trim().slice(0, 32);
+            if (!titleText) return null;
+            return {
+                titleText,
+                titleGod: cleanGodName(value.title_god || value.titleGod || ''),
+                titleNote: String(value.title_note || value.titleNote || '').trim().slice(0, 120),
+                grantedByType: String(value.granted_by_type || value.grantedByType || 'admin').trim(),
+                grantedByName: String(value.granted_by_name || value.grantedByName || '').trim().slice(0, 40),
+                grantedAt: value.granted_at || value.grantedAt || ''
+            };
+        }
+
+        function renderProfileTitleBadge(title, options = {}) {
+            const normalized = normalizeProfileTitle(title);
+            if (!normalized) return '';
+            const god = normalized.titleGod || options.fallbackGod || '命运';
+            const issuer = normalized.grantedByType === 'god'
+                ? `${god}之神降下`
+                : (normalized.grantedByName ? `${normalized.grantedByName}降下` : '馆主降下');
+            const small = options.compact ? '' : `<small>${escapeHtml(issuer)}</small>`;
+            const extraClass = options.compact ? ' leaderboard-title-badge' : '';
+            return `<span class="divine-title-badge${extraClass}" style="${getGodSkinStyle(god)}" title="${escapeHtml(`${issuer}｜${normalized.titleText}${normalized.titleNote ? `｜${normalized.titleNote}` : ''}`)}">✦ ${escapeHtml(normalized.titleText)}${small}</span>`;
+        }
+
+        function renderProfileNameWithTitle(displayName, title, options = {}) {
+            return `
+                <div class="profile-name-row">
+                    <h1 class="profile-name">${escapeHtml(displayName)}</h1>
+                    ${renderProfileTitleBadge(title, { fallbackGod: options.fallbackGod })}
+                </div>`;
+        }
+
         function formatProfileScore(value) {
             const score = normalizeProfileScore(value);
             return Number.isInteger(score) ? String(score) : score.toFixed(1);
@@ -7395,6 +7468,7 @@
                 professionClass: professionInfo.known ? professionInfo.className : '',
                 ascensionScore: normalizeProfileScore(profile.ascensionScore),
                 audienceScore: normalizeProfileScore(profile.audienceScore),
+                activeTitle: normalizeProfileTitle(profile.activeTitle || profile.active_title),
                 updatedAt: profile.updatedAt || '',
                 isCurrent: key === getProfileKey()
             };
@@ -7418,6 +7492,7 @@
                 audienceScore: normalizeProfileScore(profile.audience_score ?? profile.audienceScore, DEFAULT_AUDIENCE_SCORE),
                 items: String(profile.items || '').trim().slice(0, 800),
                 talents: String(profile.talents || '').trim().slice(0, 800),
+                activeTitle: normalizeProfileTitle(profile.active_title || profile.activeTitle),
                 scoresLockedAt: profile.scores_locked_at || profile.scoresLockedAt || '',
                 updatedAt: profile.updated_at || profile.updatedAt || ''
             };
@@ -7949,6 +8024,7 @@
                             <div class="leaderboard-name-line">
                                 ${renderGodSigil(entry.faithGod || '命运', 'sm', 'leaderboard-god-mark')}
                                 <div class="leaderboard-name">${escapeHtml(entry.displayName)}${entry.isCurrent ? ' · 你' : ''}</div>
+                                ${renderProfileTitleBadge(entry.activeTitle, { fallbackGod: entry.faithGod || '命运', compact: true })}
                             </div>
                             <div class="leaderboard-meta">
                                 <span class="mini-tag ${entry.faithClass}">${escapeHtml(faith)}</span>
@@ -8136,6 +8212,7 @@
                         audience_score: profile.audienceScore,
                         items: profile.items,
                         talents: profile.talents,
+                        active_title: normalizeProfileTitle(profile.activeTitle),
                         updated_at: profile.updatedAt,
                         is_current: key === getProfileKey()
                     },
@@ -8236,7 +8313,7 @@
                     <div class="profile-avatar ${faithClass}" style="${faithStyle}">${renderGodSigil(faithGod, 'lg')}</div>
                     <div class="profile-hero-copy">
                         <div class="profile-kicker">PUBLIC PILGRIM DOSSIER</div>
-                        <h1 class="profile-name">${escapeHtml(displayName)}</h1>
+                        ${renderProfileNameWithTitle(displayName, profile.activeTitle, { fallbackGod: faithGod })}
                         <div class="profile-subline">
                             <span class="mini-tag ${faithClass}">${escapeHtml(faith.label)}</span>
                             <span class="mini-tag ${faithClass}">${escapeHtml(faith.path)}命途</span>
@@ -8482,6 +8559,68 @@
                 </article>`).join('')}</div>`;
         }
 
+        function renderTitlePlayerOptions(entries) {
+            return (entries || [])
+                .filter(entry => entry.displayName && entry.displayName !== '未命名信徒')
+                .map(entry => `<option value="${escapeHtml(entry.displayName)}">${escapeHtml(entry.displayName)}${entry.activeTitle ? `｜${escapeHtml(entry.activeTitle.titleText)}` : ''}</option>`)
+                .join('');
+        }
+
+        function renderGodSelectOptions(selected = '') {
+            const cleanSelected = cleanGodName(selected || '');
+            return '<option value="">馆主亲授</option>' + GOD_GROUPS.map(group =>
+                `<optgroup label="${escapeHtml(group.path)}命途">${group.gods.map(god => `<option value="${escapeHtml(god)}" ${god === cleanSelected ? 'selected' : ''}>${escapeHtml(god)}之神</option>`).join('')}</optgroup>`
+            ).join('');
+        }
+
+        function renderTitleAdminPanel(entries) {
+            if (!isAdmin()) return '';
+            const options = renderTitlePlayerOptions(entries);
+            return `
+                <section class="profile-panel" data-god="命运" style="${getGodSkinStyle('命运')}">
+                    <div class="profile-panel-title"><span>称号敕令</span><small>馆主降下 / 预留神明降号</small></div>
+                    <div class="profile-form-grid">
+                        <div class="form-group full">
+                            <label>受封昵称</label>
+                            <input id="titleTargetName" list="titlePlayerList" maxlength="40" placeholder="选择或输入玩家昵称">
+                            <datalist id="titlePlayerList">${options}</datalist>
+                        </div>
+                        <div class="form-group full"><label>称号</label><input id="titleTextInput" maxlength="32" placeholder="例如：雾中执灯者"></div>
+                        <div class="form-group"><label>降号名义</label><select id="titleGodSelect">${renderGodSelectOptions()}</select></div>
+                        <div class="form-group"><label>敕令备注</label><input id="titleNoteInput" maxlength="120" placeholder="可选，授予缘由"></div>
+                    </div>
+                    <div class="identity-help">当前只允许馆主操作；后续 16 个神明账号接入后，会复用这里的神明名义字段。</div>
+                    <div class="profile-tools">
+                        <button class="btn btn-primary btn-sm" onclick="grantProfileTitleUI()">降下称号</button>
+                        <button class="btn btn-outline btn-sm" onclick="revokeProfileTitleUI()">撤销当前称号</button>
+                    </div>
+                </section>`;
+        }
+
+        async function grantProfileTitleUI() {
+            if (!isAdmin()) { showToast('需要馆主谕令'); return; }
+            const targetName = cleanDisplayNameInput(document.getElementById('titleTargetName')?.value || '');
+            const titleText = String(document.getElementById('titleTextInput')?.value || '').trim().slice(0, 32);
+            const titleGod = cleanGodName(document.getElementById('titleGodSelect')?.value || '');
+            const titleNote = String(document.getElementById('titleNoteInput')?.value || '').trim().slice(0, 120);
+            if (!targetName || !titleText) { showToast('请填写受封昵称和称号'); return; }
+            const { error } = await invokeDungeonAction('grantProfileTitle', { targetName, titleText, titleGod, titleNote });
+            if (error) { showToast(`❌ ${error.message || '称号授予失败'}`); return; }
+            showToast(`已为 ${targetName} 降下称号：${titleText}`);
+            await renderScorePage();
+        }
+
+        async function revokeProfileTitleUI() {
+            if (!isAdmin()) { showToast('需要馆主谕令'); return; }
+            const targetName = cleanDisplayNameInput(document.getElementById('titleTargetName')?.value || '');
+            if (!targetName) { showToast('请填写要撤销称号的昵称'); return; }
+            if (!window.confirm(`撤销 ${targetName} 当前生效称号？`)) return;
+            const { error } = await invokeDungeonAction('revokeProfileTitle', { targetName });
+            if (error) { showToast(`❌ ${error.message || '撤销失败'}`); return; }
+            showToast(`已撤销 ${targetName} 的当前称号`);
+            await renderScorePage();
+        }
+
         async function revokeScoreSettlementUI(settlementId) {
             const revokeRemark = window.prompt('请输入撤销备注');
             if (!revokeRemark) return;
@@ -8500,6 +8639,9 @@
             }
             const dungeons = await fetchDungeons();
             const dungeonOptions = renderScoreDungeonOptions(dungeons);
+            const { entries: titleEntries } = isAdmin()
+                ? await fetchLeaderboardEntries()
+                : { entries: [] };
             const { settlements, error } = await fetchScoreSettlements(30);
             container.innerHTML = `
                 <section class="profile-hero" data-god="真理" data-motif="${escapeHtml(getGodSkin('真理').motif)}" style="${getGodSkinStyle('真理')}">
@@ -8555,6 +8697,7 @@
                             <div class="profile-panel-title"><span>最近结算</span><small>可撤销回滚</small></div>
                             ${renderScoreSettlements(settlements, error)}
                         </section>
+                        ${renderTitleAdminPanel(titleEntries)}
                     </div>
                 </div>`;
         }
@@ -9145,7 +9288,7 @@
                     <div class="profile-avatar ${faithClass}" style="${faithStyle}">${renderGodSigil(faithGod, 'lg')}</div>
                     <div class="profile-hero-copy">
                         <div class="profile-kicker">PERSONAL PILGRIM ARCHIVE</div>
-                        <h1 class="profile-name">${escapeHtml(inviteSession.name || roleLabel)}</h1>
+                        ${renderProfileNameWithTitle(inviteSession.name || roleLabel, profile.activeTitle, { fallbackGod: faithGod })}
                         <div class="profile-subline">
                             <span class="mini-tag ${faithClass}">${escapeHtml(faith.label)}</span>
                             <span class="mini-tag ${faithClass}">${escapeHtml(faith.path)}命途</span>
@@ -9332,7 +9475,8 @@
                 audienceScore,
                 scoresLockedAt: nextScoresLockedAt,
                 items: String(document.getElementById('profileItems')?.value || '').trim().slice(0, 800),
-                talents: String(currentProfile.talents || '').trim().slice(0, 800)
+                talents: String(currentProfile.talents || '').trim().slice(0, 800),
+                activeTitle: currentProfile.activeTitle || null
             };
             if (name !== inviteSession.name) {
                 const { error } = await updateDisplayName(name);

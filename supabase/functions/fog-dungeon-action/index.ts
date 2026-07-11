@@ -197,6 +197,64 @@ async function getPublicProfileKey(inviteCodeHash: unknown) {
   return await sha256Hex(`public-profile:${codeHash}`);
 }
 
+function toPublicTitle(title: Record<string, unknown> | null | undefined) {
+  if (!title) return null;
+  return {
+    title_text: cleanText(title.title_text, 32),
+    title_god: cleanText(title.title_god, 20),
+    title_note: cleanText(title.title_note, 120),
+    granted_by_type: cleanText(title.granted_by_type, 20) || "admin",
+    granted_by_name: cleanText(title.granted_by_name, 40),
+    granted_at: cleanText(title.granted_at, 80),
+  };
+}
+
+async function getActiveTitlesByHashes(
+  supabase: ReturnType<typeof createClient>,
+  inviteCodeHashes: string[],
+) {
+  const hashes = [...new Set(inviteCodeHashes.map((hash) => cleanText(hash, 64)).filter(Boolean))];
+  const titles = new Map<string, Record<string, unknown>>();
+  if (!hashes.length) return { titles };
+  const { data, error } = await supabase
+    .from("profile_titles")
+    .select("invite_code_hash, title_text, title_god, title_note, granted_by_type, granted_by_name, granted_at")
+    .in("invite_code_hash", hashes)
+    .eq("is_active", true);
+  if (isMissingTitleTable(error)) return { titles };
+  if (error) return { titles, error };
+  for (const title of data || []) {
+    const hash = cleanText((title as Record<string, unknown>).invite_code_hash, 64);
+    if (hash) titles.set(hash, toPublicTitle(title as Record<string, unknown>) as Record<string, unknown>);
+  }
+  return { titles };
+}
+
+async function getActiveTitleForHash(
+  supabase: ReturnType<typeof createClient>,
+  inviteCodeHash: string,
+) {
+  const result = await getActiveTitlesByHashes(supabase, [inviteCodeHash]);
+  if (result.error) return { error: result.error };
+  return { title: result.titles.get(inviteCodeHash) || null };
+}
+
+async function getProfileByDisplayName(
+  supabase: ReturnType<typeof createClient>,
+  displayNameInput: unknown,
+): Promise<{ data?: Record<string, unknown>; error?: LooseError }> {
+  const displayName = cleanText(displayNameInput, 40);
+  if (!displayName) return { error: { message: "请填写玩家昵称" } };
+  const { data, error } = await supabase
+    .from("player_profiles")
+    .select("invite_code_hash, display_name, role")
+    .eq("display_name", displayName)
+    .maybeSingle();
+  if (error) return { error };
+  if (!data) return { error: { message: "没有找到这个玩家档案，请确认昵称已保存" } };
+  return { data };
+}
+
 function toPublicDungeonSummary(dungeon: Record<string, unknown> | null | undefined) {
   if (!dungeon) return null;
   return {
@@ -230,6 +288,7 @@ function toPublicProfile(profile: Record<string, unknown>, profileKey: string, i
     audience_score: cleanScore(profile.audience_score),
     items: cleanText(profile.items, 800),
     talents: cleanText(profile.talents, 800),
+    active_title: profile.active_title || null,
     updated_at: cleanText(profile.updated_at, 80),
     is_current: isCurrent,
   };
@@ -294,6 +353,10 @@ function cleanFeedbackTags(value: unknown) {
 }
 
 function isMissingTalentTable(error: LooseError) {
+  return error?.code === "42P01";
+}
+
+function isMissingTitleTable(error: LooseError) {
   return error?.code === "42P01";
 }
 
@@ -473,7 +536,14 @@ async function getTalentProfile(
     .maybeSingle();
   if (error) return { error };
   if (!data) return { error: { message: "请先保存个人档案，再开启天赋池" } };
-  return { data };
+  const titleResult = await getActiveTitleForHash(supabase, identity.codeHash);
+  if (titleResult.error) return { error: titleResult.error };
+  return {
+    data: {
+      ...data,
+      active_title: titleResult.title,
+    },
+  };
 }
 
 async function getTalentDrawState(
@@ -1289,7 +1359,14 @@ Deno.serve(async (req) => {
       if (error?.code === "42P01") return json({ error: "请先运行 player_profiles_migration.sql" }, 400);
       if (error) return json({ error: error.message }, 400);
 
-      return json({ role, name: identity.displayName, data });
+      const titleResult = await getActiveTitleForHash(supabase, identity.codeHash);
+      if (titleResult.error) return json({ error: titleResult.error.message }, 400);
+      const dataWithTitle = {
+        ...data,
+        active_title: titleResult.title,
+      };
+
+      return json({ role, name: identity.displayName, data: dataWithTitle });
     }
 
     if (action === "listProfiles") {
@@ -1303,11 +1380,18 @@ Deno.serve(async (req) => {
       if (error?.code === "42P01") return json({ error: "请先运行 player_profiles_migration.sql" }, 400);
       if (error) return json({ error: error.message }, 400);
 
+      const titleResult = await getActiveTitlesByHashes(
+        supabase,
+        (data || []).map((profile: Record<string, unknown>) => cleanText(profile.invite_code_hash, 64)),
+      );
+      if (titleResult.error) return json({ error: titleResult.error.message }, 400);
+
       const publicProfiles = await Promise.all((data || []).map(async (profile: Record<string, unknown>) => {
         const inviteCodeHash = cleanText(profile.invite_code_hash, 64);
         const { invite_code_hash: _hiddenInviteHash, ...rest } = profile;
         return {
           ...rest,
+          active_title: titleResult.titles.get(inviteCodeHash) || null,
           profile_key: await getPublicProfileKey(inviteCodeHash),
           is_current: inviteCodeHash === identity.codeHash,
         };
@@ -1348,6 +1432,9 @@ Deno.serve(async (req) => {
 
       const targetInviteHash = cleanText(targetProfile.invite_code_hash, 64);
       const targetDisplayName = cleanText(targetProfile.display_name, 40);
+      const titleResult = await getActiveTitleForHash(supabase, targetInviteHash);
+      if (titleResult.error) return json({ error: titleResult.error.message }, 400);
+      targetProfile.active_title = titleResult.title;
       let clearRecords: Record<string, unknown>[] = [];
       const clearResult = await supabase
         .from("clear_records")
@@ -1459,6 +1546,100 @@ Deno.serve(async (req) => {
             authoredCommentCount,
             avgAuthoredRating,
           },
+        },
+      });
+    }
+
+    if (action === "grantProfileTitle") {
+      if (!hasRole(role, ["admin"])) return json({ error: "需要馆主邀请码" }, 403);
+
+      const targetResult = await getProfileByDisplayName(supabase, payload.targetName);
+      if (targetResult.error) {
+        if (targetResult.error.code === "42P01") return json({ error: "请先运行 player_profiles_migration.sql" }, 400);
+        return json({ error: targetResult.error.message }, 400);
+      }
+
+      const target = targetResult.data as Record<string, unknown>;
+      const targetHash = cleanText(target.invite_code_hash, 64);
+      const titleText = cleanText(payload.titleText, 32);
+      const titleGod = cleanText(payload.titleGod, 20);
+      const titleNote = cleanText(payload.titleNote, 120);
+      if (!targetHash || !titleText) return json({ error: "请填写受封昵称和称号" }, 400);
+
+      const { error: deactivateError } = await supabase
+        .from("profile_titles")
+        .update({
+          is_active: false,
+          revoked_at: new Date().toISOString(),
+          revoked_by_hash: identity.codeHash,
+          revoked_by_name: identity.displayName,
+        })
+        .eq("invite_code_hash", targetHash)
+        .eq("is_active", true);
+      if (deactivateError?.code === "42P01") return json({ error: "请先运行 profile_titles_migration.sql" }, 400);
+      if (deactivateError) return json({ error: deactivateError.message }, 400);
+
+      const { data, error } = await supabase
+        .from("profile_titles")
+        .insert({
+          invite_code_hash: targetHash,
+          display_name: cleanText(target.display_name, 40),
+          title_text: titleText,
+          title_god: titleGod,
+          title_note: titleNote,
+          granted_by_type: titleGod ? "god" : "admin",
+          granted_by_hash: identity.codeHash,
+          granted_by_name: identity.displayName,
+          is_active: true,
+        })
+        .select("id, title_text, title_god, title_note, granted_by_type, granted_by_name, granted_at")
+        .single();
+      if (error?.code === "42P01") return json({ error: "请先运行 profile_titles_migration.sql" }, 400);
+      if (error) return json({ error: error.message }, 400);
+
+      return json({
+        role,
+        name: identity.displayName,
+        data: {
+          targetName: cleanText(target.display_name, 40),
+          activeTitle: toPublicTitle(data as Record<string, unknown>),
+        },
+      });
+    }
+
+    if (action === "revokeProfileTitle") {
+      if (!hasRole(role, ["admin"])) return json({ error: "需要馆主邀请码" }, 403);
+
+      const targetResult = await getProfileByDisplayName(supabase, payload.targetName);
+      if (targetResult.error) {
+        if (targetResult.error.code === "42P01") return json({ error: "请先运行 player_profiles_migration.sql" }, 400);
+        return json({ error: targetResult.error.message }, 400);
+      }
+
+      const target = targetResult.data as Record<string, unknown>;
+      const targetHash = cleanText(target.invite_code_hash, 64);
+      const { data, error } = await supabase
+        .from("profile_titles")
+        .update({
+          is_active: false,
+          revoked_at: new Date().toISOString(),
+          revoked_by_hash: identity.codeHash,
+          revoked_by_name: identity.displayName,
+        })
+        .eq("invite_code_hash", targetHash)
+        .eq("is_active", true)
+        .select("id, title_text")
+        .maybeSingle();
+      if (error?.code === "42P01") return json({ error: "请先运行 profile_titles_migration.sql" }, 400);
+      if (error) return json({ error: error.message }, 400);
+      if (!data) return json({ error: "这个玩家当前没有生效称号" }, 404);
+
+      return json({
+        role,
+        name: identity.displayName,
+        data: {
+          targetName: cleanText(target.display_name, 40),
+          revokedTitle: cleanText((data as Record<string, unknown>).title_text, 32),
         },
       });
     }
