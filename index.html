@@ -28,6 +28,12 @@
             --path-chaos: #a69b69;
             --path-exist: #7aaec2;
             --path-void: #d3af61;
+            --era-life: #3a7258;
+            --era-fall: #2c2222;
+            --era-civil: #6b3829;
+            --era-chaos: #323028;
+            --era-exist: #2a3a50;
+            --era-void: #382c47;
             --path-life-soft: rgba(111, 168, 121, 0.06);
             --path-fall-soft: rgba(103, 109, 118, 0.06);
             --path-civil-soft: rgba(159, 73, 56, 0.06);
@@ -116,6 +122,27 @@
                 linear-gradient(64deg, transparent 0 32%, rgba(111,168,121,0.045) 32.4%, transparent 34%),
                 linear-gradient(151deg, transparent 0 67%, rgba(159,73,56,0.038) 67.4%, transparent 69%);
             opacity: 0.9;
+        }
+        body::after {
+            content: "生命纪元\A沉沦纪元\A文明纪元\A混沌纪元\A存在纪元\A虚无纪元";
+            position: fixed;
+            top: 12vh;
+            bottom: 8vh;
+            left: max(10px, 1.6vw);
+            width: 42px;
+            display: grid;
+            align-content: space-between;
+            white-space: pre-line;
+            pointer-events: none;
+            z-index: -1;
+            color: rgba(231,207,138,0.055);
+            font-family: var(--font-display);
+            font-size: clamp(0.68rem, 1vw, 0.9rem);
+            line-height: 1.45;
+            letter-spacing: 0.18em;
+            text-orientation: mixed;
+            writing-mode: vertical-rl;
+            filter: blur(0.1px);
         }
         .ambient-mask {
             position: fixed;
@@ -901,6 +928,185 @@
         .oracle-item span {
             font-size: 0.7rem;
             color: var(--text-muted);
+        }
+        .era-scroll-panel {
+            position: relative;
+            overflow: hidden;
+            padding: 0;
+            border-color: rgba(211,175,97,0.20);
+            background:
+                linear-gradient(180deg, rgba(12,13,18,0.92), rgba(12,13,18,0.72)),
+                repeating-linear-gradient(0deg, rgba(231,207,138,0.07) 0 1px, transparent 1px 42px);
+        }
+        .era-scroll-head {
+            padding: 14px 14px 12px;
+            border-bottom: 1px solid rgba(255,255,255,0.07);
+            background:
+                radial-gradient(circle at 16% 20%, rgba(211,175,97,0.13), transparent 36%),
+                rgba(0,0,0,0.12);
+        }
+        .era-scroll-title {
+            color: var(--gold-light);
+            font-family: var(--font-display);
+            font-size: 0.95rem;
+            letter-spacing: 0.08em;
+        }
+        .era-scroll-note {
+            margin-top: 4px;
+            color: var(--text-muted);
+            font-size: 0.7rem;
+            line-height: 1.55;
+        }
+        .era-list {
+            display: grid;
+            gap: 8px;
+            padding: 12px;
+        }
+        .era-block {
+            position: relative;
+            display: grid;
+            gap: 8px;
+            padding: 11px 11px 10px;
+            border-radius: 12px;
+            border: 1px solid rgba(255,255,255,0.065);
+            background:
+                linear-gradient(90deg, var(--era-accent-soft, rgba(231,207,138,0.05)), rgba(0,0,0,0.16)),
+                rgba(0,0,0,0.12);
+            overflow: hidden;
+        }
+        .era-block::after {
+            content: attr(data-rift);
+            position: absolute;
+            right: 9px;
+            bottom: -2px;
+            color: var(--era-accent-ghost, rgba(231,207,138,0.08));
+            font-family: var(--font-display);
+            font-size: 1.8rem;
+            letter-spacing: 0.05em;
+            pointer-events: none;
+        }
+        .era-block.path-life { --era-accent: var(--era-life); --era-accent-soft: rgba(58,114,88,0.16); --era-accent-ghost: rgba(58,114,88,0.12); }
+        .era-block.path-fall { --era-accent: #782f40; --era-accent-soft: rgba(120,47,64,0.16); --era-accent-ghost: rgba(120,47,64,0.13); }
+        .era-block.path-civil { --era-accent: var(--era-civil); --era-accent-soft: rgba(107,56,41,0.20); --era-accent-ghost: rgba(192,120,85,0.12); }
+        .era-block.path-chaos { --era-accent: #927042; --era-accent-soft: rgba(146,112,66,0.16); --era-accent-ghost: rgba(201,185,103,0.11); }
+        .era-block.path-exist { --era-accent: #5488b8; --era-accent-soft: rgba(84,136,184,0.15); --era-accent-ghost: rgba(84,136,184,0.11); }
+        .era-block.path-void { --era-accent: var(--gold-light); --era-accent-soft: rgba(211,175,97,0.17); --era-accent-ghost: rgba(211,175,97,0.13); }
+        .era-block.active {
+            border-color: color-mix(in srgb, var(--era-accent) 54%, rgba(255,255,255,0.10));
+            box-shadow: 0 0 22px color-mix(in srgb, var(--era-accent) 18%, transparent);
+        }
+        .era-block-head {
+            position: relative;
+            z-index: 1;
+            width: 100%;
+            display: flex;
+            justify-content: space-between;
+            gap: 10px;
+            border: 0;
+            background: transparent;
+            color: var(--text);
+            text-align: left;
+            font: inherit;
+            cursor: pointer;
+        }
+        .era-block-head strong {
+            display: block;
+            color: var(--text-bright);
+            font-family: var(--font-display);
+            font-size: 0.88rem;
+            letter-spacing: 0.06em;
+        }
+        .era-block-head span {
+            color: var(--text-muted);
+            font-size: 0.66rem;
+            line-height: 1.45;
+        }
+        .era-count {
+            flex: 0 0 auto;
+            align-self: start;
+            min-width: 34px;
+            padding: 4px 7px;
+            border-radius: 999px;
+            border: 1px solid color-mix(in srgb, var(--era-accent) 38%, rgba(255,255,255,0.08));
+            color: var(--era-accent);
+            background: rgba(0,0,0,0.22);
+            font-size: 0.68rem;
+            font-weight: 900;
+            text-align: center;
+        }
+        .era-god-row {
+            position: relative;
+            z-index: 1;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+        }
+        .era-god-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            min-height: 28px;
+            padding: 4px 8px;
+            border-radius: 999px;
+            border: 1px solid rgba(255,255,255,0.075);
+            background: rgba(0,0,0,0.20);
+            color: var(--text);
+            font-family: var(--font-body);
+            font-size: 0.68rem;
+            cursor: pointer;
+            transition: all var(--transition);
+        }
+        .era-god-btn:hover,
+        .era-god-btn.active {
+            color: var(--text-bright);
+            border-color: color-mix(in srgb, var(--god-primary, var(--era-accent)) 44%, rgba(255,255,255,0.10));
+            box-shadow: 0 0 14px var(--god-glow, rgba(231,207,138,0.12));
+            transform: translateY(-1px);
+        }
+        .oracle-sigil {
+            margin-right: 5px;
+            vertical-align: -4px;
+        }
+        .void-chronicle {
+            display: grid;
+            gap: 8px;
+        }
+        .void-chronicle strong {
+            color: var(--gold-light);
+            font-family: var(--font-display);
+            font-size: 0.88rem;
+            letter-spacing: 0.06em;
+        }
+        .void-chronicle span {
+            color: var(--text-muted);
+            font-size: 0.74rem;
+            line-height: 1.6;
+        }
+        .faith-flow-bars {
+            display: grid;
+            gap: 8px;
+        }
+        .faith-flow-row {
+            display: grid;
+            grid-template-columns: 44px minmax(0, 1fr) 34px;
+            gap: 8px;
+            align-items: center;
+            color: var(--text-muted);
+            font-size: 0.7rem;
+        }
+        .faith-flow-track {
+            height: 8px;
+            border-radius: 999px;
+            overflow: hidden;
+            background: rgba(255,255,255,0.055);
+            border: 1px solid rgba(255,255,255,0.055);
+        }
+        .faith-flow-fill {
+            height: 100%;
+            width: var(--flow, 0%);
+            border-radius: inherit;
+            background: var(--flow-color, var(--gold-light));
+            box-shadow: 0 0 14px color-mix(in srgb, var(--flow-color, #e7cf8a) 24%, transparent);
         }
         .dungeon-card {
             background: var(--bg-card);
@@ -2997,6 +3203,131 @@
             letter-spacing: 0.08em;
             pointer-events: none;
         }
+        .profile-hero[data-god] {
+            grid-template-columns: auto minmax(0, 1fr) minmax(300px, 0.38fr);
+            border-color: color-mix(in srgb, var(--god-primary) 30%, rgba(255,255,255,0.08));
+            background:
+                radial-gradient(circle at 8% 20%, var(--god-glow), transparent 34%),
+                radial-gradient(circle at 92% 10%, color-mix(in srgb, var(--god-secondary) 14%, transparent), transparent 30%),
+                repeating-linear-gradient(135deg, color-mix(in srgb, var(--god-primary) 6%, transparent) 0 1px, transparent 1px 34px),
+                linear-gradient(135deg, color-mix(in srgb, var(--god-dark) 50%, transparent), rgba(0,0,0,0.20));
+            box-shadow:
+                inset 0 1px 0 rgba(255,255,255,0.045),
+                0 18px 48px rgba(0,0,0,0.26),
+                0 0 34px color-mix(in srgb, var(--god-primary) 10%, transparent);
+        }
+        .profile-hero[data-god]::after {
+            content: attr(data-motif);
+            color: color-mix(in srgb, var(--god-primary) 10%, transparent);
+        }
+        .profile-hero-copy,
+        .profile-hero-stats {
+            position: relative;
+            z-index: 1;
+        }
+        .profile-faith-prayer {
+            margin-top: 8px;
+            color: color-mix(in srgb, var(--god-primary, var(--gold-light)) 82%, var(--text));
+            font-size: 0.86rem;
+            line-height: 1.65;
+        }
+        .profile-hero-stats {
+            display: grid;
+            gap: 10px;
+        }
+        .profile-hero-score {
+            border: 1px solid color-mix(in srgb, var(--god-primary, #e7cf8a) 22%, rgba(255,255,255,0.08));
+            border-radius: 14px;
+            background:
+                linear-gradient(135deg, color-mix(in srgb, var(--god-primary, #e7cf8a) 9%, transparent), rgba(0,0,0,0.18)),
+                rgba(0,0,0,0.18);
+            padding: 12px 13px;
+        }
+        .profile-hero-score span {
+            display: block;
+            color: var(--text-muted);
+            font-size: 0.66rem;
+            font-weight: 900;
+            letter-spacing: 0.12em;
+            margin-bottom: 4px;
+        }
+        .profile-hero-score strong {
+            display: block;
+            color: var(--god-primary, var(--gold-light));
+            font-family: var(--font-display);
+            font-size: 1.5rem;
+            line-height: 1.1;
+        }
+        .faith-progress-card {
+            position: relative;
+            z-index: 1;
+            display: grid;
+            gap: 7px;
+            grid-column: 1 / -1;
+            padding-top: 12px;
+            border-top: 1px solid rgba(255,255,255,0.07);
+        }
+        .faith-progress-label {
+            display: flex;
+            justify-content: space-between;
+            gap: 10px;
+            color: var(--text-muted);
+            font-size: 0.72rem;
+        }
+        .faith-progress-label strong {
+            color: var(--text-bright);
+        }
+        .faith-progress-track {
+            height: 8px;
+            border-radius: 999px;
+            overflow: hidden;
+            background: rgba(255,255,255,0.06);
+            border: 1px solid rgba(255,255,255,0.06);
+        }
+        .faith-progress-fill {
+            width: var(--faith-progress, 0%);
+            height: 100%;
+            border-radius: inherit;
+            background: linear-gradient(90deg, var(--god-secondary, #7aaec2), var(--god-primary, #e7cf8a));
+            box-shadow: 0 0 18px var(--god-glow, rgba(231,207,138,0.18));
+        }
+        .profile-panel[data-god],
+        .talent-pool-card[data-god] {
+            border-color: color-mix(in srgb, var(--god-primary) 18%, rgba(255,255,255,0.075));
+            background:
+                radial-gradient(circle at 10% 16%, color-mix(in srgb, var(--god-primary) 7%, transparent), transparent 36%),
+                linear-gradient(135deg, rgba(255,255,255,0.032), rgba(255,255,255,0.010)),
+                rgba(9,10,15,0.68);
+        }
+        .profile-observatory {
+            display: grid;
+            gap: 12px;
+        }
+        .profile-observatory-grid {
+            display: grid;
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+            gap: 10px;
+        }
+        .profile-observatory-card {
+            min-height: 88px;
+            border: 1px solid color-mix(in srgb, var(--god-primary, #e7cf8a) 18%, rgba(255,255,255,0.07));
+            border-radius: 13px;
+            background: rgba(0,0,0,0.18);
+            padding: 11px;
+        }
+        .profile-observatory-card span {
+            display: block;
+            color: var(--text-muted);
+            font-size: 0.68rem;
+            font-weight: 900;
+            letter-spacing: 0.08em;
+            margin-bottom: 5px;
+        }
+        .profile-observatory-card strong {
+            color: var(--god-primary, var(--gold-light));
+            font-family: var(--font-display);
+            font-size: 1.35rem;
+        }
         .profile-avatar {
             display: grid;
             place-items: center;
@@ -3523,6 +3854,12 @@
         .leaderboard-board.full {
             grid-column: 1 / -1;
         }
+        .leaderboard-board.path-life { border-color: rgba(111,168,121,0.22); background: linear-gradient(135deg, rgba(111,168,121,0.065), rgba(255,255,255,0.012)), rgba(9,10,15,0.66); }
+        .leaderboard-board.path-fall { border-color: rgba(120,47,64,0.24); background: linear-gradient(135deg, rgba(120,47,64,0.075), rgba(255,255,255,0.012)), rgba(9,10,15,0.66); }
+        .leaderboard-board.path-civil { border-color: rgba(159,73,56,0.24); background: linear-gradient(135deg, rgba(159,73,56,0.065), rgba(255,255,255,0.012)), rgba(9,10,15,0.66); }
+        .leaderboard-board.path-chaos { border-color: rgba(166,155,105,0.24); background: linear-gradient(135deg, rgba(166,155,105,0.065), rgba(255,255,255,0.012)), rgba(9,10,15,0.66); }
+        .leaderboard-board.path-exist { border-color: rgba(122,174,194,0.24); background: linear-gradient(135deg, rgba(122,174,194,0.065), rgba(255,255,255,0.012)), rgba(9,10,15,0.66); }
+        .leaderboard-board.path-void { border-color: rgba(211,175,97,0.26); background: linear-gradient(135deg, rgba(211,175,97,0.070), rgba(255,255,255,0.012)), rgba(9,10,15,0.66); }
         .leaderboard-list {
             display: grid;
             gap: 10px;
@@ -3586,6 +3923,163 @@
             color: var(--text-muted);
             font-size: 0.82rem;
             line-height: 1.6;
+        }
+        .leaderboard-hero {
+            align-items: stretch;
+        }
+        .leaderboard-hero .profile-avatar {
+            align-self: center;
+        }
+        .leaderboard-mini-stats {
+            display: grid;
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+            gap: 10px;
+            min-width: min(420px, 100%);
+        }
+        .leaderboard-mini-card {
+            border: 1px solid color-mix(in srgb, var(--god-primary, #e7cf8a) 20%, rgba(255,255,255,0.08));
+            border-radius: 14px;
+            background:
+                linear-gradient(135deg, color-mix(in srgb, var(--god-primary, #e7cf8a) 8%, transparent), rgba(0,0,0,0.20)),
+                rgba(0,0,0,0.18);
+            padding: 11px 12px;
+        }
+        .leaderboard-mini-card span {
+            display: block;
+            color: var(--text-muted);
+            font-size: 0.66rem;
+            font-weight: 900;
+            letter-spacing: 0.10em;
+            margin-bottom: 4px;
+        }
+        .leaderboard-mini-card strong {
+            color: var(--god-primary, var(--gold-light));
+            font-family: var(--font-display);
+            font-size: 1.25rem;
+        }
+        .leaderboard-faith-strip {
+            margin: 0 0 16px;
+            border: 1px solid rgba(231,207,138,0.13);
+            border-radius: 16px;
+            background:
+                radial-gradient(circle at 12% 16%, rgba(231,207,138,0.09), transparent 38%),
+                rgba(0,0,0,0.18);
+            padding: 14px;
+        }
+        .leaderboard-faith-strip h3 {
+            color: var(--gold-light);
+            font-family: var(--font-display);
+            font-size: 0.95rem;
+            letter-spacing: 0.06em;
+            margin-bottom: 10px;
+        }
+        .leaderboard-faith-bars {
+            display: grid;
+            gap: 9px;
+        }
+        .leaderboard-row {
+            position: relative;
+            overflow: hidden;
+            transition: border-color var(--transition), background var(--transition), transform var(--transition), box-shadow var(--transition);
+        }
+        .leaderboard-row[data-god] {
+            border-color: color-mix(in srgb, var(--god-primary) 18%, rgba(255,255,255,0.07));
+            background:
+                radial-gradient(circle at 8% 14%, color-mix(in srgb, var(--god-primary) 9%, transparent), transparent 34%),
+                linear-gradient(90deg, color-mix(in srgb, var(--god-dark) 34%, transparent), rgba(0,0,0,0.17));
+        }
+        .leaderboard-row[data-god]::after {
+            content: attr(data-motif);
+            position: absolute;
+            right: 12px;
+            bottom: 0;
+            color: color-mix(in srgb, var(--god-primary) 8%, transparent);
+            font-family: var(--font-display);
+            font-size: 2.15rem;
+            letter-spacing: 0.06em;
+            pointer-events: none;
+        }
+        .leaderboard-row:hover {
+            transform: translateY(-1px);
+            border-color: color-mix(in srgb, var(--god-primary, #e7cf8a) 42%, rgba(255,255,255,0.10));
+            box-shadow: 0 12px 28px rgba(0,0,0,0.24), 0 0 22px var(--god-glow, rgba(231,207,138,0.12));
+        }
+        .leaderboard-rank.rank-1 {
+            color: #17120a;
+            background: linear-gradient(135deg, #f3d78e, #b98825);
+            border-color: rgba(243,215,142,0.62);
+            box-shadow: 0 0 20px rgba(231,207,138,0.20);
+        }
+        .leaderboard-rank.rank-2 {
+            color: #101218;
+            background: linear-gradient(135deg, #d8dde7, #8a93a8);
+            border-color: rgba(216,221,231,0.44);
+        }
+        .leaderboard-rank.rank-3 {
+            color: #15100d;
+            background: linear-gradient(135deg, #d89a5e, #8b5935);
+            border-color: rgba(216,154,94,0.44);
+        }
+        .leaderboard-name-line {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            align-items: center;
+        }
+        .leaderboard-god-mark {
+            width: 28px;
+            height: 28px;
+        }
+        .leaderboard-progress {
+            grid-column: 1 / -1;
+            height: 5px;
+            border-radius: 999px;
+            overflow: hidden;
+            background: rgba(255,255,255,0.055);
+            border: 1px solid rgba(255,255,255,0.05);
+            margin-top: 3px;
+        }
+        .leaderboard-progress-fill {
+            width: var(--rank-progress, 0%);
+            height: 100%;
+            background: linear-gradient(90deg, var(--god-secondary, #7aaec2), var(--god-primary, #e7cf8a));
+        }
+        .leaderboard-observer-note {
+            margin-top: 16px;
+            border: 1px solid rgba(231,207,138,0.12);
+            border-radius: 14px;
+            padding: 13px 14px;
+            background:
+                linear-gradient(90deg, rgba(211,175,97,0.08), transparent 45%),
+                rgba(0,0,0,0.16);
+            color: var(--text-muted);
+            font-size: 0.8rem;
+            line-height: 1.65;
+        }
+        .score-rule-grid {
+            display: grid;
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+            gap: 10px;
+            margin-bottom: 16px;
+        }
+        .score-rule-card {
+            border: 1px solid rgba(143,216,207,0.16);
+            border-radius: 14px;
+            background:
+                radial-gradient(circle at 14% 18%, rgba(143,216,207,0.08), transparent 42%),
+                rgba(0,0,0,0.18);
+            padding: 12px;
+        }
+        .score-rule-card strong {
+            display: block;
+            color: #8fd8cf;
+            font-size: 0.9rem;
+            margin-bottom: 4px;
+        }
+        .score-rule-card span {
+            color: var(--text-muted);
+            font-size: 0.74rem;
+            line-height: 1.5;
         }
         .comment-identity {
             min-width: 160px;
@@ -3800,6 +4294,16 @@
             .profile-hero {
                 grid-template-columns: 1fr;
                 padding: 18px;
+            }
+            .profile-hero[data-god],
+            .leaderboard-hero {
+                grid-template-columns: 1fr;
+            }
+            .profile-hero-stats,
+            .leaderboard-mini-stats,
+            .profile-observatory-grid,
+            .score-rule-grid {
+                grid-template-columns: 1fr;
             }
             .profile-avatar {
                 width: 62px;
@@ -4122,6 +4626,14 @@
                     <div class="loading"><div class="spinner"></div><br>正在从切片宇宙中加载祈愿试炼...</div>
             </div>
             <aside class="oracle-sidebar" aria-label="神谕榜">
+                <section class="oracle-panel era-scroll-panel" aria-label="寰宇纪元更迭卷轴">
+                    <div id="eraScrollPanel">
+                        <div class="era-scroll-head">
+                            <div class="era-scroll-title">寰宇纪元更迭卷轴</div>
+                            <div class="era-scroll-note">正在读取六大命途与十六神明。</div>
+                        </div>
+                    </div>
+                </section>
                 <section class="oracle-panel">
                     <div class="oracle-panel-title">【诸神注目试炼名录】</div>
                     <div class="oracle-list" id="supremeTrialList"><div class="oracle-item"><span>正在检索神格判定...</span></div></div>
@@ -4133,6 +4645,14 @@
                 <section class="oracle-panel">
                     <div class="oracle-panel-title">【新晋筑戏人】</div>
                     <div class="oracle-list" id="architectLedger"><div class="oracle-item"><span>等待新的构筑者献祭试炼。</span></div></div>
+                </section>
+                <section class="oracle-panel">
+                    <div class="oracle-panel-title">【当前现世・虚无愚戏记事】</div>
+                    <div class="void-chronicle" id="voidChronicle"><span>假面垂落，骰定万命。</span></div>
+                </section>
+                <section class="oracle-panel">
+                    <div class="oracle-panel-title">【寰宇信仰流向】</div>
+                    <div id="faithFlowPanel"><div class="oracle-item"><span>正在观测试炼命途分布...</span></div></div>
                 </section>
             </aside>
         </div>
@@ -4753,6 +5273,64 @@
             存在: { sigil: '◇', emblem: '流痕', tone: '冷银灰 / 雾蓝 / 暗紫流光', edict: '昔我长铭，流光拓影；时光如隙，我亦如风' },
             虚无: { sigil: '◈', emblem: '虚印', tone: '暗鎏金 / 螺旋迷纹紫 / 小丑灰', edict: '不辨真伪，勿论虚实；来途去路，尽皆命定' }
         };
+        const ERA_TIMELINE = [
+            { path: '生命', order: '第一时代', title: '生命纪元', prophecy: '万物滋生，生死往复', rift: '藤蔓初生' },
+            { path: '沉沦', order: '第二时代', title: '沉沦纪元', prophecy: '纵情腐朽，归于湮灭', rift: '腐化裂隙' },
+            { path: '文明', order: '第三时代', title: '文明纪元', prophecy: '铸规持理，战火兴邦', rift: '战争断碑' },
+            { path: '混沌', order: '第四时代', title: '混沌纪元', prophecy: '虚构规律，寰宇皆愚', rift: '混沌漩涡' },
+            { path: '存在', order: '第五时代', title: '存在纪元', prophecy: '流光拓影，时序不息', rift: '时光沙漏' },
+            { path: '虚无', order: '第六时代', title: '虚无纪元 · 现世', prophecy: '假面垂落，骰定万命', rift: '虚空星轨' }
+        ];
+        const VOID_CHRONICLES = [
+            '时间退散，欺诈来袭；命运骰子仍在裂隙中转动。',
+            '不辨真伪，勿论虚实。每一条证言都会成为愚戏的一枚筹码。',
+            '命若繁星，望而不及。当前现世仍由假面与星轨共同注视。',
+            '虚无纪元降临，所有试炼切片都在等待下一位入局信徒。'
+        ];
+        const GOD_TALENT_POOL_NAMES = {
+            诞育: '繁衍孕育池',
+            繁荣: '丰收繁荣池',
+            死亡: '终焉骨冢池',
+            污堕: '沉溺污堕池',
+            腐朽: '凋零腐朽池',
+            湮灭: '虚空湮灭池',
+            秩序: '秩序审判池',
+            真理: '真理典籍池',
+            战争: '战火征战池',
+            混乱: '无序混沌池',
+            痴愚: '痴愚幻视池',
+            沉默: '寂静无声池',
+            时间: '时序沙漏池',
+            记忆: '残页记忆池',
+            欺诈: '假面愚戏池',
+            命运: '星轨骰运池'
+        };
+        const GOD_EMPTY_TEXT = {
+            items: {
+                诞育: '暂无收纳新生器物，静待生命萌芽。',
+                繁荣: '未收录丰收器物，尚待耕耘试炼。',
+                死亡: '尚无终焉器物留存，灵魂暂得安宁。',
+                污堕: '沉溺环中空空，尚未收纳欲望器物。',
+                腐朽: '凋零架上暂空，腐朽尚未结成遗物。',
+                湮灭: '无器物可供湮灭，一切尚存。',
+                秩序: '审判台空置，无承载规则的器物。',
+                真理: '典籍架空白，无藏纳真相的器物。',
+                战争: '战台空置，无征战兵器留存。',
+                混乱: '漩涡之内空荡，无承载无序的器物。',
+                痴愚: '幻视台空置，无承载虚妄错觉的器物。',
+                沉默: '寂默殿中空空，无承载缄默的器物。',
+                时间: '时序台空置，无承载时光的器物。',
+                记忆: '忆册架空白，无留存过往的器物。',
+                欺诈: '假面台空置，无编织谎言的器物。',
+                命运: '星轨台空置，无承载宿命的器物。'
+            },
+            clear: {
+                default: '尚未登记通关。踏入试炼后，这里会形成你的履迹录。'
+            },
+            authored: {
+                default: '尚未构筑试炼切片；构筑完成后会进入筑戏人记录。'
+            }
+        };
         const LOADING_ORACLES = ['不辨真伪，勿论虚实', '昔我长铭，流光拓影', '时光如隙，我亦如风', '感孕生命，衍育自然', '凡骨入局，诸神设戏'];
         const DIFFICULTY_OPTIONS = [
             { value: '新手', label: '新手本' },
@@ -5296,14 +5874,18 @@
         }
 
         function renderTalentPoolPanel(state, error, profile) {
+            const profileGod = getProfileFaithGod(profile) || '欺诈';
+            const profileGodStyle = getGodSkinStyle(profileGod);
             if (error) {
                 return `
-                    <section class="profile-panel" id="talentPoolPanel">
-                        <div class="profile-panel-title"><span>天赋池</span><small>待启用</small></div>
+                    <section class="profile-panel" id="talentPoolPanel" data-god="${escapeHtml(profileGod)}" style="${profileGodStyle}">
+                        <div class="profile-panel-title"><span>${escapeHtml(getGodTalentPoolName(profileGod))}</span><small>待启用</small></div>
                         <div class="profile-empty">${escapeHtml(error.message || '天赋池暂不可用。请先运行天赋池 SQL 并部署后端函数。')}</div>
                     </section>`;
             }
             const selectedPool = getSelectedTalentPool(profile, state);
+            const selectedPoolGod = cleanGodName(String(selectedPool || '').replace(/^Pool/u, '')) || profileGod;
+            const selectedPoolTitle = getGodInfo(selectedPoolGod).known ? getGodTalentPoolName(selectedPoolGod) : `${formatTalentPoolLabel(selectedPool)}池`;
             const selectedPoolMeta = (state.pools || []).find(pool => pool.poolKey === selectedPool) || {};
             const selectedPoolReady = Number(selectedPoolMeta.total || 0) > 0;
             const poolCounter = getTalentPoolCounter(state, selectedPool);
@@ -5313,12 +5895,12 @@
             const inventoryLimit = Number(state.inventorySlotLimit || 8);
             const equippedCount = (state.ownedTalents || []).filter(talent => talent.equipped_slot).length;
             return `
-                <section class="profile-panel" id="talentPoolPanel">
+                <section class="profile-panel" id="talentPoolPanel" data-god="${escapeHtml(profileGod)}" style="${profileGodStyle}">
                     <div class="profile-panel-title">
-                        <span>天赋池</span>
+                        <span>${escapeHtml(selectedPoolTitle)}</span>
                         <small>仅开放信仰池与职业池</small>
                     </div>
-                    <div class="talent-pool-card">
+                    <div class="talent-pool-card" data-god="${escapeHtml(profileGod)}" style="${profileGodStyle}">
                         <div class="profile-score-row">
                             <div class="profile-stat-card"><span>可用抽数</span><strong>${Number(state.availableDraws || 0)}</strong></div>
                             <div class="profile-stat-card"><span>天赋碎片</span><strong>${Number(state.fragmentTotal || 0)}</strong></div>
@@ -5451,9 +6033,21 @@
             );
         }
 
+        function renderLeaderboardFaithDistribution(entries) {
+            const counts = countByPath(entries, entry => entry.faithPath);
+            return `
+                <section class="leaderboard-faith-strip">
+                    <h3>寰宇信仰占比简录</h3>
+                    <div class="leaderboard-faith-bars">
+                        ${renderFaithFlowBars(counts, entries.length, { note: '本录收束已保存个人档案，信徒更新档案后会同步刷新。' })}
+                    </div>
+                </section>`;
+        }
+
         function renderLeaderboardRows(entries, scoreType, limit = 50) {
             const ranked = sortLeaderboardEntries(entries, scoreType).slice(0, limit);
-            if (!ranked.length) return '<div class="profile-empty">暂无可入榜的个人档案。保存个人档案后，这里会出现榜单记录。</div>';
+            if (!ranked.length) return '<div class="profile-empty">此途暂无留存信徒档案，静待众生踏入新的愚戏。</div>';
+            const topScore = ranked.reduce((max, entry) => Math.max(max, getLeaderboardScore(entry, scoreType)), 1);
             return ranked.map((entry, index) => {
                 const role = ROLE_LABELS[entry.role] || '入局信徒';
                 const faith = entry.faithGod ? `${entry.faithGod}之神 · ${entry.faithPath}命途` : '未立信仰';
@@ -5462,16 +6056,24 @@
                 const scoreText = scoreType === 'total'
                     ? `${formatProfileScore(entry.ascensionScore)} / ${formatProfileScore(entry.audienceScore)}`
                     : formatProfileScore(score);
+                const progress = Math.max(4, Math.round((Math.max(0, score) / Math.max(1, topScore)) * 100));
+                const skinStyle = entry.faithGod ? getGodSkinStyle(entry.faithGod) : getGodSkinStyle('命运');
+                const skin = getGodSkin(entry.faithGod || '命运');
+                const rankClass = index === 0 ? 'rank-1' : index === 1 ? 'rank-2' : index === 2 ? 'rank-3' : '';
                 return `
-                    <article class="leaderboard-row ${entry.isCurrent ? 'is-current' : ''}" onclick='openProfileFromLeaderboard(${jsString(entry.key)})'>
-                        <div class="leaderboard-rank">${index + 1}</div>
+                    <article class="leaderboard-row ${entry.isCurrent ? 'is-current' : ''}" data-god="${escapeHtml(entry.faithGod || '命运')}" data-motif="${escapeHtml(skin.motif)}" style="${skinStyle};--rank-progress:${progress}%" onclick='openProfileFromLeaderboard(${jsString(entry.key)})'>
+                        <div class="leaderboard-rank ${rankClass}">${index + 1}</div>
                         <div>
-                            <div class="leaderboard-name">${escapeHtml(entry.displayName)}${entry.isCurrent ? ' · 你' : ''}</div>
+                            <div class="leaderboard-name-line">
+                                ${renderGodSigil(entry.faithGod || '命运', 'sm', 'leaderboard-god-mark')}
+                                <div class="leaderboard-name">${escapeHtml(entry.displayName)}${entry.isCurrent ? ' · 你' : ''}</div>
+                            </div>
                             <div class="leaderboard-meta">
                                 <span class="mini-tag ${entry.faithClass}">${escapeHtml(faith)}</span>
                                 <span class="metric-pill">${escapeHtml(profession)}</span>
                                 <span class="metric-pill">${escapeHtml(role)}</span>
                             </div>
+                            <div class="leaderboard-progress"><div class="leaderboard-progress-fill"></div></div>
                         </div>
                         <div class="leaderboard-score">
                             <strong>${escapeHtml(scoreText)}</strong>
@@ -5485,7 +6087,7 @@
             const boardClass = options.full ? 'leaderboard-board full' : 'leaderboard-board';
             const subtitle = options.subtitle || `${entries.length} 位信徒`;
             return `
-                <section class="${boardClass}">
+                <section class="${boardClass} ${options.path ? getPathClassByPath(options.path) : ''}">
                     <div class="profile-panel-title">
                         <span>${escapeHtml(title)}</span>
                         <small>${escapeHtml(subtitle)}</small>
@@ -5496,10 +6098,10 @@
 
         function renderLeaderboardTabs() {
             const tabs = [
-                ['overall', '总榜'],
-                ['path', '六大命途'],
-                ['ascension', '登神之路'],
-                ['audience', '觐见之梯']
+                ['overall', '寰宇信徒总览'],
+                ['path', '分途信仰名录'],
+                ['ascension', '登神阶途榜单'],
+                ['audience', '觐见观星榜单']
             ];
             return `<div class="leaderboard-tabs">${tabs.map(([mode, label]) => `<button type="button" class="leaderboard-tab ${leaderboardMode === mode ? 'active' : ''}" data-leaderboard-mode="${escapeHtml(mode)}">${escapeHtml(label)}</button>`).join('')}</div>`;
         }
@@ -5514,27 +6116,28 @@
                 return '<div class="profile-empty">还没有任何个人档案进入榜单。先进入个人档案，保存昵称、信仰、职业与两项分数。</div>';
             }
             if (leaderboardMode === 'ascension') {
-                return `<div class="leaderboard-layout">${renderLeaderboardBoard('登神之路榜', entries, 'ascension', { full: true })}</div>`;
+                return `<div class="leaderboard-layout">${renderLeaderboardBoard('命运骰录 · 登神阶途总榜', entries, 'ascension', { full: true })}</div><div class="leaderboard-observer-note">登神之路分数越高，代表信徒踏遍试炼切片越多，见证神明权柄愈深。</div>`;
             }
             if (leaderboardMode === 'audience') {
-                return `<div class="leaderboard-layout">${renderLeaderboardBoard('觐见之梯榜', entries, 'audience', { full: true })}</div>`;
+                return `<div class="leaderboard-layout">${renderLeaderboardBoard('星轨观览 · 觐见之梯总榜', entries, 'audience', { full: true })}</div><div class="leaderboard-observer-note">觐见之梯源自信徒对试炼的评判证言，代表你为愚戏降下的神格判定权重。</div>`;
             }
             if (leaderboardMode === 'path') {
                 const pathTabs = renderLeaderboardPathTabs();
                 if (leaderboardPath !== 'all') {
                     const pathEntries = entries.filter(entry => entry.faithPath === leaderboardPath);
-                    return `${pathTabs}<div class="leaderboard-layout">${renderLeaderboardBoard(`${leaderboardPath}命途独立榜`, pathEntries, 'total', { full: true, subtitle: `${pathEntries.length} 位信徒 · 按双榜总和排序` })}</div>`;
+                    return `${pathTabs}<div class="leaderboard-layout">${renderLeaderboardBoard(`${leaderboardPath}命途 · 信徒独立录`, pathEntries, 'total', { full: true, subtitle: `${pathEntries.length} 位信徒 · 按双榜总和排序`, path: leaderboardPath })}</div>`;
                 }
                 const boards = GOD_GROUPS.map(group => {
                     const pathEntries = entries.filter(entry => entry.faithPath === group.path);
-                    return renderLeaderboardBoard(`${group.path}命途`, pathEntries, 'total', { limit: 10, subtitle: `${pathEntries.length} 位信徒` });
+                    const gods = group.gods.map(god => `${god}`).join('、');
+                    return renderLeaderboardBoard(`${group.path}命途 · ${gods}信徒录`, pathEntries, 'total', { limit: 10, subtitle: `${pathEntries.length} 位信徒`, path: group.path });
                 }).join('');
                 return `${pathTabs}<div class="leaderboard-layout">${boards}</div>`;
             }
             return `
                 <div class="leaderboard-layout">
-                    ${renderLeaderboardBoard('登神之路总榜', entries, 'ascension', { limit: 30 })}
-                    ${renderLeaderboardBoard('觐见之梯总榜', entries, 'audience', { limit: 30 })}
+                    ${renderLeaderboardBoard('命运骰录 · 登神阶途总榜', entries, 'ascension', { limit: 30 })}
+                    ${renderLeaderboardBoard('星轨观览 · 觐见之梯总榜', entries, 'audience', { limit: 30 })}
                 </div>`;
         }
 
@@ -5544,27 +6147,38 @@
             container.innerHTML = '<div class="loading"><div class="spinner"></div><br>正在整理登神与觐见名录...</div>';
             const { entries, source, error } = await fetchLeaderboardEntries();
             const currentEntry = entries.find(entry => entry.isCurrent);
+            const heroGod = currentEntry?.faithGod || '命运';
+            const heroSkin = getGodSkin(heroGod);
+            const heroStyle = getGodSkinStyle(heroGod);
+            const currentFaithLabel = currentEntry?.faithGod ? `${currentEntry.faithGod}之神` : '未立信仰';
             const currentSummary = currentEntry
-                ? `<span class="metric-pill">你：<strong>${escapeHtml(currentEntry.displayName)}</strong></span><span class="metric-pill">登神 <strong>${formatProfileScore(currentEntry.ascensionScore)}</strong></span><span class="metric-pill">觐见 <strong>${formatProfileScore(currentEntry.audienceScore)}</strong></span>`
+                ? `<span class="mini-tag ${currentEntry.faithClass}">${escapeHtml(currentFaithLabel)}</span><span class="metric-pill">你：<strong>${escapeHtml(currentEntry.displayName)}</strong></span><span class="metric-pill">${escapeHtml(ROLE_LABELS[currentEntry.role] || '入局信徒')}</span>`
                 : '<span class="metric-pill">尚未保存个人档案</span>';
             const sourceText = source === 'cloud' ? '云端榜单' : '本地记录';
             const sourceHint = error?.message ? ` · ${error.message}` : '';
             container.innerHTML = `
-                <section class="profile-hero">
-                    <div class="profile-avatar path-void">${renderGodSigil('命运', 'lg')}</div>
-                    <div>
+                <section class="profile-hero leaderboard-hero" data-god="${escapeHtml(heroGod)}" data-motif="${escapeHtml(heroSkin.motif)}" style="${heroStyle}">
+                    <div class="profile-avatar path-void" style="${heroStyle}">${renderGodSigil(heroGod, 'lg')}</div>
+                    <div class="profile-hero-copy">
                         <div class="profile-kicker">ASCENSION LEDGER</div>
-                        <h1 class="profile-name">登神觐见榜</h1>
+                        <h1 class="profile-name">登神觐见录</h1>
                         <div class="profile-subline">
                             ${currentSummary}
-                            <span class="metric-pill">${escapeHtml(sourceText)} <strong>${entries.length}</strong></span>
                         </div>
+                        <div class="profile-faith-prayer">寰宇信徒登神之路，诸神观览万民命途。${escapeHtml(source === 'cloud' ? '此为云端全域观览册。' : '当前读取本地记录。')}</div>
+                    </div>
+                    <div class="leaderboard-mini-stats">
+                        <div class="leaderboard-mini-card"><span>登神之路分</span><strong>${currentEntry ? formatProfileScore(currentEntry.ascensionScore) : '—'}</strong></div>
+                        <div class="leaderboard-mini-card"><span>觐见之梯分</span><strong>${currentEntry ? formatProfileScore(currentEntry.audienceScore) : '—'}</strong></div>
+                        <div class="leaderboard-mini-card"><span>${escapeHtml(sourceText)}</span><strong>${entries.length}</strong></div>
                     </div>
                 </section>
                 <section class="profile-panel">
                     ${renderLeaderboardTabs()}
-                    <div class="leaderboard-summary">榜单读取已保存的个人档案；个人页保存后会自动联动刷新。${source === 'cloud' ? '当前为全站云端榜单。' : `当前为本地榜单，运行 Supabase 档案表并更新 Edge Function 后会切换为全站榜。${escapeHtml(sourceHint)}`}</div>
+                    <div class="leaderboard-summary">本录收录已保存的个人档案；信徒更新自身信仰记录后，名录将同步刷新。${source === 'cloud' ? '当前为云端全域观览册。' : `当前为本地榜单，运行 Supabase 档案表并更新 Edge Function 后会切换为全站榜。${escapeHtml(sourceHint)}`}</div>
+                    ${renderLeaderboardFaithDistribution(entries)}
                     ${renderLeaderboardContent(entries)}
+                    <div class="leaderboard-observer-note">登神阶途观测记事：${escapeHtml(VOID_CHRONICLES[entries.length % VOID_CHRONICLES.length])}</div>
                 </section>`;
         }
 
@@ -5721,6 +6335,7 @@
 
         async function fetchScoreSettlements(limit = 30) {
             if (!canSettleScores()) return { settlements: [], error: { message: '需要审核员权限' } };
+            if (USE_LOCAL_FALLBACK) return { settlements: [], error: null };
             const { data, error } = await invokeDungeonAction('listScoreSettlements', { limit });
             if (error) return { settlements: [], error };
             return { settlements: Array.isArray(data) ? data : [], error: null };
@@ -5763,20 +6378,30 @@
             }
             const { settlements, error } = await fetchScoreSettlements(30);
             container.innerHTML = `
-                <section class="profile-hero">
-                    <div class="profile-avatar path-exist">${renderGodSigil('真理', 'lg')}</div>
-                    <div>
+                <section class="profile-hero" data-god="真理" data-motif="${escapeHtml(getGodSkin('真理').motif)}" style="${getGodSkinStyle('真理')}">
+                    <div class="profile-avatar path-exist" style="${getGodSkinStyle('真理')}">${renderGodSigil('真理', 'lg')}</div>
+                    <div class="profile-hero-copy">
                         <div class="profile-kicker">SCORE SANCTUM</div>
-                        <h1 class="profile-name">分数结算工作台</h1>
+                        <h1 class="profile-name">分数结算神谕台</h1>
                         <div class="profile-subline">
                             <span class="metric-pill">审核员 <strong>${escapeHtml(inviteSession?.name || '')}</strong></span>
                             <span class="metric-pill">登神 ${scoreDengMin}~${scoreDengMax} <strong>觐见 ${scoreJinMin}~${scoreJinMax}</strong></span>
                         </div>
+                        <div class="profile-faith-prayer">穷究本源，洞悉真相。此页只对结算审核员与神谕馆主开放。</div>
+                    </div>
+                    <div class="profile-hero-stats">
+                        <div class="profile-hero-score"><span>最近结算</span><strong>${settlements?.length || 0}</strong></div>
+                        <div class="profile-hero-score"><span>权限席位</span><strong>${getInviteRole() === 'admin' ? '馆主' : '审核'}</strong></div>
                     </div>
                 </section>
+                <div class="score-rule-grid">
+                    <div class="score-rule-card"><strong>批量结算</strong><span>适合副本结束后按名单一次性录入，先预览校验再提交。</span></div>
+                    <div class="score-rule-card"><strong>单人补分</strong><span>用于漏分、迟到记录或单人修正，仍会写入结算信封。</span></div>
+                    <div class="score-rule-card"><strong>撤销回滚</strong><span>近期结算可撤销，回滚后玩家会收到撤销通知。</span></div>
+                </div>
                 <div class="profile-grid">
                     <div>
-                        <section class="profile-panel">
+                        <section class="profile-panel" data-god="真理" style="${getGodSkinStyle('真理')}">
                             <div class="profile-panel-title"><span>批量结算</span><small>格式：昵称:+登神+觐见</small></div>
                             <div class="form-group"><label>副本名称</label><input id="scoreDungeonName" maxlength="80" placeholder="例如：雾中档案室"></div>
                             <div class="form-group"><label>结算文本</label><textarea id="scoreBatchText" maxlength="20000" placeholder="无我:+12+2&#10;某玩家:-3+1"></textarea></div>
@@ -5787,7 +6412,7 @@
                             </div>
                             <div id="scorePreviewPanel" style="margin-top:14px;">${renderScorePreview(scorePreviewState)}</div>
                         </section>
-                        <section class="profile-panel">
+                        <section class="profile-panel" data-god="真理" style="${getGodSkinStyle('真理')}">
                             <div class="profile-panel-title"><span>单人补分</span><small>漏分补发</small></div>
                             <div class="profile-form-grid">
                                 <div class="form-group"><label>副本名称</label><input id="singleDungeonName" maxlength="80"></div>
@@ -5800,7 +6425,7 @@
                         </section>
                     </div>
                     <div>
-                        <section class="profile-panel">
+                        <section class="profile-panel" data-god="真理" style="${getGodSkinStyle('真理')}">
                             <div class="profile-panel-title"><span>最近结算</span><small>可撤销回滚</small></div>
                             ${renderScoreSettlements(settlements, error)}
                         </section>
@@ -6255,7 +6880,7 @@
         }
 
         function renderProfileAuthoredDungeons(authored) {
-            if (!authored.length) return '<div class="profile-empty">当前身份还没有构筑过试炼。作者投稿后，会在这里形成构筑者记录。</div>';
+            if (!authored.length) return '<div class="profile-empty">尚未构筑试炼切片；构筑完成后会进入筑戏人记录。</div>';
             return authored.slice(0, 18).map(d => `
                 <article class="profile-list-item clickable" onclick='openDetailFromProfile(${jsString(d.id)})'>
                     <div class="profile-list-title">
@@ -6265,6 +6890,37 @@
                     <div class="profile-list-meta">${escapeHtml(formatGodName(d.type))} · ${escapeHtml(formatGodPath(d.type))}命途 · ${escapeHtml(formatDifficulty(d.difficulty))}</div>
                     <div class="profile-list-meta">证言 ${Number(d.comment_count || 0)} · 通关留存率 ${formatClearRate(d)} · ${formatDate(d.created_at)}</div>
                 </article>`).join('');
+        }
+
+        function renderProfileFaithObservatory(clearRecords, authored, faithGod, profile) {
+            const clearedCounts = countByPath(clearRecords, record => getGodInfo(record.dungeon?.type).path);
+            const authoredCounts = countByPath(authored, dungeon => getGodInfo(dungeon.type).path);
+            const combinedCounts = Object.fromEntries(GOD_GROUPS.map(group => [
+                group.path,
+                Number(clearedCounts[group.path] || 0) + Number(authoredCounts[group.path] || 0)
+            ]));
+            const total = Object.values(combinedCounts).reduce((sum, value) => sum + Number(value || 0), 0);
+            const faithPath = getGodInfo(faithGod).path;
+            const faithCount = Number(combinedCounts[faithPath] || 0);
+            const topPath = ERA_TIMELINE
+                .map(era => ({ path: era.path, count: Number(combinedCounts[era.path] || 0) }))
+                .sort((a, b) => b.count - a.count)[0];
+            return `
+                <section class="profile-panel" data-god="${escapeHtml(getGodInfo(faithGod).god)}" style="${getGodSkinStyle(faithGod)}">
+                    <div class="profile-panel-title">
+                        <span>信仰观测录</span>
+                        <small>游玩 / 构筑命途分布</small>
+                    </div>
+                    <div class="profile-observatory">
+                        <div class="profile-observatory-grid">
+                            <div class="profile-observatory-card"><span>本命命途记录</span><strong>${faithCount}</strong></div>
+                            <div class="profile-observatory-card"><span>最常接触命途</span><strong>${escapeHtml(topPath?.count ? topPath.path : '未定')}</strong></div>
+                            <div class="profile-observatory-card"><span>观测切片总数</span><strong>${total}</strong></div>
+                        </div>
+                        ${renderFaithFlowBars(combinedCounts, total, { note: `寰宇信仰流向，见证你踏入或构筑的每一场愚戏。` })}
+                        <div class="profile-list-meta">${escapeHtml(getGodOracle(faithGod))}</div>
+                    </div>
+                </section>`;
         }
 
         function renderProfileNotices(notices) {
@@ -6312,13 +6968,16 @@
             const faith = getProfileDisplayFaith(profile);
             const faithGod = faith.god || '记忆';
             const faithClass = faith.className;
+            const faithSkin = getGodSkin(faithGod);
+            const faithStyle = getGodSkinStyle(faithGod);
             const faithLocked = isFaithLocked(profile);
             const professionLocked = isProfessionLocked(profile);
             const scoresLocked = areProfileScoresLocked(profile);
             const profession = getProfessionInfo(profile.profession);
             const roleLabel = ROLE_LABELS[getInviteRole()] || '入局信徒';
+            const faithProgress = Math.min(100, Math.max(6, Math.round(uniqueCleared * 12 + authored.length * 8 + Number(profile.audienceScore || 0))));
             const authorPanel = (authored.length || canSubmit()) ? `
-                <section class="profile-panel">
+                <section class="profile-panel" data-god="${escapeHtml(faithGod)}" style="${faithStyle}">
                     <div class="profile-panel-title">
                         <span>🎭 构筑者记录</span>
                         <small>作者身份额外记录</small>
@@ -6336,7 +6995,7 @@
                     </div>
                     <div class="profile-list" style="margin-top:14px;">${renderProfileAuthoredDungeons(authored)}</div>
                 </section>
-                <section class="profile-panel">
+                <section class="profile-panel" data-god="${escapeHtml(faithGod)}" style="${faithStyle}">
                     <div class="profile-panel-title">
                         <span>📣 楼主提醒</span>
                         <small>${unread.length ? `${unread.length} 条未读` : '暂无未读'}</small>
@@ -6344,9 +7003,9 @@
                     <div class="profile-list">${renderProfileNotices(notices)}</div>
                 </section>` : '';
             container.innerHTML = `
-                <section class="profile-hero">
-                    <div class="profile-avatar ${faithClass}" style="${getGodSkinStyle(faithGod)}">${renderGodSigil(faithGod, 'lg')}</div>
-                    <div>
+                <section class="profile-hero" data-god="${escapeHtml(faithGod)}" data-motif="${escapeHtml(faithSkin.motif)}" style="${faithStyle}">
+                    <div class="profile-avatar ${faithClass}" style="${faithStyle}">${renderGodSigil(faithGod, 'lg')}</div>
+                    <div class="profile-hero-copy">
                         <div class="profile-kicker">PERSONAL PILGRIM ARCHIVE</div>
                         <h1 class="profile-name">${escapeHtml(inviteSession.name || roleLabel)}</h1>
                         <div class="profile-subline">
@@ -6358,13 +7017,22 @@
                             ${unreadScoreMessages.length ? `<span class="metric-pill">结算信封 <strong>${unreadScoreMessages.length}</strong></span>` : ''}
                             ${unread.length ? `<span class="metric-pill">楼主提醒 <strong>${unread.length}</strong></span>` : ''}
                         </div>
+                        <div class="profile-faith-prayer">${escapeHtml(getGodPrayer(faithGod))} · ${escapeHtml(faithSkin.pattern)}</div>
+                    </div>
+                    <div class="profile-hero-stats">
+                        <div class="profile-hero-score"><span>登神之路</span><strong>${Number(profile.ascensionScore || 0)}</strong></div>
+                        <div class="profile-hero-score"><span>觐见之梯</span><strong>${Number(profile.audienceScore || 0)}</strong></div>
+                    </div>
+                    <div class="faith-progress-card">
+                        <div class="faith-progress-label"><span>信仰进度</span><strong>${escapeHtml(faithSkin.motif)} · ${faithProgress}%</strong></div>
+                        <div class="faith-progress-track"><div class="faith-progress-fill" style="--faith-progress:${faithProgress}%"></div></div>
                     </div>
                 </section>
                 <div class="profile-grid">
                     <div>
-                        <section class="profile-panel">
+                        <section class="profile-panel" data-god="${escapeHtml(faithGod)}" style="${faithStyle}">
                             <div class="profile-panel-title">
-                                <span>个人档案</span>
+                                <span>基础信仰设定</span>
                                 <small>昵称会绑定到当前邀请码</small>
                             </div>
                             <div class="profile-form-grid">
@@ -6406,16 +7074,16 @@
                                 <button class="btn btn-primary btn-sm" onclick="saveProfilePage()">保存个人档案</button>
                             </div>
                         </section>
-                        <section class="profile-panel">
+                        <section class="profile-panel" data-god="${escapeHtml(faithGod)}" style="${faithStyle}">
                             <div class="profile-panel-title">
-                                <span>通关记录</span>
+                                <span>试炼履迹录</span>
                                 <small>${uniqueCleared} 个副本 / ${clearRecords.length} 条记录</small>
                             </div>
                             <div class="profile-list">${renderProfileClearRecords(clearRecords)}</div>
                         </section>
                     </div>
                     <div>
-                        <section class="profile-panel">
+                        <section class="profile-panel" data-god="${escapeHtml(faithGod)}" style="${faithStyle}">
                             <div class="profile-panel-title">
                                 <span>个人数值</span>
                                 <small>${unreadScoreMessages.length ? `${unreadScoreMessages.length} 封未读` : '结算同步'}</small>
@@ -6430,16 +7098,17 @@
                                 <span class="metric-pill">当前身份 <strong>${escapeHtml(roleLabel)}</strong></span>
                             </div>
                         </section>
-                        <section class="profile-panel">
+                        ${renderProfileFaithObservatory(clearRecords, authored, faithGod, profile)}
+                        <section class="profile-panel" data-god="${escapeHtml(faithGod)}" style="${faithStyle}">
                             <div class="profile-panel-title">
                                 <span>结算信封</span>
                                 <small>${unreadScoreMessages.length ? `${unreadScoreMessages.length} 封未读` : '暂无未读'}</small>
                             </div>
                             ${renderScoreMessages(scoreMessages, scoreMessageError)}
                         </section>
-                        <section class="profile-panel">
+                        <section class="profile-panel" data-god="${escapeHtml(faithGod)}" style="${faithStyle}">
                             <div class="profile-panel-title"><span>个人道具</span></div>
-                            ${renderProfileChips(profile.items, '还没有填写个人道具。')}
+                            ${renderProfileChips(profile.items, getGodEmptyText(faithGod, 'items', '还没有填写个人道具。'))}
                         </section>
                         ${renderTalentPoolPanel(talentState, talentError, profile)}
                         ${authorPanel}
@@ -6918,6 +7587,55 @@
             return GOD_ICONS[god] || '✧';
         }
 
+        function getGodTalentPoolName(value) {
+            const god = getGodInfo(value).god;
+            return GOD_TALENT_POOL_NAMES[god] || `${formatTalentPoolLabel(`Pool${god}`)}池`;
+        }
+
+        function getGodEmptyText(value, type, fallback = '暂无记录。') {
+            const god = getGodInfo(value).god;
+            return GOD_EMPTY_TEXT[type]?.[god] || GOD_EMPTY_TEXT[type]?.default || fallback;
+        }
+
+        function getPathDisplayColor(path) {
+            const colors = {
+                生命: 'var(--path-life)',
+                沉沦: '#782f40',
+                文明: 'var(--path-civil)',
+                混沌: 'var(--path-chaos)',
+                存在: 'var(--path-exist)',
+                虚无: 'var(--path-void)'
+            };
+            return colors[path] || 'var(--gold-light)';
+        }
+
+        function countByPath(items, pathGetter) {
+            const counts = Object.fromEntries(GOD_GROUPS.map(group => [group.path, 0]));
+            (items || []).forEach(item => {
+                const path = pathGetter(item);
+                if (counts[path] !== undefined) counts[path] += 1;
+            });
+            return counts;
+        }
+
+        function renderFaithFlowBars(counts, total, options = {}) {
+            const safeTotal = Math.max(1, Number(total || 0));
+            const rows = ERA_TIMELINE.map(era => {
+                const count = Number(counts?.[era.path] || 0);
+                const width = count > 0 ? Math.max(8, Math.round((count / safeTotal) * 100)) : 0;
+                return `
+                    <div class="faith-flow-row">
+                        <span>${escapeHtml(era.path)}</span>
+                        <div class="faith-flow-track" title="${escapeHtml(era.path)} · ${count}">
+                            <div class="faith-flow-fill" style="--flow:${width}%;--flow-color:${getPathDisplayColor(era.path)}"></div>
+                        </div>
+                        <strong>${count}</strong>
+                    </div>`;
+            }).join('');
+            const note = options.note ? `<div class="era-scroll-note">${escapeHtml(options.note)}</div>` : '';
+            return `<div class="faith-flow-bars">${rows}</div>${note}`;
+        }
+
         function getGodSigilMeta(value) {
             const god = getGodInfo(value).god;
             return GOD_SIGILS[god] || {
@@ -7183,6 +7901,52 @@
             showToast('已显示全部试炼');
         }
 
+        function renderEraSidebar(dungeons = []) {
+            const eraPanel = document.getElementById('eraScrollPanel');
+            const faithPanel = document.getElementById('faithFlowPanel');
+            const chronicle = document.getElementById('voidChronicle');
+            const pathCounts = countByPath(dungeons, dungeon => getGodInfo(dungeon.type).path);
+            const godCounts = {};
+            (dungeons || []).forEach(dungeon => {
+                const god = getGodInfo(dungeon.type).god;
+                godCounts[god] = (godCounts[god] || 0) + 1;
+            });
+            if (eraPanel) {
+                const blocks = ERA_TIMELINE.map(era => {
+                    const group = GOD_GROUPS.find(item => item.path === era.path) || { gods: [], className: getPathClassByPath(era.path) };
+                    const active = selectedPath === era.path && selectedGod === 'all';
+                    const godButtons = group.gods.map(god => {
+                        const activeGod = selectedGod === god;
+                        return `<button type="button" class="era-god-btn ${activeGod ? 'active' : ''}" style="${getGodSkinStyle(god)}" onclick='setGodFilter(${jsString(god)})'>${renderGodSigil(god, 'xs')} ${escapeHtml(god)}<span>${Number(godCounts[god] || 0)}</span></button>`;
+                    }).join('');
+                    return `
+                        <article class="era-block ${group.className} ${active ? 'active' : ''}" data-rift="${escapeHtml(era.rift)}">
+                            <button type="button" class="era-block-head" onclick='setPathFilter(${jsString(era.path)})'>
+                                <span><strong>${escapeHtml(era.order)} · ${escapeHtml(era.title)}</strong><span>${escapeHtml(era.prophecy)}</span></span>
+                                <span class="era-count">${Number(pathCounts[era.path] || 0)}</span>
+                            </button>
+                            <div class="era-god-row">${godButtons}</div>
+                        </article>`;
+                }).join('');
+                eraPanel.innerHTML = `
+                    <div class="era-scroll-head">
+                        <div class="era-scroll-title">寰宇纪元更迭卷轴</div>
+                        <div class="era-scroll-note">按时代筛选命途，按神明徽记锁定专属试炼；虚无纪元为当前现世。</div>
+                    </div>
+                    <div class="era-list">${blocks}</div>`;
+            }
+            if (faithPanel) {
+                faithPanel.innerHTML = renderFaithFlowBars(pathCounts, dungeons.length, { note: '当前视野内的试炼命途分布；筛选后会同步变化。' });
+            }
+            if (chronicle) {
+                const noteIndex = dungeons.length ? dungeons.length % VOID_CHRONICLES.length : new Date().getMinutes() % VOID_CHRONICLES.length;
+                const voidCount = Number(pathCounts['虚无'] || 0);
+                chronicle.innerHTML = `
+                    <strong>${escapeHtml(VOID_CHRONICLES[noteIndex])}</strong>
+                    <span>当前视野收录 ${dungeons.length} 个试炼，其中虚无命途 ${voidCount} 个。网站端试炼召集入口已隐藏，召集主入口保留在小程序。</span>`;
+            }
+        }
+
         async function renderDungeonList() {
             const listEl = document.getElementById('dungeonList');
             listEl.innerHTML = `<div class="loading"><div class="spinner"></div><br>正在从切片宇宙中加载祈愿试炼...<br><span>${escapeHtml(getLoadingOracle())}</span></div>`;
@@ -7287,21 +8051,22 @@
         }
 
         async function renderOracleSidebar(dungeons = []) {
+            renderEraSidebar(dungeons);
             const supreme = document.getElementById('supremeTrialList');
             const testimony = document.getElementById('testimonyLedger');
             const architects = document.getElementById('architectLedger');
             if (supreme) {
                 const top = [...dungeons]
                     .sort((a,b) => (Number(b.avg_rating || 0) - Number(a.avg_rating || 0)) || (Number(b.rating_count || 0) - Number(a.rating_count || 0)))
-                    .slice(0, 4);
+                    .slice(0, 6);
                 supreme.innerHTML = top.length ? top.map((d, index) => `
                     <div class="oracle-item" onclick='openDetail(${jsString(d.id)})'>
                         <strong>${index + 1}. ${renderGodSigil(d.type, 'xs', 'oracle-sigil')} ${escapeHtml(d.name || '未命名试炼')}</strong>
-                        <span>${escapeHtml(getRatingTier(d.avg_rating))} · 神格判定 ${Number(d.avg_rating || 0).toFixed(1)} · ${escapeHtml(formatGodName(d.type))}</span>
+                        <span>${escapeHtml(getRatingTier(d.avg_rating))} · 神格判定 ${Number(d.avg_rating || 0).toFixed(1)} · ${escapeHtml(formatGodName(d.type))} · 通关 ${formatClearRate(d)}</span>
                     </div>`).join('') : '<div class="oracle-item"><span>暂无诸神注目的试炼。</span></div>';
             }
             if (testimony) {
-                const latest = await fetchLatestComments(4);
+                const latest = await fetchLatestComments(6);
                 testimony.innerHTML = latest.length ? latest.map(item => `
                     <div class="oracle-item" onclick='openDetail(${jsString(item.dungeon_id)})'>
                         <strong>${escapeHtml(item.author || '匿名信徒')}</strong>
@@ -7318,7 +8083,7 @@
                         seen.add(name);
                         return true;
                     })
-                    .slice(0, 4);
+                    .slice(0, 6);
                 architects.innerHTML = newest.length ? newest.map(d => `
                     <div class="oracle-item" onclick='openDetail(${jsString(d.id)})'>
                         <strong>${escapeHtml(d.creator || '匿名筑戏人')}</strong>
