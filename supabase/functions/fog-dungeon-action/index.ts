@@ -417,6 +417,10 @@ function pickDrawTalent(items: TalentPoolItem[]): TalentPoolItem {
   return pickRandomTalent(cItems.length ? cItems : items);
 }
 
+function getTalentKey(poolKey: unknown, talentId: unknown) {
+  return `${String(poolKey || "")}::${Number(talentId) || 0}`;
+}
+
 function weightedPickTalent<T extends { talent_id: number }>(items: T[]): T {
   let totalWeight = 0;
   const weighted = items.map((item) => {
@@ -533,6 +537,19 @@ async function addOwnedTalentToStorage(
   talent: { pool_key: string; talent_id: number; talent_name: string; rank: string },
   source: "draw" | "exchange",
 ) {
+  const { data: existingOwned, error: existingError } = await supabase
+    .from("owned_talents")
+    .select("id")
+    .eq("invite_code_hash", codeHash)
+    .eq("pool_key", talent.pool_key)
+    .eq("talent_id", talent.talent_id)
+    .not("storage_slot", "is", null)
+    .maybeSingle();
+  if (existingError) return { error: existingError };
+  if (existingOwned) {
+    return { duplicateFragmentGain: getTalentFragmentGain(talent.rank) };
+  }
+
   const slotResult = await getAvailableStorageSlot(supabase, codeHash);
   if (slotResult.error) return { error: slotResult.error };
   if (!slotResult.slot) {
@@ -567,6 +584,38 @@ async function addOwnedTalentToStorage(
     .single();
   if (error) return { error };
   return { ownedTalent: data };
+}
+
+async function settleDuplicateOverflowChoices(
+  supabase: ReturnType<typeof createClient>,
+  codeHash: string,
+  ownedTalents: { pool_key: string; talent_id: number }[],
+  overflowChoices: {
+    id: number;
+    pool_key: string;
+    talent_id: number;
+    talent_name: string;
+    rank: string;
+    source: string;
+    created_at: string;
+  }[],
+) {
+  const ownedKeys = new Set(ownedTalents.map((item) => getTalentKey(item.pool_key, item.talent_id)));
+  const duplicateChoices = overflowChoices.filter((choice) => ownedKeys.has(getTalentKey(choice.pool_key, choice.talent_id)));
+  if (!duplicateChoices.length) return { overflowChoices, fragmentGain: 0 };
+
+  const duplicateIds = duplicateChoices.map((choice) => choice.id);
+  const { error: deleteError } = await supabase
+    .from("talent_overflow_choices")
+    .delete()
+    .eq("invite_code_hash", codeHash)
+    .in("id", duplicateIds);
+  if (deleteError) return { error: deleteError };
+
+  return {
+    overflowChoices: overflowChoices.filter((choice) => !duplicateIds.includes(choice.id)),
+    fragmentGain: 0,
+  };
 }
 
 async function buildTalentState(
@@ -703,6 +752,14 @@ async function buildTalentState(
     .eq("invite_code_hash", identity.codeHash)
     .order("created_at", { ascending: true });
   if (overflowError) return { error: overflowError };
+  const overflowSettlement = await settleDuplicateOverflowChoices(
+    supabase,
+    identity.codeHash,
+    ownedTalents,
+    overflowChoices || [],
+  );
+  if (overflowSettlement.error) return { error: overflowSettlement.error };
+  const settledFragmentTotal = fragmentState.fragmentTotal + Number(overflowSettlement.fragmentGain || 0);
 
   return {
     data: {
@@ -717,13 +774,13 @@ async function buildTalentState(
       totalDrawsEarned,
       spentDraws,
       availableDraws,
-      fragmentTotal: fragmentState.fragmentTotal,
+      fragmentTotal: settledFragmentTotal,
       pools: [...poolMap.values()],
       allowedPoolKeys,
       poolItems,
       counters,
       ownedTalents,
-      overflowChoices: overflowChoices || [],
+      overflowChoices: overflowSettlement.overflowChoices || [],
       drawLogs,
       exchangeLogs,
     },
@@ -1557,7 +1614,7 @@ Deno.serve(async (req) => {
           .not("storage_slot", "is", null)
           .maybeSingle();
         if (ownedReadError) return json({ error: ownedReadError.message }, 400);
-        const isRepeat = !!existingOwned;
+        let isRepeat = !!existingOwned;
         let fragmentGain = 0;
         let storageSlot = 0;
         let overflowChoice: Record<string, unknown> | null = null;
@@ -1566,6 +1623,11 @@ Deno.serve(async (req) => {
           if (addResult.error) return json({ error: addResult.error.message }, 400);
           storageSlot = Number(addResult.ownedTalent?.storage_slot || 0);
           overflowChoice = addResult.overflowChoice || null;
+          if (addResult.duplicateFragmentGain) {
+            isRepeat = true;
+            fragmentGain = Number(addResult.duplicateFragmentGain || 0);
+            fragmentGainTotal += fragmentGain;
+          }
         } else {
           fragmentGain = getTalentFragmentGain(target.rank);
           fragmentGainTotal += fragmentGain;
