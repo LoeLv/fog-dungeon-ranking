@@ -4691,11 +4691,113 @@
         .oracle-panel { border-color: rgba(231,207,138,0.12); box-shadow: var(--surface-shadow); }
         .oracle-panel-title { display: flex; align-items: center; gap: 7px; padding-bottom: 8px; border-bottom: 1px solid rgba(231,207,138,0.10); }
         .oracle-panel-title::before { content: "◈"; color: rgba(231,207,138,0.70); font-size: 0.78rem; }
+        .oracle-panel-title > span { min-width: 0; flex: 1; }
+        .oracle-panel-title small {
+            flex: 0 0 auto;
+            color: rgba(234,234,242,0.42);
+            font-family: var(--font-body);
+            font-size: 0.58rem;
+            font-weight: 700;
+            letter-spacing: 0.06em;
+            white-space: nowrap;
+        }
         .oracle-panel-supreme .oracle-panel-title::before { content: "◈"; color: var(--gold-light); }
         .oracle-panel-testimony .oracle-panel-title::before { content: "✦"; color: var(--path-exist); }
         .oracle-panel-architect .oracle-panel-title::before { content: "◇"; color: var(--path-civil); }
         .oracle-panel-chronicle .oracle-panel-title::before { content: "◌"; color: var(--path-void); }
         .oracle-panel-faith .oracle-panel-title::before { content: "▥"; color: var(--path-life); }
+        .oracle-panel-sigil .oracle-panel-title::before { content: "✧"; color: var(--path-chaos); }
+        .oracle-item-main {
+            display: grid;
+            grid-template-columns: auto minmax(0, 1fr) auto;
+            gap: 6px;
+            align-items: center;
+            min-width: 0;
+        }
+        .oracle-item-main-ranked { grid-template-columns: auto auto minmax(0, 1fr); }
+        .oracle-item-main > strong {
+            min-width: 0;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+        .oracle-item-main .god-sigil { flex: 0 0 auto; }
+        .oracle-rank {
+            min-width: 20px;
+            color: rgba(231,207,138,0.52);
+            font-family: var(--font-display);
+            font-size: 0.66rem;
+            letter-spacing: 0.04em;
+            text-align: right;
+        }
+        .oracle-item-time {
+            color: rgba(234,234,242,0.38);
+            font-size: 0.6rem;
+            white-space: nowrap;
+        }
+        .oracle-item-meta {
+            display: block;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+        .oracle-panel-sigil { background: linear-gradient(135deg, rgba(146,112,66,0.08), transparent 54%), rgba(18,20,27,0.78); }
+        .god-quick-index {
+            display: grid;
+            grid-template-columns: repeat(4, minmax(0, 1fr));
+            gap: 6px;
+        }
+        .god-quick-btn {
+            display: grid;
+            justify-items: center;
+            gap: 3px;
+            min-width: 0;
+            padding: 6px 2px 5px;
+            border: 1px solid rgba(255,255,255,0.06);
+            border-radius: 8px;
+            background: rgba(0,0,0,0.18);
+            color: var(--text-muted);
+            font: inherit;
+            font-size: 0.58rem;
+            cursor: pointer;
+            transition: all var(--transition);
+        }
+        .god-quick-btn span:last-child {
+            max-width: 100%;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+        .god-quick-btn small {
+            color: rgba(234,234,242,0.36);
+            font-size: 0.52rem;
+        }
+        .god-quick-btn:hover,
+        .god-quick-btn.active {
+            border-color: color-mix(in srgb, var(--god-primary, var(--gold-light)) 54%, rgba(255,255,255,0.12));
+            color: var(--text-bright);
+            background: color-mix(in srgb, var(--god-dark, rgba(0,0,0,0.18)) 68%, rgba(255,255,255,0.05));
+            box-shadow: 0 0 16px var(--god-glow, rgba(231,207,138,0.12));
+            transform: translateY(-1px);
+        }
+        .god-quick-btn .god-sigil { width: 20px; height: 20px; border: 0; background: transparent; }
+        .god-quick-btn .god-sigil svg { width: 17px; height: 17px; }
+        .void-chronicle {
+            min-height: 112px;
+            align-content: center;
+            padding: 2px 1px;
+        }
+        .void-chronicle.is-rotating strong,
+        .void-chronicle.is-rotating span { animation: chronicleReveal 0.48s ease both; }
+        .void-chronicle.is-rotating span { animation-delay: 0.05s; }
+        @keyframes chronicleReveal {
+            from { opacity: 0; transform: translateY(5px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        @media (prefers-reduced-motion: reduce) {
+            .void-chronicle.is-rotating strong,
+            .void-chronicle.is-rotating span { animation: none; }
+        }
         .oracle-item:hover { border-color: color-mix(in srgb, var(--god-primary, var(--gold-light)) 40%, rgba(255,255,255,0.08)); box-shadow: 0 0 18px color-mix(in srgb, var(--god-glow, rgba(231,207,138,0.15)) 70%, transparent); }
         @media (max-width: 1199px) {
             .era-wall, .ambient-mask { display: none; }
@@ -5230,24 +5332,28 @@
                     </div>
                 </section>
                 <section class="oracle-panel oracle-panel-supreme">
-                    <div class="oracle-panel-title">【诸神注目试炼名录】</div>
+                    <div class="oracle-panel-title"><span>【诸神注目试炼名录】</span><small id="supremePanelMeta">TOP 6</small></div>
                     <div class="oracle-list" id="supremeTrialList"><div class="oracle-item"><span>正在检索神格判定...</span></div></div>
                 </section>
                 <section class="oracle-panel oracle-panel-testimony">
-                    <div class="oracle-panel-title">【信徒采信证言录】</div>
+                    <div class="oracle-panel-title"><span>【信徒采信证言录】</span><small id="testimonyPanelMeta">LATEST 6</small></div>
                     <div class="oracle-list" id="testimonyLedger"><div class="oracle-item"><span>正在听取证言...</span></div></div>
                 </section>
                 <section class="oracle-panel oracle-panel-architect">
-                    <div class="oracle-panel-title">【新晋筑戏人】</div>
+                    <div class="oracle-panel-title"><span>【新晋筑戏人】</span><small id="architectPanelMeta">NEWEST 6</small></div>
                     <div class="oracle-list" id="architectLedger"><div class="oracle-item"><span>等待新的构筑者献祭试炼。</span></div></div>
                 </section>
                 <section class="oracle-panel oracle-panel-chronicle">
-                    <div class="oracle-panel-title">【当前现世・虚无愚戏记事】</div>
+                    <div class="oracle-panel-title"><span>【当前现世・虚无愚戏记事】</span><small>ROTATING ORACLE</small></div>
                     <div class="void-chronicle" id="voidChronicle"><span>假面垂落，骰定万命。</span></div>
                 </section>
                 <section class="oracle-panel oracle-panel-faith">
-                    <div class="oracle-panel-title">【寰宇信仰流向】</div>
+                    <div class="oracle-panel-title"><span>【寰宇信仰流向】</span><small>PATH FLOW</small></div>
                     <div id="faithFlowPanel"><div class="oracle-item"><span>正在观测试炼命途分布...</span></div></div>
+                </section>
+                <section class="oracle-panel oracle-panel-sigil">
+                    <div class="oracle-panel-title"><span>【十六神明索引】</span><small>QUICK FILTER</small></div>
+                    <div class="god-quick-index" id="godQuickIndex"><div class="oracle-item"><span>正在刻录神明徽记...</span></div></div>
                 </section>
             </aside>
         </div>
@@ -6008,6 +6114,9 @@
         let scoreScrollY = 0;
         let leaderboardMode = 'overall';
         let leaderboardPath = 'all';
+        let chronicleRotationTimer = null;
+        let chronicleRotationDungeons = [];
+        let chronicleRotationIndex = 0;
         let selectedMatchDungeonId = null;
         let matchDungeonsCache = [];
         let matchStateCache = null;
@@ -8880,10 +8989,50 @@
             showToast('已显示全部试炼');
         }
 
+        function renderGodQuickIndex(godCounts = {}) {
+            const index = document.getElementById('godQuickIndex');
+            if (!index) return;
+            index.innerHTML = getAllGods().map(({ god, path }) => {
+                const active = selectedGod === god;
+                const count = Number(godCounts[god] || 0);
+                const label = `${god}之神 · ${path}命途｜${getGodPrayer(god)}`;
+                return `<button type="button" class="god-quick-btn ${active ? 'active' : ''}" style="${getGodSkinStyle(god)}" title="${escapeHtml(label)}" aria-label="${escapeHtml(label)}" onclick='setGodFilter(${jsString(god)})'>${renderGodSigil(god, 'xs')}<span>${escapeHtml(god)}</span><small>${count}</small></button>`;
+            }).join('');
+        }
+
+        function renderVoidChronicle(dungeons, index) {
+            const chronicle = document.getElementById('voidChronicle');
+            if (!chronicle) return;
+            const pathCounts = countByPath(dungeons, dungeon => getGodInfo(dungeon.type).path);
+            const voidCount = Number(pathCounts['虚无'] || 0);
+            chronicle.classList.remove('is-rotating');
+            chronicle.innerHTML = `
+                <strong>${escapeHtml(VOID_CHRONICLES[index % VOID_CHRONICLES.length])}</strong>
+                <span>当前视野收录 ${dungeons.length} 个试炼，其中虚无命途 ${voidCount} 个。网站端试炼召集入口已隐藏，召集主入口保留在小程序。</span>`;
+            requestAnimationFrame(() => chronicle.classList.add('is-rotating'));
+        }
+
+        function startVoidChronicleRotation(dungeons) {
+            chronicleRotationDungeons = [...(dungeons || [])];
+            if (chronicleRotationTimer) {
+                clearInterval(chronicleRotationTimer);
+                chronicleRotationTimer = null;
+            }
+            chronicleRotationIndex = chronicleRotationDungeons.length
+                ? chronicleRotationDungeons.length % VOID_CHRONICLES.length
+                : new Date().getMinutes() % VOID_CHRONICLES.length;
+            renderVoidChronicle(chronicleRotationDungeons, chronicleRotationIndex);
+            const reducedMotion = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+            if (reducedMotion || VOID_CHRONICLES.length < 2) return;
+            chronicleRotationTimer = window.setInterval(() => {
+                chronicleRotationIndex = (chronicleRotationIndex + 1) % VOID_CHRONICLES.length;
+                renderVoidChronicle(chronicleRotationDungeons, chronicleRotationIndex);
+            }, 10000);
+        }
+
         function renderEraSidebar(dungeons = []) {
             const eraPanel = document.getElementById('eraScrollPanel');
             const faithPanel = document.getElementById('faithFlowPanel');
-            const chronicle = document.getElementById('voidChronicle');
             const pathCounts = countByPath(dungeons, dungeon => getGodInfo(dungeon.type).path);
             const godCounts = {};
             (dungeons || []).forEach(dungeon => {
@@ -8917,13 +9066,8 @@
             if (faithPanel) {
                 faithPanel.innerHTML = renderFaithFlowBars(pathCounts, dungeons.length, { note: '当前视野内的试炼命途分布；筛选后会同步变化。' });
             }
-            if (chronicle) {
-                const noteIndex = dungeons.length ? dungeons.length % VOID_CHRONICLES.length : new Date().getMinutes() % VOID_CHRONICLES.length;
-                const voidCount = Number(pathCounts['虚无'] || 0);
-                chronicle.innerHTML = `
-                    <strong>${escapeHtml(VOID_CHRONICLES[noteIndex])}</strong>
-                    <span>当前视野收录 ${dungeons.length} 个试炼，其中虚无命途 ${voidCount} 个。网站端试炼召集入口已隐藏，召集主入口保留在小程序。</span>`;
-            }
+            renderGodQuickIndex(godCounts);
+            startVoidChronicleRotation(dungeons);
         }
 
         async function renderDungeonList() {
@@ -9039,22 +9183,35 @@
             const supreme = document.getElementById('supremeTrialList');
             const testimony = document.getElementById('testimonyLedger');
             const architects = document.getElementById('architectLedger');
+            const supremeMeta = document.getElementById('supremePanelMeta');
+            const testimonyMeta = document.getElementById('testimonyPanelMeta');
+            const architectMeta = document.getElementById('architectPanelMeta');
             if (supreme) {
                 const top = [...dungeons]
                     .sort((a,b) => (Number(b.avg_rating || 0) - Number(a.avg_rating || 0)) || (Number(b.rating_count || 0) - Number(a.rating_count || 0)))
                     .slice(0, 6);
+                if (supremeMeta) supremeMeta.textContent = top.length ? `${top.length} 条` : '待降';
                 supreme.innerHTML = top.length ? top.map((d, index) => `
-                    <div class="oracle-item" onclick='openDetail(${jsString(d.id)})'>
-                        <strong>${index + 1}. ${renderGodSigil(d.type, 'xs', 'oracle-sigil')} ${escapeHtml(d.name || '未命名试炼')}</strong>
-                        <span>${escapeHtml(getRatingTier(d.avg_rating))} · 神格判定 ${Number(d.avg_rating || 0).toFixed(1)} · ${escapeHtml(formatGodName(d.type))} · 通关 ${formatClearRate(d)}</span>
+                    <div class="oracle-item" data-god="${escapeHtml(getGodInfo(d.type).god)}" onclick='openDetail(${jsString(d.id)})'>
+                        <div class="oracle-item-main oracle-item-main-ranked">
+                            <span class="oracle-rank">${String(index + 1).padStart(2, '0')}</span>
+                            ${renderGodSigil(d.type, 'xs')}
+                            <strong>${escapeHtml(d.name || '未命名试炼')}</strong>
+                        </div>
+                        <span class="oracle-item-meta">${escapeHtml(getRatingTier(d.avg_rating))} · 神格判定 ${Number(d.avg_rating || 0).toFixed(1)} · ${escapeHtml(formatGodName(d.type))} · 通关 ${formatClearRate(d)}</span>
                     </div>`).join('') : '<div class="oracle-item"><span>暂无诸神注目的试炼。</span></div>';
             }
             if (testimony) {
                 const latest = await fetchLatestComments(6);
+                if (testimonyMeta) testimonyMeta.textContent = latest.length ? `${latest.length} 条` : '空席';
                 testimony.innerHTML = latest.length ? latest.map(item => `
-                    <div class="oracle-item" onclick='openDetail(${jsString(item.dungeon_id)})'>
-                        <strong>${escapeHtml(item.author || '匿名信徒')}</strong>
-                        <span>${escapeHtml(truncateText(item.content, 46))}</span>
+                    <div class="oracle-item" data-god="${escapeHtml(getGodInfo(item.dungeon?.type || '命运').god)}" style="${getGodSkinStyle(item.dungeon?.type || '命运')}" onclick='openDetail(${jsString(item.dungeon_id)})'>
+                        <div class="oracle-item-main">
+                            ${renderGodSigil(item.dungeon?.type || '命运', 'xs')}
+                            <strong>${escapeHtml(item.author || '匿名信徒')}</strong>
+                            <span class="oracle-item-time">${escapeHtml(formatDate(item.created_at))}</span>
+                        </div>
+                        <span class="oracle-item-meta">${escapeHtml(truncateText(item.content, 46))}</span>
                     </div>`).join('') : '<div class="oracle-item"><span>暂无可采信证言。</span></div>';
             }
             if (architects) {
@@ -9068,10 +9225,15 @@
                         return true;
                     })
                     .slice(0, 6);
+                if (architectMeta) architectMeta.textContent = newest.length ? `${newest.length} 位` : '空席';
                 architects.innerHTML = newest.length ? newest.map(d => `
-                    <div class="oracle-item" onclick='openDetail(${jsString(d.id)})'>
-                        <strong>${escapeHtml(d.creator || '匿名筑戏人')}</strong>
-                        <span>献祭《${escapeHtml(d.name || '未命名试炼')}》 · ${escapeHtml(formatDate(d.created_at))}</span>
+                    <div class="oracle-item" data-god="${escapeHtml(getGodInfo(d.type).god)}" style="${getGodSkinStyle(d.type)}" onclick='openDetail(${jsString(d.id)})'>
+                        <div class="oracle-item-main">
+                            ${renderGodSigil(d.type, 'xs')}
+                            <strong>${escapeHtml(d.creator || '匿名筑戏人')}</strong>
+                            <span class="oracle-item-time">${escapeHtml(formatDate(d.created_at))}</span>
+                        </div>
+                        <span class="oracle-item-meta">献祭《${escapeHtml(d.name || '未命名试炼')}》</span>
                     </div>`).join('') : '<div class="oracle-item"><span>等待新的构筑者献祭试炼。</span></div>';
             }
         }
