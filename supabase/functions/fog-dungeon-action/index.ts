@@ -186,7 +186,7 @@ function toPublicDungeonSummary(dungeon: Record<string, unknown> | null | undefi
     name: cleanText(dungeon.name, 80),
     creator: cleanText(dungeon.creator, 40),
     difficulty: cleanText(dungeon.difficulty, 20),
-    type: cleanText(dungeon.type, 20),
+    type: cleanText(dungeon.type, 160),
     participant_count: Number(dungeon.participant_count || 0),
     run_count: Number(dungeon.run_count || 0),
     clear_count: Number(dungeon.clear_count || 0),
@@ -2214,7 +2214,7 @@ Deno.serve(async (req) => {
       const description = cleanText(payload.description, 1800);
       const pinnedNote = cleanText(payload.pinnedNote, 800);
       const difficulty = cleanText(payload.difficulty, 20) || "超凡";
-      const type = cleanText(payload.type, 20) || "综合";
+      const type = cleanText(payload.type, 160) || "综合";
       const participantCount = Number(payload.participantCount ?? payload.participant_count);
       const runCount = Number(payload.runCount ?? payload.run_count ?? 1);
       const isOneShot = payload.isOneShot === true || payload.is_one_shot === true || cleanText(payload.dungeonMode, 20) === "one_shot";

@@ -5193,6 +5193,7 @@
         .form-grid.compact {
             grid-template-columns: 1.2fr 0.9fr 0.9fr;
         }
+        .form-grid .full { grid-column: 1 / -1; }
         .form-span { grid-column: 1 / -1; }
         .number-pair {
             display: grid;
@@ -6320,7 +6321,7 @@
                     <div class="form-group"><label>构筑者 *</label><input type="text" id="dungeonCreator" placeholder="你的神名或代号..." required maxlength="30"></div>
                 </div>
                 <div class="form-grid compact">
-                    <div class="form-group"><label>神明标签 *</label><select id="dungeonType" required><option value="" selected disabled>请选择试炼归属神明</option></select></div>
+                    <div class="form-group full"><label>神明标签 *（可多选）</label><select id="dungeonType" multiple required size="6"></select></div>
                     <div class="form-group"><label>固定人数 *</label><input type="number" id="participantCount" min="1" max="99" value="6" required></div>
                     <div class="form-group"><label>当前局数 *</label><input type="number" id="runCount" min="1" max="999" value="1" required></div>
                 </div>
@@ -8905,8 +8906,8 @@
         }
 
         function renderProfileFaithObservatory(clearRecords, authored, faithGod, profile) {
-            const clearedCounts = countByPath(clearRecords, record => getGodInfo(record.dungeon?.type).path);
-            const authoredCounts = countByPath(authored, dungeon => getGodInfo(dungeon.type).path);
+            const clearedCounts = countDungeonsByPath(clearRecords, record => record.dungeon?.type);
+            const authoredCounts = countDungeonsByPath(authored, dungeon => dungeon.type);
             const combinedCounts = Object.fromEntries(GOD_GROUPS.map(group => [
                 group.path,
                 Number(clearedCounts[group.path] || 0) + Number(authoredCounts[group.path] || 0)
@@ -9550,8 +9551,39 @@
             return GOD_ALIASES[raw] || raw;
         }
 
+        function splitGodTags(value) {
+            const seen = new Set();
+            return String(value || '')
+                .split(/[、,，/|;；\s]+/u)
+                .map(cleanGodName)
+                .filter(god => {
+                    if (!god || seen.has(god)) return false;
+                    seen.add(god);
+                    return true;
+                })
+                ;
+        }
+
+        function getPrimaryGod(value) {
+            return splitGodTags(value)[0] || cleanGodName(value);
+        }
+
+        function getDungeonGodInfos(value) {
+            const tags = splitGodTags(value);
+            const source = tags.length ? tags : [value];
+            return source.map(getGodInfo);
+        }
+
+        function dungeonHasGod(value, god) {
+            return splitGodTags(value).some(item => item === cleanGodName(god));
+        }
+
+        function dungeonHasPath(value, path) {
+            return getDungeonGodInfos(value).some(info => info.path === path);
+        }
+
         function getGodInfo(value) {
-            const clean = cleanGodName(value);
+            const clean = cleanGodName(getPrimaryGod(value));
             const found = getAllGods().find(item => item.god === clean);
             return found ? { ...found, known: true } : { god: clean || '未归档', path: '旧档案', className: 'path-unknown', known: false };
         }
@@ -9578,12 +9610,13 @@
         function getGodSkinStyle(value) {
             const skin = getGodSkin(value);
             const pathMeta = getPathMetaByGod(value);
+            const primaryInfo = getGodInfo(value);
             return [
                 `--god-primary:${skin.primary}`,
                 `--god-secondary:${skin.secondary}`,
                 `--god-glow:${skin.glow}`,
                 `--god-dark:${skin.dark}`,
-                `--era-base:var(--${getGodInfo(value).className}, ${skin.secondary})`,
+                `--era-base:var(--${primaryInfo.className}, ${skin.secondary})`,
                 `--god-pattern-label:'${String(skin.motif || pathMeta.emblem || '').replace(/'/g, '')}'`
             ].join(';');
         }
@@ -9844,6 +9877,17 @@
             return counts;
         }
 
+        function countDungeonsByPath(items, typeGetter) {
+            const counts = Object.fromEntries(GOD_GROUPS.map(group => [group.path, 0]));
+            (items || []).forEach(item => {
+                const paths = [...new Set(getDungeonGodInfos(typeGetter(item)).map(info => info.path))];
+                paths.forEach(path => {
+                    if (counts[path] !== undefined) counts[path] += 1;
+                });
+            });
+            return counts;
+        }
+
         function renderFaithFlowBars(counts, total, options = {}) {
             const safeTotal = Math.max(1, Number(total || 0));
             const rows = ERA_TIMELINE.map(era => {
@@ -9963,12 +10007,13 @@
         }
 
         function formatGodName(value) {
-            const info = getGodInfo(value);
-            return info.known ? `${info.god}之神` : info.god;
+            const infos = getDungeonGodInfos(value);
+            return infos.map(info => info.known ? `${info.god}之神` : info.god).join('、');
         }
 
         function formatGodPath(value) {
-            return getGodInfo(value).path;
+            const paths = [...new Set(getDungeonGodInfos(value).map(info => info.path).filter(Boolean))];
+            return paths.join('、') || '旧档案';
         }
 
         function getGodClass(value) {
@@ -10155,9 +10200,8 @@
         function populateGodSelect() {
             const select = document.getElementById('dungeonType');
             if (!select) return;
-            select.innerHTML = `<option value="" selected disabled>请选择试炼归属神明</option>` +
-                GOD_GROUPS.map(group => `<optgroup label="${escapeHtml(group.path)}命途">${group.gods.map(god => `<option value="${escapeHtml(god)}">${escapeHtml(getGodIcon(god))} ${escapeHtml(group.path)} · ${escapeHtml(god)}之神</option>`).join('')}</optgroup>`).join('');
-            select.value = '';
+            select.innerHTML = GOD_GROUPS.map(group => `<optgroup label="${escapeHtml(group.path)}命途">${group.gods.map(god => `<option value="${escapeHtml(god)}">${escapeHtml(getGodIcon(god))} ${escapeHtml(group.path)} · ${escapeHtml(god)}之神</option>`).join('')}</optgroup>`).join('');
+            Array.from(select.options).forEach(option => { option.selected = false; });
         }
 
         function setGodFilter(god) {
@@ -10311,7 +10355,7 @@
         function renderVoidChronicle(dungeons, index) {
             const chronicle = document.getElementById('voidChronicle');
             if (!chronicle) return;
-            const pathCounts = countByPath(dungeons, dungeon => getGodInfo(dungeon.type).path);
+            const pathCounts = countDungeonsByPath(dungeons, dungeon => dungeon.type);
             const filterNode = getFilterAtmosphereNode();
             const node = filterNode || getActiveAtmosphereNode();
             const era = node.path;
@@ -10357,11 +10401,13 @@
         function renderEraSidebar(dungeons = []) {
             const eraPanel = document.getElementById('eraScrollPanel');
             const faithPanel = document.getElementById('faithFlowPanel');
-            const pathCounts = countByPath(dungeons, dungeon => getGodInfo(dungeon.type).path);
+            const pathCounts = countDungeonsByPath(dungeons, dungeon => dungeon.type);
             const godCounts = {};
             (dungeons || []).forEach(dungeon => {
-                const god = getGodInfo(dungeon.type).god;
-                godCounts[god] = (godCounts[god] || 0) + 1;
+                getDungeonGodInfos(dungeon.type).forEach(info => {
+                    const god = info.god;
+                    godCounts[god] = (godCounts[god] || 0) + 1;
+                });
             });
             if (eraPanel) {
                 const blocks = ERA_TIMELINE.map(era => {
@@ -10388,7 +10434,8 @@
                     <div class="era-list">${blocks}</div>`;
             }
             if (faithPanel) {
-                faithPanel.innerHTML = renderFaithFlowBars(pathCounts, dungeons.length, { note: '当前视野内的试炼命途分布；筛选后会同步变化。' });
+                const pathTotal = Object.values(pathCounts).reduce((sum, value) => sum + Number(value || 0), 0);
+                faithPanel.innerHTML = renderFaithFlowBars(pathCounts, pathTotal, { note: '当前视野内的试炼命途分布；共创试炼会同时计入多个命途。' });
             }
             renderGodQuickIndex(godCounts);
             startVoidChronicleRotation(dungeons);
@@ -10424,8 +10471,8 @@
                     formatDifficulty(d.difficulty)
                 ].some(value => String(value || '').toLowerCase().includes(q)));
             }
-            if (selectedPath !== 'all') dungeons = dungeons.filter(d => getGodInfo(d.type).path === selectedPath);
-            if (selectedGod !== 'all') dungeons = dungeons.filter(d => getGodInfo(d.type).god === selectedGod);
+            if (selectedPath !== 'all') dungeons = dungeons.filter(d => dungeonHasPath(d.type, selectedPath));
+            if (selectedGod !== 'all') dungeons = dungeons.filter(d => dungeonHasGod(d.type, selectedGod));
             if (selectedDifficulty !== 'all') dungeons = dungeons.filter(d => normalizeDifficulty(d.difficulty) === selectedDifficulty);
             if (currentSort === 'popular') dungeons.sort((a,b) =>
                 (b.rating_count||0) - (a.rating_count||0) ||
@@ -11243,7 +11290,7 @@
             const godSelect = document.getElementById('dungeonType');
             const diffSelect = document.getElementById('dungeonDifficulty');
             const modeSelect = document.getElementById('dungeonMode');
-            if (godSelect) godSelect.value = '';
+            if (godSelect) Array.from(godSelect.options).forEach(option => { option.selected = false; });
             if (diffSelect) diffSelect.value = '中';
             if (modeSelect) modeSelect.value = 'cycle';
         }
@@ -11262,7 +11309,8 @@
             const name=document.getElementById('dungeonName').value.trim();
             const creator=document.getElementById('dungeonCreator').value.trim();
             const difficulty=document.getElementById('dungeonDifficulty').value;
-            const type=document.getElementById('dungeonType').value;
+            const selectedTypes=Array.from(document.getElementById('dungeonType').selectedOptions).map(option => option.value);
+            const type=selectedTypes.join('、');
             const participantCount=Number(document.getElementById('participantCount').value);
             const runCount=Number(document.getElementById('runCount').value);
             const desc=document.getElementById('dungeonDesc').value.trim();
@@ -11270,6 +11318,7 @@
             const dungeonMode=document.getElementById('dungeonMode')?.value || 'cycle';
             const isOneShot=dungeonMode==='one_shot';
             if(!name||!creator||!desc){showToast('请填写所有必填项');return;}
+            if(!selectedTypes.length){showToast('请至少选择一个神明标签');return;}
             if(!Number.isInteger(participantCount)||participantCount<1||participantCount>99){showToast('请检查固定人数');return;}
             if(!Number.isInteger(runCount)||runCount<1||runCount>999){showToast('请检查当前局数');return;}
             const btn=e.target.querySelector('button[type="submit"]');
