@@ -42,6 +42,7 @@ const defaultAudienceScore = 0;
 const drawScoreStep = 5;
 const starterTalentDrawGrant = 10;
 const bTalentDrawRate = 0.2;
+const bTalentGuaranteeDraws = 10;
 const cTalentFragmentGain = 5;
 const bTalentFragmentGain = 10;
 const targetTalentExchangeCost = 180;
@@ -417,6 +418,14 @@ function pickDrawTalent(items: TalentPoolItem[]): TalentPoolItem {
   return pickRandomTalent(cItems.length ? cItems : items);
 }
 
+function pickDrawTalentWithGuarantee(items: TalentPoolItem[], continueDraw: number) {
+  const bItems = items.filter((item) => item.rank === "B");
+  const cItems = items.filter((item) => item.rank === "C");
+  const shouldGuarantee = bItems.length > 0 && cItems.length > 0 && continueDraw >= bTalentGuaranteeDraws - 1;
+  if (shouldGuarantee) return { talent: pickRandomTalent(bItems), isGuarantee: true };
+  return { talent: pickDrawTalent(items), isGuarantee: false };
+}
+
 function getTalentKey(poolKey: unknown, talentId: unknown) {
   return `${String(poolKey || "")}::${Number(talentId) || 0}`;
 }
@@ -768,6 +777,7 @@ async function buildTalentState(
       equippedSlotLimit,
       starterTalentDrawGrant,
       bTalentDrawRate,
+      bTalentGuaranteeDraws,
       cTalentFragmentGain,
       bTalentFragmentGain,
       targetTalentExchangeCost,
@@ -1599,11 +1609,40 @@ Deno.serve(async (req) => {
       let continueDraw = Number(counterRow?.continue_draw || 0);
       const results: Record<string, unknown>[] = [];
       let fragmentGainTotal = 0;
+      const nextSpentDraws = spentDraws + drawCount;
+
+      const { error: initialStateError } = await supabase
+        .from("talent_draw_state")
+        .insert({
+          invite_code_hash: identity.codeHash,
+          spent_draws: spentDraws,
+          updated_at: new Date().toISOString(),
+        });
+      if (initialStateError && initialStateError.code !== "23505") {
+        return json({ error: initialStateError.message }, 400);
+      }
+
+      const { data: reservedState, error: reserveError } = await supabase
+        .from("talent_draw_state")
+        .update({
+          spent_draws: nextSpentDraws,
+          updated_at: new Date().toISOString(),
+        })
+        .eq("invite_code_hash", identity.codeHash)
+        .eq("spent_draws", spentDraws)
+        .select("spent_draws")
+        .maybeSingle();
+      if (reserveError) return json({ error: reserveError.message }, 400);
+      if (!reservedState) {
+        return json({ error: "抽取请求已在处理中，请刷新天赋池后再试" }, 409);
+      }
 
       for (let i = 0; i < drawCount; i += 1) {
-        const target = pickDrawTalent(talentItems);
+        const drawResult = pickDrawTalentWithGuarantee(talentItems, continueDraw);
+        const target = drawResult.talent;
         const isB = target.rank === "B";
-        continueDraw += 1;
+        const isGuarantee = drawResult.isGuarantee && isB;
+        continueDraw = isB ? 0 : continueDraw + 1;
 
         const { data: existingOwned, error: ownedReadError } = await supabase
           .from("owned_talents")
@@ -1642,7 +1681,7 @@ Deno.serve(async (req) => {
             talent_id: target.talent_id,
             talent_name: target.talent_name,
             rank: target.rank,
-            is_guarantee: isB,
+            is_guarantee: isGuarantee,
             is_repeat: isRepeat,
             fragment_gain: fragmentGain,
           });
@@ -1654,7 +1693,7 @@ Deno.serve(async (req) => {
           talentName: target.talent_name,
           effect: target.effect || "",
           rank: target.rank,
-          isGuarantee: isB,
+          isGuarantee,
           isRepeat,
           fragmentGain,
           storageSlot,
@@ -1662,16 +1701,6 @@ Deno.serve(async (req) => {
           overflowChoiceId: overflowChoice?.id || null,
         });
       }
-
-      const nextSpentDraws = spentDraws + drawCount;
-      const { error: stateUpdateError } = await supabase
-        .from("talent_draw_state")
-        .upsert({
-          invite_code_hash: identity.codeHash,
-          spent_draws: nextSpentDraws,
-          updated_at: new Date().toISOString(),
-        });
-      if (stateUpdateError) return json({ error: stateUpdateError.message }, 400);
 
       const { error: counterUpdateError } = await supabase
         .from("talent_pool_counters")

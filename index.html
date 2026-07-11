@@ -7076,6 +7076,7 @@
         let scorePreviewState = null;
         let selectedTalentPool = '';
         let lastTalentDrawResult = [];
+        let talentDrawInFlight = false;
         let currentTalentState = normalizeTalentState(null);
         let currentTalentError = null;
         let replyTarget = null;
@@ -7436,6 +7437,7 @@
                 equippedSlotLimit: Number(state.equippedSlotLimit || 3),
                 starterTalentDrawGrant: Number(state.starterTalentDrawGrant || 10),
                 bTalentDrawRate: Number(state.bTalentDrawRate || 0.2),
+                bTalentGuaranteeDraws: Number(state.bTalentGuaranteeDraws || 10),
                 cTalentFragmentGain: Number(state.cTalentFragmentGain || 5),
                 bTalentFragmentGain: Number(state.bTalentFragmentGain || 10),
                 targetTalentExchangeCost: Number(state.targetTalentExchangeCost || 180),
@@ -7512,6 +7514,7 @@
                 const effect = talent.effect || talent.talent_effect || '';
                 const pool = formatTalentPoolLabel(talent.poolKey || talent.pool_key);
                 const repeat = talent.isRepeat || talent.is_repeat;
+                const guarantee = talent.isGuarantee || talent.is_guarantee;
                 const overflow = talent.isOverflow || talent.is_overflow;
                 const fragment = Number(talent.fragmentGain ?? talent.fragment_gain ?? 0);
                 const storageSlot = Number(talent.storageSlot ?? talent.storage_slot ?? 0);
@@ -7520,7 +7523,7 @@
                 return `
                     <div class="talent-card rank-${escapeHtml(rank)} ${repeat ? 'repeat' : ''} ${overflow ? 'pending' : ''}">
                         <strong>${escapeHtml(name)}</strong>
-                        <small>${escapeHtml(rank)}级 · ${escapeHtml(pool || source)}${repeat ? ` · 重复转化 +${fragment} 碎片` : ''}${escapeHtml(place)}</small>
+                        <small>${escapeHtml(rank)}级 · ${escapeHtml(pool || source)}${guarantee ? ' · 保底' : ''}${repeat ? ` · 重复转化 +${fragment} 碎片` : ''}${escapeHtml(place)}</small>
                         ${effect ? `<span class="talent-effect-text">${escapeHtml(effect)}</span>` : ''}
                     </div>`;
             }).join('')}</div>`;
@@ -7531,8 +7534,9 @@
             if (!logs.length) return renderRitualEmpty(getGodEmptyText(god, 'drawLogs'), god, '抽取记录暂空');
             return `<div class="talent-log-list">${logs.slice(0, 12).map(log => {
                 const label = `${formatTalentPoolLabel(log.pool_key)}池 · ${log.draw_type === 'ten' ? '十连谕' : '单枚牵引'}`;
+                const guarantee = log.is_guarantee ? ' · 保底' : '';
                 const repeat = log.is_repeat ? ` · 重复 +${Number(log.fragment_gain || 0)}碎片` : '';
-                return `<div class="talent-log-item"><span><strong>${escapeHtml(log.talent_name)}</strong> ${escapeHtml(log.rank)}级${escapeHtml(repeat)}</span><span>${escapeHtml(label)}</span></div>`;
+                return `<div class="talent-log-item"><span><strong>${escapeHtml(log.talent_name)}</strong> ${escapeHtml(log.rank)}级${escapeHtml(guarantee)}${escapeHtml(repeat)}</span><span>${escapeHtml(label)}</span></div>`;
             }).join('')}</div>`;
         }
 
@@ -7672,6 +7676,8 @@
             const equippedCount = (state.ownedTalents || []).filter(talent => talent.equipped_slot).length;
             const exchangeCost = Number(state.targetTalentExchangeCost || 180);
             const bRateText = `${Math.round(Number(state.bTalentDrawRate || 0.2) * 100)}%`;
+            const guaranteeDraws = Number(state.bTalentGuaranteeDraws || 10);
+            const currentMisses = Math.min(guaranteeDraws - 1, getTalentPoolCounter(state, selectedPool));
             return `
                 <section class="profile-panel" id="talentPoolPanel" data-god="${escapeHtml(profileGod)}" style="${profileGodStyle}">
                     <div class="profile-panel-title">
@@ -7687,12 +7693,14 @@
                             <span class="metric-pill">累计获得抽数 <strong>${Number(state.totalDrawsEarned || 0)}</strong></span>
                             <span class="metric-pill">已用抽数 <strong>${Number(state.spentDraws || 0)}</strong></span>
                             <span class="metric-pill">B级概率 <strong>${escapeHtml(bRateText)}</strong></span>
+                            <span class="metric-pill">保底进度 <strong>${currentMisses}/${guaranteeDraws - 1}</strong></span>
                             <span class="metric-pill">仓库 <strong>${inventoryCount}/${inventoryLimit}</strong></span>
                             <span class="metric-pill">携带 <strong>${equippedCount}/${Number(state.equippedSlotLimit || 3)}</strong></span>
                             <span class="metric-pill">可选池 <strong>${escapeHtml(allowedPoolText)}</strong></span>
                         </div>
                         <div class="talent-rule-strip">
                             <span>开服赠送 <strong>${Number(state.starterTalentDrawGrant || 10)}</strong> 抽</span>
+                            <span>每池 <strong>${guaranteeDraws}</strong> 抽保底 B</span>
                             <span>重复 C/B：<strong>+${Number(state.cTalentFragmentGain || 5)} / +${Number(state.bTalentFragmentGain || 10)}</strong> 碎片</span>
                             <span>分解 C/B：<strong>+${Number(state.cTalentFragmentGain || 5)} / +${Number(state.bTalentFragmentGain || 10)}</strong> 碎片</span>
                             <span>指定 B 兑换：<strong>${exchangeCost}</strong> 碎片</span>
@@ -7703,8 +7711,8 @@
                                 <select id="talentPoolSelect" onchange="selectTalentPoolUI(this.value)">${renderTalentPoolOptions(state, selectedPool)}</select>
                             </div>
                             <button type="button" class="btn btn-outline btn-sm" onclick="refreshTalentPoolUI()">重观池纹</button>
-                            <button type="button" class="btn btn-outline btn-sm" onclick="drawTalentUI('single')" ${!selectedPoolReady || state.availableDraws < 1 ? 'disabled' : ''}>牵引一枚</button>
-                            <button type="button" class="btn btn-primary btn-sm" onclick="drawTalentUI('ten')" ${!selectedPoolReady || state.availableDraws < 10 ? 'disabled' : ''}>启十连谕</button>
+                            <button type="button" class="btn btn-outline btn-sm" onclick="drawTalentUI('single')" ${talentDrawInFlight || !selectedPoolReady || state.availableDraws < 1 ? 'disabled' : ''}>${talentDrawInFlight ? '牵引中' : '牵引一枚'}</button>
+                            <button type="button" class="btn btn-primary btn-sm" onclick="drawTalentUI('ten')" ${talentDrawInFlight || !selectedPoolReady || state.availableDraws < 10 ? 'disabled' : ''}>${talentDrawInFlight ? '十连牵引中' : '启十连谕'}</button>
                         </div>
                         ${selectedPoolReady ? '' : '<div class="identity-help">当前天赋池暂无配置，等补完池子后就能抽取。</div>'}
                         ${latestResults ? `<div class="profile-list-meta" style="margin-top:12px;">本次抽取</div>${latestResults}` : ''}
@@ -7746,14 +7754,22 @@
 
         async function drawTalentUI(drawType) {
             if (!inviteSession?.code) { openInviteModal('先验入局谕令后可开启天赋池。'); return; }
+            if (talentDrawInFlight) { showToast('天赋池正在牵引，请勿重复点击'); return; }
             const poolKey = document.getElementById('talentPoolSelect')?.value || selectedTalentPool;
-            const { data, error } = await invokeDungeonAction('drawTalent', { poolKey, drawType });
-            if (error) { showToast(`❌ ${error.message || '抽取失败'}`); return; }
-            selectedTalentPool = poolKey;
-            lastTalentDrawResult = Array.isArray(data?.results) ? data.results : [];
-            applyTalentActionState(data);
-            showToast(drawType === 'ten' ? '十连完成' : '单抽完成');
-            if (document.getElementById('leaderboardPage')?.style.display !== 'none') await renderLeaderboardPage();
+            talentDrawInFlight = true;
+            replaceTalentPoolPanel();
+            try {
+                const { data, error } = await invokeDungeonAction('drawTalent', { poolKey, drawType });
+                if (error) { showToast(`❌ ${error.message || '抽取失败'}`); return; }
+                selectedTalentPool = poolKey;
+                lastTalentDrawResult = Array.isArray(data?.results) ? data.results : [];
+                applyTalentActionState(data);
+                showToast(drawType === 'ten' ? '十连完成' : '单抽完成');
+                if (document.getElementById('leaderboardPage')?.style.display !== 'none') await renderLeaderboardPage();
+            } finally {
+                talentDrawInFlight = false;
+                replaceTalentPoolPanel();
+            }
         }
 
         async function exchangeTalentUI() {
