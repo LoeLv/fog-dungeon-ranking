@@ -7077,6 +7077,7 @@
         let selectedTalentPool = '';
         let lastTalentDrawResult = [];
         let talentDrawInFlight = false;
+        let talentManageInFlight = false;
         let currentTalentState = normalizeTalentState(null);
         let currentTalentError = null;
         let replyTarget = null;
@@ -7621,7 +7622,7 @@
                         <div class="talent-slot-meta">${escapeHtml(talent.rank)}级 · ${escapeHtml(formatTalentPoolLabel(talent.pool_key))}池</div>
                         ${effect ? `<div class="talent-effect-text">${escapeHtml(effect)}</div>` : ''}
                         <div class="talent-slot-actions">
-                            <button type="button" class="btn btn-outline btn-sm" onclick="discardOwnedTalentUI(${Number(talent.id)})" ${equippedIds.has(Number(talent.id)) ? 'disabled title="已携带的天赋请先卸下"' : ''}>分解 +${fragmentGain}</button>
+                            <button type="button" class="btn btn-outline btn-sm" onclick="discardOwnedTalentUI(${Number(talent.id)})" ${talentManageInFlight || equippedIds.has(Number(talent.id)) ? 'disabled' : ''} ${equippedIds.has(Number(talent.id)) ? 'title="已携带的天赋请先卸下"' : ''}>${talentManageInFlight ? '处理中' : `分解 +${fragmentGain}`}</button>
                         </div>
                     </div>`;
             }).join('')}</div>`;
@@ -7645,10 +7646,10 @@
                             ${getTalentEffectText(state, choice) ? `<div class="talent-effect-text">${escapeHtml(getTalentEffectText(state, choice))}</div>` : ''}
                             <div class="talent-exchange-row">
                                 <select id="overflowReplaceSelect-${id}">${replacementOptions || '<option value="">仓库暂无可替换天赋</option>'}</select>
-                                <button type="button" class="btn btn-primary btn-sm" onclick="resolveTalentOverflowUI(${id}, 'replace')" ${replacementOptions ? '' : 'disabled'}>保留并分解旧天赋</button>
+                                <button type="button" class="btn btn-primary btn-sm" onclick="resolveTalentOverflowUI(${id}, 'replace')" ${talentManageInFlight || !replacementOptions ? 'disabled' : ''}>${talentManageInFlight ? '处理中' : '保留并分解旧天赋'}</button>
                             </div>
                             <div class="talent-slot-actions">
-                                <button type="button" class="btn btn-outline btn-sm" onclick="resolveTalentOverflowUI(${id}, 'discard')">分解新天赋 +${getTalentDismantleGain(state, choice.rank)}</button>
+                                <button type="button" class="btn btn-outline btn-sm" onclick="resolveTalentOverflowUI(${id}, 'discard')" ${talentManageInFlight ? 'disabled' : ''}>${talentManageInFlight ? '处理中' : `分解新天赋 +${getTalentDismantleGain(state, choice.rank)}`}</button>
                             </div>
                         </div>`;
                 }).join('')}</div>`;
@@ -7801,28 +7802,44 @@
 
         async function resolveTalentOverflowUI(choiceId, decision) {
             if (!inviteSession?.code) { openInviteModal('先验入局谕令后可处理溢出天赋。'); return; }
+            if (talentManageInFlight) { showToast('天赋正在处理中，请勿重复点击'); return; }
             const payload = { choiceId: Number(choiceId), decision };
             if (decision === 'replace') {
                 const replaceOwnedId = Number(document.getElementById(`overflowReplaceSelect-${choiceId}`)?.value || 0);
                 if (!replaceOwnedId) { showToast('请选择要替换的仓库天赋'); return; }
                 payload.replaceOwnedId = replaceOwnedId;
             }
-            const { data, error } = await invokeDungeonAction('resolveTalentOverflow', payload);
-            if (error) { showToast(`❌ ${error.message || '处理失败'}`); return; }
-            lastTalentDrawResult = [];
-            applyTalentActionState(data);
-            const gain = Number(data?.fragmentGain || 0);
-            showToast(decision === 'replace' ? `已保留新天赋，旧天赋分解 +${gain} 碎片` : `已分解溢出天赋 +${gain} 碎片`);
+            talentManageInFlight = true;
+            replaceTalentPoolPanel();
+            try {
+                const { data, error } = await invokeDungeonAction('resolveTalentOverflow', payload);
+                if (error) { showToast(`❌ ${error.message || '处理失败'}`); return; }
+                lastTalentDrawResult = [];
+                applyTalentActionState(data);
+                const gain = Number(data?.fragmentGain || 0);
+                showToast(decision === 'replace' ? `已保留新天赋，旧天赋分解 +${gain} 碎片` : `已分解溢出天赋 +${gain} 碎片`);
+            } finally {
+                talentManageInFlight = false;
+                replaceTalentPoolPanel();
+            }
         }
 
         async function discardOwnedTalentUI(ownedTalentId) {
             if (!inviteSession?.code) { openInviteModal('先验入局谕令后可整理仓库。'); return; }
+            if (talentManageInFlight) { showToast('天赋正在处理中，请勿重复点击'); return; }
             if (!window.confirm('确定分解这个仓库天赋并获得碎片吗？')) return;
-            const { data, error } = await invokeDungeonAction('discardOwnedTalent', { ownedTalentId: Number(ownedTalentId) });
-            if (error) { showToast(`❌ ${error.message || '分解失败'}`); return; }
-            lastTalentDrawResult = [];
-            applyTalentActionState(data);
-            showToast(`仓库天赋已分解 +${Number(data?.fragmentGain || 0)} 碎片`);
+            talentManageInFlight = true;
+            replaceTalentPoolPanel();
+            try {
+                const { data, error } = await invokeDungeonAction('discardOwnedTalent', { ownedTalentId: Number(ownedTalentId) });
+                if (error) { showToast(`❌ ${error.message || '分解失败'}`); return; }
+                lastTalentDrawResult = [];
+                applyTalentActionState(data);
+                showToast(`仓库天赋已分解 +${Number(data?.fragmentGain || 0)} 碎片`);
+            } finally {
+                talentManageInFlight = false;
+                replaceTalentPoolPanel();
+            }
         }
 
         function sortLeaderboardEntries(entries, scoreType) {

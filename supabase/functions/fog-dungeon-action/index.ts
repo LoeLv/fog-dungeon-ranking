@@ -1857,40 +1857,24 @@ Deno.serve(async (req) => {
       const choiceId = cleanBigIntId(payload.choiceId);
       const decision = cleanText(payload.decision, 12);
       if (!choiceId || !["discard", "replace"].includes(decision)) return json({ error: "溢出处理参数不正确" }, 400);
+      const replaceOwnedId = decision === "replace" ? cleanBigIntId(payload.replaceOwnedId) : 0;
+      if (decision === "replace" && !replaceOwnedId) return json({ error: "请选择要替换的仓库天赋" }, 400);
 
       const { data: choice, error: choiceError } = await supabase
         .from("talent_overflow_choices")
-        .select("id, pool_key, talent_id, talent_name, rank, source")
+        .delete()
         .eq("id", choiceId)
         .eq("invite_code_hash", identity.codeHash)
+        .select("id, pool_key, talent_id, talent_name, rank, source")
         .maybeSingle();
       if (isMissingTalentTable(choiceError)) return json({ error: "请先运行 talent_inventory_migration.sql" }, 400);
       if (choiceError) return json({ error: choiceError.message }, 400);
-      if (!choice) return json({ error: "待处理天赋不存在" }, 404);
+      if (!choice) return json({ error: "待处理天赋不存在或已处理" }, 404);
 
       let fragmentGainTotal = 0;
       if (decision === "discard") {
-        const { error: deleteChoiceError } = await supabase
-          .from("talent_overflow_choices")
-          .delete()
-          .eq("id", choiceId)
-          .eq("invite_code_hash", identity.codeHash);
-        if (deleteChoiceError) return json({ error: deleteChoiceError.message }, 400);
         fragmentGainTotal += getTalentFragmentGain(choice.rank);
       } else {
-        const replaceOwnedId = cleanBigIntId(payload.replaceOwnedId);
-        if (!replaceOwnedId) return json({ error: "请选择要替换的仓库天赋" }, 400);
-
-        const { data: replaced, error: replacedError } = await supabase
-          .from("owned_talents")
-          .select("id, storage_slot, rank")
-          .eq("id", replaceOwnedId)
-          .eq("invite_code_hash", identity.codeHash)
-          .not("storage_slot", "is", null)
-          .maybeSingle();
-        if (replacedError) return json({ error: replacedError.message }, 400);
-        if (!replaced) return json({ error: "要替换的仓库天赋不存在" }, 404);
-
         const { data: existingSame, error: existingSameError } = await supabase
           .from("owned_talents")
           .select("id")
@@ -1900,20 +1884,18 @@ Deno.serve(async (req) => {
           .maybeSingle();
         if (existingSameError) return json({ error: existingSameError.message }, 400);
         if (existingSame) {
-          const { error: deleteDuplicateChoiceError } = await supabase
-            .from("talent_overflow_choices")
-            .delete()
-            .eq("id", choiceId)
-            .eq("invite_code_hash", identity.codeHash);
-          if (deleteDuplicateChoiceError) return json({ error: deleteDuplicateChoiceError.message }, 400);
           fragmentGainTotal += getTalentFragmentGain(choice.rank);
         } else {
-          const { error: deleteOwnedError } = await supabase
+          const { data: replaced, error: deleteOwnedError } = await supabase
             .from("owned_talents")
             .delete()
             .eq("id", replaceOwnedId)
-            .eq("invite_code_hash", identity.codeHash);
+            .eq("invite_code_hash", identity.codeHash)
+            .not("storage_slot", "is", null)
+            .select("id, storage_slot, rank")
+            .maybeSingle();
           if (deleteOwnedError) return json({ error: deleteOwnedError.message }, 400);
+          if (!replaced) return json({ error: "要替换的仓库天赋不存在或已处理" }, 404);
           fragmentGainTotal += getTalentFragmentGain(replaced.rank);
 
           const { error: insertReplacementError } = await supabase
@@ -1928,13 +1910,6 @@ Deno.serve(async (req) => {
               storage_slot: replaced.storage_slot,
             });
           if (insertReplacementError) return json({ error: insertReplacementError.message }, 400);
-
-          const { error: deleteChoiceError } = await supabase
-            .from("talent_overflow_choices")
-            .delete()
-            .eq("id", choiceId)
-            .eq("invite_code_hash", identity.codeHash);
-          if (deleteChoiceError) return json({ error: deleteChoiceError.message }, 400);
         }
       }
 
@@ -2005,22 +1980,16 @@ Deno.serve(async (req) => {
       const ownedTalentId = cleanBigIntId(payload.ownedTalentId);
       if (!ownedTalentId) return json({ error: "仓库天赋不正确" }, 400);
 
-      const { data: ownedTalent, error: ownedReadError } = await supabase
-        .from("owned_talents")
-        .select("id, rank")
-        .eq("id", ownedTalentId)
-        .eq("invite_code_hash", identity.codeHash)
-        .not("storage_slot", "is", null)
-        .maybeSingle();
-      if (ownedReadError) return json({ error: ownedReadError.message }, 400);
-      if (!ownedTalent) return json({ error: "仓库天赋不存在" }, 404);
-
-      const { error: deleteOwnedError } = await supabase
+      const { data: ownedTalent, error: deleteOwnedError } = await supabase
         .from("owned_talents")
         .delete()
         .eq("id", ownedTalentId)
-        .eq("invite_code_hash", identity.codeHash);
+        .eq("invite_code_hash", identity.codeHash)
+        .not("storage_slot", "is", null)
+        .select("id, rank")
+        .maybeSingle();
       if (deleteOwnedError) return json({ error: deleteOwnedError.message }, 400);
+      if (!ownedTalent) return json({ error: "仓库天赋不存在或已处理" }, 404);
 
       const fragmentGain = getTalentFragmentGain(ownedTalent.rank);
       const fragmentUpdate = await addUserFragments(supabase, identity.codeHash, fragmentGain);
