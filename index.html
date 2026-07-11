@@ -152,6 +152,23 @@
             writing-mode: vertical-rl;
             filter: blur(0.1px);
         }
+        body.visual-effects-muted::before,
+        body.visual-effects-muted::after,
+        body.visual-effects-muted .era-wall,
+        body.visual-effects-muted .ambient-mask,
+        body.visual-effects-muted .dungeon-card::after,
+        body.visual-effects-muted .forum-feed::after,
+        body.visual-effects-muted .role-insight-panel::after,
+        body.visual-effects-muted .profile-hero::after,
+        body.visual-effects-muted .leaderboard-row::after,
+        body.visual-effects-muted .empty-state::after {
+            opacity: 0 !important;
+            animation: none !important;
+        }
+        body.visual-effects-muted .void-constellation-orbit,
+        body.visual-effects-muted .dungeon-card.divine-trial::before {
+            animation: none !important;
+        }
         .era-wall {
             position: fixed;
             top: 0;
@@ -936,6 +953,54 @@
             flex-direction: column;
             gap: 16px;
         }
+        .archive-pagination {
+            display: grid;
+            grid-template-columns: minmax(0, 1fr) auto;
+            gap: 12px;
+            align-items: center;
+            padding: 13px 14px;
+            border: 1px solid rgba(231,207,138,0.12);
+            border-radius: 8px;
+            background: rgba(8,9,14,0.72);
+            box-shadow: var(--surface-shadow);
+        }
+        .archive-pagination-info {
+            color: var(--text-muted);
+            font-size: 0.76rem;
+        }
+        .archive-pagination-info strong {
+            color: var(--gold-light);
+        }
+        .archive-pagination-actions {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+            justify-content: flex-end;
+        }
+        .archive-page-btn {
+            min-width: 34px;
+            height: 32px;
+            padding: 0 10px;
+            border: 1px solid rgba(255,255,255,0.08);
+            border-radius: 8px;
+            background: rgba(0,0,0,0.18);
+            color: var(--text-muted);
+            font: inherit;
+            font-size: 0.72rem;
+            cursor: pointer;
+            transition: all var(--transition);
+        }
+        .archive-page-btn:hover,
+        .archive-page-btn.active {
+            border-color: rgba(231,207,138,0.42);
+            background: rgba(231,207,138,0.13);
+            color: var(--text-bright);
+        }
+        .archive-page-btn:disabled {
+            cursor: not-allowed;
+            opacity: 0.42;
+            transform: none;
+        }
         .archive-layout {
             display: grid;
             grid-template-columns: minmax(0, 1fr) 300px;
@@ -983,6 +1048,10 @@
             border-color: rgba(231,207,138,0.28);
             color: var(--text-bright);
             transform: translateY(-1px);
+        }
+        .oracle-item.is-linked {
+            border-color: color-mix(in srgb, var(--god-primary, var(--gold-light)) 58%, rgba(255,255,255,0.10));
+            box-shadow: 0 0 22px var(--god-glow, rgba(231,207,138,0.15));
         }
         .oracle-item strong {
             font-size: 0.82rem;
@@ -4660,10 +4729,26 @@
         .controls .sort-btn.active { background: rgba(231,207,138,0.07); border: 0; color: var(--gold-light); box-shadow: none; }
         .controls .sort-btn.active::after { transform: scaleX(1); }
         .controls .sort-btn:hover { color: var(--text-bright); border: 0; background: rgba(255,255,255,0.035); }
-        .filter-toggle-btn { border-radius: 9px; border-color: rgba(211,175,97,0.32); background: rgba(211,175,97,0.08); }
+        .filter-toggle-btn { border-radius: 8px; border-color: rgba(211,175,97,0.32); background: rgba(211,175,97,0.08); }
         .filter-toggle-btn:hover { box-shadow: 0 0 18px rgba(211,175,97,0.16); }
+        .visual-toggle-btn {
+            flex: 0 0 auto;
+            min-width: 116px;
+            border-radius: 8px;
+            border-color: rgba(122,174,194,0.28);
+            background: rgba(122,174,194,0.07);
+        }
+        .visual-toggle-btn[aria-pressed="true"] {
+            border-color: rgba(231,207,138,0.44);
+            color: var(--gold-light);
+            background: rgba(231,207,138,0.10);
+        }
         .dungeon-card { border-radius: 14px; box-shadow: var(--surface-shadow); }
         .dungeon-card[data-god]:hover { box-shadow: var(--surface-shadow-hover), 0 0 34px var(--god-glow); }
+        .dungeon-card.is-oracle-focused {
+            border-color: color-mix(in srgb, var(--god-primary, var(--gold-light)) 82%, rgba(255,255,255,0.16));
+            box-shadow: var(--surface-shadow-hover), 0 0 0 1px color-mix(in srgb, var(--god-primary, var(--gold-light)) 48%, transparent), 0 0 44px var(--god-glow);
+        }
         .trial-card-head { margin-bottom: 14px; }
         .trial-title-block { gap: 12px; }
         .dungeon-card .card-title { font-size: 1.45rem; }
@@ -4836,6 +4921,12 @@
             .oracle-sidebar {
                 position: static;
                 grid-template-columns: repeat(3, minmax(0, 1fr));
+            }
+            .oracle-panel-supreme,
+            .oracle-panel-testimony,
+            .oracle-panel-architect,
+            .oracle-panel-sigil {
+                min-height: 100%;
             }
             .role-insight-cards,
             .trial-dossier-grid {
@@ -5156,6 +5247,16 @@
                 width: 100%;
                 justify-content: space-between;
             }
+            .visual-toggle-btn { width: 100%; }
+            .archive-pagination {
+                grid-template-columns: 1fr;
+            }
+            .archive-pagination-actions {
+                justify-content: stretch;
+            }
+            .archive-page-btn {
+                flex: 1 1 44px;
+            }
             .god-cluster { grid-template-columns: 1fr; gap: 8px; }
             .god-cluster-title { padding-top: 0; }
             .card-path-rune {
@@ -5175,6 +5276,12 @@
             }
             .oracle-sidebar {
                 grid-template-columns: 1fr;
+            }
+            .oracle-panel {
+                padding: 12px;
+            }
+            .god-quick-index {
+                grid-template-columns: repeat(4, minmax(0, 1fr));
             }
             .search-input { max-width: none; width: 100%; }
             .forum-feed { padding: 16px 14px; }
@@ -5270,6 +5377,10 @@
                 <button class="filter-toggle-btn" id="filterToggleBtn" onclick="toggleAdvancedFilters()" aria-expanded="false">
                     <span>✦ 分途观览</span>
                     <small id="filterSummaryText">全神席 · 全部难度</small>
+                </button>
+                <button class="filter-toggle-btn visual-toggle-btn" id="visualEffectsToggle" type="button" onclick="toggleVisualEffects()" aria-pressed="true">
+                    <span>✧ 视觉粒子</span>
+                    <small id="visualEffectsText">开启</small>
                 </button>
             </div>
             <div class="advanced-filters" id="advancedFilters" hidden>
@@ -6105,8 +6216,14 @@
         const LEGACY_DIFFICULTY_MAP = { 凡尘: '新手', 觉醒: '低', 超凡: '中', 神话: '高', 愚者: '高' };
         const DEFAULT_ASCENSION_SCORE = 1000;
         const DEFAULT_AUDIENCE_SCORE = 0;
+        const ARCHIVE_PAGE_SIZE = 5;
+        const VISUAL_EFFECTS_STORAGE_KEY = 'visual_effects_enabled_v1';
         let inviteSession = getLocalData(INVITE_STORAGE_KEY, null);
         let currentSort = 'popular', searchQuery = '', selectedGod = 'all', selectedPath = 'all', selectedDifficulty = 'all', searchTimeout = null, currentDetailId = null;
+        let archivePage = 1;
+        let archiveFilteredDungeons = [];
+        let archiveFocusId = null;
+        let visualEffectsEnabled = getLocalData(VISUAL_EFFECTS_STORAGE_KEY, true) !== false;
         let archiveScrollY = 0;
         let profileScrollY = 0;
         let leaderboardScrollY = 0;
@@ -8918,6 +9035,21 @@
             button.textContent = shouldOpen ? '收起' : '展开';
         }
 
+        function applyVisualEffectsPreference() {
+            document.body.classList.toggle('visual-effects-muted', !visualEffectsEnabled);
+            const button = document.getElementById('visualEffectsToggle');
+            const label = document.getElementById('visualEffectsText');
+            if (button) button.setAttribute('aria-pressed', String(visualEffectsEnabled));
+            if (label) label.textContent = visualEffectsEnabled ? '开启' : '静默';
+        }
+
+        function toggleVisualEffects() {
+            visualEffectsEnabled = !visualEffectsEnabled;
+            setLocalData(VISUAL_EFFECTS_STORAGE_KEY, visualEffectsEnabled);
+            applyVisualEffectsPreference();
+            showToast(visualEffectsEnabled ? '视觉粒子已开启' : '视觉粒子已静默');
+        }
+
         function populateGodSelect() {
             const select = document.getElementById('dungeonType');
             if (!select) return;
@@ -8928,6 +9060,7 @@
         function setGodFilter(god) {
             selectedGod = god;
             selectedPath = 'all';
+            archivePage = 1;
             renderGodFilters();
             renderPathNav();
             updateFilterSummary();
@@ -8937,6 +9070,7 @@
         function setPathFilter(path) {
             selectedPath = selectedPath === path ? 'all' : path;
             selectedGod = 'all';
+            archivePage = 1;
             renderPathNav();
             renderGodFilters();
             updateFilterSummary();
@@ -8945,6 +9079,7 @@
 
         function setDifficultyFilter(difficulty) {
             selectedDifficulty = difficulty;
+            archivePage = 1;
             renderDifficultyFilters();
             updateFilterSummary();
             renderDungeonList();
@@ -8979,6 +9114,7 @@
             selectedGod = 'all';
             selectedPath = 'all';
             selectedDifficulty = 'all';
+            archivePage = 1;
             const input = document.getElementById('searchInput');
             if (input) input.value = '';
             renderPathNav();
@@ -8987,6 +9123,78 @@
             updateFilterSummary();
             renderDungeonList();
             showToast('已显示全部试炼');
+        }
+
+        function renderArchivePagination(totalCount, page, pageCount) {
+            if (totalCount <= ARCHIVE_PAGE_SIZE) return '';
+            const start = (page - 1) * ARCHIVE_PAGE_SIZE + 1;
+            const end = Math.min(totalCount, page * ARCHIVE_PAGE_SIZE);
+            const radius = 1;
+            const pageNumbers = [];
+            for (let i = 1; i <= pageCount; i++) {
+                if (i === 1 || i === pageCount || Math.abs(i - page) <= radius) pageNumbers.push(i);
+            }
+            const uniquePages = [...new Set(pageNumbers)].sort((a, b) => a - b);
+            const buttons = [];
+            let last = 0;
+            uniquePages.forEach(num => {
+                if (last && num - last > 1) buttons.push('<span class="archive-pagination-info">…</span>');
+                buttons.push(`<button type="button" class="archive-page-btn ${num === page ? 'active' : ''}" onclick="goArchivePage(${num})" ${num === page ? 'aria-current="page"' : ''}>${num}</button>`);
+                last = num;
+            });
+            return `
+                <nav class="archive-pagination" aria-label="试炼分页">
+                    <div class="archive-pagination-info">当前显示 <strong>${start}-${end}</strong> / ${totalCount} 个试炼 · 第 ${page} / ${pageCount} 页</div>
+                    <div class="archive-pagination-actions">
+                        <button type="button" class="archive-page-btn" onclick="goArchivePage(${page - 1})" ${page <= 1 ? 'disabled' : ''}>上一页</button>
+                        ${buttons.join('')}
+                        <button type="button" class="archive-page-btn" onclick="goArchivePage(${page + 1})" ${page >= pageCount ? 'disabled' : ''}>下一页</button>
+                    </div>
+                </nav>`;
+        }
+
+        function goArchivePage(page) {
+            const pageCount = Math.max(1, Math.ceil(archiveFilteredDungeons.length / ARCHIVE_PAGE_SIZE));
+            const nextPage = Math.min(Math.max(1, Number(page) || 1), pageCount);
+            if (nextPage === archivePage) return;
+            archivePage = nextPage;
+            renderDungeonList().then(() => {
+                document.getElementById('dungeonList')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            });
+        }
+
+        function markLinkedOracle(id) {
+            document.querySelectorAll('.oracle-item.is-linked').forEach(item => item.classList.remove('is-linked'));
+            const linked = Array.from(document.querySelectorAll('.oracle-item[data-dungeon-id]'))
+                .find(item => item.dataset.dungeonId === String(id));
+            if (linked) linked.classList.add('is-linked');
+        }
+
+        function highlightArchiveCard(id) {
+            document.querySelectorAll('.dungeon-card.is-oracle-focused').forEach(card => card.classList.remove('is-oracle-focused'));
+            const card = Array.from(document.querySelectorAll('.dungeon-card[data-dungeon-id]'))
+                .find(item => item.dataset.dungeonId === String(id));
+            if (!card) return false;
+            card.classList.add('is-oracle-focused');
+            card.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            window.setTimeout(() => card.classList.remove('is-oracle-focused'), 2600);
+            return true;
+        }
+
+        async function focusArchiveTrial(id) {
+            archiveFocusId = String(id);
+            const index = archiveFilteredDungeons.findIndex(item => String(item.id) === String(id));
+            if (index >= 0) {
+                const targetPage = Math.floor(index / ARCHIVE_PAGE_SIZE) + 1;
+                if (targetPage !== archivePage) {
+                    archivePage = targetPage;
+                    await renderDungeonList();
+                }
+            }
+            markLinkedOracle(id);
+            if (!highlightArchiveCard(id)) {
+                await openDetail(id);
+            }
         }
 
         function renderGodQuickIndex(godCounts = {}) {
@@ -9113,13 +9321,19 @@
             else if (currentSort === 'newest') dungeons.sort((a,b) => new Date(b.created_at) - new Date(a.created_at));
             else if (currentSort === 'comments') dungeons.sort((a,b) => (b.comment_count||0)-(a.comment_count||0));
             updateDiscoveryFilterStatus(totalDungeons, dungeons.length);
+            archiveFilteredDungeons = [...dungeons];
             if (!dungeons.length) {
+                archivePage = 1;
                 const filtered = searchQuery || selectedGod !== 'all' || selectedPath !== 'all' || selectedDifficulty !== 'all';
                 listEl.innerHTML = renderArchiveEmptyState(!!filtered);
                 await renderOracleSidebar([]);
                 return;
             }
-            listEl.innerHTML = dungeons.map((d,i) => {
+            const pageCount = Math.max(1, Math.ceil(dungeons.length / ARCHIVE_PAGE_SIZE));
+            archivePage = Math.min(Math.max(1, archivePage), pageCount);
+            const pageStart = (archivePage - 1) * ARCHIVE_PAGE_SIZE;
+            const visibleDungeons = dungeons.slice(pageStart, pageStart + ARCHIVE_PAGE_SIZE);
+            listEl.innerHTML = visibleDungeons.map((d,i) => {
                 const godLabel = formatGodName(d.type);
                 const godPath = formatGodPath(d.type);
                 const godClass = getGodClass(d.type);
@@ -9132,15 +9346,16 @@
                 const ratingValue = score ? score.toFixed(1) : '—';
                 const testimonyCount = Number(d.comment_count || 0);
                 const godSigil = renderGodSigil(d.type, 'lg', 'god-emblem');
+                const trialIndex = pageStart + i + 1;
                 return `
-                <div class="dungeon-card ${godClass} ${divineClass}" data-god="${escapeHtml(getGodInfo(d.type).god)}" data-motif="${escapeHtml(skin.motif)}" data-particle="${escapeHtml(skin.particle)}" style="${godStyle}" onclick="openDetail('${escapeHtml(d.id)}')">
+                <div class="dungeon-card ${godClass} ${divineClass}" data-dungeon-id="${escapeHtml(d.id)}" data-god="${escapeHtml(getGodInfo(d.type).god)}" data-motif="${escapeHtml(skin.motif)}" data-particle="${escapeHtml(skin.particle)}" style="${godStyle}" onclick='openDetail(${jsString(d.id)})'>
                     <div class="trial-card-head">
                         <div class="trial-title-block">
                             ${godSigil}
                             <div>
                                 <div class="card-title-line">
                                     <span class="card-title">${escapeHtml(d.name||'未命名试炼')}</span>
-                                    <span class="trial-number">试炼编号 #${i + 1}</span>
+                                    <span class="trial-number">试炼编号 #${trialIndex}</span>
                                 </div>
                                 <div class="trial-subline">${escapeHtml(godPath)}命途 · ${escapeHtml(godLabel)}</div>
                             </div>
@@ -9169,8 +9384,16 @@
                     </div>
                     ${renderTrialOracle(d, godClass)}
                 </div>`;
-            }).join('');
+            }).join('') + renderArchivePagination(dungeons.length, archivePage, pageCount);
             await renderOracleSidebar(dungeons);
+            if (archiveFocusId) {
+                const pendingFocusId = archiveFocusId;
+                archiveFocusId = null;
+                requestAnimationFrame(() => {
+                    markLinkedOracle(pendingFocusId);
+                    highlightArchiveCard(pendingFocusId);
+                });
+            }
         }
 
         function getDiffClass(d) { const m={新手:'difficulty-newbie',低:'difficulty-low',中:'difficulty-medium',高:'difficulty-high'}; return m[normalizeDifficulty(d)]||'difficulty-medium'; }
@@ -9192,7 +9415,7 @@
                     .slice(0, 6);
                 if (supremeMeta) supremeMeta.textContent = top.length ? `${top.length} 条` : '待降';
                 supreme.innerHTML = top.length ? top.map((d, index) => `
-                    <div class="oracle-item" data-god="${escapeHtml(getGodInfo(d.type).god)}" onclick='openDetail(${jsString(d.id)})'>
+                    <div class="oracle-item" data-dungeon-id="${escapeHtml(d.id)}" data-god="${escapeHtml(getGodInfo(d.type).god)}" onclick='focusArchiveTrial(${jsString(d.id)})'>
                         <div class="oracle-item-main oracle-item-main-ranked">
                             <span class="oracle-rank">${String(index + 1).padStart(2, '0')}</span>
                             ${renderGodSigil(d.type, 'xs')}
@@ -9205,7 +9428,7 @@
                 const latest = await fetchLatestComments(6);
                 if (testimonyMeta) testimonyMeta.textContent = latest.length ? `${latest.length} 条` : '空席';
                 testimony.innerHTML = latest.length ? latest.map(item => `
-                    <div class="oracle-item" data-god="${escapeHtml(getGodInfo(item.dungeon?.type || '命运').god)}" style="${getGodSkinStyle(item.dungeon?.type || '命运')}" onclick='openDetail(${jsString(item.dungeon_id)})'>
+                    <div class="oracle-item" data-dungeon-id="${escapeHtml(item.dungeon_id)}" data-god="${escapeHtml(getGodInfo(item.dungeon?.type || '命运').god)}" style="${getGodSkinStyle(item.dungeon?.type || '命运')}" onclick='focusArchiveTrial(${jsString(item.dungeon_id)})'>
                         <div class="oracle-item-main">
                             ${renderGodSigil(item.dungeon?.type || '命运', 'xs')}
                             <strong>${escapeHtml(item.author || '匿名信徒')}</strong>
@@ -9227,7 +9450,7 @@
                     .slice(0, 6);
                 if (architectMeta) architectMeta.textContent = newest.length ? `${newest.length} 位` : '空席';
                 architects.innerHTML = newest.length ? newest.map(d => `
-                    <div class="oracle-item" data-god="${escapeHtml(getGodInfo(d.type).god)}" style="${getGodSkinStyle(d.type)}" onclick='openDetail(${jsString(d.id)})'>
+                    <div class="oracle-item" data-dungeon-id="${escapeHtml(d.id)}" data-god="${escapeHtml(getGodInfo(d.type).god)}" style="${getGodSkinStyle(d.type)}" onclick='focusArchiveTrial(${jsString(d.id)})'>
                         <div class="oracle-item-main">
                             ${renderGodSigil(d.type, 'xs')}
                             <strong>${escapeHtml(d.creator || '匿名筑戏人')}</strong>
@@ -9960,8 +10183,8 @@
             await updateProfileNoticeBadge();
             if (document.getElementById('profilePage')?.style.display !== 'none') await renderProfilePage();
         }
-        function setSort(sort,btn){ currentSort=sort; document.querySelectorAll('.sort-btn').forEach(b=>b.classList.remove('active')); btn.classList.add('active'); renderDungeonList(); }
-        function debounceSearch(){ clearTimeout(searchTimeout); searchTimeout=setTimeout(()=>{ searchQuery=document.getElementById('searchInput').value; renderDungeonList(); },350); }
+        function setSort(sort,btn){ currentSort=sort; archivePage=1; document.querySelectorAll('.sort-btn').forEach(b=>b.classList.remove('active')); btn.classList.add('active'); renderDungeonList(); }
+        function debounceSearch(){ clearTimeout(searchTimeout); searchTimeout=setTimeout(()=>{ searchQuery=document.getElementById('searchInput').value; archivePage=1; renderDungeonList(); },350); }
         function showToast(msg){ const c=document.getElementById('toastContainer'); const t=document.createElement('div'); t.className='toast'; t.textContent=msg; c.appendChild(t); setTimeout(()=>{if(t.parentNode)t.remove();},3200); }
         document.addEventListener('click', event => {
             const target = event.target instanceof Element ? event.target : null;
@@ -10016,6 +10239,7 @@
         (async function init(){
             const searchInput = document.getElementById('searchInput');
             if (searchInput) searchInput.value = '';
+            applyVisualEffectsPreference();
             populateGodSelect();
             renderPathNav();
             renderGodFilters();
