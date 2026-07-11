@@ -172,10 +172,10 @@
             position: fixed;
             top: 0;
             bottom: 0;
-            width: clamp(108px, 9vw, 148px);
+            width: clamp(70px, 4.8vw, 80px);
             z-index: 0;
             pointer-events: none;
-            opacity: 0.07;
+            opacity: 0.058;
             background:
                 var(--edge-mural-glyphs),
                 linear-gradient(90deg, rgba(0,0,0,0.38), transparent 46%, rgba(255,255,255,0.05), transparent 72%),
@@ -323,15 +323,153 @@
         }
         .edge-particle-stream.left { left: 0; }
         .edge-particle-stream.right { right: 0; animation-delay: -9s; transform: scaleX(-1); }
+        .edge-chronology-band {
+            position: fixed;
+            top: 12vh;
+            right: clamp(78px, 5.5vw, 96px);
+            height: 76vh;
+            width: 74px;
+            opacity: 0.78;
+            display: grid;
+            align-content: space-between;
+            justify-items: end;
+            gap: 8px;
+            padding: 16px 0;
+            background: linear-gradient(180deg, transparent, var(--edge-accent-soft) 12%, var(--edge-accent-soft) 88%, transparent);
+            mask: linear-gradient(180deg, transparent, #000 8%, #000 92%, transparent);
+            -webkit-mask: linear-gradient(180deg, transparent, #000 8%, #000 92%, transparent);
+        }
+        .edge-chronology-band::before {
+            content: "";
+            position: absolute;
+            top: 10px;
+            bottom: 10px;
+            right: 7px;
+            width: 1px;
+            background: linear-gradient(180deg, transparent, rgba(231,207,138,0.36), rgba(122,174,194,0.22), rgba(231,207,138,0.36), transparent);
+            filter: drop-shadow(0 0 8px var(--edge-primary));
+        }
+        .edge-era-tick {
+            position: relative;
+            z-index: 1;
+            display: grid;
+            grid-template-columns: minmax(0, 1fr) 14px;
+            align-items: center;
+            gap: 6px;
+            min-width: 54px;
+            color: rgba(234,234,242,0.28);
+            font-family: var(--font-display);
+            font-size: 0.6rem;
+            line-height: 1;
+            letter-spacing: 0.08em;
+            text-align: right;
+        }
+        .edge-era-tick::after {
+            content: "";
+            width: 7px;
+            height: 7px;
+            border: 1px solid rgba(231,207,138,0.28);
+            border-radius: 50%;
+            background: rgba(8,9,14,0.76);
+            box-shadow: 0 0 0 1px rgba(0,0,0,0.28);
+        }
+        .edge-era-tick.is-active {
+            color: var(--edge-primary);
+            text-shadow: 0 0 14px var(--edge-primary);
+        }
+        .edge-era-tick.is-active::after {
+            width: 12px;
+            height: 12px;
+            border-color: var(--edge-primary);
+            background: radial-gradient(circle, var(--edge-primary) 0 38%, rgba(8,9,14,0.78) 42%);
+            box-shadow: 0 0 18px var(--edge-primary);
+            animation: activeEraPulse 1.9s ease-in-out infinite;
+        }
+        .edge-current-label {
+            position: fixed;
+            z-index: 0;
+            pointer-events: none;
+            display: grid;
+            gap: 7px;
+            width: 190px;
+            padding: 13px 14px;
+            border: 1px solid color-mix(in srgb, var(--edge-primary) 30%, rgba(255,255,255,0.08));
+            border-radius: 8px;
+            background:
+                linear-gradient(135deg, color-mix(in srgb, var(--edge-primary) 18%, transparent), transparent 56%),
+                rgba(7,8,12,0.68);
+            box-shadow: 0 0 34px color-mix(in srgb, var(--edge-primary) 20%, transparent);
+            color: rgba(234,234,242,0.82);
+            backdrop-filter: blur(8px);
+        }
+        .edge-current-label.left {
+            left: clamp(92px, 6.6vw, 126px);
+            top: 23vh;
+        }
+        .edge-current-label.right {
+            right: clamp(112px, 7.4vw, 150px);
+            top: 30vh;
+            text-align: right;
+        }
+        .edge-current-label small {
+            color: color-mix(in srgb, var(--edge-primary) 84%, rgba(234,234,242,0.66));
+            font-size: 0.58rem;
+            font-weight: 900;
+            letter-spacing: 0.18em;
+        }
+        .edge-current-label strong {
+            color: color-mix(in srgb, var(--text-bright) 88%, var(--edge-primary));
+            font-family: var(--font-display);
+            font-size: 1.06rem;
+            line-height: 1.2;
+            text-shadow: 0 0 18px color-mix(in srgb, var(--edge-primary) 38%, transparent);
+        }
+        .edge-current-label span {
+            color: rgba(234,234,242,0.60);
+            font-size: 0.67rem;
+            line-height: 1.45;
+        }
+        .edge-current-label .edge-god-sigil {
+            width: 38px;
+            height: 38px;
+            display: grid;
+            place-items: center;
+            border: 1px solid color-mix(in srgb, var(--edge-primary) 42%, rgba(255,255,255,0.08));
+            border-radius: 50%;
+            color: var(--edge-primary);
+            box-shadow: inset 0 0 16px color-mix(in srgb, var(--edge-primary) 16%, transparent), 0 0 18px color-mix(in srgb, var(--edge-primary) 18%, transparent);
+        }
+        .edge-current-label.right .edge-god-sigil {
+            justify-self: end;
+        }
+        .edge-current-label.is-switching {
+            animation: edgeLabelSwitch 0.72s ease both;
+        }
+        @keyframes activeEraPulse {
+            0%, 100% { transform: scale(1); opacity: 0.78; }
+            50% { transform: scale(1.22); opacity: 1; }
+        }
+        @keyframes edgeLabelSwitch {
+            from { opacity: 0.35; transform: translateY(8px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
         @keyframes edgeParticleDrift {
             from { background-position: 0 0; }
             to { background-position: 0 180px; }
         }
         body.visual-effects-muted .edge-particle-stream { display: none; }
         body.visual-effects-muted .edge-silhouette { opacity: 0.045; }
+        body.visual-effects-muted .edge-chronology-band { opacity: 0.38; }
+        body.visual-effects-muted .edge-current-label { opacity: 0.54; }
         @media (max-width: 1199px) {
             .edge-silhouette,
-            .edge-particle-stream { display: none; }
+            .edge-particle-stream,
+            .edge-chronology-band,
+            .edge-current-label { display: none; }
+        }
+        @media (prefers-reduced-motion: reduce) {
+            .edge-era-tick.is-active::after,
+            .edge-current-label.is-switching { animation: none; }
         }
 
         /* ========== 顶部导航 ========== */
@@ -1076,10 +1214,41 @@
             transform: none;
         }
         .archive-layout {
+            position: relative;
             display: grid;
             grid-template-columns: minmax(0, 1fr) 300px;
             gap: 18px;
             align-items: start;
+        }
+        .archive-layout::before {
+            content: "";
+            position: absolute;
+            top: 8px;
+            bottom: 8px;
+            left: calc(100% - 318px);
+            width: 1px;
+            pointer-events: none;
+            background:
+                linear-gradient(180deg, transparent, rgba(231,207,138,0.34) 16%, rgba(122,174,194,0.20) 50%, rgba(231,207,138,0.28) 84%, transparent);
+            box-shadow: 0 0 12px rgba(231,207,138,0.10);
+        }
+        .archive-layout::after {
+            content: "✦\A◇\A▣\A✺\A◒\A◈";
+            position: absolute;
+            top: 32px;
+            bottom: 32px;
+            left: calc(100% - 326px);
+            width: 16px;
+            display: grid;
+            align-content: space-between;
+            justify-items: center;
+            white-space: pre-line;
+            pointer-events: none;
+            color: rgba(231,207,138,0.24);
+            font-family: var(--font-display);
+            font-size: 0.58rem;
+            line-height: 1;
+            text-shadow: 0 0 10px rgba(231,207,138,0.18);
         }
         .oracle-sidebar {
             position: sticky;
@@ -4994,6 +5163,10 @@
             .archive-layout {
                 grid-template-columns: 1fr;
             }
+            .archive-layout::before,
+            .archive-layout::after {
+                display: none;
+            }
             .oracle-sidebar {
                 position: static;
                 grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -5390,6 +5563,9 @@
         <div class="edge-silhouette br"></div>
         <div class="edge-particle-stream left"></div>
         <div class="edge-particle-stream right"></div>
+        <div class="edge-current-label left" id="edgeEraLabel"></div>
+        <div class="edge-current-label right" id="edgeGodLabel"></div>
+        <div class="edge-chronology-band" id="edgeChronologyBand"></div>
     </div>
     <header class="header">
         <div class="logo">
@@ -9173,6 +9349,55 @@
             return ATMOSPHERE_CYCLE[index] || { path: '虚无', god: '欺诈' };
         }
 
+        function getFilterAtmosphereNode() {
+            if (selectedGod !== 'all') {
+                const info = getGodInfo(selectedGod);
+                if (info.known) return { path: info.path, god: selectedGod };
+            }
+            if (selectedPath !== 'all') {
+                const group = GOD_GROUPS.find(item => item.path === selectedPath);
+                if (group) return { path: group.path, god: group.gods?.[0] || '欺诈' };
+            }
+            return null;
+        }
+
+        function syncEdgeAtmosphere() {
+            updateEdgeAtmosphere(getFilterAtmosphereNode() || getActiveAtmosphereNode());
+        }
+
+        function renderEdgeAtmosphereSignals() {
+            const eraLabel = document.getElementById('edgeEraLabel');
+            const godLabel = document.getElementById('edgeGodLabel');
+            const band = document.getElementById('edgeChronologyBand');
+            const meta = PATH_META[currentAtmosphereEra] || PATH_META['虚无'];
+            const prayer = getGodPrayer(currentAtmosphereGod);
+            const sigil = renderGodSigil(currentAtmosphereGod, 'sm', 'edge-god-sigil');
+            const modeLabel = getFilterAtmosphereNode() ? '筛选牵引' : '自动轮转';
+            if (eraLabel) {
+                eraLabel.classList.remove('is-switching');
+                eraLabel.innerHTML = `
+                    <small>${escapeHtml(modeLabel)} · ERA</small>
+                    <strong>${escapeHtml(meta.sigil)} ${escapeHtml(currentAtmosphereEra)}纪元</strong>
+                    <span>${escapeHtml(meta.edict)}</span>`;
+                requestAnimationFrame(() => eraLabel.classList.add('is-switching'));
+            }
+            if (godLabel) {
+                godLabel.classList.remove('is-switching');
+                godLabel.innerHTML = `
+                    ${sigil}
+                    <small>ACTIVE GOD</small>
+                    <strong>${escapeHtml(currentAtmosphereGod)}之神</strong>
+                    <span>${escapeHtml(prayer)}</span>`;
+                requestAnimationFrame(() => godLabel.classList.add('is-switching'));
+            }
+            if (band) {
+                band.innerHTML = ERA_TIMELINE.map((era, index) => `
+                    <span class="edge-era-tick ${era.path === currentAtmosphereEra ? 'is-active' : ''}" title="${escapeHtml(era.title)}">
+                        ${index + 1} ${escapeHtml(era.path)}
+                    </span>`).join('');
+            }
+        }
+
         function updateEdgeAtmosphere(node = getActiveAtmosphereNode()) {
             currentAtmosphereEra = ERA_CHRONICLE_LIBRARY[node.path] ? node.path : '虚无';
             currentAtmosphereGod = getGodInfo(node.god).known ? node.god : (GOD_GROUPS.find(group => group.path === currentAtmosphereEra)?.gods?.[0] || '欺诈');
@@ -9180,6 +9405,7 @@
             if (layer) layer.dataset.era = currentAtmosphereEra;
             const title = document.getElementById('chronicleEraName');
             if (title) title.textContent = `${currentAtmosphereEra}・${currentAtmosphereGod}`;
+            renderEdgeAtmosphereSignals();
         }
 
         function resetDiscoveryFiltersToEmpty() {
@@ -9207,6 +9433,7 @@
             renderGodFilters();
             renderPathNav();
             updateFilterSummary();
+            syncEdgeAtmosphere();
             renderDungeonList();
         }
 
@@ -9217,6 +9444,7 @@
             renderPathNav();
             renderGodFilters();
             updateFilterSummary();
+            syncEdgeAtmosphere();
             renderDungeonList();
         }
 
@@ -9258,6 +9486,7 @@
             renderGodFilters();
             renderDifficultyFilters();
             updateFilterSummary();
+            syncEdgeAtmosphere();
             renderDungeonList();
             showToast('已显示全部试炼');
         }
@@ -9349,16 +9578,18 @@
             const chronicle = document.getElementById('voidChronicle');
             if (!chronicle) return;
             const pathCounts = countByPath(dungeons, dungeon => getGodInfo(dungeon.type).path);
-            const node = getActiveAtmosphereNode();
+            const filterNode = getFilterAtmosphereNode();
+            const node = filterNode || getActiveAtmosphereNode();
             const era = node.path;
-            updateEdgeAtmosphere(node);
+            syncEdgeAtmosphere();
             const library = ERA_CHRONICLE_LIBRARY[era] || ERA_CHRONICLE_LIBRARY['虚无'];
             const entry = library[index % library.length];
             const eraCount = Number(pathCounts[era] || 0);
+            const modeLabel = filterNode ? '筛选高亮' : '自动轮转';
             chronicle.classList.remove('is-rotating');
             chronicle.innerHTML = `
                 <strong>${renderGodSigil(node.god, 'xs')} ${escapeHtml(node.god)}之神 · ${escapeHtml(entry.lead)}</strong>
-                <span>${escapeHtml(entry.note)} 当前轮转：${escapeHtml(era)}命途 / ${escapeHtml(getGodPrayer(node.god))}。当前视野收录 ${dungeons.length} 个试炼，其中${escapeHtml(era)}命途 ${eraCount} 个。</span>`;
+                <span>${escapeHtml(entry.note)} ${modeLabel}：${escapeHtml(era)}命途 / ${escapeHtml(getGodPrayer(node.god))}。当前视野收录 ${dungeons.length} 个试炼，其中${escapeHtml(era)}命途 ${eraCount} 个。</span>`;
             requestAnimationFrame(() => chronicle.classList.add('is-rotating'));
         }
 
@@ -9368,8 +9599,8 @@
                 clearInterval(chronicleRotationTimer);
                 chronicleRotationTimer = null;
             }
-            const node = getActiveAtmosphereNode();
-            updateEdgeAtmosphere(node);
+            const node = getFilterAtmosphereNode() || getActiveAtmosphereNode();
+            syncEdgeAtmosphere();
             const era = node.path;
             const library = ERA_CHRONICLE_LIBRARY[era] || ERA_CHRONICLE_LIBRARY['虚无'];
             chronicleRotationIndex = chronicleRotationDungeons.length
@@ -9381,8 +9612,9 @@
             chronicleRotationTimer = window.setInterval(() => {
                 atmosphereCycleIndex = (atmosphereCycleIndex + 1) % ATMOSPHERE_CYCLE.length;
                 const activeNode = getActiveAtmosphereNode();
-                updateEdgeAtmosphere(activeNode);
-                const activeLibrary = ERA_CHRONICLE_LIBRARY[activeNode.path] || ERA_CHRONICLE_LIBRARY['虚无'];
+                syncEdgeAtmosphere();
+                const displayNode = getFilterAtmosphereNode() || activeNode;
+                const activeLibrary = ERA_CHRONICLE_LIBRARY[displayNode.path] || ERA_CHRONICLE_LIBRARY['虚无'];
                 chronicleRotationIndex = (chronicleRotationIndex + 1) % activeLibrary.length;
                 renderVoidChronicle(chronicleRotationDungeons, chronicleRotationIndex);
             }, 15000);
