@@ -40,6 +40,11 @@
             --path-chaos-soft: rgba(166, 155, 105, 0.06);
             --path-exist-soft: rgba(122, 174, 194, 0.06);
             --path-void-soft: rgba(211, 175, 97, 0.06);
+            --era-mural-opacity: 0.052;
+            --surface-border: rgba(231,207,138,0.14);
+            --surface-shadow: 0 18px 42px rgba(0,0,0,0.42), inset 0 1px 0 rgba(255,255,255,0.035);
+            --surface-shadow-hover: 0 22px 54px rgba(0,0,0,0.58), inset 0 1px 0 rgba(255,255,255,0.06);
+            --rune-gold: rgba(231,207,138,0.78);
             --difficulty-newbie: #d8d8d0;
             --difficulty-low: #d8d8d0;
             --difficulty-medium: #7aaec2;
@@ -66,6 +71,8 @@
         }
 
         body {
+            position: relative;
+            isolation: isolate;
             background: var(--bg);
             background-image:
                 var(--bg-pattern),
@@ -144,6 +151,58 @@
             text-orientation: mixed;
             writing-mode: vertical-rl;
             filter: blur(0.1px);
+        }
+        .era-wall {
+            position: fixed;
+            top: 0;
+            bottom: 0;
+            width: clamp(54px, 6vw, 92px);
+            z-index: 0;
+            pointer-events: none;
+            opacity: var(--era-mural-opacity);
+            background:
+                radial-gradient(ellipse at 52% 8%, rgba(111,168,121,0.9), transparent 17%),
+                radial-gradient(ellipse at 48% 26%, rgba(120,47,64,0.85), transparent 18%),
+                radial-gradient(ellipse at 56% 43%, rgba(159,73,56,0.78), transparent 17%),
+                radial-gradient(ellipse at 44% 60%, rgba(166,155,105,0.72), transparent 17%),
+                radial-gradient(ellipse at 55% 77%, rgba(122,174,194,0.82), transparent 17%),
+                radial-gradient(ellipse at 48% 94%, rgba(211,175,97,0.92), transparent 18%),
+                repeating-linear-gradient(90deg, transparent 0 14px, rgba(231,207,138,0.32) 14px 15px, transparent 15px 27px),
+                repeating-linear-gradient(0deg, transparent 0 38px, rgba(231,207,138,0.28) 38px 39px, transparent 39px 76px);
+            filter: grayscale(0.72) blur(0.15px);
+            mix-blend-mode: screen;
+            transform: translateY(0);
+            animation: muralDrift 32s ease-in-out infinite alternate;
+        }
+        .era-wall::before,
+        .era-wall::after {
+            content: "";
+            position: absolute;
+            inset: 0;
+            background:
+                linear-gradient(90deg, transparent 0 34%, rgba(231,207,138,0.34) 34.7%, transparent 36%),
+                linear-gradient(90deg, transparent 0 66%, rgba(231,207,138,0.24) 66.7%, transparent 68%);
+            opacity: 0.42;
+        }
+        .era-wall::after {
+            background:
+                repeating-linear-gradient(118deg, transparent 0 24px, rgba(231,207,138,0.34) 24px 25px, transparent 25px 52px),
+                radial-gradient(circle at 50% 94%, rgba(231,207,138,0.8) 0 1px, transparent 2px 14px);
+            opacity: 0.24;
+        }
+        .era-wall-left { left: 0; }
+        .era-wall-right { right: 0; transform: scaleX(-1); animation-delay: -14s; }
+        @keyframes muralDrift {
+            from { transform: translateY(-10px); }
+            to { transform: translateY(10px); }
+        }
+        .container,
+        .header {
+            position: relative;
+            z-index: 1;
+        }
+        @media (prefers-reduced-motion: reduce) {
+            .era-wall { animation: none; }
         }
         .ambient-mask {
             position: fixed;
@@ -4469,6 +4528,181 @@
             flex-wrap: wrap;
             margin-top: 18px;
         }
+        .brand-emblem {
+            width: 70px;
+            height: 56px;
+            flex-basis: 70px;
+            border-radius: 17px;
+            color: var(--gold-light);
+            background:
+                radial-gradient(circle at 30% 20%, rgba(231,207,138,0.18), transparent 38%),
+                linear-gradient(135deg, rgba(211,175,97,0.14), rgba(122,174,194,0.04) 58%, rgba(0,0,0,0.34));
+            box-shadow: 0 0 30px rgba(211,175,97,0.14), inset 0 0 18px rgba(0,0,0,0.34);
+        }
+        .brand-emblem svg { width: 58px; height: 48px; overflow: visible; filter: drop-shadow(0 0 7px rgba(231,207,138,0.2)); }
+        .brand-copy > span:first-child { color: var(--gold-light); font-weight: 900; }
+        .brand-copy .sub { display: block; margin-top: 3px; color: rgba(231,207,138,0.48); }
+        .brand-era {
+            width: fit-content;
+            padding: 2px 7px;
+            border-left: 1px solid rgba(211,175,97,0.48);
+            color: rgba(122,174,194,0.78);
+            font-size: 0.61rem;
+            letter-spacing: 0.16em;
+        }
+        .header-action {
+            min-height: 36px;
+            border-radius: 10px;
+            font-size: 0.74rem;
+            letter-spacing: 0.04em;
+        }
+        .header-action-ledger,
+        .header-action-score { border-color: rgba(231,207,138,0.30); background: rgba(211,175,97,0.07); color: var(--gold-light); }
+        .header-action-invite { border-color: rgba(122,174,194,0.28); background: rgba(122,174,194,0.06); }
+        .header-action-build {
+            min-width: 142px;
+            border-color: rgba(231,207,138,0.68);
+            background: linear-gradient(135deg, #a87a16, #e7cf8a 52%, #8b5f17);
+            color: #17120a;
+            box-shadow: 0 0 24px rgba(231,207,138,0.18), inset 0 1px 0 rgba(255,255,255,0.42);
+        }
+        .header-action-build:hover { box-shadow: 0 0 34px rgba(231,207,138,0.36), inset 0 1px 0 rgba(255,255,255,0.62); }
+        .path-nav { gap: 5px; }
+        .path-nav-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            border-color: rgba(231,207,138,0.10);
+            border-radius: 9px;
+            padding: 7px 9px 9px;
+            background: rgba(4,5,9,0.28);
+        }
+        .path-nav-btn::after {
+            content: "";
+            position: absolute;
+            left: 13px;
+            right: 13px;
+            bottom: 2px;
+            height: 1px;
+            transform: scaleX(0);
+            transform-origin: center;
+            background: currentColor;
+            box-shadow: 0 0 10px currentColor;
+            transition: transform 0.22s ease;
+        }
+        .path-nav-btn:hover::after,
+        .path-nav-btn.active::after { transform: scaleX(1); }
+        .path-nav-btn.active { background: color-mix(in srgb, currentColor 8%, rgba(8,8,13,0.6)); }
+        .path-nav-sigil { width: 20px; height: 20px; border: 0; background: transparent; }
+        .path-nav-sigil svg { width: 16px; height: 16px; }
+        .world-altar {
+            min-height: 284px;
+            margin-bottom: 17px;
+            padding: clamp(24px, 4vw, 36px) clamp(22px, 4vw, 42px);
+            border-color: rgba(231,207,138,0.22);
+            background:
+                radial-gradient(circle at 77% 44%, rgba(154,120,224,0.14), transparent 28%),
+                radial-gradient(circle at 92% 18%, rgba(211,175,97,0.10), transparent 23%),
+                linear-gradient(135deg, rgba(213,178,91,0.14), transparent 38%),
+                linear-gradient(245deg, rgba(117,189,208,0.08), transparent 46%),
+                rgba(10,10,18,0.86);
+            box-shadow: var(--surface-shadow);
+        }
+        .world-altar::before {
+            background:
+                radial-gradient(circle at 84% 18%, rgba(231,207,138,0.12) 0 1px, transparent 2px 18px),
+                repeating-conic-gradient(from 18deg at 83% 38%, rgba(211,175,97,0.11) 0deg 2deg, transparent 2deg 17deg),
+                linear-gradient(112deg, transparent 0 43%, rgba(231,207,138,0.14) 43.5%, rgba(117,189,208,0.09) 45%, transparent 47%),
+                repeating-linear-gradient(90deg, rgba(255,255,255,0.022) 0 1px, transparent 1px 48px);
+            opacity: 0.72;
+        }
+        .world-kicker { color: rgba(231,207,138,0.62); font-size: 0.66rem; letter-spacing: 0.24em; }
+        .world-title {
+            color: transparent;
+            background: linear-gradient(180deg, #fff7d8, #e7cf8a 52%, #8f6b2a);
+            -webkit-background-clip: text;
+            background-clip: text;
+            font-size: clamp(2.25rem, 5vw, 4.15rem);
+            text-shadow: 0 0 30px rgba(231,207,138,0.24);
+        }
+        .world-line { max-width: 680px; color: rgba(234,234,242,0.78); font-size: 1rem; line-height: 1.9; letter-spacing: 0.045em; }
+        .world-tokens { gap: 7px; margin-top: 19px; }
+        .world-token {
+            position: relative;
+            border-color: color-mix(in srgb, var(--gold-light) 23%, rgba(255,255,255,0.09));
+            background: rgba(0,0,0,0.32);
+            color: rgba(234,234,242,0.86);
+            box-shadow: inset 0 1px 0 rgba(255,255,255,0.04);
+        }
+        .world-token:nth-child(1) { border-color: rgba(198,90,136,0.38); color: #d795ad; }
+        .world-token:nth-child(2) { border-color: rgba(211,175,97,0.42); color: var(--gold-light); }
+        .world-token:nth-child(3) { border-color: rgba(103,109,118,0.40); color: #aeb3c1; }
+        .world-token:nth-child(4) { border-color: rgba(154,120,224,0.40); color: #c7b9e7; }
+        .world-token:hover { transform: translateY(-1px); box-shadow: 0 0 18px rgba(231,207,138,0.14); }
+        .void-constellation { position: relative; width: min(270px, 54vw); aspect-ratio: 1; display: grid; place-items: center; color: var(--gold-light); }
+        .void-constellation-orbit { position: absolute; border: 1px solid rgba(231,207,138,0.24); border-radius: 50%; transform: rotate(-26deg); }
+        .orbit-one { inset: 5%; border-left-color: transparent; border-right-color: rgba(122,174,194,0.44); animation: orbitTurn 18s linear infinite; }
+        .orbit-two { inset: 18%; transform: rotate(38deg) scaleX(0.62); border-color: rgba(154,120,224,0.32); animation: orbitTurn 26s linear infinite reverse; }
+        .void-constellation-sigil { position: absolute; display: grid; place-items: center; filter: drop-shadow(0 0 12px currentColor); }
+        .void-constellation-sigil svg { overflow: visible; }
+        .void-mask-sigil { width: 140px; color: rgba(231,207,138,0.92); transform: translate(-17px, -12px); }
+        .void-dice-sigil { width: 92px; color: rgba(122,174,194,0.92); transform: translate(48px, 43px) rotate(8deg); }
+        .void-constellation-caption { position: absolute; bottom: 6%; color: rgba(231,207,138,0.46); font-size: 0.58rem; letter-spacing: 0.26em; }
+        @keyframes orbitTurn { to { transform: rotate(334deg); } }
+        .search-shell { position: relative; display: flex; align-items: center; min-width: 230px; flex: 1; max-width: 340px; }
+        .search-mark { position: absolute; left: 14px; z-index: 1; color: rgba(231,207,138,0.72); font-size: 1.2rem; line-height: 1; pointer-events: none; }
+        .search-shell .search-input { width: 100%; max-width: none; padding-left: 36px; border-radius: 10px; border-color: rgba(211,175,97,0.24); }
+        .search-shell:focus-within .search-mark { color: var(--gold-light); text-shadow: 0 0 12px rgba(231,207,138,0.4); }
+        .controls { padding: 13px 15px 14px; gap: 11px; border-color: rgba(231,207,138,0.12); background: rgba(9,10,16,0.72); box-shadow: var(--surface-shadow); }
+        .controls .sort-group { gap: 2px; }
+        .controls .sort-btn { position: relative; border: 0; border-radius: 8px; padding: 9px 12px 10px; background: transparent; }
+        .controls .sort-btn::after { content: ""; position: absolute; left: 12px; right: 12px; bottom: 3px; height: 1px; transform: scaleX(0); background: var(--gold-light); box-shadow: 0 0 12px rgba(231,207,138,0.72); transition: transform 0.22s ease; }
+        .controls .sort-btn.active { background: rgba(231,207,138,0.07); border: 0; color: var(--gold-light); box-shadow: none; }
+        .controls .sort-btn.active::after { transform: scaleX(1); }
+        .controls .sort-btn:hover { color: var(--text-bright); border: 0; background: rgba(255,255,255,0.035); }
+        .filter-toggle-btn { border-radius: 9px; border-color: rgba(211,175,97,0.32); background: rgba(211,175,97,0.08); }
+        .filter-toggle-btn:hover { box-shadow: 0 0 18px rgba(211,175,97,0.16); }
+        .dungeon-card { border-radius: 14px; box-shadow: var(--surface-shadow); }
+        .dungeon-card[data-god]:hover { box-shadow: var(--surface-shadow-hover), 0 0 34px var(--god-glow); }
+        .trial-card-head { margin-bottom: 14px; }
+        .trial-title-block { gap: 12px; }
+        .dungeon-card .card-title { font-size: 1.45rem; }
+        .card-title-line { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: start; gap: 10px; }
+        .trial-number { justify-self: end; color: rgba(234,234,242,0.40); font-family: var(--font-display); font-size: 0.62rem; letter-spacing: 0.12em; }
+        .trial-subline { color: color-mix(in srgb, var(--god-primary, var(--text-muted)) 64%, var(--text-muted)); letter-spacing: 0.08em; }
+        .judgement-badge { min-width: 166px; padding: 9px 13px; border-radius: 10px; background: color-mix(in srgb, var(--god-primary, var(--gold-light)) 9%, rgba(0,0,0,0.26)); box-shadow: inset 0 1px 0 rgba(255,255,255,0.04); }
+        .judgement-score { font-size: 0.92rem; }
+        .dungeon-card[data-god].divine-trial { box-shadow: var(--surface-shadow), 0 0 22px color-mix(in srgb, var(--god-primary) 15%, transparent); }
+        .dungeon-card[data-god].divine-trial::before { animation: divineRift 2.8s linear infinite; }
+        .trial-oracle { margin-top: 14px; padding: 13px 15px; border-radius: 8px; border-top-color: color-mix(in srgb, var(--god-primary) 40%, transparent); border-right-color: transparent; border-bottom-color: transparent; border-left-width: 2px; color: color-mix(in srgb, var(--god-primary) 78%, var(--text)); background: linear-gradient(90deg, color-mix(in srgb, var(--god-primary) 10%, transparent), rgba(0,0,0,0.12) 68%, transparent); }
+        .era-scroll-panel { border-color: rgba(231,207,138,0.30); box-shadow: var(--surface-shadow); }
+        .era-scroll-head { border-bottom-color: rgba(231,207,138,0.16); }
+        .era-scroll-title { font-size: 1rem; text-shadow: 0 0 16px rgba(231,207,138,0.22); }
+        .era-list { gap: 7px; padding: 10px; }
+        .era-block { border-color: color-mix(in srgb, var(--era-accent) 24%, rgba(255,255,255,0.06)); box-shadow: inset 0 1px 0 rgba(255,255,255,0.035); }
+        .era-block.path-void { border-color: rgba(231,207,138,0.46); box-shadow: 0 0 24px rgba(211,175,97,0.16), inset 0 1px 0 rgba(255,255,255,0.08); }
+        .era-block.path-void::before { content: ""; position: absolute; inset: 0; background: repeating-conic-gradient(from 22deg at 84% 25%, rgba(231,207,138,0.12) 0deg 2deg, transparent 2deg 14deg); opacity: 0.5; pointer-events: none; }
+        .era-block-head strong { color: var(--era-accent); }
+        .era-block-head-copy { display: grid; gap: 3px; }
+        .era-block-head-copy > strong { display: flex; align-items: center; gap: 5px; }
+        .era-block-head-copy .god-sigil { width: 18px; height: 18px; border: 0; background: transparent; }
+        .era-block-head-copy .god-sigil svg { width: 15px; height: 15px; }
+        .era-count { font-size: 0.78rem; }
+        .oracle-panel { border-color: rgba(231,207,138,0.12); box-shadow: var(--surface-shadow); }
+        .oracle-panel-title { display: flex; align-items: center; gap: 7px; padding-bottom: 8px; border-bottom: 1px solid rgba(231,207,138,0.10); }
+        .oracle-panel-title::before { content: "◈"; color: rgba(231,207,138,0.70); font-size: 0.78rem; }
+        .oracle-panel-supreme .oracle-panel-title::before { content: "◈"; color: var(--gold-light); }
+        .oracle-panel-testimony .oracle-panel-title::before { content: "✦"; color: var(--path-exist); }
+        .oracle-panel-architect .oracle-panel-title::before { content: "◇"; color: var(--path-civil); }
+        .oracle-panel-chronicle .oracle-panel-title::before { content: "◌"; color: var(--path-void); }
+        .oracle-panel-faith .oracle-panel-title::before { content: "▥"; color: var(--path-life); }
+        .oracle-item:hover { border-color: color-mix(in srgb, var(--god-primary, var(--gold-light)) 40%, rgba(255,255,255,0.08)); box-shadow: 0 0 18px color-mix(in srgb, var(--god-glow, rgba(231,207,138,0.15)) 70%, transparent); }
+        @media (max-width: 1199px) {
+            .era-wall, .ambient-mask { display: none; }
+        }
+        @media (prefers-reduced-motion: reduce) {
+            .orbit-one, .orbit-two { animation: none; }
+        }
         @media (max-width: 1100px) {
             .header {
                 grid-template-columns: 1fr;
@@ -4864,23 +5098,33 @@
     </style>
 </head>
 <body>
-    <div class="ambient-mask ambient-mask-left" aria-hidden="true">🎭</div>
-    <div class="ambient-mask ambient-mask-right" aria-hidden="true">🎭</div>
+    <div class="era-wall era-wall-left" aria-hidden="true"></div>
+    <div class="era-wall era-wall-right" aria-hidden="true"></div>
+    <div class="ambient-mask ambient-mask-left" aria-hidden="true">◒</div>
+    <div class="ambient-mask ambient-mask-right" aria-hidden="true">◈</div>
     <header class="header">
         <div class="logo">
-            <span class="brand-emblem" aria-hidden="true"><span class="mask-mark">🎭</span><span class="dice-mark">🎲</span></span>
+            <span class="brand-emblem" aria-hidden="true">
+                <svg viewBox="0 0 64 54" role="presentation">
+                    <path d="M9 22c4-10 14-15 23-12 9 2 14 8 16 17-1 12-8 18-20 18S10 39 9 22Z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>
+                    <path d="M19 26c3-3 6-3 9 0M34 26c3-3 6-3 9 0M22 36c5 3 10 3 15 0" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                    <path d="m39 8 13 7v14l-13 7-13-7V15z" fill="rgba(231,207,138,0.08)" stroke="var(--path-exist)" stroke-width="1.6"/>
+                    <circle cx="34" cy="18" r="1.4" fill="currentColor"/><circle cx="44" cy="27" r="1.4" fill="currentColor"/>
+                </svg>
+            </span>
             <span class="brand-copy">
                 <span>诸神愚戏<span class="sub">Folly of the Gods · 祈愿试炼神谕留存地</span></span>
                 <span class="brand-motto">凡骨入局，诸神设戏</span>
+                <span class="brand-era">现世纪元 · 虚无</span>
             </span>
         </div>
         <nav class="path-nav" id="pathNav" aria-label="六大命途快速筛选"></nav>
         <div class="header-actions">
             <button type="button" class="role-badge" id="roleBadge" onclick="openProfilePage()">旁观者只读</button>
-            <button class="btn btn-outline" onclick="openLeaderboardPage()">🏛 觐见榜单</button>
-            <button class="btn btn-outline" id="scoreDeskButton" onclick="openScorePage()" style="display:none;">⚖ 分数结算</button>
-            <button class="btn btn-outline" id="inviteButton" onclick="openInviteModal()">🎲 同契召引</button>
-            <button class="btn btn-primary btn-folly" id="submitEntryButton" onclick="openSubmitModal()">🎭 构筑愚戏</button>
+            <button class="btn btn-outline header-action header-action-ledger" onclick="openLeaderboardPage()">◈ 觐见榜单</button>
+            <button class="btn btn-outline header-action header-action-score" id="scoreDeskButton" onclick="openScorePage()" style="display:none;">⚖ 分数结算</button>
+            <button class="btn btn-outline header-action header-action-invite" id="inviteButton" onclick="openInviteModal()">◇ 同契召引</button>
+            <button class="btn btn-primary btn-folly header-action header-action-build" id="submitEntryButton" onclick="openSubmitModal()">🎭 构筑愚戏</button>
         </div>
     </header>
 
@@ -4898,8 +5142,16 @@
                 </div>
             </div>
             <div class="world-altar-symbols" aria-hidden="true">
-                <div class="fate-emblem">
-                    <div class="fate-face">🎭🎲<small>FOLLY</small></div>
+                <div class="void-constellation">
+                    <div class="void-constellation-orbit orbit-one"></div>
+                    <div class="void-constellation-orbit orbit-two"></div>
+                    <div class="void-constellation-sigil void-mask-sigil">
+                        <svg viewBox="0 0 80 80" role="presentation"><path d="M13 31c7-12 18-18 28-15 12 2 20 9 25 22-3 17-13 25-29 25S15 55 13 31Z" fill="none" stroke="currentColor" stroke-width="2"/><path d="M23 36c4-4 8-4 12 0M43 36c4-4 8-4 12 0M28 49c7 4 14 4 21 0" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M40 15v42" fill="none" stroke="currentColor" stroke-width="1" opacity="0.5"/></svg>
+                    </div>
+                    <div class="void-constellation-sigil void-dice-sigil">
+                        <svg viewBox="0 0 64 64" role="presentation"><path d="m32 7 22 13v25L32 58 10 45V20z" fill="rgba(122,174,194,0.08)" stroke="currentColor" stroke-width="2"/><path d="m11 20 21 13 22-13M32 33v25" fill="none" stroke="currentColor" stroke-width="1.6"/><circle cx="24" cy="20" r="2" fill="currentColor"/><circle cx="41" cy="43" r="2" fill="currentColor"/><circle cx="44" cy="24" r="1.6" fill="currentColor"/></svg>
+                    </div>
+                    <span class="void-constellation-caption">FOLLY · VOID ERA</span>
                 </div>
             </div>
         </section>
@@ -4907,14 +5159,14 @@
         <div class="controls">
             <div class="control-topline">
                 <div class="sort-group">
-                    <button class="sort-btn active" data-sort="popular" onclick="setSort('popular', this)">🔥 试炼热度</button>
-                    <button class="sort-btn" data-sort="rating" onclick="setSort('rating', this)">🎲 神格判定</button>
-                    <button class="sort-btn" data-sort="newest" onclick="setSort('newest', this)">🎲 新降试炼</button>
-                    <button class="sort-btn" data-sort="comments" onclick="setSort('comments', this)">💬 证言热度</button>
+                    <button class="sort-btn active" data-sort="popular" onclick="setSort('popular', this)">试炼热度</button>
+                    <button class="sort-btn" data-sort="rating" onclick="setSort('rating', this)">神格判定</button>
+                    <button class="sort-btn" data-sort="newest" onclick="setSort('newest', this)">新降试炼</button>
+                    <button class="sort-btn" data-sort="comments" onclick="setSort('comments', this)">证言热度</button>
                 </div>
-                <input type="text" class="search-input" placeholder="🔍 搜索试炼、构筑者、神明或命途..." oninput="debounceSearch()" id="searchInput" autocomplete="off" autocapitalize="off" spellcheck="false">
+                <label class="search-shell" for="searchInput"><span class="search-mark" aria-hidden="true">⌕</span><input type="text" class="search-input" placeholder="搜寻试炼切片、构筑信徒、神明命途" oninput="debounceSearch()" id="searchInput" autocomplete="off" autocapitalize="off" spellcheck="false"></label>
                 <button class="filter-toggle-btn" id="filterToggleBtn" onclick="toggleAdvancedFilters()" aria-expanded="false">
-                    <span>✦ 筛选</span>
+                    <span>✦ 分途观览</span>
                     <small id="filterSummaryText">全神席 · 全部难度</small>
                 </button>
             </div>
@@ -4977,23 +5229,23 @@
                         </div>
                     </div>
                 </section>
-                <section class="oracle-panel">
+                <section class="oracle-panel oracle-panel-supreme">
                     <div class="oracle-panel-title">【诸神注目试炼名录】</div>
                     <div class="oracle-list" id="supremeTrialList"><div class="oracle-item"><span>正在检索神格判定...</span></div></div>
                 </section>
-                <section class="oracle-panel">
+                <section class="oracle-panel oracle-panel-testimony">
                     <div class="oracle-panel-title">【信徒采信证言录】</div>
                     <div class="oracle-list" id="testimonyLedger"><div class="oracle-item"><span>正在听取证言...</span></div></div>
                 </section>
-                <section class="oracle-panel">
+                <section class="oracle-panel oracle-panel-architect">
                     <div class="oracle-panel-title">【新晋筑戏人】</div>
                     <div class="oracle-list" id="architectLedger"><div class="oracle-item"><span>等待新的构筑者献祭试炼。</span></div></div>
                 </section>
-                <section class="oracle-panel">
+                <section class="oracle-panel oracle-panel-chronicle">
                     <div class="oracle-panel-title">【当前现世・虚无愚戏记事】</div>
                     <div class="void-chronicle" id="voidChronicle"><span>假面垂落，骰定万命。</span></div>
                 </section>
-                <section class="oracle-panel">
+                <section class="oracle-panel oracle-panel-faith">
                     <div class="oracle-panel-title">【寰宇信仰流向】</div>
                     <div id="faithFlowPanel"><div class="oracle-item"><span>正在观测试炼命途分布...</span></div></div>
                 </section>
@@ -8507,8 +8759,9 @@
             nav.innerHTML = GOD_GROUPS.map(group => {
                 const meta = getPathMetaByPath(group.path);
                 const active = selectedPath === group.path && selectedGod === 'all';
-                return `<button class="path-nav-btn ${group.className} ${active ? 'active' : ''}" onclick="setPathFilter('${escapeHtml(group.path)}')">
-                    ${escapeHtml(meta.sigil)} ${escapeHtml(group.path)}
+                const leadGod = group.gods[0] || '命运';
+                return `<button class="path-nav-btn ${group.className} ${active ? 'active' : ''}" title="${escapeHtml(group.path)}纪元｜${escapeHtml(group.gods.join(' / '))}" onclick="setPathFilter('${escapeHtml(group.path)}')">
+                    ${renderGodSigil(leadGod, 'xs', 'path-nav-sigil')} <span>${escapeHtml(group.path)}</span>
                     <span class="path-nav-prayer">${escapeHtml(group.gods.join(' / '))} · ${escapeHtml(meta.edict)}</span>
                 </button>`;
             }).join('');
@@ -8646,9 +8899,9 @@
                         return `<button type="button" class="era-god-btn ${activeGod ? 'active' : ''}" style="${getGodSkinStyle(god)}" onclick='setGodFilter(${jsString(god)})'>${renderGodSigil(god, 'xs')} ${escapeHtml(god)}<span>${Number(godCounts[god] || 0)}</span></button>`;
                     }).join('');
                     return `
-                        <article class="era-block ${group.className} ${active ? 'active' : ''}" data-rift="${escapeHtml(era.rift)}">
+                        <article class="era-block ${group.className} ${active ? 'active' : ''}" data-era="${escapeHtml(era.path)}" data-rift="${escapeHtml(era.rift)}">
                             <button type="button" class="era-block-head" onclick='setPathFilter(${jsString(era.path)})'>
-                                <span><strong>${escapeHtml(era.order)} · ${escapeHtml(era.title)}</strong><span>${escapeHtml(era.prophecy)}</span></span>
+                                <span class="era-block-head-copy"><strong>${renderGodSigil(group.gods[0] || '命运', 'xs')} ${escapeHtml(era.order)} · ${escapeHtml(era.title)}</strong><span>${escapeHtml(era.prophecy)}</span></span>
                                 <span class="era-count">${Number(pathCounts[era.path] || 0)}</span>
                             </button>
                             <div class="era-god-row">${godButtons}</div>
