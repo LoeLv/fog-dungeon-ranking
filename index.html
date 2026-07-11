@@ -4229,6 +4229,32 @@
             padding: 3px 8px;
             font-size: 0.66rem;
         }
+        .profile-title-status {
+            display: grid;
+            gap: 8px;
+            padding: 13px 14px;
+            border: 1px solid color-mix(in srgb, var(--god-primary, #e7cf8a) 22%, rgba(255,255,255,0.08));
+            border-radius: var(--radius-sm);
+            background:
+                linear-gradient(90deg, color-mix(in srgb, var(--god-primary, #e7cf8a) 10%, transparent), rgba(0,0,0,0.18)),
+                rgba(0,0,0,0.20);
+        }
+        .profile-title-status-head {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            justify-content: space-between;
+            gap: 8px;
+        }
+        .profile-title-status-head strong {
+            color: var(--text-bright);
+            font-size: 0.86rem;
+        }
+        .profile-title-status-note {
+            color: var(--text-muted);
+            font-size: 0.76rem;
+            line-height: 1.55;
+        }
         .profile-subline {
             position: relative;
             z-index: 1;
@@ -7545,6 +7571,31 @@
                 </div>`;
         }
 
+        function renderProfileTitleStatus(title, fallbackGod = '命运') {
+            const normalized = normalizeProfileTitle(title);
+            if (!normalized) {
+                return `
+                    <div class="profile-title-status" style="${getGodSkinStyle(fallbackGod)}">
+                        <div class="profile-title-status-head">
+                            <strong>当前称号</strong>
+                            <span class="metric-pill">暂无称号</span>
+                        </div>
+                        <div class="profile-title-status-note">尚未有馆主或神明为你降下称号。获得称号后，会绑定昵称显示在个人面板、公开档案和榜单里。</div>
+                    </div>`;
+            }
+            const issuer = normalized.grantedByType === 'god'
+                ? `${normalized.titleGod || fallbackGod}之神降下`
+                : (normalized.grantedByName ? `${normalized.grantedByName}降下` : '馆主降下');
+            return `
+                <div class="profile-title-status" style="${getGodSkinStyle(normalized.titleGod || fallbackGod)}">
+                    <div class="profile-title-status-head">
+                        <strong>当前称号</strong>
+                        ${renderProfileTitleBadge(normalized, { fallbackGod })}
+                    </div>
+                    <div class="profile-title-status-note">${escapeHtml(issuer)}${normalized.titleNote ? `｜${escapeHtml(normalized.titleNote)}` : ''}</div>
+                </div>`;
+        }
+
         function formatProfileScore(value) {
             const score = normalizeProfileScore(value);
             return Number.isInteger(score) ? String(score) : score.toFixed(1);
@@ -8540,21 +8591,41 @@
             if (error) return renderRitualEmpty(error.message || '结算信封暂不可用。', god, '结算信封暂不可用');
             if (!messages?.length) return renderRitualEmpty(getGodEmptyText(god, 'scoreMessages'), god, '结算信封暂空');
             return `<div class="profile-list">${messages.map(message => `
-                <article class="profile-list-item score-message-card ${message.is_read ? '' : 'unread'}">
+                <article class="profile-list-item score-message-card ${message.is_read ? '' : 'unread'}" data-score-message-id="${Number(message.id)}">
                     <div class="profile-list-title">
-                        <span>${message.is_read ? '' : '<span class="profile-notice-mark">未读</span> '}${escapeHtml(message.msg_type || 'score')}</span>
+                        <span>${message.is_read ? '' : '<span class="profile-notice-mark" data-score-message-unread-mark>未读</span> '}${escapeHtml(message.msg_type || 'score')}</span>
                         <small>${escapeHtml(formatDate(message.created_at))}</small>
                     </div>
                     <div class="profile-list-meta">${escapeHtml(message.content || '')}</div>
-                    ${message.is_read ? '' : `<div class="profile-tools" style="margin-top:10px;"><button class="btn btn-outline btn-sm" onclick="markScoreMessageReadUI(${Number(message.id)})">封缄此信</button></div>`}
+                    ${message.is_read ? '' : `<div class="profile-tools" data-score-message-actions style="margin-top:10px;"><button class="btn btn-outline btn-sm" onclick="markScoreMessageReadUI(${Number(message.id)})">封缄此信</button></div>`}
                 </article>`).join('')}</div>`;
+        }
+
+        function syncScoreMessageUnreadUI() {
+            const unreadCount = document.querySelectorAll('#profileContent .score-message-card.unread').length;
+            const panelCount = document.getElementById('scoreMessagesPanelCount');
+            if (panelCount) panelCount.textContent = unreadCount ? `${unreadCount} 封未读` : '暂无未读';
+            const scoreSyncLabel = document.getElementById('profileScoreSyncLabel');
+            if (scoreSyncLabel) scoreSyncLabel.textContent = unreadCount ? `${unreadCount} 封未读` : '结算同步';
+            const heroPill = document.getElementById('profileScoreMessagePill');
+            if (heroPill) {
+                heroPill.style.display = unreadCount ? '' : 'none';
+                const value = heroPill.querySelector('strong');
+                if (value) value.textContent = String(unreadCount);
+            }
         }
 
         async function markScoreMessageReadUI(messageId) {
             const { error } = await invokeDungeonAction('markScoreMessageRead', { messageId: Number(messageId) });
             if (error) { showToast(`❌ ${error.message || '标记失败'}`); return; }
             showToast('结算信封已读');
-            if (document.getElementById('profilePage')?.style.display !== 'none') await renderProfilePage();
+            const card = document.querySelector(`[data-score-message-id="${Number(messageId)}"]`);
+            if (card) {
+                card.classList.remove('unread');
+                card.querySelector('[data-score-message-unread-mark]')?.remove();
+                card.querySelector('[data-score-message-actions]')?.remove();
+                syncScoreMessageUnreadUI();
+            }
         }
 
         function renderScorePreview(preview) {
@@ -9406,7 +9477,7 @@
                             <span class="mini-tag ${faithClass}">${escapeHtml(roleLabel)}</span>
                             <span class="metric-pill">职业 <strong>${escapeHtml(profile.profession || '未填写')}</strong></span>
                             ${profession.known ? `<span class="metric-pill">${escapeHtml(profession.god)}之神 <strong>${escapeHtml(profession.className)}</strong></span>` : ''}
-                            ${unreadScoreMessages.length ? `<span class="metric-pill">结算信封 <strong>${unreadScoreMessages.length}</strong></span>` : ''}
+                            <span class="metric-pill" id="profileScoreMessagePill" style="${unreadScoreMessages.length ? '' : 'display:none;'}">结算信封 <strong>${unreadScoreMessages.length}</strong></span>
                             ${unread.length ? `<span class="metric-pill">楼主提醒 <strong>${unread.length}</strong></span>` : ''}
                         </div>
                         <div class="profile-faith-prayer">${escapeHtml(getGodPrayer(faithGod))} · ${escapeHtml(faithSkin.pattern)}</div>
@@ -9453,6 +9524,10 @@
                                     <div class="identity-help">${scoresLocked ? `初始登神 ${DEFAULT_ASCENSION_SCORE}、觐见 ${DEFAULT_AUDIENCE_SCORE}；后续由结算信封改写，不可自行篡改。` : '馆主测试权限：可临时校准分数，用于二测验证。'}</div>
                                 </div>
                                 <div class="form-group full">
+                                    <label>当前称号</label>
+                                    ${renderProfileTitleStatus(profile.activeTitle, faithGod)}
+                                </div>
+                                <div class="form-group full">
                                     <label for="profileItems">个人道具</label>
                                     <textarea id="profileItems" maxlength="800" placeholder="每行一个道具">${escapeHtml(profile.items)}</textarea>
                                 </div>
@@ -9479,7 +9554,7 @@
                         <section class="profile-panel" data-god="${escapeHtml(faithGod)}" style="${faithStyle}">
                             <div class="profile-panel-title">
                                 <span>个人数值</span>
-                                <small>${unreadScoreMessages.length ? `${unreadScoreMessages.length} 封未读` : '结算同步'}</small>
+                                <small id="profileScoreSyncLabel">${unreadScoreMessages.length ? `${unreadScoreMessages.length} 封未读` : '结算同步'}</small>
                             </div>
                             <div class="profile-score-row">
                                 <div class="profile-score-card"><span>登神之路</span><strong>${Number(profile.ascensionScore || 0)}</strong></div>
@@ -9495,7 +9570,7 @@
                         <section class="profile-panel" data-god="${escapeHtml(faithGod)}" style="${faithStyle}">
                             <div class="profile-panel-title">
                                 <span>结算信封</span>
-                                <small>${unreadScoreMessages.length ? `${unreadScoreMessages.length} 封未读` : '暂无未读'}</small>
+                                <small id="scoreMessagesPanelCount">${unreadScoreMessages.length ? `${unreadScoreMessages.length} 封未读` : '暂无未读'}</small>
                             </div>
                             ${renderScoreMessages(scoreMessages, scoreMessageError, faithGod)}
                         </section>
