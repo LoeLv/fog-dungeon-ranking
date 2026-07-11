@@ -6,7 +6,7 @@ const corsHeaders = {
   "Access-Control-Allow-Methods": "POST, OPTIONS",
 };
 
-type InviteRole = "player" | "author" | "reviewer" | "admin";
+type InviteRole = "player" | "author" | "reviewer" | "admin" | "god";
 
 type RequestBody = {
   action?: string;
@@ -35,7 +35,27 @@ const roleLabels: Record<InviteRole, string> = {
   author: "作者",
   reviewer: "审核员",
   admin: "馆主",
+  god: "神明",
 };
+
+const godNames = new Set([
+  "诞育",
+  "繁荣",
+  "死亡",
+  "记忆",
+  "时间",
+  "秩序",
+  "真理",
+  "战争",
+  "欺诈",
+  "命运",
+  "混乱",
+  "沉默",
+  "痴愚",
+  "污堕",
+  "腐朽",
+  "湮灭",
+]);
 
 const defaultAscensionScore = 1000;
 const defaultAudienceScore = 0;
@@ -310,7 +330,9 @@ async function getInviteIdentity(
   if (error) return null;
 
   const roleFromTable = data?.role as InviteRole | undefined;
-  if (data?.is_active && roleFromTable && ["player", "author", "reviewer", "admin"].includes(roleFromTable)) {
+  if (data?.is_active && roleFromTable && ["player", "author", "reviewer", "admin", "god"].includes(roleFromTable)) {
+    const displayName = cleanText(data.display_name, 40) || roleLabels[roleFromTable];
+    if (roleFromTable === "god" && !godNames.has(displayName)) return null;
     await supabase
       .from("invite_codes")
       .update({ last_used_at: new Date().toISOString() })
@@ -318,7 +340,7 @@ async function getInviteIdentity(
     return {
       role: roleFromTable,
       codeHash,
-      displayName: cleanText(data.display_name, 40) || roleLabels[roleFromTable],
+      displayName,
       inviteId: data.id,
     };
   }
@@ -327,6 +349,15 @@ async function getInviteIdentity(
 
 function hasRole(role: InviteRole, allowed: InviteRole[]) {
   return allowed.includes(role);
+}
+
+function canGrantTitles(role: InviteRole) {
+  return hasRole(role, ["admin", "god"]);
+}
+
+function getTitleGrantGod(identity: InviteIdentity, requestedGod: unknown) {
+  if (identity.role === "god") return identity.displayName;
+  return cleanText(requestedGod, 20);
 }
 
 function isMissingInviteColumn(error: { code?: string; message?: string } | null) {
@@ -1287,6 +1318,7 @@ Deno.serve(async (req) => {
 
     if (action === "updateDisplayName") {
       if (!identity.inviteId) return json({ error: "共享邀请码不能绑定个人昵称，请使用专属码" }, 403);
+      if (role === "god") return json({ error: "神明账号昵称固定为神名，不能改名" }, 403);
 
       const display = cleanDisplayName(payload.displayName, role);
       if (display.error || !display.name) return json({ error: display.error || "昵称不正确" }, 400);
@@ -1304,6 +1336,7 @@ Deno.serve(async (req) => {
     }
 
     if (action === "saveProfile") {
+      if (role === "god") return json({ error: "神明账号不建立信徒个人档案" }, 403);
       if (!hasRole(role, ["player", "author", "reviewer", "admin"])) return json({ error: "需要入局谕令" }, 403);
 
       const faithGod = cleanText(payload.faithGod, 20);
@@ -1370,7 +1403,7 @@ Deno.serve(async (req) => {
     }
 
     if (action === "listProfiles") {
-      if (!hasRole(role, ["player", "author", "reviewer", "admin"])) return json({ error: "需要入局谕令" }, 403);
+      if (!hasRole(role, ["player", "author", "reviewer", "admin", "god"])) return json({ error: "需要入局谕令" }, 403);
 
       const { data, error } = await supabase
         .from("player_profiles")
@@ -1405,7 +1438,7 @@ Deno.serve(async (req) => {
     }
 
     if (action === "getPublicProfile") {
-      if (!hasRole(role, ["player", "author", "reviewer", "admin"])) return json({ error: "需要入局谕令" }, 403);
+      if (!hasRole(role, ["player", "author", "reviewer", "admin", "god"])) return json({ error: "需要入局谕令" }, 403);
 
       const profileKey = cleanText(payload.profileKey ?? payload.profile_key, 96);
       if (!/^[a-f0-9]{64}$/i.test(profileKey)) return json({ error: "公开档案标识不正确" }, 400);
@@ -1551,7 +1584,7 @@ Deno.serve(async (req) => {
     }
 
     if (action === "grantProfileTitle") {
-      if (!hasRole(role, ["admin"])) return json({ error: "需要馆主邀请码" }, 403);
+      if (!canGrantTitles(role)) return json({ error: "需要馆主或神明谕令" }, 403);
 
       const targetResult = await getProfileByDisplayName(supabase, payload.targetName);
       if (targetResult.error) {
@@ -1562,7 +1595,7 @@ Deno.serve(async (req) => {
       const target = targetResult.data as Record<string, unknown>;
       const targetHash = cleanText(target.invite_code_hash, 64);
       const titleText = cleanText(payload.titleText, 32);
-      const titleGod = cleanText(payload.titleGod, 20);
+      const titleGod = getTitleGrantGod(identity, payload.titleGod);
       const titleNote = cleanText(payload.titleNote, 120);
       if (!targetHash || !titleText) return json({ error: "请填写受封昵称和称号" }, 400);
 
@@ -1587,7 +1620,7 @@ Deno.serve(async (req) => {
           title_text: titleText,
           title_god: titleGod,
           title_note: titleNote,
-          granted_by_type: titleGod ? "god" : "admin",
+          granted_by_type: role === "god" || titleGod ? "god" : "admin",
           granted_by_hash: identity.codeHash,
           granted_by_name: identity.displayName,
           is_active: true,
@@ -1608,7 +1641,7 @@ Deno.serve(async (req) => {
     }
 
     if (action === "revokeProfileTitle") {
-      if (!hasRole(role, ["admin"])) return json({ error: "需要馆主邀请码" }, 403);
+      if (!canGrantTitles(role)) return json({ error: "需要馆主或神明谕令" }, 403);
 
       const targetResult = await getProfileByDisplayName(supabase, payload.targetName);
       if (targetResult.error) {
@@ -1618,7 +1651,7 @@ Deno.serve(async (req) => {
 
       const target = targetResult.data as Record<string, unknown>;
       const targetHash = cleanText(target.invite_code_hash, 64);
-      const { data, error } = await supabase
+      let revokeQuery = supabase
         .from("profile_titles")
         .update({
           is_active: false,
@@ -1627,7 +1660,9 @@ Deno.serve(async (req) => {
           revoked_by_name: identity.displayName,
         })
         .eq("invite_code_hash", targetHash)
-        .eq("is_active", true)
+        .eq("is_active", true);
+      if (role === "god") revokeQuery = revokeQuery.eq("granted_by_hash", identity.codeHash);
+      const { data, error } = await revokeQuery
         .select("id, title_text")
         .maybeSingle();
       if (error?.code === "42P01") return json({ error: "请先运行 profile_titles_migration.sql" }, 400);
@@ -2517,10 +2552,10 @@ Deno.serve(async (req) => {
     }
 
     if (action === "submitDungeon") {
-      if (!hasRole(role, ["author", "reviewer", "admin"])) return json({ error: "需要作者、审核员或馆主邀请码" }, 403);
+      if (!hasRole(role, ["author", "reviewer", "admin", "god"])) return json({ error: "需要作者、审核员、神明或馆主邀请码" }, 403);
 
       const name = cleanText(payload.name, 80);
-      const creator = cleanText(payload.creator, 40);
+      const creator = role === "god" ? identity.displayName : cleanText(payload.creator, 40);
       const coCreators = cleanCoCreators(payload.coCreators ?? payload.co_creators);
       const description = cleanText(payload.description, 1800);
       const pinnedNote = cleanText(payload.pinnedNote, 800);
@@ -2670,7 +2705,7 @@ Deno.serve(async (req) => {
     }
 
     if (action === "advanceRun") {
-      if (!hasRole(role, ["author", "reviewer", "admin"])) return json({ error: "需要作者、审核员或馆主邀请码" }, 403);
+      if (!hasRole(role, ["author", "reviewer", "admin", "god"])) return json({ error: "需要作者、审核员、神明或馆主邀请码" }, 403);
 
       const dungeonId = cleanText(payload.dungeonId, 80);
       if (!isUuid(dungeonId)) return json({ error: "副本 ID 不正确" }, 400);
@@ -2728,7 +2763,7 @@ Deno.serve(async (req) => {
     }
 
     if (action === "addComment") {
-      if (!hasRole(role, ["player", "author", "reviewer", "admin"])) return json({ error: "需要入局谕令" }, 403);
+      if (!hasRole(role, ["player", "author", "reviewer", "admin", "god"])) return json({ error: "需要入局谕令" }, 403);
 
       const dungeonId = cleanText(payload.dungeonId, 80);
       const authorInput = cleanText(payload.author, 40);
@@ -2795,7 +2830,7 @@ Deno.serve(async (req) => {
     }
 
     if (action === "deleteComment") {
-      if (!hasRole(role, ["player", "author", "reviewer", "admin"])) return json({ error: "需要邀请码" }, 403);
+      if (!hasRole(role, ["player", "author", "reviewer", "admin", "god"])) return json({ error: "需要邀请码" }, 403);
 
       const commentId = cleanText(payload.commentId, 80);
       if (!isUuid(commentId)) return json({ error: "评论 ID 不正确" }, 400);
@@ -2828,7 +2863,7 @@ Deno.serve(async (req) => {
     }
 
     if (action === "updatePinnedNote") {
-      if (!hasRole(role, ["author", "reviewer", "admin"])) return json({ error: "需要作者、审核员或馆主邀请码" }, 403);
+      if (!hasRole(role, ["author", "reviewer", "admin", "god"])) return json({ error: "需要作者、审核员、神明或馆主邀请码" }, 403);
 
       const dungeonId = cleanText(payload.dungeonId, 80);
       const pinnedNote = cleanText(payload.pinnedNote, 800);

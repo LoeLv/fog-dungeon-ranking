@@ -37,7 +37,27 @@ const players = readNumber("players", 80);
 const authors = readNumber("authors", 0);
 const reviewers = readNumber("reviewers", 0);
 const admins = readNumber("admins", 0);
+const gods = readNumber("gods", 0);
 const prefix = readString("prefix", "诸神愚戏");
+
+const godNames = [
+  "诞育",
+  "繁荣",
+  "死亡",
+  "记忆",
+  "时间",
+  "秩序",
+  "真理",
+  "战争",
+  "欺诈",
+  "命运",
+  "混乱",
+  "沉默",
+  "痴愚",
+  "污堕",
+  "腐朽",
+  "湮灭",
+];
 
 const rows = [];
 for (let i = 1; i <= players; i += 1) {
@@ -51,6 +71,9 @@ for (let i = 1; i <= reviewers; i += 1) {
 }
 for (let i = 1; i <= admins; i += 1) {
   rows.push({ role: "admin", displayName: `馆主${pad(i, admins)}`, code: codeFor("admin") });
+}
+for (let i = 0; i < Math.min(gods, godNames.length); i += 1) {
+  rows.push({ role: "god", displayName: godNames[i], code: codeFor("god") });
 }
 
 const stamp = new Date().toISOString().replace(/[-:T]/g, "").slice(0, 14);

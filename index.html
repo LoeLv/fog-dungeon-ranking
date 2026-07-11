@@ -697,6 +697,12 @@
             border-color: rgba(154,120,224,0.44);
             background: rgba(154,120,224,0.12);
         }
+        .role-badge[data-role="god"] {
+            color: var(--gold-light);
+            border-color: rgba(231,207,138,0.54);
+            background: rgba(231,207,138,0.14);
+            box-shadow: 0 0 18px rgba(231,207,138,0.12);
+        }
         .btn {
             padding: 10px 22px;
             border-radius: 30px;
@@ -5150,6 +5156,12 @@
             border-color: rgba(243,215,142,0.62);
             box-shadow: 0 0 20px rgba(231,207,138,0.20);
         }
+        .leaderboard-rank.rank-0 {
+            color: var(--gold-light);
+            background: linear-gradient(145deg, rgba(231,207,138,0.22), rgba(123,93,45,0.18));
+            border-color: rgba(231,207,138,0.74);
+            box-shadow: 0 0 18px rgba(231,207,138,0.16);
+        }
         .leaderboard-rank.rank-2 {
             color: #101218;
             background: linear-gradient(135deg, #d8dde7, #8a93a8);
@@ -5165,6 +5177,13 @@
             flex-wrap: wrap;
             gap: 8px;
             align-items: center;
+        }
+        .leaderboard-row.god-seat {
+            cursor: default;
+            border-color: color-mix(in srgb, var(--god-primary, #e7cf8a) 42%, rgba(255,255,255,0.08));
+            background:
+                radial-gradient(circle at 12% 18%, color-mix(in srgb, var(--god-primary, #e7cf8a) 18%, transparent), transparent 38%),
+                rgba(11,12,18,0.74);
         }
         .leaderboard-god-mark {
             width: 28px;
@@ -6467,6 +6486,7 @@
                 <div class="role-card" data-role="author" data-mark="筑"><strong>试炼构筑者</strong><span>可构筑愚戏，也能参与判定与证言。</span><small>不能进入分数结算</small></div>
                 <div class="role-card" data-role="reviewer" data-mark="审"><strong>结算审核员</strong><span>拥有信徒、构筑者与结算权限。</span><small>显示构筑 / 显示结算</small></div>
                 <div class="role-card" data-role="admin" data-mark="馆"><strong>神谕馆主</strong><span>可管理试炼，并拥有结算权限。</span><small>完整管理席位</small></div>
+                <div class="role-card" data-role="god" data-mark="神"><strong>祈愿神明</strong><span>可祈愿创本，并以神名降下称号。</span><small>第零神席 / 不争信徒榜</small></div>
             </div>
             <div class="identity-card" id="identityCard">
                 <div class="identity-card-head">
@@ -6623,7 +6643,7 @@
         const INVITE_STORAGE_KEY = 'invite_session_v1';
         const PROFILE_STORAGE_KEY = 'personal_profiles_v1';
         const PROFILE_NOTICE_SEEN_KEY = 'profile_notice_seen_v1';
-        const ROLE_LABELS = { player: '入局信徒', author: '试炼构筑者', reviewer: '结算审核员', admin: '神谕馆主' };
+        const ROLE_LABELS = { player: '入局信徒', author: '试炼构筑者', reviewer: '结算审核员', admin: '神谕馆主', god: '祈愿神明' };
         const ROLE_UI_COPY = {
             guest: {
                 title: '旁观者只读',
@@ -6673,6 +6693,16 @@
                     ['⚖', '分数结算', '可进入结算神谕台。'],
                     ['📌', '神谕维护', '可管理置顶与试炼状态。'],
                     ['✦', '档案观测', '保留个人档案与榜单能力。']
+                ]
+            },
+            god: {
+                title: '祈愿神明',
+                note: '神明可创建祈愿试炼，也可为信徒降下称号；神明不参与普通试炼与信徒榜竞争。',
+                cards: [
+                    ['✦', '降下称号', '以本神名义为信徒授予或撤销称号。'],
+                    ['🎭', '祈愿创本', '写下祈愿试炼，供信徒祈愿道具或愿望。'],
+                    ['◇', '第零神席', '榜单展示为第 0 名，不占据信徒名次。'],
+                    ['⊘', '不入试炼', '不登记通关、不参与评分和信徒分数竞争。']
                 ]
             }
         };
@@ -7285,8 +7315,11 @@
         function getInviteRole() { return inviteSession?.role || null; }
         function canUseRole(roles) { return roles.includes(getInviteRole()); }
         function canInteract() { return canUseRole(['player', 'author', 'reviewer', 'admin']); }
-        function canSubmit() { return canUseRole(['author', 'reviewer', 'admin']); }
+        function canTestify() { return canUseRole(['player', 'author', 'reviewer', 'admin', 'god']); }
+        function canSubmit() { return canUseRole(['author', 'reviewer', 'admin', 'god']); }
         function isAdmin() { return getInviteRole() === 'admin'; }
+        function isGodRole() { return getInviteRole() === 'god'; }
+        function canGrantTitlesUI() { return canUseRole(['admin', 'god']); }
         function canSettleScores() { return canUseRole(['reviewer', 'admin']); }
         function canOverrideProfileLocks() { return isAdmin(); }
         function canEditProfileScores() { return canOverrideProfileLocks(); }
@@ -7295,7 +7328,7 @@
         }
 
         function normalizeRole(role) {
-            return ['player', 'author', 'reviewer', 'admin'].includes(role) ? role : null;
+            return ['player', 'author', 'reviewer', 'admin', 'god'].includes(role) ? role : null;
         }
 
         function saveInviteSession(session) {
@@ -7331,7 +7364,7 @@
             const identityRoleText = document.getElementById('identityRoleText');
             const displayNameInput = document.getElementById('displayNameInput');
             if (roleBadge) {
-                const registry = role === 'admin' ? '神谕馆册' : role === 'reviewer' ? '审核席' : role === 'author' ? '构筑者名录' : '信徒名录';
+                const registry = role === 'god' ? '神明席' : role === 'admin' ? '神谕馆册' : role === 'reviewer' ? '审核席' : role === 'author' ? '构筑者名录' : '信徒名录';
                 roleBadge.textContent = role ? `${registry} · ${inviteSession?.name || ROLE_LABELS[role]}` : '旁观者只读';
                 roleBadge.classList.toggle('active', !!role);
                 roleBadge.dataset.role = role || 'guest';
@@ -7341,17 +7374,26 @@
             }
             if (inviteButton) inviteButton.textContent = '🎲 同契召引';
             if (scoreButton) {
-                scoreButton.style.display = canSettleScores() ? '' : 'none';
-                scoreButton.title = canSettleScores() ? '审核员分数结算工作台' : '仅审核员可见';
+                scoreButton.style.display = (canSettleScores() || isGodRole()) ? '' : 'none';
+                scoreButton.textContent = isGodRole() ? '✦ 称号敕令' : '⚖ 分数结算';
+                scoreButton.title = isGodRole() ? '神明称号敕令台' : (canSettleScores() ? '审核员分数结算工作台' : '仅审核员可见');
             }
             if (submitButton) {
-                submitButton.textContent = '🎭 构筑愚戏';
+                submitButton.textContent = isGodRole() ? '✦ 祈愿创本' : '🎭 构筑愚戏';
                 submitButton.style.display = (!role || canSubmit()) ? '' : 'none';
-                submitButton.title = canSubmit() ? '构筑愚戏' : '需要构筑者或审核员谕令';
+                submitButton.title = isGodRole() ? '写下祈愿创本' : (canSubmit() ? '构筑愚戏' : '需要构筑者或审核员谕令');
             }
             if (identityCard) identityCard.classList.toggle('active', !!role);
             if (identityRoleText) identityRoleText.textContent = role ? `${ROLE_LABELS[role]}` : '未入局';
-            if (displayNameInput && role) displayNameInput.value = inviteSession?.name || ROLE_LABELS[role];
+            if (displayNameInput && role) {
+                displayNameInput.value = inviteSession?.name || ROLE_LABELS[role];
+                displayNameInput.disabled = isGodRole();
+            }
+            const displayNameButton = document.getElementById('displayNameButton');
+            if (displayNameButton) {
+                displayNameButton.disabled = isGodRole();
+                displayNameButton.textContent = isGodRole() ? '神名固定' : '保存昵称';
+            }
             updateRoleCards(role);
             updateRoleInsightPanel(role);
             updateProfileNoticeBadge();
@@ -8160,28 +8202,58 @@
                 </section>`;
         }
 
+        function getLeaderboardGodSeats(scoreType, options = {}) {
+            const gods = getAllGods();
+            const filtered = options.path ? gods.filter(item => item.path === options.path) : gods;
+            return filtered.map(({ god, path, className }) => ({
+                key: `god-seat-${god}`,
+                displayName: god,
+                role: 'god',
+                faithGod: god,
+                faithPath: path,
+                faithClass: className,
+                profession: '',
+                professionClass: '',
+                ascensionScore: '∞',
+                audienceScore: '∞',
+                updatedAt: new Date(0).toISOString(),
+                isCurrent: isGodRole() && inviteSession?.name === god,
+                isGodSeat: true,
+                activeTitle: {
+                    titleText: '第零神席',
+                    titleGod: god,
+                    grantedByType: 'god',
+                    grantedByName: god
+                },
+                scoreType
+            }));
+        }
+
         function renderLeaderboardRows(entries, scoreType, limit = 50, options = {}) {
+            const godRows = options.includeGodSeats ? getLeaderboardGodSeats(scoreType, options).slice(0, options.godLimit || 16) : [];
             const ranked = sortLeaderboardEntries(entries, scoreType).slice(0, limit);
-            if (!ranked.length) return renderRitualEmpty('此途暂无留存信徒档案，静待众生踏入新的愚戏。', '命运', '信徒名录暂空');
+            if (!ranked.length && !godRows.length) return renderRitualEmpty('此途暂无留存信徒档案，静待众生踏入新的愚戏。', '命运', '信徒名录暂空');
             const topScore = ranked.reduce((max, entry) => Math.max(max, getLeaderboardScore(entry, scoreType)), 1);
-            return ranked.map((entry, index) => {
+            const renderEntryRow = (entry, index) => {
                 const role = ROLE_LABELS[entry.role] || '入局信徒';
                 const faith = entry.faithGod ? `${entry.faithGod}之神 · ${entry.faithPath}命途` : '未立信仰';
-                const profession = entry.profession ? `${entry.professionClass} · ${entry.profession}` : '未定职业';
+                const profession = entry.isGodSeat ? '无职业 · 无信仰登记' : (entry.profession ? `${entry.professionClass} · ${entry.profession}` : '未定职业');
                 const score = getLeaderboardScore(entry, scoreType);
-                const scoreText = scoreType === 'total'
+                const scoreText = entry.isGodSeat ? '∞' : scoreType === 'total'
                     ? `${formatProfileScore(entry.ascensionScore)} / ${formatProfileScore(entry.audienceScore)}`
                     : formatProfileScore(score);
-                const secondaryScoreText = options.showAscensionInParentheses
+                const secondaryScoreText = options.showAscensionInParentheses && !entry.isGodSeat
                     ? `<em>（登神之路 ${escapeHtml(formatProfileScore(entry.ascensionScore))}）</em>`
                     : '';
-                const progress = Math.max(4, Math.round((Math.max(0, score) / Math.max(1, topScore)) * 100));
+                const progress = entry.isGodSeat ? 100 : Math.max(4, Math.round((Math.max(0, score) / Math.max(1, topScore)) * 100));
                 const skinStyle = entry.faithGod ? getGodSkinStyle(entry.faithGod) : getGodSkinStyle('命运');
                 const skin = getGodSkin(entry.faithGod || '命运');
-                const rankClass = index === 0 ? 'rank-1' : index === 1 ? 'rank-2' : index === 2 ? 'rank-3' : '';
+                const rankClass = entry.isGodSeat ? 'rank-0' : index === 0 ? 'rank-1' : index === 1 ? 'rank-2' : index === 2 ? 'rank-3' : '';
+                const rankLabel = entry.isGodSeat ? '0' : String(index + 1);
+                const clickAction = entry.isGodSeat ? '' : ` onclick='openProfileFromLeaderboard(${jsString(entry.key)})'`;
                 return `
-                    <article class="leaderboard-row ${entry.isCurrent ? 'is-current' : ''}" data-god="${escapeHtml(entry.faithGod || '命运')}" data-motif="${escapeHtml(skin.motif)}" style="${skinStyle};--rank-progress:${progress}%" onclick='openProfileFromLeaderboard(${jsString(entry.key)})'>
-                        <div class="leaderboard-rank ${rankClass}">${index + 1}</div>
+                    <article class="leaderboard-row ${entry.isCurrent ? 'is-current' : ''} ${entry.isGodSeat ? 'god-seat' : ''}" data-god="${escapeHtml(entry.faithGod || '命运')}" data-motif="${escapeHtml(skin.motif)}" style="${skinStyle};--rank-progress:${progress}%"${clickAction}>
+                        <div class="leaderboard-rank ${rankClass}">${rankLabel}</div>
                         <div>
                             <div class="leaderboard-name-line">
                                 ${renderGodSigil(entry.faithGod || '命运', 'sm', 'leaderboard-god-mark')}
@@ -8201,7 +8273,8 @@
                             <span>${escapeHtml(getLeaderboardScoreLabel(scoreType))}</span>
                         </div>
                     </article>`;
-            }).join('');
+            };
+            return [...godRows.map((entry, index) => renderEntryRow(entry, index)), ...ranked.map(renderEntryRow)].join('');
         }
 
         function renderLeaderboardBoard(title, entries, scoreType, options = {}) {
@@ -8233,32 +8306,29 @@
         }
 
         function renderLeaderboardContent(entries) {
-            if (!entries.length) {
-                return renderRitualEmpty('还没有任何个人档案进入榜单。先进入个人档案，保存昵称、信仰、职业与两项分数。', '命运', '登神觐见录暂空');
-            }
             if (leaderboardMode === 'ascension') {
-                return `<div class="leaderboard-layout">${renderLeaderboardBoard('命运骰录 · 登神阶途总榜', entries, 'ascension', { full: true })}</div><div class="leaderboard-observer-note">登神之路分数越高，代表信徒踏遍试炼切片越多，见证神明权柄愈深。</div>`;
+                return `<div class="leaderboard-layout">${renderLeaderboardBoard('命运骰录 · 登神阶途总榜', entries, 'ascension', { full: true, includeGodSeats: true })}</div><div class="leaderboard-observer-note">登神之路分数越高，代表信徒踏遍试炼切片越多，见证神明权柄愈深；神明固定列第 0 位，不参与信徒争榜。</div>`;
             }
             if (leaderboardMode === 'audience') {
-                return `<div class="leaderboard-layout">${renderLeaderboardBoard('星轨观览 · 觐见之梯总榜', entries, 'audience', { full: true })}</div><div class="leaderboard-observer-note">觐见之梯源自信徒对试炼的评判证言，代表你为愚戏降下的神格判定权重。</div>`;
+                return `<div class="leaderboard-layout">${renderLeaderboardBoard('星轨观览 · 觐见之梯总榜', entries, 'audience', { full: true, includeGodSeats: true })}</div><div class="leaderboard-observer-note">觐见之梯源自信徒对试炼的评判证言；神明固定列第 0 位，不参与信徒争榜。</div>`;
             }
             if (leaderboardMode === 'path') {
                 const pathTabs = renderLeaderboardPathTabs();
                 if (leaderboardPath !== 'all') {
                     const pathEntries = entries.filter(entry => entry.faithPath === leaderboardPath);
-                    return `${pathTabs}<div class="leaderboard-layout">${renderLeaderboardBoard(`${leaderboardPath}命途 · 信徒独立录`, pathEntries, 'audience', { full: true, subtitle: `${pathEntries.length} 位信徒 · 按觐见之梯排序`, path: leaderboardPath, showAscensionInParentheses: true })}</div>`;
+                    return `${pathTabs}<div class="leaderboard-layout">${renderLeaderboardBoard(`${leaderboardPath}命途 · 信徒独立录`, pathEntries, 'audience', { full: true, subtitle: `${pathEntries.length} 位信徒 · 第 0 位为神席`, path: leaderboardPath, showAscensionInParentheses: true, includeGodSeats: true })}</div>`;
                 }
                 const boards = GOD_GROUPS.map(group => {
                     const pathEntries = entries.filter(entry => entry.faithPath === group.path);
                     const gods = group.gods.map(god => `${god}`).join('、');
-                    return renderLeaderboardBoard(`${group.path}命途 · ${gods}信徒录`, pathEntries, 'audience', { limit: 10, subtitle: `${pathEntries.length} 位信徒 · 觐见之梯序`, path: group.path, showAscensionInParentheses: true });
+                    return renderLeaderboardBoard(`${group.path}命途 · ${gods}信徒录`, pathEntries, 'audience', { limit: 10, subtitle: `${pathEntries.length} 位信徒 · 第 0 位为神席`, path: group.path, showAscensionInParentheses: true, includeGodSeats: true });
                 }).join('');
                 return `${pathTabs}<div class="leaderboard-layout">${boards}</div>`;
             }
             return `
                 <div class="leaderboard-layout">
-                    ${renderLeaderboardBoard('命运骰录 · 登神阶途总榜', entries, 'ascension', { limit: 30 })}
-                    ${renderLeaderboardBoard('星轨观览 · 觐见之梯总榜', entries, 'audience', { limit: 30 })}
+                    ${renderLeaderboardBoard('命运骰录 · 登神阶途总榜', entries, 'ascension', { limit: 30, includeGodSeats: true })}
+                    ${renderLeaderboardBoard('星轨观览 · 觐见之梯总榜', entries, 'audience', { limit: 30, includeGodSeats: true })}
                 </div>`;
         }
 
@@ -8756,11 +8826,18 @@
         }
 
         function renderTitleAdminPanel(entries) {
-            if (!isAdmin()) return '';
+            if (!canGrantTitlesUI()) return '';
             const options = renderTitlePlayerOptions(entries);
+            const godName = isGodRole() ? cleanGodName(inviteSession?.name || '') : '';
+            const titleGodControl = isGodRole()
+                ? `<input id="titleGodSelect" value="${escapeHtml(godName)}" disabled>`
+                : `<select id="titleGodSelect">${renderGodSelectOptions()}</select>`;
+            const titleGodHelp = isGodRole()
+                ? `${escapeHtml(godName)}之神只能以本神名义降下称号；撤销时也只能撤销本神授予的当前称号。`
+                : '馆主可选择馆主亲授，或代填某位神明名义。';
             return `
-                <section class="profile-panel" data-god="命运" style="${getGodSkinStyle('命运')}">
-                    <div class="profile-panel-title"><span>称号敕令</span><small>馆主降下 / 预留神明降号</small></div>
+                <section class="profile-panel" data-god="${escapeHtml(godName || '命运')}" style="${getGodSkinStyle(godName || '命运')}">
+                    <div class="profile-panel-title"><span>称号敕令</span><small>${isGodRole() ? '神明降号' : '馆主降下 / 神明名义'}</small></div>
                     <div class="profile-form-grid">
                         <div class="form-group full">
                             <label>受封昵称</label>
@@ -8768,10 +8845,10 @@
                             <datalist id="titlePlayerList">${options}</datalist>
                         </div>
                         <div class="form-group full"><label>称号</label><input id="titleTextInput" maxlength="32" placeholder="例如：雾中执灯者"></div>
-                        <div class="form-group"><label>降号名义</label><select id="titleGodSelect">${renderGodSelectOptions()}</select></div>
+                        <div class="form-group"><label>降号名义</label>${titleGodControl}</div>
                         <div class="form-group"><label>敕令备注</label><input id="titleNoteInput" maxlength="120" placeholder="可选，授予缘由"></div>
                     </div>
-                    <div class="identity-help">当前只允许馆主操作；后续 16 个神明账号接入后，会复用这里的神明名义字段。</div>
+                    <div class="identity-help">${titleGodHelp}</div>
                     <div class="profile-tools">
                         <button class="btn btn-primary btn-sm" onclick="grantProfileTitleUI()">降下称号</button>
                         <button class="btn btn-outline btn-sm" onclick="revokeProfileTitleUI()">撤销当前称号</button>
@@ -8780,10 +8857,10 @@
         }
 
         async function grantProfileTitleUI() {
-            if (!isAdmin()) { showToast('需要馆主谕令'); return; }
+            if (!canGrantTitlesUI()) { showToast('需要馆主或神明谕令'); return; }
             const targetName = cleanDisplayNameInput(document.getElementById('titleTargetName')?.value || '');
             const titleText = String(document.getElementById('titleTextInput')?.value || '').trim().slice(0, 32);
-            const titleGod = cleanGodName(document.getElementById('titleGodSelect')?.value || '');
+            const titleGod = isGodRole() ? cleanGodName(inviteSession?.name || '') : cleanGodName(document.getElementById('titleGodSelect')?.value || '');
             const titleNote = String(document.getElementById('titleNoteInput')?.value || '').trim().slice(0, 120);
             if (!targetName || !titleText) { showToast('请填写受封昵称和称号'); return; }
             const { error } = await invokeDungeonAction('grantProfileTitle', { targetName, titleText, titleGod, titleNote });
@@ -8793,7 +8870,7 @@
         }
 
         async function revokeProfileTitleUI() {
-            if (!isAdmin()) { showToast('需要馆主谕令'); return; }
+            if (!canGrantTitlesUI()) { showToast('需要馆主或神明谕令'); return; }
             const targetName = cleanDisplayNameInput(document.getElementById('titleTargetName')?.value || '');
             if (!targetName) { showToast('请填写要撤销称号的昵称'); return; }
             if (!window.confirm(`撤销 ${targetName} 当前生效称号？`)) return;
@@ -8816,12 +8893,39 @@
             const container = document.getElementById('scoreContent');
             if (!container) return;
             if (!canSettleScores()) {
+                if (isGodRole()) {
+                    const { entries: titleEntries } = await fetchLeaderboardEntries();
+                    const godName = cleanGodName(inviteSession?.name || '') || '命运';
+                    container.innerHTML = `
+                        <section class="profile-hero" data-god="${escapeHtml(godName)}" data-motif="${escapeHtml(getGodSkin(godName).motif)}" style="${getGodSkinStyle(godName)}">
+                            <div class="profile-avatar ${getGodClass(godName)}" style="${getGodSkinStyle(godName)}">${renderGodSigil(godName, 'lg')}</div>
+                            <div class="profile-hero-copy">
+                                <div class="profile-kicker">DIVINE TITLE EDICT</div>
+                                <h1 class="profile-name">称号敕令台</h1>
+                                <div class="profile-subline">
+                                    <span class="metric-pill">神明 <strong>${escapeHtml(inviteSession?.name || godName)}</strong></span>
+                                    <span class="metric-pill">第零神席 <strong>∞</strong></span>
+                                </div>
+                                <div class="profile-faith-prayer">神明可为信徒降下称号、撤销本神授予的称号；不进入分数结算，也不登记普通试炼成绩。</div>
+                            </div>
+                        </section>
+                        <div class="profile-grid">
+                            <div>${renderTitleAdminPanel(titleEntries)}</div>
+                            <div>
+                                <section class="profile-panel" data-god="${escapeHtml(godName)}" style="${getGodSkinStyle(godName)}">
+                                    <div class="profile-panel-title"><span>神明边界</span><small>不参与信徒试炼</small></div>
+                                    <div class="profile-empty">此账号可祈愿创本、递交证言、降下称号；不会建立信徒个人档案，不进入通关、匹配、抽天赋和分数结算流程。</div>
+                                </section>
+                            </div>
+                        </div>`;
+                    return;
+                }
                 container.innerHTML = renderRitualEmpty('此页只对结算审核员与神谕馆主开放；未持审核席权限的身份不会进入分数结算。', '真理', '需要审核席权限');
                 return;
             }
             const dungeons = await fetchDungeons();
             const dungeonOptions = renderScoreDungeonOptions(dungeons);
-            const { entries: titleEntries } = isAdmin()
+            const { entries: titleEntries } = canGrantTitlesUI()
                 ? await fetchLeaderboardEntries()
                 : { entries: [] };
             const { settlements, error } = await fetchScoreSettlements(30);
@@ -8885,7 +8989,7 @@
         }
 
         async function openScorePage() {
-            if (!canSettleScores()) {
+            if (!canSettleScores() && !isGodRole()) {
                 openInviteModal('需要审核员谕令后才能进入分数结算。');
                 return;
             }
@@ -11320,10 +11424,11 @@
             const comments = await fetchComments(id);
             const feedbackSummary = await fetchClearFeedbackSummary(id);
             const rated = await checkHasRated(id);
-            const locked = !canInteract();
-            const ratingText = rated ? '✅ 你已经封存神格评议' : (locked ? '🎲 验入局谕令后可降下判定' : '选择 1-5 阶，封存你的神格评议');
-            const commentLockedAttrs = locked ? 'disabled' : '';
-            const commentPlaceholder = locked ? '验入局谕令后可递交证言' : getTestimonyPlaceholder(d.type);
+            const ratingLocked = !canInteract();
+            const testimonyLocked = !canTestify();
+            const ratingText = rated ? '✅ 你已经封存神格评议' : (ratingLocked ? '🎲 验入局谕令后可降下判定' : '选择 1-5 阶，封存你的神格评议');
+            const commentLockedAttrs = testimonyLocked ? 'disabled' : '';
+            const commentPlaceholder = testimonyLocked ? '验入局谕令后可递交证言' : getTestimonyPlaceholder(d.type);
             const runCount = getRunCount(d);
             const clearLocalKey = `${id}:${runCount}:${inviteSession?.code || 'guest'}`;
             const clearDone = !!getLocalData('cleared_supabase', {})[clearLocalKey];
@@ -11342,7 +11447,7 @@
             const ratingValue = ratingScore ? ratingScore.toFixed(1) : '—';
             const judgementControl = rated
                 ? '<span class="judgement-seal">已封存判定</span>'
-                : `<button class="btn btn-outline btn-sm" onclick="${locked ? `openInviteModal('验入局谕令后可为试炼降下神格判定。')` : `openRatingModal('${escapeHtml(id)}')`}">${locked ? '验入局谕令' : '降下你的判定'}</button>`;
+                : `<button class="btn btn-outline btn-sm" onclick="${ratingLocked ? `openInviteModal('验入局谕令后可为试炼降下神格判定。')` : `openRatingModal('${escapeHtml(id)}')`}">${ratingLocked ? '验入局谕令' : '降下你的判定'}</button>`;
             const pinnedNote = d.pinned_note || '';
             const canEditNote = canEditPinned(d);
             const pinnedNoteHtml = pinnedNote || canEditNote ? `
@@ -11396,7 +11501,7 @@
                         <p>${escapeHtml(skin.oracle)}</p>
                     </div>
                 </section>
-                ${renderDetailDossier(d, { locked, rated, clearDone, activeCommentCount })}
+                ${renderDetailDossier(d, { locked: ratingLocked, rated, clearDone, activeCommentCount })}
                 ${pinnedNoteHtml}
                 <div class="clear-panel">
                     <div class="clear-panel-head">
@@ -11426,9 +11531,9 @@
                     <div class="testimony-launch ${godClass}" data-god="${escapeHtml(getGodInfo(d.type).god)}" style="${godStyle}">
                         <div>
                             <div class="testimony-launch-title">${renderGodSigil(d.type, 'sm')} 递交试炼证言</div>
-                            <div class="testimony-launch-note">当前身份：<strong>${locked ? '访客' : escapeHtml(inviteSession?.name || ROLE_LABELS[getInviteRole()] || '匿名')}</strong>。神谕记录将被留存，供后来信徒判断。</div>
+                            <div class="testimony-launch-note">当前身份：<strong>${testimonyLocked ? '访客' : escapeHtml(inviteSession?.name || ROLE_LABELS[getInviteRole()] || '匿名')}</strong>。神谕记录将被留存，供后来信徒判断。</div>
                         </div>
-                        <button class="btn btn-primary btn-sm" onclick="${locked?`openInviteModal('验入局谕令后可递交证言。')`:`openTestimonyModal('${escapeHtml(id)}')`}">${locked?'验入局谕令':'递交证言'}</button>
+                        <button class="btn btn-primary btn-sm" onclick="${testimonyLocked?`openInviteModal('验入局谕令后可递交证言。')`:`openTestimonyModal('${escapeHtml(id)}')`}">${testimonyLocked?'验入局谕令':'递交证言'}</button>
                     </div>
                     <div id="commentsList">${renderComments(comments, d.creator)}</div>
                 </div>`;
@@ -11559,7 +11664,7 @@
         }
 
         async function openTestimonyModal(id, options = {}) {
-            if(!requireInvite(['player','author','reviewer','admin'], '验入局谕令后可递交试炼证言。')) return;
+            if(!requireInvite(['player','author','reviewer','admin','god'], '验入局谕令后可递交试炼证言。')) return;
             testimonyTargetId = id;
             const dungeons = await fetchDungeons();
             const d = dungeons.find(item => item.id === id);
@@ -11753,7 +11858,7 @@
         }
 
         async function submitComment(id){
-            if(!requireInvite(['player','author','reviewer','admin'], '验入局谕令后可递交试炼证言。')) return;
+            if(!requireInvite(['player','author','reviewer','admin','god'], '验入局谕令后可递交试炼证言。')) return;
             const a=inviteSession?.name || ROLE_LABELS[getInviteRole()] || '';
             const input = document.getElementById('testimonyContentInput') || document.getElementById('commentContentInput');
             const c=input?.value.trim();
@@ -11772,7 +11877,7 @@
         }
 
         async function deleteCommentUI(commentId){
-            if(!requireInvite(['player','author','reviewer','admin'], '验入局谕令后才可抹去自己的证言。')) return;
+            if(!requireInvite(['player','author','reviewer','admin','god'], '验入局谕令后才可抹去自己的证言。')) return;
             if(!confirm('确定抹去这条证言吗？')) return;
             const {error}=await removeComment(commentId);
             if(error){showToast(`❌ ${error.message || '删除失败'}`);return;}
@@ -11804,7 +11909,7 @@
         }
 
         async function advanceRunUI(id){
-            if(!requireInvite(['author','reviewer','admin'], '只有试炼构筑者、结算审核员或神谕馆主可以重掷下一局。')) return;
+            if(!requireInvite(['author','reviewer','admin','god'], '只有试炼构筑者、结算审核员、神明或神谕馆主可以重掷下一局。')) return;
             if(!confirm('确定重掷下一局吗？通关率会按新的总参与人次重新计算。')) return;
             const {error}=await advanceDungeonRun(id);
             if(error){ showToast(`❌ ${error.message || '开启失败'}`); return; }
@@ -11814,11 +11919,16 @@
         }
 
         function openSubmitModal(){
-            if(!requireInvite(['author','reviewer','admin'], '只有试炼构筑者、结算审核员或神谕馆主可以构筑试炼。')) return;
+            if(!requireInvite(['author','reviewer','admin','god'], '只有试炼构筑者、结算审核员、神明或神谕馆主可以构筑试炼。')) return;
             document.getElementById('submitModalOverlay').style.display='flex';
             document.body.style.overflow='hidden';
+            const modalTitle = document.querySelector('#submitModal h2');
+            const submitButton = document.querySelector('#submitForm button[type="submit"]');
+            if (modalTitle) modalTitle.textContent = isGodRole() ? '✦ 《祈愿创本》' : '🎭 《构筑你的试炼愚戏》';
+            if (submitButton) submitButton.textContent = isGodRole() ? '降下祈愿创本' : '献祭试炼至圣殿';
             const creatorInput = document.getElementById('dungeonCreator');
             if (creatorInput && !creatorInput.value && inviteSession?.name && !inviteSession.name.includes('共享')) creatorInput.value = inviteSession.name;
+            if (creatorInput) creatorInput.disabled = isGodRole();
             document.getElementById('dungeonName').focus();
         }
 
@@ -11837,14 +11947,16 @@
             document.getElementById('submitModalOverlay').style.display='none';
             document.body.style.overflow='';
             document.getElementById('submitForm').reset();
+            const creatorInput = document.getElementById('dungeonCreator');
+            if (creatorInput) creatorInput.disabled = false;
             resetSubmitDefaults();
         }
 
         async function submitDungeon(e){
             e.preventDefault();
-            if(!requireInvite(['author','reviewer','admin'], '只有试炼构筑者、结算审核员或神谕馆主可以构筑试炼。')) return;
+            if(!requireInvite(['author','reviewer','admin','god'], '只有试炼构筑者、结算审核员、神明或神谕馆主可以构筑试炼。')) return;
             const name=document.getElementById('dungeonName').value.trim();
-            const creator=document.getElementById('dungeonCreator').value.trim();
+            const creator=isGodRole() ? (inviteSession?.name || '') : document.getElementById('dungeonCreator').value.trim();
             const coCreators=parseCoCreators(document.getElementById('dungeonCoCreators')?.value || '');
             const difficulty=document.getElementById('dungeonDifficulty').value;
             const selectedTypes=getSelectedSubmitGods();
@@ -11864,7 +11976,7 @@
             btn.textContent='献祭中...';
             const {error}=await addDungeon({name,creator,coCreators,difficulty,type,participantCount,runCount,description:desc,pinnedNote,isOneShot,dungeonMode});
             btn.disabled=false;
-            btn.textContent='献祭试炼至圣殿';
+            btn.textContent=isGodRole() ? '降下祈愿创本' : '献祭试炼至圣殿';
             if(error){showToast(`❌ ${error.message || '失败'}`);return;}
             showToast('你已代行神明权柄，一场愚戏试炼，正式落位切片宇宙。静待信徒入局，降下他们的神格判定。');
             closeSubmitModal();
