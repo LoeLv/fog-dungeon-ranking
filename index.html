@@ -5233,6 +5233,103 @@
         }
         .form-grid .full { grid-column: 1 / -1; }
         .form-span { grid-column: 1 / -1; }
+        .submit-modal {
+            max-width: 860px;
+        }
+        .submit-modal-close {
+            position: absolute;
+            top: 14px;
+            right: 16px;
+            width: 34px;
+            height: 34px;
+            border-radius: 999px;
+            border: 1px solid rgba(255,255,255,0.10);
+            background:
+                radial-gradient(circle at 35% 25%, rgba(231,207,138,0.16), transparent 48%),
+                rgba(0,0,0,0.34);
+            color: var(--text-muted);
+            font: inherit;
+            font-size: 0.92rem;
+            line-height: 1;
+            cursor: pointer;
+            transition: all var(--transition);
+        }
+        .submit-modal-close:hover {
+            color: var(--text-bright);
+            border-color: rgba(231,207,138,0.38);
+            background: rgba(231,207,138,0.10);
+            transform: translateY(-1px);
+        }
+        .god-pick-panel {
+            display: grid;
+            gap: 8px;
+            padding: 10px;
+            border: 1px solid rgba(231,207,138,0.16);
+            border-radius: var(--radius-sm);
+            background:
+                linear-gradient(135deg, rgba(231,207,138,0.055), transparent 44%),
+                rgba(0,0,0,0.28);
+        }
+        .god-pick-row {
+            display: grid;
+            grid-template-columns: 74px minmax(0, 1fr);
+            gap: 8px;
+            align-items: center;
+        }
+        .god-pick-path {
+            color: var(--text-muted);
+            font-size: 0.7rem;
+            font-weight: 900;
+            letter-spacing: 0.08em;
+        }
+        .god-pick-buttons {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+        }
+        .god-pick-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            min-height: 30px;
+            padding: 5px 10px;
+            border-radius: 999px;
+            border: 1px solid rgba(255,255,255,0.085);
+            background: rgba(0,0,0,0.24);
+            color: var(--text);
+            font: inherit;
+            font-size: 0.72rem;
+            cursor: pointer;
+            transition: all var(--transition);
+        }
+        .god-pick-btn:hover {
+            color: var(--text-bright);
+            border-color: color-mix(in srgb, var(--god-primary, var(--gold-light)) 42%, rgba(255,255,255,0.08));
+            transform: translateY(-1px);
+        }
+        .god-pick-btn.active {
+            color: var(--text-bright);
+            border-color: color-mix(in srgb, var(--god-primary, var(--gold-light)) 62%, rgba(255,255,255,0.10));
+            background:
+                linear-gradient(90deg, color-mix(in srgb, var(--god-primary, var(--gold-light)) 20%, transparent), rgba(0,0,0,0.24));
+            box-shadow: 0 0 16px var(--god-glow, rgba(231,207,138,0.14));
+        }
+        .god-pick-summary {
+            min-height: 24px;
+            color: var(--text-muted);
+            font-size: 0.74rem;
+            line-height: 1.45;
+        }
+        .god-pick-summary strong {
+            color: var(--gold-light);
+        }
+        .sr-only-select {
+            position: absolute;
+            width: 1px;
+            height: 1px;
+            opacity: 0;
+            pointer-events: none;
+        }
         .number-pair {
             display: grid;
             grid-template-columns: 1fr auto 1fr;
@@ -5994,6 +6091,13 @@
             .role-guide { grid-template-columns: 1fr; }
             .form-grid, .form-grid.compact { grid-template-columns: 1fr; }
             .form-span { grid-column: auto; }
+            .god-pick-row {
+                grid-template-columns: 1fr;
+                gap: 5px;
+            }
+            .god-pick-path {
+                font-size: 0.68rem;
+            }
             .world-altar {
                 grid-template-columns: 1fr;
                 padding: 22px 18px;
@@ -6358,22 +6462,29 @@
 
     <!-- 提交弹窗 -->
     <div class="modal-overlay" id="submitModalOverlay" style="display:none;" onclick="closeSubmitModal(event)">
-        <div class="modal" id="submitModal" onclick="event.stopPropagation()">
-            <button class="close-btn" style="position:absolute;top:16px;right:20px;" onclick="closeSubmitModal()">✕</button>
+        <div class="modal submit-modal" id="submitModal" onclick="event.stopPropagation()">
+            <button class="submit-modal-close" onclick="closeSubmitModal()" title="关闭构筑窗口" aria-label="关闭构筑窗口">✕</button>
             <h2>🎭 《构筑你的试炼愚戏》</h2>
             <form id="submitForm" onsubmit="submitDungeon(event)">
                 <div class="form-grid">
                     <div class="form-group"><label>试炼名 *</label><input type="text" id="dungeonName" placeholder="为这枚切片宇宙命名..." required maxlength="60"></div>
                     <div class="form-group"><label>构筑者 *</label><input type="text" id="dungeonCreator" placeholder="你的神名或代号..." required maxlength="30"></div>
                 </div>
-                <div class="form-group"><label>同契共筑者（可选）</label><input type="text" id="dungeonCoCreators" placeholder="多人共同构筑时填写昵称，用顿号、逗号或换行分隔" maxlength="240"></div>
+                <div class="form-grid">
+                    <div class="form-group"><label>同契共筑者（可选）</label><input type="text" id="dungeonCoCreators" placeholder="多个昵称用顿号、逗号或换行分隔" maxlength="240"></div>
+                    <div class="form-group"><label>试炼归档</label><select id="dungeonMode"><option value="cycle" selected>轮回试炼 —— 可反复召集入局</option><option value="one_shot">绝响试炼 —— 被抽中参与后不可再入局</option></select></div>
+                </div>
+                <div class="form-group">
+                    <label>神明标签 *（可多选）</label>
+                    <select id="dungeonType" class="sr-only-select" multiple tabindex="-1" aria-hidden="true"></select>
+                    <div class="god-pick-panel" id="dungeonGodPicker"></div>
+                    <div class="god-pick-summary" id="dungeonGodSummary">未选择神明标签</div>
+                </div>
                 <div class="form-grid compact">
-                    <div class="form-group full"><label>神明标签 *（可多选）</label><select id="dungeonType" multiple required size="6"></select></div>
                     <div class="form-group"><label>固定人数 *</label><input type="number" id="participantCount" min="1" max="99" value="6" required></div>
                     <div class="form-group"><label>当前局数 *</label><input type="number" id="runCount" min="1" max="999" value="1" required></div>
+                    <div class="form-group"><label>难度标签</label><select id="dungeonDifficulty"><option value="新手">新手本 —— 第一次入场也能跑</option><option value="低">低难 —— 轻量机制与短流程</option><option value="中" selected>中难 —— 标准挑战强度</option><option value="高">高难 —— 需要配合或硬核机制</option></select></div>
                 </div>
-                <div class="form-group"><label>试炼归档</label><select id="dungeonMode"><option value="cycle" selected>轮回试炼 —— 可反复召集入局</option><option value="one_shot">绝响试炼 —— 被抽中参与后不可再入局</option></select></div>
-                <div class="form-group"><label>难度标签</label><select id="dungeonDifficulty"><option value="新手">新手本 —— 第一次入场也能跑</option><option value="低">低难 —— 轻量机制与短流程</option><option value="中" selected>中难 —— 标准挑战强度</option><option value="高">高难 —— 需要配合或硬核机制</option></select></div>
                 <div class="form-group"><label>试炼简介 *</label><textarea id="dungeonDesc" placeholder="【写下这场试炼的谶语，供入局信徒见证】" required maxlength="1500"></textarea></div>
                 <div class="form-group"><label>构筑者置顶神谕（可选）</label><textarea id="pinnedNoteInput" placeholder="可以写开本时间、注意事项、车卡要求、构筑者补充神谕..." maxlength="800"></textarea></div>
                 <div class="form-actions"><button type="button" class="btn btn-outline" onclick="closeSubmitModal()">取消</button><button type="submit" class="btn btn-primary">献祭试炼至圣殿</button></div>
@@ -10504,6 +10615,51 @@
             if (!select) return;
             select.innerHTML = GOD_GROUPS.map(group => `<optgroup label="${escapeHtml(group.path)}命途">${group.gods.map(god => `<option value="${escapeHtml(god)}">${escapeHtml(getGodIcon(god))} ${escapeHtml(group.path)} · ${escapeHtml(god)}之神</option>`).join('')}</optgroup>`).join('');
             Array.from(select.options).forEach(option => { option.selected = false; });
+            renderSubmitGodPicker();
+        }
+
+        function renderSubmitGodPicker() {
+            const panel = document.getElementById('dungeonGodPicker');
+            if (!panel) return;
+            panel.innerHTML = GOD_GROUPS.map(group => `
+                <div class="god-pick-row ${group.className}">
+                    <div class="god-pick-path">${escapeHtml(group.path)}</div>
+                    <div class="god-pick-buttons">
+                        ${group.gods.map(god => `<button type="button" class="god-pick-btn" data-submit-god="${escapeHtml(god)}" style="${getGodSkinStyle(god)}" onclick='toggleSubmitGod(${jsString(god)})'>${renderGodSigil(god, 'xs')}<span>${escapeHtml(god)}</span></button>`).join('')}
+                    </div>
+                </div>
+            `).join('');
+            syncSubmitGodPicker();
+        }
+
+        function getSelectedSubmitGods() {
+            const select = document.getElementById('dungeonType');
+            return select ? Array.from(select.selectedOptions).map(option => option.value).filter(Boolean) : [];
+        }
+
+        function syncSubmitGodPicker() {
+            const selected = new Set(getSelectedSubmitGods());
+            document.querySelectorAll('[data-submit-god]').forEach(button => {
+                const god = button.getAttribute('data-submit-god') || '';
+                button.classList.toggle('active', selected.has(god));
+                button.setAttribute('aria-pressed', selected.has(god) ? 'true' : 'false');
+            });
+            const summary = document.getElementById('dungeonGodSummary');
+            if (summary) {
+                const gods = [...selected];
+                summary.innerHTML = gods.length
+                    ? `已选 <strong>${gods.map(escapeHtml).join('、')}</strong>`
+                    : '未选择神明标签';
+            }
+        }
+
+        function toggleSubmitGod(god) {
+            const select = document.getElementById('dungeonType');
+            if (!select) return;
+            const option = Array.from(select.options).find(item => item.value === god);
+            if (!option) return;
+            option.selected = !option.selected;
+            syncSubmitGodPicker();
         }
 
         function setGodFilter(god) {
@@ -11596,6 +11752,7 @@
             const diffSelect = document.getElementById('dungeonDifficulty');
             const modeSelect = document.getElementById('dungeonMode');
             if (godSelect) Array.from(godSelect.options).forEach(option => { option.selected = false; });
+            syncSubmitGodPicker();
             if (diffSelect) diffSelect.value = '中';
             if (modeSelect) modeSelect.value = 'cycle';
         }
@@ -11615,7 +11772,7 @@
             const creator=document.getElementById('dungeonCreator').value.trim();
             const coCreators=parseCoCreators(document.getElementById('dungeonCoCreators')?.value || '');
             const difficulty=document.getElementById('dungeonDifficulty').value;
-            const selectedTypes=Array.from(document.getElementById('dungeonType').selectedOptions).map(option => option.value);
+            const selectedTypes=getSelectedSubmitGods();
             const type=selectedTypes.join('、');
             const participantCount=Number(document.getElementById('participantCount').value);
             const runCount=Number(document.getElementById('runCount').value);
