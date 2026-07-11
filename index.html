@@ -1460,8 +1460,18 @@
         .faith-flow-bars {
             display: grid;
             gap: 8px;
+            position: relative;
+            padding: 10px;
+            border: 1px solid color-mix(in srgb, var(--god-primary, #e7cf8a) 12%, rgba(255,255,255,0.055));
+            border-radius: 12px;
+            background:
+                linear-gradient(90deg, rgba(255,255,255,0.035) 1px, transparent 1px),
+                linear-gradient(180deg, rgba(255,255,255,0.025) 1px, transparent 1px),
+                rgba(0,0,0,0.14);
+            background-size: 28px 100%, 100% 18px, auto;
         }
         .faith-flow-row {
+            position: relative;
             display: grid;
             grid-template-columns: 44px minmax(0, 1fr) 34px;
             gap: 8px;
@@ -1469,19 +1479,55 @@
             color: var(--text-muted);
             font-size: 0.7rem;
         }
+        .faith-flow-row span {
+            color: color-mix(in srgb, var(--flow-color, #e7cf8a) 72%, var(--text-muted));
+            font-weight: 800;
+        }
         .faith-flow-track {
+            position: relative;
             height: 8px;
             border-radius: 999px;
-            overflow: hidden;
-            background: rgba(255,255,255,0.055);
-            border: 1px solid rgba(255,255,255,0.055);
+            background:
+                linear-gradient(90deg, rgba(255,255,255,0.06), transparent 18%),
+                rgba(255,255,255,0.055);
+            border: 1px solid color-mix(in srgb, var(--flow-color, #e7cf8a) 18%, rgba(255,255,255,0.055));
         }
         .faith-flow-fill {
             height: 100%;
             width: var(--flow, 0%);
             border-radius: inherit;
-            background: var(--flow-color, var(--gold-light));
+            background:
+                linear-gradient(90deg, color-mix(in srgb, var(--flow-color, #e7cf8a) 54%, transparent), var(--flow-color, var(--gold-light)));
             box-shadow: 0 0 14px color-mix(in srgb, var(--flow-color, #e7cf8a) 24%, transparent);
+        }
+        .faith-flow-row strong {
+            color: var(--flow-color, var(--gold-light));
+            font-family: var(--font-display);
+            font-size: 0.82rem;
+            text-align: right;
+        }
+        .faith-flow-row::after {
+            content: attr(data-tip);
+            position: absolute;
+            right: 38px;
+            top: -29px;
+            z-index: 4;
+            max-width: 190px;
+            padding: 5px 8px;
+            border: 1px solid color-mix(in srgb, var(--flow-color, #e7cf8a) 28%, rgba(255,255,255,0.08));
+            border-radius: 8px;
+            background: rgba(8,9,14,0.94);
+            color: var(--text-bright);
+            font-size: 0.66rem;
+            white-space: nowrap;
+            opacity: 0;
+            transform: translateY(4px);
+            pointer-events: none;
+            transition: opacity var(--transition), transform var(--transition);
+        }
+        .faith-flow-row:hover::after {
+            opacity: 1;
+            transform: translateY(0);
         }
         .dungeon-card {
             background: var(--bg-card);
@@ -4303,6 +4349,54 @@
             font-size: 0.76rem;
             line-height: 1.55;
         }
+        .talent-mini-empty {
+            position: relative;
+            overflow: hidden;
+            display: grid;
+            grid-template-columns: auto minmax(0, 1fr);
+            gap: 8px 10px;
+            align-items: center;
+            margin-top: 9px;
+            padding: 9px;
+            border: 1px dashed color-mix(in srgb, var(--god-primary, #e7cf8a) 20%, rgba(255,255,255,0.09));
+            border-radius: 10px;
+            background:
+                radial-gradient(circle at 10% 20%, color-mix(in srgb, var(--god-primary, #e7cf8a) 8%, transparent), transparent 42%),
+                rgba(0,0,0,0.12);
+        }
+        .talent-mini-empty::after {
+            content: attr(data-god);
+            position: absolute;
+            right: 8px;
+            bottom: -7px;
+            color: color-mix(in srgb, var(--god-primary, #e7cf8a) 8%, transparent);
+            font-family: var(--font-display);
+            font-size: 1.5rem;
+            pointer-events: none;
+        }
+        .talent-mini-empty > span {
+            display: grid;
+            place-items: center;
+            width: 28px;
+            height: 28px;
+            border-radius: 9px;
+            color: var(--god-primary, #e7cf8a);
+            background: rgba(0,0,0,0.20);
+        }
+        .talent-mini-empty .god-sigil {
+            width: 19px;
+            height: 19px;
+        }
+        .talent-mini-empty strong {
+            color: var(--text-bright);
+            font-size: 0.76rem;
+        }
+        .talent-mini-empty small {
+            grid-column: 2;
+            color: var(--text-muted);
+            font-size: 0.68rem;
+            line-height: 1.45;
+        }
         .profile-notice {
             border-color: rgba(213,178,91,0.24);
             background:
@@ -6703,6 +6797,39 @@
                 欺诈: '假面台空置，无编织谎言的器物。',
                 命运: '星轨台空置，无承载宿命的器物。'
             },
+            talents: {
+                诞育: '新生环尚未萌芽，天赋之种仍在沉睡。',
+                繁荣: '丰收架尚未垂穗，天赋枝蔓仍待抽生。',
+                死亡: '安息匣中无魂火，尚未封存任何天赋。',
+                污堕: '沉溺环中空空，尚未收纳任何欲望器物。',
+                腐朽: '凋零瘢痕尚未成形，天赋仍未腐化入册。',
+                湮灭: '虚空槽位静默，无天赋可供吞没。',
+                秩序: '审判格尚未落印，无规则天赋归档。',
+                真理: '典籍页仍为空白，尚无真理天赋显形。',
+                战争: '战痕台未鸣，尚无征伐天赋入列。',
+                混乱: '漩涡尚未吐出异象，无序天赋仍未显现。',
+                痴愚: '幻视台空置，无承载虚妄错觉的天赋。',
+                沉默: '寂默槽位无声，尚未封存缄默天赋。',
+                时间: '沙漏未落下天赋之砂，时序槽仍空。',
+                记忆: '忆册架空白，尚无残页天赋归档。',
+                欺诈: '假面未启，无谎言天赋悬挂于此。',
+                命运: '星轨未掷，无命定天赋落入骰面。'
+            },
+            scoreMessages: {
+                default: '尚无结算信封。待审核员封存分数后，加分细则会在此显现。'
+            },
+            notices: {
+                default: '尚无新证言叩门。下一位信徒入局后，此处会亮起楼主提醒。'
+            },
+            equipped: {
+                default: '携带环暂空，请从天赋仓库择一枚天赋嵌入。'
+            },
+            warehouse: {
+                default: '仓库格尚空，新抽得的天赋会优先封入此位。'
+            },
+            drawLogs: {
+                default: '抽取记录尚未刻入池底。'
+            },
             clear: {
                 default: '尚未登记通关。踏入试炼后，这里会形成你的履迹录。'
             },
@@ -7152,7 +7279,7 @@
             const panel = document.getElementById('talentPoolPanel');
             if (panel) panel.outerHTML = renderTalentPoolPanel(currentTalentState, currentTalentError, profile);
             const equipPanel = document.getElementById('profileTalentEquipPanel');
-            if (equipPanel) equipPanel.innerHTML = renderEquippedTalentSlots(currentTalentState);
+            if (equipPanel) equipPanel.innerHTML = renderEquippedTalentSlots(currentTalentState, getProfileFaithGod(profile) || '命运');
         }
 
         function getSelectedTalentPool(profile, state) {
@@ -7199,11 +7326,11 @@
             }).join('')}</div>`;
         }
 
-        function renderTalentLogs(state) {
+        function renderTalentLogs(state, god = '命运') {
             const logs = state.drawLogs || [];
-            if (!logs.length) return '<div class="profile-empty">暂无抽取记录。</div>';
+            if (!logs.length) return renderRitualEmpty(getGodEmptyText(god, 'drawLogs'), god, '抽取记录暂空');
             return `<div class="talent-log-list">${logs.slice(0, 12).map(log => {
-                const label = `${formatTalentPoolLabel(log.pool_key)}池 · ${log.draw_type === 'ten' ? '十连' : '单抽'}`;
+                const label = `${formatTalentPoolLabel(log.pool_key)}池 · ${log.draw_type === 'ten' ? '十连谕' : '单枚牵引'}`;
                 const repeat = log.is_repeat ? ` · 重复 +${Number(log.fragment_gain || 0)}碎片` : '';
                 return `<div class="talent-log-item"><span><strong>${escapeHtml(log.talent_name)}</strong> ${escapeHtml(log.rank)}级${escapeHtml(repeat)}</span><span>${escapeHtml(label)}</span></div>`;
             }).join('')}</div>`;
@@ -7242,12 +7369,12 @@
                 : Number(state.cTalentFragmentGain || 5);
         }
 
-        function renderEquippedTalentSlots(state) {
+        function renderEquippedTalentSlots(state, god = getProfileFaithGod(getCurrentProfile()) || '命运') {
             const talents = state.ownedTalents || [];
             const byEquippedSlot = new Map(talents.filter(t => t.equipped_slot).map(t => [Number(t.equipped_slot), t]));
             const limit = Number(state.equippedSlotLimit || 3);
             const options = (selectedId) => [
-                '<option value="">不携带</option>',
+                '<option value="">暂不收纳此天赋</option>',
                 ...talents.map(talent => {
                     const id = Number(talent.id);
                     return `<option value="${id}" ${id === Number(selectedId || 0) ? 'selected' : ''}>${escapeHtml(renderTalentOptionLabel(talent))}</option>`;
@@ -7258,14 +7385,14 @@
                 const talent = byEquippedSlot.get(slot);
                 return `
                     <div class="talent-slot-card ${talent ? '' : 'empty'}">
-                        <div class="talent-slot-head"><span>携带槽 ${slot}</span><span>${talent ? '已装备' : '空槽'}</span></div>
+                        <div class="talent-slot-head"><span>携带槽 ${slot}</span><span>${talent ? '已嵌入' : '空槽'}</span></div>
                         <select onchange="equipTalentUI(${slot}, this.value)">${options(talent?.id)}</select>
-                        <div class="talent-slot-meta">${talent ? escapeHtml(renderTalentOptionLabel(talent)) : '从仓库中选择一个天赋放到个人面板。'}</div>
+                        ${talent ? `<div class="talent-slot-meta">${escapeHtml(renderTalentOptionLabel(talent))}</div>` : renderMiniRitualEmpty(getGodEmptyText(god, 'equipped'), god, '携带环空置')}
                     </div>`;
             }).join('')}</div>`;
         }
 
-        function renderTalentWarehouse(state) {
+        function renderTalentWarehouse(state, god = getProfileFaithGod(getCurrentProfile()) || '命运') {
             const talents = state.ownedTalents || [];
             const byStorageSlot = new Map(talents.filter(t => t.storage_slot).map(t => [Number(t.storage_slot), t]));
             const equippedIds = new Set(talents.filter(t => t.equipped_slot).map(t => Number(t.id)));
@@ -7277,7 +7404,7 @@
                     return `
                         <div class="talent-slot-card empty">
                             <div class="talent-slot-head"><span>仓库位 ${slot}</span><span>空</span></div>
-                            <div class="talent-slot-meta">新抽到的天赋会优先进入空仓库位。</div>
+                            ${renderMiniRitualEmpty(getGodEmptyText(god, 'warehouse'), god, '仓库格空置')}
                         </div>`;
                 }
                 const equippedText = talent.equipped_slot ? `携带槽 ${talent.equipped_slot}` : '未携带';
@@ -7375,22 +7502,22 @@
                                 <label for="talentPoolSelect">选择天赋池</label>
                                 <select id="talentPoolSelect" onchange="selectTalentPoolUI(this.value)">${renderTalentPoolOptions(state, selectedPool)}</select>
                             </div>
-                            <button type="button" class="btn btn-outline btn-sm" onclick="refreshTalentPoolUI()">刷新池子</button>
-                            <button type="button" class="btn btn-outline btn-sm" onclick="drawTalentUI('single')" ${!selectedPoolReady || state.availableDraws < 1 ? 'disabled' : ''}>单抽</button>
-                            <button type="button" class="btn btn-primary btn-sm" onclick="drawTalentUI('ten')" ${!selectedPoolReady || state.availableDraws < 10 ? 'disabled' : ''}>十连</button>
+                            <button type="button" class="btn btn-outline btn-sm" onclick="refreshTalentPoolUI()">重观池纹</button>
+                            <button type="button" class="btn btn-outline btn-sm" onclick="drawTalentUI('single')" ${!selectedPoolReady || state.availableDraws < 1 ? 'disabled' : ''}>牵引一枚</button>
+                            <button type="button" class="btn btn-primary btn-sm" onclick="drawTalentUI('ten')" ${!selectedPoolReady || state.availableDraws < 10 ? 'disabled' : ''}>启十连谕</button>
                         </div>
                         ${selectedPoolReady ? '' : '<div class="identity-help">当前天赋池暂无配置，等补完池子后就能抽取。</div>'}
                         ${latestResults ? `<div class="profile-list-meta" style="margin-top:12px;">本次抽取</div>${latestResults}` : ''}
                     </div>
                     ${renderOverflowChoices(state)}
                     <div class="profile-panel-title" style="margin-top:16px;"><span>天赋仓库</span><small>${inventoryCount}/${inventoryLimit} 个槽位</small></div>
-                    ${renderTalentWarehouse(state)}
+                    ${renderTalentWarehouse(state, profileGod)}
                     <div class="talent-exchange-row">
                         <select id="talentExchangeSelect">${renderTalentExchangeOptions(state, selectedPool)}</select>
-                        <button type="button" class="btn btn-outline btn-sm" onclick="exchangeTalentUI()" ${!selectedPoolReady ? 'disabled' : ''}>${exchangeCost} 碎片兑换</button>
+                        <button type="button" class="btn btn-outline btn-sm" onclick="exchangeTalentUI()" ${!selectedPoolReady ? 'disabled' : ''}>${exchangeCost} 碎片赎取</button>
                     </div>
                     <div class="profile-panel-title" style="margin-top:16px;"><span>抽取记录</span></div>
-                    ${renderTalentLogs(state)}
+                    ${renderTalentLogs(state, profileGod)}
                 </section>`;
         }
 
@@ -7923,9 +8050,9 @@
             return { messages, unread: messages.filter(message => !message.is_read), error: null };
         }
 
-        function renderScoreMessages(messages, error) {
-            if (error) return `<div class="profile-empty">${escapeHtml(error.message || '结算信封暂不可用。')}</div>`;
-            if (!messages?.length) return '<div class="profile-empty">暂无结算信封。</div>';
+        function renderScoreMessages(messages, error, god = '命运') {
+            if (error) return renderRitualEmpty(error.message || '结算信封暂不可用。', god, '结算信封暂不可用');
+            if (!messages?.length) return renderRitualEmpty(getGodEmptyText(god, 'scoreMessages'), god, '结算信封暂空');
             return `<div class="profile-list">${messages.map(message => `
                 <article class="profile-list-item score-message-card ${message.is_read ? '' : 'unread'}">
                     <div class="profile-list-title">
@@ -7933,7 +8060,7 @@
                         <small>${escapeHtml(formatDate(message.created_at))}</small>
                     </div>
                     <div class="profile-list-meta">${escapeHtml(message.content || '')}</div>
-                    ${message.is_read ? '' : `<div class="profile-tools" style="margin-top:10px;"><button class="btn btn-outline btn-sm" onclick="markScoreMessageReadUI(${Number(message.id)})">标记已读</button></div>`}
+                    ${message.is_read ? '' : `<div class="profile-tools" style="margin-top:10px;"><button class="btn btn-outline btn-sm" onclick="markScoreMessageReadUI(${Number(message.id)})">封缄此信</button></div>`}
                 </article>`).join('')}</div>`;
         }
 
@@ -8606,7 +8733,7 @@
         }
 
         function renderProfileNotices(notices, faithGod = '命运') {
-            if (!notices.length) return renderRitualEmpty('还没有人在你的试炼下留下新证言；等下一位信徒入局后，这里会亮起提醒。', faithGod, '楼主提醒暂空');
+            if (!notices.length) return renderRitualEmpty(getGodEmptyText(faithGod, 'notices'), faithGod, '楼主提醒暂空');
             return notices.slice(0, 12).map(notice => {
                 const d = notice.dungeon || {};
                 return `
@@ -8673,7 +8800,7 @@
                         <span class="metric-pill">楼主提醒 <strong>${unread.length}</strong></span>
                     </div>
                     <div class="profile-tools">
-                        <button class="btn btn-outline btn-sm" onclick="markProfileNoticesRead()">标记楼主提醒已读</button>
+                        <button class="btn btn-outline btn-sm" onclick="markProfileNoticesRead()">封缄楼主谕响</button>
                     </div>
                     <div class="profile-list" style="margin-top:14px;">${renderProfileAuthoredDungeons(authored, faithGod)}</div>
                 </section>
@@ -8732,12 +8859,12 @@
                                 <div class="form-group">
                                     <label for="profileFaithGod">信仰神明</label>
                                     <select id="profileFaithGod" onchange="previewProfileFaithSkin(this.value)" ${faithLocked ? 'disabled' : ''}>${renderProfileGodOptions(profile.faithGod)}</select>
-                                    <div class="identity-help">${faithLocked ? `信仰已封存为 ${escapeHtml(faith.label)}，不可再改。` : (faith.god === '欺诈' ? '欺诈信徒可以改写信仰记录。嘻嘻。' : '第一次保存后会锁定信仰；欺诈信徒除外。')}</div>
+                                <div class="identity-help">${faithLocked ? `信仰已封存为 ${escapeHtml(faith.label)}，不可再改。` : (faith.god === '欺诈' ? '欺诈信徒可改写信仰档纹。嘻嘻。' : '首次封存后信仰将刻入档案；欺诈信徒除外。')}</div>
                                 </div>
                                 <div class="form-group full">
                                     <label for="profileProfession">个人职业</label>
-                                    <select id="profileProfession" ${professionLocked ? 'disabled' : ''}>${renderProfileProfessionOptions(profile.profession)}</select>
-                                    <div class="identity-help">${professionLocked ? `职业已封存为 ${escapeHtml(profile.profession)}，不可再改。` : (faith.god === '欺诈' ? '欺诈信徒可以改写职业记录。嘻嘻。' : '请选择 96 职业之一；首次保存后会封存，欺诈信徒除外。')}</div>
+                                <select id="profileProfession" ${professionLocked ? 'disabled' : ''}>${renderProfileProfessionOptions(profile.profession)}</select>
+                                    <div class="identity-help">${professionLocked ? `职业已封存为 ${escapeHtml(profile.profession)}，不可再改。` : (faith.god === '欺诈' ? '欺诈信徒可改写职业档纹。嘻嘻。' : '请选择 96 职业之一；首次封存后会刻入档案，欺诈信徒除外。')}</div>
                                 </div>
                                 <div class="form-group">
                                     <label for="profileAscensionScore">登神之路分数</label>
@@ -8746,7 +8873,7 @@
                                 <div class="form-group">
                                     <label for="profileAudienceScore">觐见之梯分数</label>
                                     <input id="profileAudienceScore" type="number" min="0" step="0.1" value="${Number(profile.audienceScore ?? DEFAULT_AUDIENCE_SCORE)}" ${scoresLocked ? 'disabled' : ''}>
-                                    <div class="identity-help">${scoresLocked ? `初始登神 ${DEFAULT_ASCENSION_SCORE}、觐见 ${DEFAULT_AUDIENCE_SCORE}；后续由上分系统调整，不可自行填写。` : '馆主测试权限：可临时调整分数，用于二测验证。'}</div>
+                                    <div class="identity-help">${scoresLocked ? `初始登神 ${DEFAULT_ASCENSION_SCORE}、觐见 ${DEFAULT_AUDIENCE_SCORE}；后续由结算信封改写，不可自行篡改。` : '馆主测试权限：可临时校准分数，用于二测验证。'}</div>
                                 </div>
                                 <div class="form-group full">
                                     <label for="profileItems">个人道具</label>
@@ -8754,13 +8881,13 @@
                                 </div>
                                 <div class="form-group full">
                                     <label>个人天赋</label>
-                                    <div class="identity-help">个人天赋由天赋仓库接管，最多携带 3 个；从仓库中选择要放到个人面板的天赋。</div>
-                                    <div id="profileTalentEquipPanel">${renderEquippedTalentSlots(talentState)}</div>
+                                    <div class="identity-help">个人天赋由天赋仓库接管，最多携带 3 个；从仓库中择取要刻入面板的天赋。</div>
+                                    <div id="profileTalentEquipPanel">${renderEquippedTalentSlots(talentState, faithGod)}</div>
                                 </div>
                             </div>
                             <div class="profile-tools">
-                                <button class="btn btn-outline btn-sm" onclick="openLeaderboardPage()">查看登神觐见榜</button>
-                                <button class="btn btn-primary btn-sm" onclick="saveProfilePage()">保存个人档案</button>
+                                <button class="btn btn-outline btn-sm" onclick="openLeaderboardPage()">踏入登神观星台</button>
+                                <button class="btn btn-primary btn-sm" onclick="saveProfilePage()">封存信徒档案</button>
                             </div>
                         </section>
                         <section class="profile-panel" data-god="${escapeHtml(faithGod)}" style="${faithStyle}">
@@ -8793,7 +8920,7 @@
                                 <span>结算信封</span>
                                 <small>${unreadScoreMessages.length ? `${unreadScoreMessages.length} 封未读` : '暂无未读'}</small>
                             </div>
-                            ${renderScoreMessages(scoreMessages, scoreMessageError)}
+                            ${renderScoreMessages(scoreMessages, scoreMessageError, faithGod)}
                         </section>
                         <section class="profile-panel" data-god="${escapeHtml(faithGod)}" style="${faithStyle}">
                             <div class="profile-panel-title"><span>个人道具</span></div>
@@ -9302,6 +9429,15 @@
                 </div>`;
         }
 
+        function renderMiniRitualEmpty(text, god = '命运', title = '空位') {
+            return `
+                <div class="talent-mini-empty" data-god="${escapeHtml(getGodInfo(god).god)}" style="${getGodSkinStyle(god)}">
+                    <span>${renderGodSigil(god, 'sm')}</span>
+                    <strong>${escapeHtml(title)}</strong>
+                    <small>${escapeHtml(text)}</small>
+                </div>`;
+        }
+
         function renderProfileAtmosphere(god = '命运') {
             const info = getGodInfo(god);
             const skin = getGodSkin(god);
@@ -9431,11 +9567,13 @@
             const rows = ERA_TIMELINE.map(era => {
                 const count = Number(counts?.[era.path] || 0);
                 const width = count > 0 ? Math.max(8, Math.round((count / safeTotal) * 100)) : 0;
+                const flowColor = getPathDisplayColor(era.path);
+                const percent = Number(total || 0) > 0 ? Math.round((count / safeTotal) * 100) : 0;
                 return `
-                    <div class="faith-flow-row">
+                    <div class="faith-flow-row" style="--flow-color:${flowColor}" data-tip="${escapeHtml(`${era.path}命途 / 游玩切片 ${count} 个 / ${percent}%`)}">
                         <span>${escapeHtml(era.path)}</span>
                         <div class="faith-flow-track" title="${escapeHtml(era.path)} · ${count}">
-                            <div class="faith-flow-fill" style="--flow:${width}%;--flow-color:${getPathDisplayColor(era.path)}"></div>
+                            <div class="faith-flow-fill" style="--flow:${width}%"></div>
                         </div>
                         <strong>${count}</strong>
                     </div>`;
