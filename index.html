@@ -696,22 +696,6 @@
             font-size: 0.95rem;
             line-height: 1.8;
         }
-        .world-tokens {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 8px;
-            margin-top: 16px;
-        }
-        .world-token {
-            border: 1px solid rgba(255,255,255,0.1);
-            border-radius: 999px;
-            padding: 6px 10px;
-            background: rgba(0,0,0,0.24);
-            color: var(--text-bright);
-            font-size: 0.75rem;
-            font-weight: 800;
-            letter-spacing: 0.05em;
-        }
         .world-altar-symbols {
             display: grid;
             place-items: center;
@@ -4785,19 +4769,6 @@
             text-shadow: 0 0 30px rgba(231,207,138,0.24);
         }
         .world-line { max-width: 680px; color: rgba(234,234,242,0.78); font-size: 1rem; line-height: 1.9; letter-spacing: 0.045em; }
-        .world-tokens { gap: 7px; margin-top: 19px; }
-        .world-token {
-            position: relative;
-            border-color: color-mix(in srgb, var(--gold-light) 23%, rgba(255,255,255,0.09));
-            background: rgba(0,0,0,0.32);
-            color: rgba(234,234,242,0.86);
-            box-shadow: inset 0 1px 0 rgba(255,255,255,0.04);
-        }
-        .world-token:nth-child(1) { border-color: rgba(198,90,136,0.38); color: #d795ad; }
-        .world-token:nth-child(2) { border-color: rgba(211,175,97,0.42); color: var(--gold-light); }
-        .world-token:nth-child(3) { border-color: rgba(103,109,118,0.40); color: #aeb3c1; }
-        .world-token:nth-child(4) { border-color: rgba(154,120,224,0.40); color: #c7b9e7; }
-        .world-token:hover { transform: translateY(-1px); box-shadow: 0 0 18px rgba(231,207,138,0.14); }
         .void-constellation { position: relative; width: min(270px, 54vw); aspect-ratio: 1; display: grid; place-items: center; color: var(--gold-light); }
         .void-constellation-orbit { position: absolute; border: 1px solid rgba(231,207,138,0.24); border-radius: 50%; transform: rotate(-26deg); }
         .orbit-one { inset: 5%; border-left-color: transparent; border-right-color: rgba(122,174,194,0.44); animation: orbitTurn 18s linear infinite; }
@@ -5341,10 +5312,6 @@
                 overflow-wrap: anywhere;
             }
             .world-line { overflow-wrap: anywhere; }
-            .world-token {
-                min-width: 0;
-                white-space: normal;
-            }
             .controls { align-items: stretch; }
             .control-topline { align-items: stretch; }
             .controls .sort-group { width: 100%; }
@@ -5456,12 +5423,6 @@
                 <div class="world-kicker">TRIAL ARCHIVE · 愚戏棋局</div>
                 <h1 class="world-title">祈愿试炼留存地</h1>
                 <p class="world-line">欺诈假面垂落，命运骰子已在裂隙中转动。这里记录构筑者降下的切片宇宙，也收存入局信徒的神格判定与试炼证言。</p>
-                <div class="world-tokens" aria-label="核心标识">
-                    <span class="world-token">🎭 欺诈假面</span>
-                    <span class="world-token">🎲 命运骰子</span>
-                    <span class="world-token">裂隙切片</span>
-                    <span class="world-token">六大命途</span>
-                </div>
             </div>
             <div class="world-altar-symbols" aria-hidden="true">
                 <div class="void-constellation">
