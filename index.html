@@ -5096,7 +5096,7 @@
             <div class="role-guide">
                 <div class="role-card" data-role="player" data-mark="信"><strong>入局信徒</strong><span>浏览、判定、证言、评分、登记通关。</span><small>不能构筑 / 不能结算</small></div>
                 <div class="role-card" data-role="author" data-mark="筑"><strong>试炼构筑者</strong><span>可构筑愚戏，也能参与判定与证言。</span><small>不能进入分数结算</small></div>
-                <div class="role-card" data-role="reviewer" data-mark="审"><strong>结算审核员</strong><span>可进入分数结算、补分与撤销。</span><small>不显示构筑入口</small></div>
+                <div class="role-card" data-role="reviewer" data-mark="审"><strong>结算审核员</strong><span>拥有信徒、构筑者与结算权限。</span><small>显示构筑 / 显示结算</small></div>
                 <div class="role-card" data-role="admin" data-mark="馆"><strong>神谕馆主</strong><span>可管理试炼，并拥有结算权限。</span><small>完整管理席位</small></div>
             </div>
             <div class="identity-card" id="identityCard">
@@ -5240,7 +5240,7 @@
                 cards: [
                     ['🎲', '旁观者', '浏览试炼与证言，确认是否入局。'],
                     ['✦', '信徒入口', '判定、证言、通关登记需要入局谕令。'],
-                    ['🎭', '构筑入口', '作者谕令才会开放构筑愚戏。'],
+                    ['🎭', '构筑入口', '作者 / 审核员 / 馆主会开放构筑愚戏。'],
                     ['⚖', '结算入口', '审核员 / 馆主才会看到分数结算。']
                 ]
             },
@@ -5266,12 +5266,12 @@
             },
             reviewer: {
                 title: '结算审核员',
-                note: '你拥有信徒能力，并额外进入分数结算神谕台；构筑入口不会开放。',
+                note: '你同时拥有信徒、构筑者与审核员能力；可以构筑试炼，也可以进入分数结算神谕台。',
                 cards: [
                     ['⚖', '批量结算', '按名单预览校验后提交。'],
-                    ['✦', '单人补分', '处理漏分与单人修正。'],
-                    ['↩', '撤销回滚', '近期结算可回滚并通知玩家。'],
-                    ['🎭', '构筑愚戏', '审核员身份不开放构筑入口。']
+                    ['🎭', '构筑愚戏', '创建并维护自己的轮回试炼或绝响试炼。'],
+                    ['📌', '作者维护', '可维护自己试炼的置顶神谕与下一周目。'],
+                    ['↩', '撤销回滚', '近期结算可回滚并通知玩家。']
                 ]
             },
             admin: {
@@ -5772,7 +5772,7 @@
         function getInviteRole() { return inviteSession?.role || null; }
         function canUseRole(roles) { return roles.includes(getInviteRole()); }
         function canInteract() { return canUseRole(['player', 'author', 'reviewer', 'admin']); }
-        function canSubmit() { return canUseRole(['author', 'admin']); }
+        function canSubmit() { return canUseRole(['author', 'reviewer', 'admin']); }
         function isAdmin() { return getInviteRole() === 'admin'; }
         function canSettleScores() { return canUseRole(['reviewer', 'admin']); }
         function canOverrideProfileLocks() { return isAdmin(); }
@@ -5817,7 +5817,7 @@
             if (submitButton) {
                 submitButton.textContent = '🎭 构筑愚戏';
                 submitButton.style.display = (!role || canSubmit()) ? '' : 'none';
-                submitButton.title = canSubmit() ? '构筑愚戏' : '需要构筑者谕令';
+                submitButton.title = canSubmit() ? '构筑愚戏' : '需要构筑者或审核员谕令';
             }
             if (identityCard) identityCard.classList.toggle('active', !!role);
             if (identityRoleText) identityRoleText.textContent = role ? `${ROLE_LABELS[role]}` : '未入局';
@@ -7033,7 +7033,7 @@
             const container = document.getElementById('scoreContent');
             if (!container) return;
             if (!canSettleScores()) {
-                container.innerHTML = renderRitualEmpty('此页只对结算审核员与神谕馆主开放；玩家与作者不会进入分数结算。', '真理', '需要审核席权限');
+                container.innerHTML = renderRitualEmpty('此页只对结算审核员与神谕馆主开放；未持审核席权限的身份不会进入分数结算。', '真理', '需要审核席权限');
                 return;
             }
             const { settlements, error } = await fetchScoreSettlements(30);
@@ -9053,7 +9053,7 @@
                         <span class="trial-data-pill">归档：${escapeHtml(formatTrialArchive(d))}</span>
                         <span class="trial-data-pill">通关留存率：${formatClearRate(d)}</span>
                         <span class="trial-data-pill">证言条数：${activeCommentCount}</span>
-                        ${canUseRole(['author','admin']) ? `<button class="btn btn-outline btn-xs" onclick="advanceRunUI('${escapeHtml(id)}')">重掷下一局</button>` : ''}
+                        ${canSubmit() ? `<button class="btn btn-outline btn-xs" onclick="advanceRunUI('${escapeHtml(id)}')">重掷下一局</button>` : ''}
                         ${isAdmin() ? `<button class="btn btn-danger btn-xs" onclick="deleteDungeon('${escapeHtml(id)}')">封存试炼</button>` : ''}
                     </div>
                     <div class="trial-entry-body">
@@ -9329,7 +9329,7 @@
         }
 
         async function savePinnedNoteUI(id) {
-            if(!requireInvite(['author','admin'], '只有试炼构筑者或神谕馆主可以修改置顶神谕。')) return;
+            if(!requireInvite(['author','reviewer','admin'], '只有试炼构筑者、结算审核员或神谕馆主可以修改置顶神谕。')) return;
             const note = document.getElementById('pinnedNoteTextarea')?.value || '';
             const { error } = await savePinnedNote(id, note);
             if(error){ showToast(`❌ ${error.message || '保存失败'}`); return; }
@@ -9467,7 +9467,7 @@
         }
 
         async function advanceRunUI(id){
-            if(!requireInvite(['author','admin'], '只有试炼构筑者或神谕馆主可以重掷下一局。')) return;
+            if(!requireInvite(['author','reviewer','admin'], '只有试炼构筑者、结算审核员或神谕馆主可以重掷下一局。')) return;
             if(!confirm('确定重掷下一局吗？通关率会按新的总参与人次重新计算。')) return;
             const {error}=await advanceDungeonRun(id);
             if(error){ showToast(`❌ ${error.message || '开启失败'}`); return; }
@@ -9477,7 +9477,7 @@
         }
 
         function openSubmitModal(){
-            if(!requireInvite(['author','admin'], '只有试炼构筑者谕令可以构筑试炼。')) return;
+            if(!requireInvite(['author','reviewer','admin'], '只有试炼构筑者、结算审核员或神谕馆主可以构筑试炼。')) return;
             document.getElementById('submitModalOverlay').style.display='flex';
             document.body.style.overflow='hidden';
             const creatorInput = document.getElementById('dungeonCreator');
@@ -9504,7 +9504,7 @@
 
         async function submitDungeon(e){
             e.preventDefault();
-            if(!requireInvite(['author','admin'], '只有试炼构筑者谕令可以构筑试炼。')) return;
+            if(!requireInvite(['author','reviewer','admin'], '只有试炼构筑者、结算审核员或神谕馆主可以构筑试炼。')) return;
             const name=document.getElementById('dungeonName').value.trim();
             const creator=document.getElementById('dungeonCreator').value.trim();
             const difficulty=document.getElementById('dungeonDifficulty').value;

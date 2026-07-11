@@ -2059,7 +2059,7 @@ Deno.serve(async (req) => {
     }
 
     if (action === "submitDungeon") {
-      if (!hasRole(role, ["author", "admin"])) return json({ error: "需要作者邀请码" }, 403);
+      if (!hasRole(role, ["author", "reviewer", "admin"])) return json({ error: "需要作者、审核员或馆主邀请码" }, 403);
 
       const name = cleanText(payload.name, 80);
       const creator = cleanText(payload.creator, 40);
@@ -2187,7 +2187,7 @@ Deno.serve(async (req) => {
     }
 
     if (action === "advanceRun") {
-      if (!hasRole(role, ["author", "admin"])) return json({ error: "需要作者邀请码" }, 403);
+      if (!hasRole(role, ["author", "reviewer", "admin"])) return json({ error: "需要作者、审核员或馆主邀请码" }, 403);
 
       const dungeonId = cleanText(payload.dungeonId, 80);
       if (!isUuid(dungeonId)) return json({ error: "副本 ID 不正确" }, 400);
@@ -2345,7 +2345,7 @@ Deno.serve(async (req) => {
     }
 
     if (action === "updatePinnedNote") {
-      if (!hasRole(role, ["author", "admin"])) return json({ error: "需要作者或馆主邀请码" }, 403);
+      if (!hasRole(role, ["author", "reviewer", "admin"])) return json({ error: "需要作者、审核员或馆主邀请码" }, 403);
 
       const dungeonId = cleanText(payload.dungeonId, 80);
       const pinnedNote = cleanText(payload.pinnedNote, 800);
