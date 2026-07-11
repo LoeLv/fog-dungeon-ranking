@@ -27,6 +27,7 @@ type TalentPoolItem = {
   talent_id: number;
   talent_name: string;
   rank: string;
+  effect?: string | null;
 };
 
 const roleLabels: Record<InviteRole, string> = {
@@ -39,8 +40,11 @@ const roleLabels: Record<InviteRole, string> = {
 const defaultAscensionScore = 1000;
 const defaultAudienceScore = 0;
 const drawScoreStep = 5;
-const repeatFragmentGain = 5;
-const targetTalentExchangeCost = 100;
+const starterTalentDrawGrant = 10;
+const bTalentDrawRate = 0.2;
+const cTalentFragmentGain = 5;
+const bTalentFragmentGain = 10;
+const targetTalentExchangeCost = 180;
 const inventorySlotLimit = 8;
 const equippedSlotLimit = 3;
 const scoreDengMin = -20;
@@ -270,6 +274,10 @@ function isMissingTalentTable(error: LooseError) {
   return error?.code === "42P01";
 }
 
+function isMissingTalentEffectColumn(error: LooseError) {
+  return error?.code === "42703" && !!error.message?.includes("effect");
+}
+
 function isMissingMatchSystem(error: LooseError) {
   return error?.code === "42P01" || error?.code === "42883";
 }
@@ -289,7 +297,7 @@ function isMissingMatchMusterSystem(error: LooseError) {
 
 function getEarnedDraws(ascensionScore: unknown) {
   const score = cleanScore(ascensionScore);
-  return Math.max(0, Math.floor((score - defaultAscensionScore) / drawScoreStep));
+  return starterTalentDrawGrant + Math.max(0, Math.floor((score - defaultAscensionScore) / drawScoreStep));
 }
 
 function getAllowedTalentPools(profile: Record<string, unknown>) {
@@ -394,6 +402,21 @@ async function buildScorePreview(
   };
 }
 
+function getTalentFragmentGain(rank: unknown) {
+  return String(rank || "").toUpperCase() === "B" ? bTalentFragmentGain : cTalentFragmentGain;
+}
+
+function pickRandomTalent<T>(items: T[]): T {
+  return items[Math.floor(Math.random() * items.length)] ?? items[0];
+}
+
+function pickDrawTalent(items: TalentPoolItem[]): TalentPoolItem {
+  const bItems = items.filter((item) => item.rank === "B");
+  const cItems = items.filter((item) => item.rank === "C");
+  if (bItems.length && (!cItems.length || Math.random() < bTalentDrawRate)) return pickRandomTalent(bItems);
+  return pickRandomTalent(cItems.length ? cItems : items);
+}
+
 function weightedPickTalent<T extends { talent_id: number }>(items: T[]): T {
   let totalWeight = 0;
   const weighted = items.map((item) => {
@@ -442,6 +465,27 @@ async function getFragmentTotal(
     .maybeSingle();
   if (error) return { error, fragmentTotal: 0 };
   return { fragmentTotal: Number(data?.fragment_total || 0) };
+}
+
+async function addUserFragments(
+  supabase: ReturnType<typeof createClient>,
+  codeHash: string,
+  amount: number,
+) {
+  const gain = Math.max(0, Math.floor(Number(amount) || 0));
+  if (!gain) return { fragmentTotal: undefined };
+  const fragmentState = await getFragmentTotal(supabase, codeHash);
+  if (fragmentState.error) return { error: fragmentState.error };
+  const nextTotal = fragmentState.fragmentTotal + gain;
+  const { error } = await supabase
+    .from("user_fragments")
+    .upsert({
+      invite_code_hash: codeHash,
+      fragment_total: nextTotal,
+      updated_at: new Date().toISOString(),
+    });
+  if (error) return { error };
+  return { fragmentTotal: nextTotal };
 }
 
 async function updateProfileTalentText(
@@ -547,13 +591,25 @@ async function buildTalentState(
   if (allowedPoolKeys.length > 0) {
     const poolResult = await supabase
       .from("talent_pool_items")
-      .select("pool_key, talent_id, talent_name, rank")
+      .select("pool_key, talent_id, talent_name, rank, effect")
       .in("pool_key", allowedPoolKeys)
       .order("pool_key", { ascending: true })
       .order("rank", { ascending: true })
       .order("talent_id", { ascending: true });
-    if (poolResult.error) return { error: poolResult.error };
-    poolItems = poolResult.data || [];
+    if (isMissingTalentEffectColumn(poolResult.error ?? null)) {
+      const fallbackPoolResult = await supabase
+        .from("talent_pool_items")
+        .select("pool_key, talent_id, talent_name, rank")
+        .in("pool_key", allowedPoolKeys)
+        .order("pool_key", { ascending: true })
+        .order("rank", { ascending: true })
+        .order("talent_id", { ascending: true });
+      if (fallbackPoolResult.error) return { error: fallbackPoolResult.error };
+      poolItems = fallbackPoolResult.data || [];
+    } else {
+      if (poolResult.error) return { error: poolResult.error };
+      poolItems = poolResult.data || [];
+    }
   }
 
   const poolMap = new Map<string, { poolKey: string; total: number; bCount: number; cCount: number }>();
@@ -653,6 +709,11 @@ async function buildTalentState(
       profile,
       inventorySlotLimit,
       equippedSlotLimit,
+      starterTalentDrawGrant,
+      bTalentDrawRate,
+      cTalentFragmentGain,
+      bTalentFragmentGain,
+      targetTalentExchangeCost,
       totalDrawsEarned,
       spentDraws,
       availableDraws,
@@ -1454,14 +1515,23 @@ Deno.serve(async (req) => {
 
       const { data: poolItems, error: poolError } = await supabase
         .from("talent_pool_items")
-        .select("pool_key, talent_id, talent_name, rank")
+        .select("pool_key, talent_id, talent_name, rank, effect")
         .eq("pool_key", poolKey);
-      if (isMissingTalentTable(poolError)) return json({ error: "请先运行 talent_pool_migration.sql" }, 400);
-      if (poolError) return json({ error: poolError.message }, 400);
-      if (!poolItems?.length) return json({ error: "该天赋池暂无天赋" }, 400);
+      let poolRows = poolItems;
+      if (isMissingTalentEffectColumn(poolError ?? null)) {
+        const fallbackPoolResult = await supabase
+          .from("talent_pool_items")
+          .select("pool_key, talent_id, talent_name, rank")
+          .eq("pool_key", poolKey);
+        if (fallbackPoolResult.error) return json({ error: fallbackPoolResult.error.message }, 400);
+        poolRows = fallbackPoolResult.data || [];
+      } else {
+        if (isMissingTalentTable(poolError)) return json({ error: "请先运行 talent_pool_migration.sql" }, 400);
+        if (poolError) return json({ error: poolError.message }, 400);
+      }
+      if (!poolRows?.length) return json({ error: "该天赋池暂无天赋" }, 400);
 
-      const talentItems = (poolItems || []) as TalentPoolItem[];
-      const bItems = talentItems.filter((item) => item.rank === "B");
+      const talentItems = (poolRows || []) as TalentPoolItem[];
       const { data: counterRow, error: counterError } = await supabase
         .from("talent_pool_counters")
         .select("continue_draw")
@@ -1474,14 +1544,9 @@ Deno.serve(async (req) => {
       let fragmentGainTotal = 0;
 
       for (let i = 0; i < drawCount; i += 1) {
-        let target = weightedPickTalent(talentItems);
-        let isForcedGuarantee = false;
-        if (bItems.length > 0 && continueDraw >= 9) {
-          target = bItems[Math.floor(Math.random() * bItems.length)];
-          isForcedGuarantee = true;
-        }
+        const target = pickDrawTalent(talentItems);
         const isB = target.rank === "B";
-        continueDraw = isB ? 0 : continueDraw + 1;
+        continueDraw += 1;
 
         const { data: existingOwned, error: ownedReadError } = await supabase
           .from("owned_talents")
@@ -1489,19 +1554,10 @@ Deno.serve(async (req) => {
           .eq("invite_code_hash", identity.codeHash)
           .eq("pool_key", poolKey)
           .eq("talent_id", target.talent_id)
+          .not("storage_slot", "is", null)
           .maybeSingle();
         if (ownedReadError) return json({ error: ownedReadError.message }, 400);
-
-        const { data: existingPending, error: pendingReadError } = await supabase
-          .from("talent_overflow_choices")
-          .select("id")
-          .eq("invite_code_hash", identity.codeHash)
-          .eq("pool_key", poolKey)
-          .eq("talent_id", target.talent_id)
-          .maybeSingle();
-        if (pendingReadError) return json({ error: pendingReadError.message }, 400);
-
-        const isRepeat = !!existingOwned || !!existingPending;
+        const isRepeat = !!existingOwned;
         let fragmentGain = 0;
         let storageSlot = 0;
         let overflowChoice: Record<string, unknown> | null = null;
@@ -1510,8 +1566,8 @@ Deno.serve(async (req) => {
           if (addResult.error) return json({ error: addResult.error.message }, 400);
           storageSlot = Number(addResult.ownedTalent?.storage_slot || 0);
           overflowChoice = addResult.overflowChoice || null;
-        } else if (isB) {
-          fragmentGain = repeatFragmentGain;
+        } else {
+          fragmentGain = getTalentFragmentGain(target.rank);
           fragmentGainTotal += fragmentGain;
         }
 
@@ -1524,7 +1580,7 @@ Deno.serve(async (req) => {
             talent_id: target.talent_id,
             talent_name: target.talent_name,
             rank: target.rank,
-            is_guarantee: isForcedGuarantee || isB,
+            is_guarantee: isB,
             is_repeat: isRepeat,
             fragment_gain: fragmentGain,
           });
@@ -1534,8 +1590,9 @@ Deno.serve(async (req) => {
           poolKey,
           talentId: target.talent_id,
           talentName: target.talent_name,
+          effect: target.effect || "",
           rank: target.rank,
-          isGuarantee: isForcedGuarantee || isB,
+          isGuarantee: isB,
           isRepeat,
           fragmentGain,
           storageSlot,
@@ -1565,16 +1622,8 @@ Deno.serve(async (req) => {
       if (counterUpdateError) return json({ error: counterUpdateError.message }, 400);
 
       if (fragmentGainTotal > 0) {
-        const fragmentState = await getFragmentTotal(supabase, identity.codeHash);
-        if (fragmentState.error) return json({ error: fragmentState.error.message }, 400);
-        const { error: fragmentUpdateError } = await supabase
-          .from("user_fragments")
-          .upsert({
-            invite_code_hash: identity.codeHash,
-            fragment_total: fragmentState.fragmentTotal + fragmentGainTotal,
-            updated_at: new Date().toISOString(),
-          });
-        if (fragmentUpdateError) return json({ error: fragmentUpdateError.message }, 400);
+        const fragmentUpdate = await addUserFragments(supabase, identity.codeHash, fragmentGainTotal);
+        if (fragmentUpdate.error) return json({ error: fragmentUpdate.error.message }, 400);
       }
 
       const talentTextUpdate = await updateProfileTalentText(supabase, identity.codeHash);
@@ -1614,13 +1663,25 @@ Deno.serve(async (req) => {
 
       const { data: targetTalent, error: targetError } = await supabase
         .from("talent_pool_items")
-        .select("pool_key, talent_id, talent_name, rank")
+        .select("pool_key, talent_id, talent_name, rank, effect")
         .eq("pool_key", poolKey)
         .eq("talent_id", targetTalentId)
         .maybeSingle();
-      if (isMissingTalentTable(targetError)) return json({ error: "请先运行 talent_pool_migration.sql" }, 400);
-      if (targetError) return json({ error: targetError.message }, 400);
-      if (!targetTalent || targetTalent.rank !== "B") return json({ error: "只能兑换该池的 B 级天赋" }, 400);
+      let targetTalentRow = targetTalent;
+      if (isMissingTalentEffectColumn(targetError ?? null)) {
+        const fallbackTargetResult = await supabase
+          .from("talent_pool_items")
+          .select("pool_key, talent_id, talent_name, rank")
+          .eq("pool_key", poolKey)
+          .eq("talent_id", targetTalentId)
+          .maybeSingle();
+        if (fallbackTargetResult.error) return json({ error: fallbackTargetResult.error.message }, 400);
+        targetTalentRow = fallbackTargetResult.data;
+      } else {
+        if (isMissingTalentTable(targetError)) return json({ error: "请先运行 talent_pool_migration.sql" }, 400);
+        if (targetError) return json({ error: targetError.message }, 400);
+      }
+      if (!targetTalentRow || targetTalentRow.rank !== "B") return json({ error: "只能兑换该池的 B 级天赋" }, 400);
 
       const { data: owned, error: ownedError } = await supabase
         .from("owned_talents")
@@ -1628,6 +1689,7 @@ Deno.serve(async (req) => {
         .eq("invite_code_hash", identity.codeHash)
         .eq("pool_key", poolKey)
         .eq("talent_id", targetTalentId)
+        .not("storage_slot", "is", null)
         .maybeSingle();
       if (ownedError) return json({ error: ownedError.message }, 400);
       if (owned) return json({ error: "你已经拥有这个天赋了，不需要重复兑换" }, 409);
@@ -1659,7 +1721,7 @@ Deno.serve(async (req) => {
         });
       if (fragmentUpdateError) return json({ error: fragmentUpdateError.message }, 400);
 
-      const addResult = await addOwnedTalentToStorage(supabase, identity.codeHash, targetTalent, "exchange");
+      const addResult = await addOwnedTalentToStorage(supabase, identity.codeHash, targetTalentRow, "exchange");
       if (addResult.error) return json({ error: addResult.error.message }, 400);
 
       const { error: logError } = await supabase
@@ -1667,8 +1729,8 @@ Deno.serve(async (req) => {
         .insert({
           invite_code_hash: identity.codeHash,
           pool_key: poolKey,
-          target_talent_id: targetTalent.talent_id,
-          target_talent_name: targetTalent.talent_name,
+          target_talent_id: targetTalentRow.talent_id,
+          target_talent_name: targetTalentRow.talent_name,
           cost_fragment: targetTalentExchangeCost,
         });
       if (logError) return json({ error: logError.message }, 400);
@@ -1684,9 +1746,10 @@ Deno.serve(async (req) => {
         data: {
           talent: {
             poolKey,
-            talentId: targetTalent.talent_id,
-            talentName: targetTalent.talent_name,
-            rank: targetTalent.rank,
+            talentId: targetTalentRow.talent_id,
+            talentName: targetTalentRow.talent_name,
+            effect: targetTalentRow.effect || "",
+            rank: targetTalentRow.rank,
             storageSlot: Number(addResult.ownedTalent?.storage_slot || 0),
             isOverflow: !!addResult.overflowChoice,
             overflowChoiceId: addResult.overflowChoice?.id || null,
@@ -1714,6 +1777,7 @@ Deno.serve(async (req) => {
       if (choiceError) return json({ error: choiceError.message }, 400);
       if (!choice) return json({ error: "待处理天赋不存在" }, 404);
 
+      let fragmentGainTotal = 0;
       if (decision === "discard") {
         const { error: deleteChoiceError } = await supabase
           .from("talent_overflow_choices")
@@ -1721,13 +1785,14 @@ Deno.serve(async (req) => {
           .eq("id", choiceId)
           .eq("invite_code_hash", identity.codeHash);
         if (deleteChoiceError) return json({ error: deleteChoiceError.message }, 400);
+        fragmentGainTotal += getTalentFragmentGain(choice.rank);
       } else {
         const replaceOwnedId = cleanBigIntId(payload.replaceOwnedId);
         if (!replaceOwnedId) return json({ error: "请选择要替换的仓库天赋" }, 400);
 
         const { data: replaced, error: replacedError } = await supabase
           .from("owned_talents")
-          .select("id, storage_slot")
+          .select("id, storage_slot, rank")
           .eq("id", replaceOwnedId)
           .eq("invite_code_hash", identity.codeHash)
           .not("storage_slot", "is", null)
@@ -1750,6 +1815,7 @@ Deno.serve(async (req) => {
             .eq("id", choiceId)
             .eq("invite_code_hash", identity.codeHash);
           if (deleteDuplicateChoiceError) return json({ error: deleteDuplicateChoiceError.message }, 400);
+          fragmentGainTotal += getTalentFragmentGain(choice.rank);
         } else {
           const { error: deleteOwnedError } = await supabase
             .from("owned_talents")
@@ -1757,6 +1823,7 @@ Deno.serve(async (req) => {
             .eq("id", replaceOwnedId)
             .eq("invite_code_hash", identity.codeHash);
           if (deleteOwnedError) return json({ error: deleteOwnedError.message }, 400);
+          fragmentGainTotal += getTalentFragmentGain(replaced.rank);
 
           const { error: insertReplacementError } = await supabase
             .from("owned_talents")
@@ -1780,11 +1847,16 @@ Deno.serve(async (req) => {
         }
       }
 
+      if (fragmentGainTotal > 0) {
+        const fragmentUpdate = await addUserFragments(supabase, identity.codeHash, fragmentGainTotal);
+        if (fragmentUpdate.error) return json({ error: fragmentUpdate.error.message }, 400);
+      }
+
       const talentTextUpdate = await updateProfileTalentText(supabase, identity.codeHash);
       if (talentTextUpdate.error) return json({ error: talentTextUpdate.error.message }, 400);
       const state = await buildTalentState(supabase, identity);
       if (state.error) return json({ error: state.error.message }, 400);
-      return json({ role, name: identity.displayName, data: { state: state.data } });
+      return json({ role, name: identity.displayName, data: { fragmentGain: fragmentGainTotal, state: state.data } });
     }
 
     if (action === "setEquippedTalent") {
@@ -1842,6 +1914,16 @@ Deno.serve(async (req) => {
       const ownedTalentId = cleanBigIntId(payload.ownedTalentId);
       if (!ownedTalentId) return json({ error: "仓库天赋不正确" }, 400);
 
+      const { data: ownedTalent, error: ownedReadError } = await supabase
+        .from("owned_talents")
+        .select("id, rank")
+        .eq("id", ownedTalentId)
+        .eq("invite_code_hash", identity.codeHash)
+        .not("storage_slot", "is", null)
+        .maybeSingle();
+      if (ownedReadError) return json({ error: ownedReadError.message }, 400);
+      if (!ownedTalent) return json({ error: "仓库天赋不存在" }, 404);
+
       const { error: deleteOwnedError } = await supabase
         .from("owned_talents")
         .delete()
@@ -1849,11 +1931,15 @@ Deno.serve(async (req) => {
         .eq("invite_code_hash", identity.codeHash);
       if (deleteOwnedError) return json({ error: deleteOwnedError.message }, 400);
 
+      const fragmentGain = getTalentFragmentGain(ownedTalent.rank);
+      const fragmentUpdate = await addUserFragments(supabase, identity.codeHash, fragmentGain);
+      if (fragmentUpdate.error) return json({ error: fragmentUpdate.error.message }, 400);
+
       const talentTextUpdate = await updateProfileTalentText(supabase, identity.codeHash);
       if (talentTextUpdate.error) return json({ error: talentTextUpdate.error.message }, 400);
       const state = await buildTalentState(supabase, identity);
       if (state.error) return json({ error: state.error.message }, 400);
-      return json({ role, name: identity.displayName, data: { state: state.data } });
+      return json({ role, name: identity.displayName, data: { fragmentGain, state: state.data } });
     }
 
     if (action === "listMatchDungeons") {

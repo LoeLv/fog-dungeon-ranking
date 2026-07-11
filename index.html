@@ -4185,6 +4185,13 @@
             font-size: 0.72rem;
             line-height: 1.45;
         }
+        .talent-effect-text {
+            display: block;
+            margin-top: 7px;
+            color: rgba(234,234,242,0.62);
+            font-size: 0.72rem;
+            line-height: 1.55;
+        }
         .talent-card.repeat small {
             color: var(--gold-light);
         }
@@ -4239,6 +4246,25 @@
             font-size: 0.72rem;
             line-height: 1.5;
             margin-top: 5px;
+        }
+        .talent-rule-strip {
+            display: grid;
+            grid-template-columns: repeat(4, minmax(0, 1fr));
+            gap: 8px;
+            margin-top: 10px;
+        }
+        .talent-rule-strip span {
+            min-height: 38px;
+            border: 1px solid rgba(231,207,138,0.10);
+            border-radius: 8px;
+            background: rgba(0,0,0,0.16);
+            padding: 7px 9px;
+            color: var(--text-muted);
+            font-size: 0.68rem;
+            line-height: 1.35;
+        }
+        .talent-rule-strip strong {
+            color: var(--gold-light);
         }
         .talent-slot-actions {
             display: flex;
@@ -5313,7 +5339,10 @@
             .leaderboard-layout,
             .match-layout,
             .profile-form-grid,
-            .profile-score-row {
+            .profile-score-row,
+            .talent-rule-strip,
+            .talent-control-row,
+            .talent-exchange-row {
                 grid-template-columns: 1fr;
             }
             .leaderboard-board.full {
@@ -6889,6 +6918,11 @@
                 profile: state.profile || null,
                 inventorySlotLimit: Number(state.inventorySlotLimit || 8),
                 equippedSlotLimit: Number(state.equippedSlotLimit || 3),
+                starterTalentDrawGrant: Number(state.starterTalentDrawGrant || 10),
+                bTalentDrawRate: Number(state.bTalentDrawRate || 0.2),
+                cTalentFragmentGain: Number(state.cTalentFragmentGain || 5),
+                bTalentFragmentGain: Number(state.bTalentFragmentGain || 10),
+                targetTalentExchangeCost: Number(state.targetTalentExchangeCost || 180),
                 totalDrawsEarned: Number(state.totalDrawsEarned || 0),
                 spentDraws: Number(state.spentDraws || 0),
                 availableDraws: Number(state.availableDraws || 0),
@@ -6959,6 +6993,7 @@
             return `<div class="talent-result-grid">${talents.map(talent => {
                 const name = talent.talentName || talent.talent_name || '未知天赋';
                 const rank = talent.rank || 'C';
+                const effect = talent.effect || talent.talent_effect || '';
                 const pool = formatTalentPoolLabel(talent.poolKey || talent.pool_key);
                 const repeat = talent.isRepeat || talent.is_repeat;
                 const overflow = talent.isOverflow || talent.is_overflow;
@@ -6970,6 +7005,7 @@
                     <div class="talent-card rank-${escapeHtml(rank)} ${repeat ? 'repeat' : ''} ${overflow ? 'pending' : ''}">
                         <strong>${escapeHtml(name)}</strong>
                         <small>${escapeHtml(rank)}级 · ${escapeHtml(pool || source)}${repeat ? ` · 重复转化 +${fragment} 碎片` : ''}${escapeHtml(place)}</small>
+                        ${effect ? `<span class="talent-effect-text">${escapeHtml(effect)}</span>` : ''}
                     </div>`;
             }).join('')}</div>`;
         }
@@ -6998,6 +7034,23 @@
         function renderTalentOptionLabel(talent) {
             if (!talent) return '空';
             return `${talent.talent_name}（${talent.rank} · ${formatTalentPoolLabel(talent.pool_key)}池）`;
+        }
+
+        function getTalentEffectText(state, talent) {
+            if (!talent) return '';
+            return String(
+                talent.effect ||
+                (state.poolItems || []).find(item =>
+                    item.pool_key === talent.pool_key && Number(item.talent_id) === Number(talent.talent_id)
+                )?.effect ||
+                ''
+            ).trim();
+        }
+
+        function getTalentDismantleGain(state, rank) {
+            return String(rank || '').toUpperCase() === 'B'
+                ? Number(state.bTalentFragmentGain || 10)
+                : Number(state.cTalentFragmentGain || 5);
         }
 
         function renderEquippedTalentSlots(state) {
@@ -7039,13 +7092,16 @@
                         </div>`;
                 }
                 const equippedText = talent.equipped_slot ? `携带槽 ${talent.equipped_slot}` : '未携带';
+                const effect = getTalentEffectText(state, talent);
+                const fragmentGain = getTalentDismantleGain(state, talent.rank);
                 return `
                     <div class="talent-slot-card">
                         <div class="talent-slot-head"><span>仓库位 ${slot}</span><span>${escapeHtml(equippedText)}</span></div>
                         <div class="talent-slot-name">${escapeHtml(talent.talent_name)}</div>
                         <div class="talent-slot-meta">${escapeHtml(talent.rank)}级 · ${escapeHtml(formatTalentPoolLabel(talent.pool_key))}池</div>
+                        ${effect ? `<div class="talent-effect-text">${escapeHtml(effect)}</div>` : ''}
                         <div class="talent-slot-actions">
-                            <button type="button" class="btn btn-outline btn-sm" onclick="discardOwnedTalentUI(${Number(talent.id)})" ${equippedIds.has(Number(talent.id)) ? 'disabled title="已携带的天赋请先卸下"' : ''}>丢弃</button>
+                            <button type="button" class="btn btn-outline btn-sm" onclick="discardOwnedTalentUI(${Number(talent.id)})" ${equippedIds.has(Number(talent.id)) ? 'disabled title="已携带的天赋请先卸下"' : ''}>分解 +${fragmentGain}</button>
                         </div>
                     </div>`;
             }).join('')}</div>`;
@@ -7065,13 +7121,14 @@
                         <div class="talent-overflow-card">
                             <div class="talent-slot-head"><span>新天赋溢出</span><span>${escapeHtml(choice.source || 'draw')}</span></div>
                             <div class="talent-slot-name">${escapeHtml(choice.talent_name)}</div>
-                            <div class="talent-slot-meta">${escapeHtml(choice.rank)}级 · ${escapeHtml(formatTalentPoolLabel(choice.pool_key))}池。仓库已满，请选择保留新天赋并替换旧天赋，或丢弃新天赋。</div>
+                            <div class="talent-slot-meta">${escapeHtml(choice.rank)}级 · ${escapeHtml(formatTalentPoolLabel(choice.pool_key))}池。仓库已满，请选择保留新天赋并替换旧天赋，或分解新天赋。</div>
+                            ${getTalentEffectText(state, choice) ? `<div class="talent-effect-text">${escapeHtml(getTalentEffectText(state, choice))}</div>` : ''}
                             <div class="talent-exchange-row">
                                 <select id="overflowReplaceSelect-${id}">${replacementOptions || '<option value="">仓库暂无可替换天赋</option>'}</select>
-                                <button type="button" class="btn btn-primary btn-sm" onclick="resolveTalentOverflowUI(${id}, 'replace')" ${replacementOptions ? '' : 'disabled'}>保留并替换</button>
+                                <button type="button" class="btn btn-primary btn-sm" onclick="resolveTalentOverflowUI(${id}, 'replace')" ${replacementOptions ? '' : 'disabled'}>保留并分解旧天赋</button>
                             </div>
                             <div class="talent-slot-actions">
-                                <button type="button" class="btn btn-outline btn-sm" onclick="resolveTalentOverflowUI(${id}, 'discard')">丢弃新天赋</button>
+                                <button type="button" class="btn btn-outline btn-sm" onclick="resolveTalentOverflowUI(${id}, 'discard')">分解新天赋 +${getTalentDismantleGain(state, choice.rank)}</button>
                             </div>
                         </div>`;
                 }).join('')}</div>`;
@@ -7092,12 +7149,13 @@
             const selectedPoolTitle = getGodInfo(selectedPoolGod).known ? getGodTalentPoolName(selectedPoolGod) : `${formatTalentPoolLabel(selectedPool)}池`;
             const selectedPoolMeta = (state.pools || []).find(pool => pool.poolKey === selectedPool) || {};
             const selectedPoolReady = Number(selectedPoolMeta.total || 0) > 0;
-            const poolCounter = getTalentPoolCounter(state, selectedPool);
             const latestResults = lastTalentDrawResult.length ? renderTalentCards(lastTalentDrawResult, '') : '';
             const allowedPoolText = (state.pools || []).map(pool => formatTalentPoolLabel(pool.poolKey)).join(' / ') || '未绑定';
             const inventoryCount = (state.ownedTalents || []).length;
             const inventoryLimit = Number(state.inventorySlotLimit || 8);
             const equippedCount = (state.ownedTalents || []).filter(talent => talent.equipped_slot).length;
+            const exchangeCost = Number(state.targetTalentExchangeCost || 180);
+            const bRateText = `${Math.round(Number(state.bTalentDrawRate || 0.2) * 100)}%`;
             return `
                 <section class="profile-panel" id="talentPoolPanel" data-god="${escapeHtml(profileGod)}" style="${profileGodStyle}">
                     <div class="profile-panel-title">
@@ -7112,10 +7170,16 @@
                         <div class="metric-strip">
                             <span class="metric-pill">累计获得抽数 <strong>${Number(state.totalDrawsEarned || 0)}</strong></span>
                             <span class="metric-pill">已用抽数 <strong>${Number(state.spentDraws || 0)}</strong></span>
-                            <span class="metric-pill">当前池保底 <strong>${poolCounter}/10</strong></span>
+                            <span class="metric-pill">B级概率 <strong>${escapeHtml(bRateText)}</strong></span>
                             <span class="metric-pill">仓库 <strong>${inventoryCount}/${inventoryLimit}</strong></span>
                             <span class="metric-pill">携带 <strong>${equippedCount}/${Number(state.equippedSlotLimit || 3)}</strong></span>
                             <span class="metric-pill">可选池 <strong>${escapeHtml(allowedPoolText)}</strong></span>
+                        </div>
+                        <div class="talent-rule-strip">
+                            <span>开服赠送 <strong>${Number(state.starterTalentDrawGrant || 10)}</strong> 抽</span>
+                            <span>重复 C/B：<strong>+${Number(state.cTalentFragmentGain || 5)} / +${Number(state.bTalentFragmentGain || 10)}</strong> 碎片</span>
+                            <span>分解 C/B：<strong>+${Number(state.cTalentFragmentGain || 5)} / +${Number(state.bTalentFragmentGain || 10)}</strong> 碎片</span>
+                            <span>指定 B 兑换：<strong>${exchangeCost}</strong> 碎片</span>
                         </div>
                         <div class="talent-control-row">
                             <div class="form-group" style="margin:0;">
@@ -7134,7 +7198,7 @@
                     ${renderTalentWarehouse(state)}
                     <div class="talent-exchange-row">
                         <select id="talentExchangeSelect">${renderTalentExchangeOptions(state, selectedPool)}</select>
-                        <button type="button" class="btn btn-outline btn-sm" onclick="exchangeTalentUI()" ${!selectedPoolReady ? 'disabled' : ''}>100 碎片兑换</button>
+                        <button type="button" class="btn btn-outline btn-sm" onclick="exchangeTalentUI()" ${!selectedPoolReady ? 'disabled' : ''}>${exchangeCost} 碎片兑换</button>
                     </div>
                     <div class="profile-panel-title" style="margin-top:16px;"><span>抽取记录</span></div>
                     ${renderTalentLogs(state)}
@@ -7215,17 +7279,18 @@
             if (error) { showToast(`❌ ${error.message || '处理失败'}`); return; }
             lastTalentDrawResult = [];
             applyTalentActionState(data);
-            showToast(decision === 'replace' ? '已保留新天赋并替换仓库' : '已丢弃溢出天赋');
+            const gain = Number(data?.fragmentGain || 0);
+            showToast(decision === 'replace' ? `已保留新天赋，旧天赋分解 +${gain} 碎片` : `已分解溢出天赋 +${gain} 碎片`);
         }
 
         async function discardOwnedTalentUI(ownedTalentId) {
             if (!inviteSession?.code) { openInviteModal('先验入局谕令后可整理仓库。'); return; }
-            if (!window.confirm('确定丢弃这个仓库天赋吗？')) return;
+            if (!window.confirm('确定分解这个仓库天赋并获得碎片吗？')) return;
             const { data, error } = await invokeDungeonAction('discardOwnedTalent', { ownedTalentId: Number(ownedTalentId) });
-            if (error) { showToast(`❌ ${error.message || '丢弃失败'}`); return; }
+            if (error) { showToast(`❌ ${error.message || '分解失败'}`); return; }
             lastTalentDrawResult = [];
             applyTalentActionState(data);
-            showToast('仓库天赋已丢弃');
+            showToast(`仓库天赋已分解 +${Number(data?.fragmentGain || 0)} 碎片`);
         }
 
         function sortLeaderboardEntries(entries, scoreType) {
