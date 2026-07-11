@@ -4986,6 +4986,14 @@
             color: var(--text-muted);
             font-size: 0.68rem;
         }
+        .leaderboard-score em {
+            display: block;
+            color: var(--text-muted);
+            font-size: 0.72rem;
+            font-style: normal;
+            margin-top: 4px;
+            white-space: nowrap;
+        }
         .leaderboard-summary {
             margin-bottom: 14px;
             color: var(--text-muted);
@@ -7820,7 +7828,7 @@
                 </section>`;
         }
 
-        function renderLeaderboardRows(entries, scoreType, limit = 50) {
+        function renderLeaderboardRows(entries, scoreType, limit = 50, options = {}) {
             const ranked = sortLeaderboardEntries(entries, scoreType).slice(0, limit);
             if (!ranked.length) return renderRitualEmpty('此途暂无留存信徒档案，静待众生踏入新的愚戏。', '命运', '信徒名录暂空');
             const topScore = ranked.reduce((max, entry) => Math.max(max, getLeaderboardScore(entry, scoreType)), 1);
@@ -7832,6 +7840,9 @@
                 const scoreText = scoreType === 'total'
                     ? `${formatProfileScore(entry.ascensionScore)} / ${formatProfileScore(entry.audienceScore)}`
                     : formatProfileScore(score);
+                const secondaryScoreText = options.showAscensionInParentheses
+                    ? `<em>（登神之路 ${escapeHtml(formatProfileScore(entry.ascensionScore))}）</em>`
+                    : '';
                 const progress = Math.max(4, Math.round((Math.max(0, score) / Math.max(1, topScore)) * 100));
                 const skinStyle = entry.faithGod ? getGodSkinStyle(entry.faithGod) : getGodSkinStyle('命运');
                 const skin = getGodSkin(entry.faithGod || '命运');
@@ -7853,6 +7864,7 @@
                         </div>
                         <div class="leaderboard-score">
                             <strong>${escapeHtml(scoreText)}</strong>
+                            ${secondaryScoreText}
                             <span>${escapeHtml(getLeaderboardScoreLabel(scoreType))}</span>
                         </div>
                     </article>`;
@@ -7868,7 +7880,7 @@
                         <span>${escapeHtml(title)}</span>
                         <small>${escapeHtml(subtitle)}</small>
                     </div>
-                    <div class="leaderboard-list">${renderLeaderboardRows(entries, scoreType, options.limit || 50)}</div>
+                    <div class="leaderboard-list">${renderLeaderboardRows(entries, scoreType, options.limit || 50, options)}</div>
                 </section>`;
         }
 
@@ -7901,12 +7913,12 @@
                 const pathTabs = renderLeaderboardPathTabs();
                 if (leaderboardPath !== 'all') {
                     const pathEntries = entries.filter(entry => entry.faithPath === leaderboardPath);
-                    return `${pathTabs}<div class="leaderboard-layout">${renderLeaderboardBoard(`${leaderboardPath}命途 · 信徒独立录`, pathEntries, 'total', { full: true, subtitle: `${pathEntries.length} 位信徒 · 按双榜总和排序`, path: leaderboardPath })}</div>`;
+                    return `${pathTabs}<div class="leaderboard-layout">${renderLeaderboardBoard(`${leaderboardPath}命途 · 信徒独立录`, pathEntries, 'audience', { full: true, subtitle: `${pathEntries.length} 位信徒 · 按觐见之梯排序`, path: leaderboardPath, showAscensionInParentheses: true })}</div>`;
                 }
                 const boards = GOD_GROUPS.map(group => {
                     const pathEntries = entries.filter(entry => entry.faithPath === group.path);
                     const gods = group.gods.map(god => `${god}`).join('、');
-                    return renderLeaderboardBoard(`${group.path}命途 · ${gods}信徒录`, pathEntries, 'total', { limit: 10, subtitle: `${pathEntries.length} 位信徒`, path: group.path });
+                    return renderLeaderboardBoard(`${group.path}命途 · ${gods}信徒录`, pathEntries, 'audience', { limit: 10, subtitle: `${pathEntries.length} 位信徒 · 觐见之梯序`, path: group.path, showAscensionInParentheses: true });
                 }).join('');
                 return `${pathTabs}<div class="leaderboard-layout">${boards}</div>`;
             }
