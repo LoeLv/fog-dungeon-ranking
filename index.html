@@ -172,16 +172,17 @@
             position: fixed;
             top: 0;
             bottom: 0;
-            width: clamp(78px, 7vw, 104px);
+            width: clamp(108px, 9vw, 148px);
             z-index: 0;
             pointer-events: none;
             opacity: 0.07;
             background:
                 var(--edge-mural-glyphs),
-                repeating-linear-gradient(90deg, transparent 0 15px, var(--edge-accent-soft) 15px 16px, transparent 16px 31px),
-                repeating-linear-gradient(0deg, transparent 0 42px, rgba(231,207,138,0.14) 42px 43px, transparent 43px 84px);
-            background-size: auto, auto, auto;
-            filter: grayscale(0.28) blur(0.05px);
+                linear-gradient(90deg, rgba(0,0,0,0.38), transparent 46%, rgba(255,255,255,0.05), transparent 72%),
+                repeating-linear-gradient(90deg, transparent 0 13px, var(--edge-accent-soft) 13px 14px, transparent 14px 28px),
+                repeating-linear-gradient(0deg, transparent 0 38px, rgba(231,207,138,0.24) 38px 39px, transparent 39px 76px);
+            background-size: 100% 100%, auto, auto, auto;
+            filter: grayscale(0.08) blur(0.02px);
             mix-blend-mode: screen;
             transform: translateY(0);
             animation: muralDrift 44s ease-in-out infinite alternate;
@@ -194,13 +195,13 @@
             background:
                 linear-gradient(90deg, transparent 0 34%, rgba(231,207,138,0.34) 34.7%, transparent 36%),
                 linear-gradient(90deg, transparent 0 66%, rgba(231,207,138,0.24) 66.7%, transparent 68%);
-            opacity: 0.35;
+            opacity: 0.48;
         }
         .era-wall::after {
             background:
-                repeating-linear-gradient(118deg, transparent 0 24px, rgba(231,207,138,0.34) 24px 25px, transparent 25px 52px),
-                radial-gradient(circle at 50% 94%, rgba(231,207,138,0.8) 0 1px, transparent 2px 14px);
-            opacity: 0.18;
+                repeating-linear-gradient(118deg, transparent 0 20px, rgba(231,207,138,0.44) 20px 21px, transparent 21px 44px),
+                radial-gradient(circle at 50% 94%, rgba(231,207,138,0.9) 0 1.5px, transparent 2.5px 13px);
+            opacity: 0.34;
         }
         .era-wall-left { left: 0; }
         .era-wall-right { right: 0; transform: scaleX(-1); animation-delay: -14s; }
@@ -221,7 +222,7 @@
             top: 28vh;
             z-index: 0;
             pointer-events: none;
-            color: rgba(231,207,138,0.05);
+            color: rgba(231,207,138,0.07);
             font-size: clamp(8rem, 18vw, 18rem);
             line-height: 1;
             filter: grayscale(1) blur(0.4px);
@@ -243,12 +244,7 @@
             --edge-secondary: rgba(122,174,194,1);
             --edge-accent-soft: rgba(211,175,97,0.18);
             --edge-mural-glyphs:
-                radial-gradient(ellipse at 48% 8%, rgba(111,168,121,0.60), transparent 17%),
-                radial-gradient(ellipse at 52% 24%, rgba(120,47,64,0.60), transparent 18%),
-                radial-gradient(ellipse at 48% 40%, rgba(159,73,56,0.58), transparent 17%),
-                radial-gradient(ellipse at 54% 56%, rgba(166,155,105,0.58), transparent 17%),
-                radial-gradient(ellipse at 47% 72%, rgba(122,174,194,0.60), transparent 17%),
-                radial-gradient(ellipse at 52% 89%, rgba(211,175,97,0.68), transparent 18%);
+                url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 120 900'%3E%3Cg fill='none' stroke='%23e7cf8a' stroke-width='6' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M59 34c-23 32-25 72-5 112 15-30 38-45 70-46'/%3E%3Cpath d='M59 33c19 34 17 72-3 113-18-29-41-44-72-44'/%3E%3Cpath d='M54 196c38 20 45 48 18 84M57 199c-37 17-45 45-21 83M43 267c27-3 50-3 73 0'/%3E%3Cpath d='M22 352h78v82H22zM18 431l85-78M34 341l19 104M84 341 63 445'/%3E%3Cpath d='M60 508c41 18 40 75-3 90-38-19-38-72 3-90zM27 555c22-26 45-28 69-7'/%3E%3Cpath d='M34 670h52l-17 50h-19zM34 770h52l-17-50h-19zM35 669c29 16 49 16 78 0M35 771c29-16 49-16 78 0'/%3E%3Cpath d='M19 834c22-33 55-44 81-17 19 26 2 57-34 55-24-1-40-13-47-38zM37 835c7-5 15-5 22 0M72 835c7-5 14-5 21 0M53 858c13 7 25 7 37 0'/%3E%3Cpath d='M78 801l32 19v38l-32 19-32-19v-38zM47 820l31 19 32-19M78 839v38'/%3E%3C/g%3E%3C/svg%3E");
             position: fixed;
             inset: 0;
             z-index: 0;
@@ -263,22 +259,22 @@
         .edge-atmosphere[data-era="虚无"] { --edge-primary: rgba(211,175,97,1); --edge-secondary: rgba(122,174,194,1); --edge-accent-soft: rgba(211,175,97,0.20); }
         .edge-silhouette {
             position: fixed;
-            width: clamp(160px, 19vw, 310px);
-            height: clamp(160px, 19vw, 310px);
+            width: clamp(260px, 24vw, 430px);
+            height: clamp(260px, 24vw, 430px);
             opacity: 0.06;
             color: var(--edge-primary);
             background:
-                radial-gradient(circle at 50% 50%, currentColor 0 1.5px, transparent 2px 100%),
-                conic-gradient(from var(--silhouette-turn, 0deg), transparent 0 16%, currentColor 16% 24%, transparent 24% 52%, currentColor 52% 59%, transparent 59% 100%);
+                radial-gradient(circle at 50% 50%, currentColor 0 2px, transparent 3px 100%),
+                conic-gradient(from var(--silhouette-turn, 0deg), transparent 0 14%, currentColor 14% 27%, transparent 27% 49%, currentColor 49% 63%, transparent 63% 100%);
             mask: var(--edge-mask);
             -webkit-mask: var(--edge-mask);
-            filter: blur(0.2px) drop-shadow(0 0 18px currentColor);
+            filter: blur(0.1px) drop-shadow(0 0 30px currentColor);
             transform: rotate(var(--silhouette-rotate, 0deg));
         }
-        .edge-silhouette.tl { top: 88px; left: clamp(16px, 3vw, 54px); --silhouette-rotate: -8deg; --silhouette-turn: 12deg; }
-        .edge-silhouette.tr { top: 118px; right: clamp(16px, 3vw, 54px); --silhouette-rotate: 16deg; --silhouette-turn: 54deg; }
-        .edge-silhouette.bl { bottom: 42px; left: clamp(18px, 3vw, 62px); --silhouette-rotate: 18deg; --silhouette-turn: 104deg; }
-        .edge-silhouette.br { bottom: 58px; right: clamp(18px, 3vw, 62px); --silhouette-rotate: -14deg; --silhouette-turn: 164deg; }
+        .edge-silhouette.tl { top: 92px; left: clamp(-38px, -2vw, -10px); --silhouette-rotate: -8deg; --silhouette-turn: 12deg; }
+        .edge-silhouette.tr { top: 132px; right: clamp(-38px, -2vw, -10px); --silhouette-rotate: 16deg; --silhouette-turn: 54deg; }
+        .edge-silhouette.bl { bottom: 28px; left: clamp(-44px, -2.5vw, -12px); --silhouette-rotate: 18deg; --silhouette-turn: 104deg; }
+        .edge-silhouette.br { bottom: 44px; right: clamp(-44px, -2.5vw, -12px); --silhouette-rotate: -14deg; --silhouette-turn: 164deg; }
         .edge-atmosphere[data-era="虚无"] .edge-silhouette {
             --edge-mask: radial-gradient(ellipse at 42% 42%, #000 0 28%, transparent 29%),
                 radial-gradient(ellipse at 63% 61%, #000 0 19%, transparent 20%),
@@ -311,15 +307,17 @@
             position: fixed;
             top: -8vh;
             bottom: -8vh;
-            width: clamp(56px, 6vw, 90px);
-            opacity: 0.065;
+            width: clamp(86px, 7vw, 122px);
+            opacity: 0.07;
             background:
                 radial-gradient(circle at 24% 12%, var(--edge-primary) 0 1.5px, transparent 2.5px),
                 radial-gradient(circle at 72% 29%, var(--edge-secondary) 0 1.2px, transparent 2.4px),
                 radial-gradient(circle at 46% 48%, var(--edge-primary) 0 1.4px, transparent 2.5px),
                 radial-gradient(circle at 18% 67%, var(--edge-secondary) 0 1px, transparent 2.2px),
-                radial-gradient(circle at 78% 84%, var(--edge-primary) 0 1.5px, transparent 2.5px);
-            background-size: 42px 180px;
+                radial-gradient(circle at 78% 84%, var(--edge-primary) 0 1.5px, transparent 2.5px),
+                radial-gradient(circle at 54% 7%, var(--edge-secondary) 0 1px, transparent 2px),
+                radial-gradient(circle at 36% 92%, var(--edge-primary) 0 1.2px, transparent 2.2px);
+            background-size: 38px 142px;
             animation: edgeParticleDrift 18s linear infinite;
             mix-blend-mode: screen;
         }
@@ -330,7 +328,7 @@
             to { background-position: 0 180px; }
         }
         body.visual-effects-muted .edge-particle-stream { display: none; }
-        body.visual-effects-muted .edge-silhouette { opacity: 0.035; }
+        body.visual-effects-muted .edge-silhouette { opacity: 0.045; }
         @media (max-width: 1199px) {
             .edge-silhouette,
             .edge-particle-stream { display: none; }
@@ -5570,7 +5568,7 @@
                     <div class="oracle-list" id="architectLedger"><div class="oracle-item"><span>等待新的构筑者献祭试炼。</span></div></div>
                 </section>
                 <section class="oracle-panel oracle-panel-chronicle">
-                    <div class="oracle-panel-title"><span>【当前现世・虚无愚戏记事】</span><small>ROTATING ORACLE</small></div>
+                    <div class="oracle-panel-title"><span>【当前现世・<b id="chronicleEraName">虚无</b>愚戏记事】</span><small>ROTATING ORACLE</small></div>
                     <div class="void-chronicle" id="voidChronicle"><span>假面垂落，骰定万命。</span></div>
                 </section>
                 <section class="oracle-panel oracle-panel-faith">
@@ -5712,7 +5710,7 @@
                     <div class="form-group"><label>构筑者 *</label><input type="text" id="dungeonCreator" placeholder="你的神名或代号..." required maxlength="30"></div>
                 </div>
                 <div class="form-grid compact">
-                    <div class="form-group"><label>神明标签 *</label><select id="dungeonType" required><option value="记忆" selected>存在 · 记忆之神</option></select></div>
+                    <div class="form-group"><label>神明标签 *</label><select id="dungeonType" required><option value="" selected disabled>请选择试炼归属神明</option></select></div>
                     <div class="form-group"><label>固定人数 *</label><input type="number" id="participantCount" min="1" max="99" value="6" required></div>
                     <div class="form-group"><label>当前局数 *</label><input type="number" id="runCount" min="1" max="999" value="1" required></div>
                 </div>
@@ -6309,6 +6307,10 @@
                 { lead: '时间退散，欺诈来袭。', note: '每一条证言都会成为愚戏的一枚筹码。' }
             ]
         };
+        const ATMOSPHERE_CYCLE = ERA_TIMELINE.flatMap(era => {
+            const group = GOD_GROUPS.find(item => item.path === era.path);
+            return (group?.gods || []).map(god => ({ path: era.path, god }));
+        });
         const GOD_TALENT_POOL_NAMES = {
             诞育: '繁衍孕育池',
             繁荣: '丰收繁荣池',
@@ -6382,7 +6384,9 @@
         let chronicleRotationTimer = null;
         let chronicleRotationDungeons = [];
         let chronicleRotationIndex = 0;
+        let atmosphereCycleIndex = ATMOSPHERE_CYCLE.findIndex(item => item.path === '虚无');
         let currentAtmosphereEra = '虚无';
+        let currentAtmosphereGod = '欺诈';
         let selectedMatchDungeonId = null;
         let matchDungeonsCache = [];
         let matchStateCache = null;
@@ -9200,29 +9204,45 @@
         }
 
         function getActiveAtmosphereEra() {
-            if (selectedGod !== 'all') return getGodInfo(selectedGod).path;
-            if (selectedPath !== 'all') return selectedPath;
-            return '虚无';
+            return getActiveAtmosphereNode().path;
         }
 
-        function updateEdgeAtmosphere(path) {
-            currentAtmosphereEra = ERA_CHRONICLE_LIBRARY[path] ? path : '虚无';
+        function getActiveAtmosphereNode() {
+            const index = ((atmosphereCycleIndex % ATMOSPHERE_CYCLE.length) + ATMOSPHERE_CYCLE.length) % ATMOSPHERE_CYCLE.length;
+            return ATMOSPHERE_CYCLE[index] || { path: '虚无', god: '欺诈' };
+        }
+
+        function updateEdgeAtmosphere(node = getActiveAtmosphereNode()) {
+            currentAtmosphereEra = ERA_CHRONICLE_LIBRARY[node.path] ? node.path : '虚无';
+            currentAtmosphereGod = getGodInfo(node.god).known ? node.god : (GOD_GROUPS.find(group => group.path === currentAtmosphereEra)?.gods?.[0] || '欺诈');
             const layer = document.getElementById('edgeAtmosphere');
             if (layer) layer.dataset.era = currentAtmosphereEra;
+            const title = document.getElementById('chronicleEraName');
+            if (title) title.textContent = `${currentAtmosphereEra}・${currentAtmosphereGod}`;
+        }
+
+        function resetDiscoveryFiltersToEmpty() {
+            searchQuery = '';
+            selectedGod = 'all';
+            selectedPath = 'all';
+            selectedDifficulty = 'all';
+            archivePage = 1;
+            const input = document.getElementById('searchInput');
+            if (input) input.value = '';
         }
 
         function populateGodSelect() {
             const select = document.getElementById('dungeonType');
             if (!select) return;
-            select.innerHTML = GOD_GROUPS.map(group => `<optgroup label="${escapeHtml(group.path)}命途">${group.gods.map(god => `<option value="${escapeHtml(god)}">${escapeHtml(getGodIcon(god))} ${escapeHtml(group.path)} · ${escapeHtml(god)}之神</option>`).join('')}</optgroup>`).join('');
-            select.value = '记忆';
+            select.innerHTML = `<option value="" selected disabled>请选择试炼归属神明</option>` +
+                GOD_GROUPS.map(group => `<optgroup label="${escapeHtml(group.path)}命途">${group.gods.map(god => `<option value="${escapeHtml(god)}">${escapeHtml(getGodIcon(god))} ${escapeHtml(group.path)} · ${escapeHtml(god)}之神</option>`).join('')}</optgroup>`).join('');
+            select.value = '';
         }
 
         function setGodFilter(god) {
             selectedGod = god;
             selectedPath = 'all';
             archivePage = 1;
-            updateEdgeAtmosphere(getActiveAtmosphereEra());
             renderGodFilters();
             renderPathNav();
             updateFilterSummary();
@@ -9233,7 +9253,6 @@
             selectedPath = selectedPath === path ? 'all' : path;
             selectedGod = 'all';
             archivePage = 1;
-            updateEdgeAtmosphere(getActiveAtmosphereEra());
             renderPathNav();
             renderGodFilters();
             updateFilterSummary();
@@ -9243,7 +9262,6 @@
         function setDifficultyFilter(difficulty) {
             selectedDifficulty = difficulty;
             archivePage = 1;
-            updateEdgeAtmosphere(getActiveAtmosphereEra());
             renderDifficultyFilters();
             updateFilterSummary();
             renderDungeonList();
@@ -9274,14 +9292,7 @@
         }
 
         function clearDiscoveryFilters() {
-            searchQuery = '';
-            selectedGod = 'all';
-            selectedPath = 'all';
-            selectedDifficulty = 'all';
-            archivePage = 1;
-            updateEdgeAtmosphere(getActiveAtmosphereEra());
-            const input = document.getElementById('searchInput');
-            if (input) input.value = '';
+            resetDiscoveryFiltersToEmpty();
             renderPathNav();
             renderGodFilters();
             renderDifficultyFilters();
@@ -9377,14 +9388,16 @@
             const chronicle = document.getElementById('voidChronicle');
             if (!chronicle) return;
             const pathCounts = countByPath(dungeons, dungeon => getGodInfo(dungeon.type).path);
-            const era = getActiveAtmosphereEra();
+            const node = getActiveAtmosphereNode();
+            const era = node.path;
+            updateEdgeAtmosphere(node);
             const library = ERA_CHRONICLE_LIBRARY[era] || ERA_CHRONICLE_LIBRARY['虚无'];
             const entry = library[index % library.length];
             const eraCount = Number(pathCounts[era] || 0);
             chronicle.classList.remove('is-rotating');
             chronicle.innerHTML = `
-                <strong>${escapeHtml(entry.lead)}</strong>
-                <span>${escapeHtml(entry.note)} 当前视野收录 ${dungeons.length} 个试炼，其中${escapeHtml(era)}命途 ${eraCount} 个。</span>`;
+                <strong>${renderGodSigil(node.god, 'xs')} ${escapeHtml(node.god)}之神 · ${escapeHtml(entry.lead)}</strong>
+                <span>${escapeHtml(entry.note)} 当前轮转：${escapeHtml(era)}命途 / ${escapeHtml(getGodPrayer(node.god))}。当前视野收录 ${dungeons.length} 个试炼，其中${escapeHtml(era)}命途 ${eraCount} 个。</span>`;
             requestAnimationFrame(() => chronicle.classList.add('is-rotating'));
         }
 
@@ -9394,8 +9407,9 @@
                 clearInterval(chronicleRotationTimer);
                 chronicleRotationTimer = null;
             }
-            const era = getActiveAtmosphereEra();
-            updateEdgeAtmosphere(era);
+            const node = getActiveAtmosphereNode();
+            updateEdgeAtmosphere(node);
+            const era = node.path;
             const library = ERA_CHRONICLE_LIBRARY[era] || ERA_CHRONICLE_LIBRARY['虚无'];
             chronicleRotationIndex = chronicleRotationDungeons.length
                 ? chronicleRotationDungeons.length % library.length
@@ -9404,7 +9418,10 @@
             const reducedMotion = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
             if (reducedMotion || library.length < 2) return;
             chronicleRotationTimer = window.setInterval(() => {
-                const activeLibrary = ERA_CHRONICLE_LIBRARY[getActiveAtmosphereEra()] || ERA_CHRONICLE_LIBRARY['虚无'];
+                atmosphereCycleIndex = (atmosphereCycleIndex + 1) % ATMOSPHERE_CYCLE.length;
+                const activeNode = getActiveAtmosphereNode();
+                updateEdgeAtmosphere(activeNode);
+                const activeLibrary = ERA_CHRONICLE_LIBRARY[activeNode.path] || ERA_CHRONICLE_LIBRARY['虚无'];
                 chronicleRotationIndex = (chronicleRotationIndex + 1) % activeLibrary.length;
                 renderVoidChronicle(chronicleRotationDungeons, chronicleRotationIndex);
             }, 15000);
@@ -10299,7 +10316,7 @@
             const godSelect = document.getElementById('dungeonType');
             const diffSelect = document.getElementById('dungeonDifficulty');
             const modeSelect = document.getElementById('dungeonMode');
-            if (godSelect) godSelect.value = '记忆';
+            if (godSelect) godSelect.value = '';
             if (diffSelect) diffSelect.value = '中';
             if (modeSelect) modeSelect.value = 'cycle';
         }
@@ -10409,8 +10426,7 @@
         });
 
         (async function init(){
-            const searchInput = document.getElementById('searchInput');
-            if (searchInput) searchInput.value = '';
+            resetDiscoveryFiltersToEmpty();
             applyVisualEffectsPreference();
             populateGodSelect();
             renderPathNav();
