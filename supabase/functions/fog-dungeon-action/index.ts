@@ -150,6 +150,23 @@ function cleanTalentId(value: unknown) {
   return id;
 }
 
+function cleanCoCreators(value: unknown) {
+  const rawItems = Array.isArray(value)
+    ? value
+    : String(value || "").split(/[、,，;；\n\r]+/u);
+  const seen = new Set<string>();
+  const names: string[] = [];
+  for (const item of rawItems) {
+    const name = cleanText(item, 16).replace(/\s+/g, " ");
+    const key = name.toLowerCase();
+    if (!name || seen.has(key)) continue;
+    seen.add(key);
+    names.push(name);
+    if (names.length >= 12) break;
+  }
+  return names;
+}
+
 function cleanBigIntId(value: unknown) {
   const id = Number(value);
   if (!Number.isInteger(id) || id < 1 || id > Number.MAX_SAFE_INTEGER) return 0;
@@ -186,6 +203,7 @@ function toPublicDungeonSummary(dungeon: Record<string, unknown> | null | undefi
     id: cleanText(dungeon.id, 80),
     name: cleanText(dungeon.name, 80),
     creator: cleanText(dungeon.creator, 40),
+    co_creators: cleanCoCreators(dungeon.co_creators),
     difficulty: cleanText(dungeon.difficulty, 20),
     type: cleanText(dungeon.type, 160),
     participant_count: Number(dungeon.participant_count || 0),
@@ -261,6 +279,10 @@ function isMissingInviteColumn(error: { code?: string; message?: string } | null
 
 function isMissingForumColumn(error: { code?: string; message?: string } | null) {
   return error?.code === "42703";
+}
+
+function isMissingCoCreatorsColumn(error: LooseError) {
+  return error?.code === "42703" && !!error.message?.includes("co_creators");
 }
 
 function cleanFeedbackTags(value: unknown) {
@@ -830,13 +852,70 @@ async function recalculateClearStats(
   return { data, error };
 }
 
+async function confirmClearRecordsFromSettlement(
+  supabase: ReturnType<typeof createClient>,
+  dungeonName: string,
+  entries: { nick: string; deng: number; jin: number; total: number; line: number; raw: string }[],
+  profiles: Map<string, Record<string, unknown>>,
+  operatorName: string,
+) {
+  const cleanDungeonName = cleanText(dungeonName, 80);
+  if (!cleanDungeonName) return { confirmed: 0 };
+
+  const { data: dungeon, error: dungeonError } = await supabase
+    .from("dungeons")
+    .select("id, name, run_count")
+    .eq("name", cleanDungeonName)
+    .maybeSingle();
+  if (dungeonError) return { error: dungeonError };
+  if (!dungeon) return { error: { message: `未找到副本：${cleanDungeonName}` } };
+
+  let confirmed = 0;
+  const runNumber = Number(dungeon.run_count) || 1;
+  for (const entry of entries) {
+    const profile = profiles.get(entry.nick) || {};
+    const codeHash = String(profile.invite_code_hash || "");
+    if (!codeHash) continue;
+    const { error } = await supabase
+      .from("clear_records")
+      .insert({
+        dungeon_id: String(dungeon.id),
+        run_number: runNumber,
+        invite_code_hash: codeHash,
+        invite_name: entry.nick,
+        feedback_tags: ["审核确认"],
+        feedback_note: `由审核员 ${operatorName} 在分数结算时确认通关`,
+      });
+    if (error?.code === "23505") continue;
+    if (isMissingForumColumn(error)) {
+      const retry = await supabase
+        .from("clear_records")
+        .insert({
+          dungeon_id: String(dungeon.id),
+          run_number: runNumber,
+          invite_code_hash: codeHash,
+          invite_name: entry.nick,
+        });
+      if (retry.error?.code === "23505") continue;
+      if (retry.error) return { error: retry.error };
+    } else if (error) {
+      return { error };
+    }
+    confirmed += 1;
+  }
+
+  const stats = await recalculateClearStats(supabase, String(dungeon.id));
+  if (stats.error) return { error: stats.error };
+  return { confirmed, dungeon: stats.data };
+}
+
 async function getMatchState(
   supabase: ReturnType<typeof createClient>,
   dungeonId: string,
 ) {
   const { data: dungeon, error: dungeonError } = await supabase
     .from("dungeons")
-    .select("id, name, creator, difficulty, type, participant_count, run_count, clear_rate, avg_rating, rating_count")
+    .select("id, name, creator, co_creators, difficulty, type, participant_count, run_count, clear_rate, avg_rating, rating_count")
     .eq("id", dungeonId)
     .single();
   if (dungeonError) return { error: dungeonError };
@@ -912,7 +991,7 @@ async function getMatchMusterState(
   const dungeonId = String(muster.dungeon_id || "");
   const { data: dungeon, error: dungeonError } = await supabase
     .from("dungeons")
-    .select("id, name, creator, difficulty, type, participant_count, run_count, clear_rate, avg_rating, rating_count, comment_count, is_one_shot")
+    .select("id, name, creator, co_creators, difficulty, type, participant_count, run_count, clear_rate, avg_rating, rating_count, comment_count, is_one_shot")
     .eq("id", dungeonId)
     .single();
   if (dungeonError) return { error: dungeonError };
@@ -985,11 +1064,12 @@ async function commitScoreSettlement(
   sourceType: "batch" | "single",
   dungeonNameInput: unknown,
   entries: { nick: string; deng: number; jin: number; total: number; line: number; raw: string }[],
-  options: { rawText?: string; remark?: string } = {},
+  options: { rawText?: string; remark?: string; confirmClear?: boolean } = {},
 ) {
   const dungeonName = cleanText(dungeonNameInput, 80);
   const rawText = cleanText(options.rawText ?? "", 20000);
   const remark = cleanText(options.remark ?? "", 500);
+  const confirmClear = !!options.confirmClear;
   if (!dungeonName) return { error: { message: "请填写副本名称" } };
 
   const preview = await buildScorePreview(supabase, entries, []);
@@ -1067,10 +1147,16 @@ async function commitScoreSettlement(
   const { error: logError } = await supabase.from("score_change_logs").insert(logRows);
   if (logError) return { error: logError };
 
+  const clearResult = confirmClear
+    ? await confirmClearRecordsFromSettlement(supabase, dungeonName, entries, profiles, identity.displayName)
+    : { confirmed: 0 };
+  if (clearResult.error) return { error: clearResult.error };
+
   const messageRows = entries.map((entry) => {
     const profile = profiles.get(entry.nick) || {};
     const typeName = sourceType === "single" ? "漏分补发" : "批量结算";
-    const content = `【${typeName}｜副本：${dungeonName}】\n审核员：${identity.displayName}\n登神之路：${entry.deng >= 0 ? "+" : ""}${entry.deng}\n觐见之梯：+${entry.jin}\n本次总变化：${entry.total >= 0 ? "+" : ""}${entry.total}${remark ? `\n备注：${remark}` : ""}`;
+    const clearText = confirmClear ? "\n通关确认：已由审核员登记通过" : "";
+    const content = `【${typeName}｜副本：${dungeonName}】\n审核员：${identity.displayName}\n登神之路：${entry.deng >= 0 ? "+" : ""}${entry.deng}\n觐见之梯：+${entry.jin}\n本次总变化：${entry.total >= 0 ? "+" : ""}${entry.total}${clearText}${remark ? `\n备注：${remark}` : ""}`;
     return {
       player_code_hash: String(profile.invite_code_hash || ""),
       player_name: entry.nick,
@@ -1082,7 +1168,7 @@ async function commitScoreSettlement(
   const { error: messageError } = await supabase.from("score_messages").insert(messageRows);
   if (messageError) return { error: messageError };
 
-  return { data: { settlement, entries: entryRows } };
+  return { data: { settlement, entries: entryRows, clearConfirmed: Number(clearResult.confirmed || 0) } };
 }
 
 Deno.serve(async (req) => {
@@ -1262,6 +1348,7 @@ Deno.serve(async (req) => {
       }
 
       const dungeonFields = "id, name, creator, difficulty, type, participant_count, run_count, clear_count, clear_rate, avg_rating, rating_count, comment_count, created_at, is_one_shot";
+      const dungeonFieldsWithCoCreators = "id, name, creator, co_creators, difficulty, type, participant_count, run_count, clear_count, clear_rate, avg_rating, rating_count, comment_count, created_at, is_one_shot";
       const clearDungeonIds = [...new Set(clearRecords.map((record) => cleanText(record.dungeon_id, 80)).filter(isUuid))];
       const clearDungeonById = new Map<string, Record<string, unknown>>();
       if (clearDungeonIds.length) {
@@ -1303,6 +1390,18 @@ Deno.serve(async (req) => {
           .limit(12);
         if (byCreator.error) return json({ error: byCreator.error.message }, 400);
         addAuthoredRows((byCreator.data || []) as Record<string, unknown>[]);
+
+        const byCoCreator = await supabase
+          .from("dungeons")
+          .select(dungeonFieldsWithCoCreators)
+          .contains("co_creators", [targetDisplayName])
+          .order("created_at", { ascending: false })
+          .limit(12);
+        if (byCoCreator.error) {
+          if (!isMissingCoCreatorsColumn(byCoCreator.error)) return json({ error: byCoCreator.error.message }, 400);
+        } else {
+          addAuthoredRows((byCoCreator.data || []) as Record<string, unknown>[]);
+        }
       }
 
       const publicClearRecords = clearRecords.map((record) => {
@@ -2006,11 +2105,20 @@ Deno.serve(async (req) => {
       if (!hasRole(role, ["player", "author", "reviewer", "admin"])) return json({ error: "需要入局谕令" }, 403);
 
       const limit = Math.max(1, Math.min(Number(payload.limit) || 80, 200));
-      const { data: dungeons, error: dungeonError } = await supabase
+      let { data: dungeons, error: dungeonError } = await supabase
         .from("dungeons")
-        .select("id, name, creator, difficulty, type, participant_count, run_count, clear_rate, avg_rating, rating_count, comment_count, created_at, is_one_shot")
+        .select("id, name, creator, co_creators, difficulty, type, participant_count, run_count, clear_rate, avg_rating, rating_count, comment_count, created_at, is_one_shot")
         .order("created_at", { ascending: false })
         .limit(limit);
+      if (isMissingCoCreatorsColumn(dungeonError)) {
+        const fallback = await supabase
+          .from("dungeons")
+          .select("id, name, creator, difficulty, type, participant_count, run_count, clear_rate, avg_rating, rating_count, comment_count, created_at, is_one_shot")
+          .order("created_at", { ascending: false })
+          .limit(limit);
+        dungeons = fallback.data;
+        dungeonError = fallback.error;
+      }
       if (isMissingMatchMusterSystem(dungeonError)) return json({ error: "请先运行 match_muster_migration.sql" }, 400);
       if (dungeonError) return json({ error: dungeonError.message }, 400);
 
@@ -2209,6 +2317,7 @@ Deno.serve(async (req) => {
 
       const name = cleanText(payload.name, 80);
       const creator = cleanText(payload.creator, 40);
+      const coCreators = cleanCoCreators(payload.coCreators ?? payload.co_creators);
       const description = cleanText(payload.description, 1800);
       const pinnedNote = cleanText(payload.pinnedNote, 800);
       const difficulty = cleanText(payload.difficulty, 20) || "超凡";
@@ -2231,6 +2340,7 @@ Deno.serve(async (req) => {
         .insert({
           name,
           creator,
+          co_creators: coCreators,
           difficulty,
           type,
           description,
@@ -2249,6 +2359,29 @@ Deno.serve(async (req) => {
         const retry = await supabase
           .from("dungeons")
           .insert({ name, creator, difficulty, type, description })
+          .select()
+          .single();
+        if (retry.error) return json({ error: retry.error.message }, 400);
+        return json({ role, name: identity.displayName, data: retry.data });
+      }
+      if (isMissingCoCreatorsColumn(error)) {
+        const retry = await supabase
+          .from("dungeons")
+          .insert({
+            name,
+            creator,
+            difficulty,
+            type,
+            description,
+            pinned_note: pinnedNote,
+            participant_count: participantCount,
+            run_count: runCount,
+            is_one_shot: isOneShot,
+            clear_count: 0,
+            clear_rate: 0,
+            invite_code_hash: identity.codeHash,
+            invite_name: identity.displayName,
+          })
           .select()
           .single();
         if (retry.error) return json({ error: retry.error.message }, 400);

@@ -5902,11 +5902,19 @@
             }
             .ritual-actions .btn { width: 100%; }
             #testimonyModalOverlay {
+                position: fixed;
+                inset: 0;
                 align-items: flex-end;
+                justify-content: center;
                 padding: 0;
                 overflow: hidden;
+                overscroll-behavior: contain;
             }
             #testimonyModalOverlay .ritual-modal {
+                position: fixed;
+                left: 0;
+                right: 0;
+                bottom: 0;
                 width: 100vw;
                 max-height: 88dvh;
                 max-height: 88svh;
@@ -6320,6 +6328,7 @@
                     <div class="form-group"><label>试炼名 *</label><input type="text" id="dungeonName" placeholder="为这枚切片宇宙命名..." required maxlength="60"></div>
                     <div class="form-group"><label>构筑者 *</label><input type="text" id="dungeonCreator" placeholder="你的神名或代号..." required maxlength="30"></div>
                 </div>
+                <div class="form-group"><label>共创者（可选）</label><input type="text" id="dungeonCoCreators" placeholder="多人共创时填写昵称，用顿号、逗号或换行分隔" maxlength="240"></div>
                 <div class="form-grid compact">
                     <div class="form-group full"><label>神明标签 *（可多选）</label><select id="dungeonType" multiple required size="6"></select></div>
                     <div class="form-group"><label>固定人数 *</label><input type="number" id="participantCount" min="1" max="99" value="6" required></div>
@@ -6419,8 +6428,22 @@
         window.addEventListener('keydown', releaseInitialTopLock, { once: true });
         window.addEventListener('pageshow', () => lockInitialViewToTop());
 
-        function getLocalData(key, defaultValue) { try { const raw = localStorage.getItem('fog_' + key); return raw ? JSON.parse(raw) : defaultValue; } catch { return defaultValue; } }
-        function setLocalData(key, value) { try { localStorage.setItem('fog_' + key, JSON.stringify(value)); } catch {} }
+        function getLocalData(key, defaultValue) {
+            const storageKey = 'fog_' + key;
+            for (const store of [localStorage, sessionStorage]) {
+                try {
+                    const raw = store.getItem(storageKey);
+                    if (raw) return JSON.parse(raw);
+                } catch {}
+            }
+            return defaultValue;
+        }
+        function setLocalData(key, value) {
+            const storageKey = 'fog_' + key;
+            const raw = JSON.stringify(value);
+            try { localStorage.setItem(storageKey, raw); } catch {}
+            try { sessionStorage.setItem(storageKey, raw); } catch {}
+        }
 
         const INVITE_STORAGE_KEY = 'invite_session_v1';
         const PROFILE_STORAGE_KEY = 'personal_profiles_v1';
@@ -7106,6 +7129,23 @@
             updateInviteUI();
         }
 
+        function getInviteSnapshot() {
+            return inviteSession?.code || '';
+        }
+
+        function isInviteSnapshotCurrent(snapshot) {
+            return (snapshot || '') === getInviteSnapshot();
+        }
+
+        function resetTalentViewState() {
+            selectedTalentPool = '';
+            lastTalentDrawResult = [];
+            talentDrawInFlight = false;
+            talentManageInFlight = false;
+            currentTalentState = normalizeTalentState(null);
+            currentTalentError = null;
+        }
+
         function updateInviteUI() {
             const role = getInviteRole();
             const roleBadge = document.getElementById('roleBadge');
@@ -7466,7 +7506,11 @@
             if (USE_LOCAL_FALLBACK || !inviteSession?.code) {
                 return { state: normalizeTalentState(null), error: { message: '天赋池需要云端 Supabase 支持，本地模式仅显示个人档案。' } };
             }
+            const inviteSnapshot = getInviteSnapshot();
             const { data, error } = await invokeDungeonAction('getTalentState', {});
+            if (!isInviteSnapshotCurrent(inviteSnapshot)) {
+                return { state: currentTalentState, error: { message: '身份已切换，已忽略旧账号天赋回包。' }, stale: true };
+            }
             if (error) return { state: normalizeTalentState(null), error };
             const state = normalizeTalentState(data);
             applyTalentStateProfile(state);
@@ -7738,6 +7782,7 @@
 
         async function refreshTalentPoolUI(showToastOnSuccess = true) {
             const { state, error } = await fetchTalentState();
+            if (error?.message?.includes('身份已切换')) return;
             setCurrentTalentState(state, error);
             lastTalentDrawResult = [];
             replaceTalentPoolPanel();
@@ -7758,9 +7803,11 @@
             if (talentDrawInFlight) { showToast('天赋池正在牵引，请勿重复点击'); return; }
             const poolKey = document.getElementById('talentPoolSelect')?.value || selectedTalentPool;
             talentDrawInFlight = true;
+            const inviteSnapshot = getInviteSnapshot();
             replaceTalentPoolPanel();
             try {
                 const { data, error } = await invokeDungeonAction('drawTalent', { poolKey, drawType });
+                if (!isInviteSnapshotCurrent(inviteSnapshot)) return;
                 if (error) { showToast(`❌ ${error.message || '抽取失败'}`); return; }
                 selectedTalentPool = poolKey;
                 lastTalentDrawResult = Array.isArray(data?.results) ? data.results : [];
@@ -7768,8 +7815,10 @@
                 showToast(drawType === 'ten' ? '十连完成' : '单抽完成');
                 if (document.getElementById('leaderboardPage')?.style.display !== 'none') await renderLeaderboardPage();
             } finally {
-                talentDrawInFlight = false;
-                replaceTalentPoolPanel();
+                if (isInviteSnapshotCurrent(inviteSnapshot)) {
+                    talentDrawInFlight = false;
+                    replaceTalentPoolPanel();
+                }
             }
         }
 
@@ -7778,7 +7827,9 @@
             const poolKey = document.getElementById('talentPoolSelect')?.value || selectedTalentPool;
             const targetTalentId = Number(document.getElementById('talentExchangeSelect')?.value || 0);
             if (!targetTalentId) { showToast('请选择可兑换的 B 级天赋'); return; }
+            const inviteSnapshot = getInviteSnapshot();
             const { data, error } = await invokeDungeonAction('exchangeTalent', { poolKey, targetTalentId });
+            if (!isInviteSnapshotCurrent(inviteSnapshot)) return;
             if (error) { showToast(`❌ ${error.message || '兑换失败'}`); return; }
             selectedTalentPool = poolKey;
             lastTalentDrawResult = data?.talent ? [data.talent] : [];
@@ -7793,7 +7844,9 @@
                 equippedSlot: Number(equippedSlot),
                 ownedTalentId: ownedTalentId ? Number(ownedTalentId) : null
             };
+            const inviteSnapshot = getInviteSnapshot();
             const { data, error } = await invokeDungeonAction('setEquippedTalent', payload);
+            if (!isInviteSnapshotCurrent(inviteSnapshot)) return;
             if (error) { showToast(`❌ ${error.message || '设置失败'}`); return; }
             lastTalentDrawResult = [];
             applyTalentActionState(data);
@@ -7810,17 +7863,21 @@
                 payload.replaceOwnedId = replaceOwnedId;
             }
             talentManageInFlight = true;
+            const inviteSnapshot = getInviteSnapshot();
             replaceTalentPoolPanel();
             try {
                 const { data, error } = await invokeDungeonAction('resolveTalentOverflow', payload);
+                if (!isInviteSnapshotCurrent(inviteSnapshot)) return;
                 if (error) { showToast(`❌ ${error.message || '处理失败'}`); return; }
                 lastTalentDrawResult = [];
                 applyTalentActionState(data);
                 const gain = Number(data?.fragmentGain || 0);
                 showToast(decision === 'replace' ? `已保留新天赋，旧天赋分解 +${gain} 碎片` : `已分解溢出天赋 +${gain} 碎片`);
             } finally {
-                talentManageInFlight = false;
-                replaceTalentPoolPanel();
+                if (isInviteSnapshotCurrent(inviteSnapshot)) {
+                    talentManageInFlight = false;
+                    replaceTalentPoolPanel();
+                }
             }
         }
 
@@ -7829,16 +7886,20 @@
             if (talentManageInFlight) { showToast('天赋正在处理中，请勿重复点击'); return; }
             if (!window.confirm('确定分解这个仓库天赋并获得碎片吗？')) return;
             talentManageInFlight = true;
+            const inviteSnapshot = getInviteSnapshot();
             replaceTalentPoolPanel();
             try {
                 const { data, error } = await invokeDungeonAction('discardOwnedTalent', { ownedTalentId: Number(ownedTalentId) });
+                if (!isInviteSnapshotCurrent(inviteSnapshot)) return;
                 if (error) { showToast(`❌ ${error.message || '分解失败'}`); return; }
                 lastTalentDrawResult = [];
                 applyTalentActionState(data);
                 showToast(`仓库天赋已分解 +${Number(data?.fragmentGain || 0)} 碎片`);
             } finally {
-                talentManageInFlight = false;
-                replaceTalentPoolPanel();
+                if (isInviteSnapshotCurrent(inviteSnapshot)) {
+                    talentManageInFlight = false;
+                    replaceTalentPoolPanel();
+                }
             }
         }
 
@@ -8056,7 +8117,7 @@
             const nameKey = displayName.trim().toLowerCase();
             const dungeons = getLocalData('dungeons', []);
             const authoredDungeons = (dungeons || [])
-                .filter(d => nameKey && [d.invite_name, d.creator].some(value => String(value || '').trim().toLowerCase() === nameKey))
+                .filter(d => nameKey && ([d.invite_name, d.creator].some(value => String(value || '').trim().toLowerCase() === nameKey) || isCoCreatorName(d, nameKey)))
                 .slice(0, 12);
             const authoredCommentCount = authoredDungeons.reduce((sum, d) => sum + Number(d.comment_count || 0), 0);
             const avgAuthoredRating = authoredDungeons.length
@@ -8350,7 +8411,8 @@
             const dungeonName = document.getElementById('scoreDungeonName')?.value || '';
             const textContent = document.getElementById('scoreBatchText')?.value || '';
             const remark = document.getElementById('scoreBatchRemark')?.value || '';
-            const { data, error } = await invokeDungeonAction('submitScoreBatch', { dungeonName, textContent, remark });
+            const confirmClear = !!document.getElementById('scoreBatchConfirmClear')?.checked;
+            const { data, error } = await invokeDungeonAction('submitScoreBatch', { dungeonName, textContent, remark, confirmClear });
             if (error) {
                 if (error.data) {
                     scorePreviewState = error.data;
@@ -8361,7 +8423,7 @@
                 return;
             }
             scorePreviewState = null;
-            showToast(`结算完成：${data?.entries?.length || 0} 人`);
+            showToast(`结算完成：${data?.entries?.length || 0} 人${data?.clearConfirmed ? `，通关确认 ${data.clearConfirmed} 人` : ''}`);
             await renderScorePage();
         }
 
@@ -8371,11 +8433,12 @@
                 playerName: document.getElementById('singlePlayerName')?.value || '',
                 dengScore: document.getElementById('singleDengScore')?.value || 0,
                 jinScore: document.getElementById('singleJinScore')?.value || 0,
-                remark: document.getElementById('singleRemark')?.value || ''
+                remark: document.getElementById('singleRemark')?.value || '',
+                confirmClear: !!document.getElementById('singleConfirmClear')?.checked
             };
             const { data, error } = await invokeDungeonAction('submitScoreSingle', payload);
             if (error) { showToast(`❌ ${error.message || '补分失败'}`); return; }
-            showToast(`补分完成：${data?.entries?.[0]?.player_name || payload.playerName}`);
+            showToast(`补分完成：${data?.entries?.[0]?.player_name || payload.playerName}${data?.clearConfirmed ? '，通关已确认' : ''}`);
             await renderScorePage();
         }
 
@@ -8452,6 +8515,7 @@
                             <div class="form-group"><label>副本名称</label><input id="scoreDungeonName" maxlength="80" placeholder="例如：雾中档案室"></div>
                             <div class="form-group"><label>结算文本</label><textarea id="scoreBatchText" maxlength="20000" placeholder="无我:+12+2&#10;某玩家:-3+1"></textarea></div>
                             <div class="form-group"><label>备注</label><input id="scoreBatchRemark" maxlength="500" placeholder="可选，写结算来源或说明"></div>
+                            <label class="identity-help" style="display:flex;align-items:center;gap:8px;margin-bottom:12px;"><input id="scoreBatchConfirmClear" type="checkbox" style="width:auto;"> 本次结算同时确认这些玩家通过该副本</label>
                             <div class="profile-tools">
                                 <button class="btn btn-outline btn-sm" onclick="checkScorePreviewUI()">预览校验</button>
                                 <button class="btn btn-primary btn-sm" onclick="submitScoreBatchUI()">确认结算</button>
@@ -8466,6 +8530,7 @@
                                 <div class="form-group"><label>登神之路</label><input id="singleDengScore" type="number" min="${scoreDengMin}" max="${scoreDengMax}" step="0.1" value="0"></div>
                                 <div class="form-group"><label>觐见之梯</label><input id="singleJinScore" type="number" min="${scoreJinMin}" max="${scoreJinMax}" step="0.1" value="0"></div>
                                 <div class="form-group full"><label>备注</label><input id="singleRemark" maxlength="500" placeholder="补发原因"></div>
+                                <label class="identity-help full" style="display:flex;align-items:center;gap:8px;margin-bottom:0;"><input id="singleConfirmClear" type="checkbox" style="width:auto;"> 同时确认该玩家通过该副本</label>
                             </div>
                             <div class="profile-tools"><button class="btn btn-primary btn-sm" onclick="submitScoreSingleUI()">提交补分</button></div>
                         </section>
@@ -8570,7 +8635,7 @@
                         <div class="match-card-head">
                             <div>
                                 <div class="match-card-title">${renderGodSigil(dungeon.type, 'xs')} ${escapeHtml(dungeon.name || '未命名试炼')}</div>
-                                <div class="match-card-meta">${escapeHtml(formatGodName(dungeon.type))} · ${escapeHtml(formatDifficulty(dungeon.difficulty))} · ${escapeHtml(dungeon.creator || '匿名构筑者')}</div>
+                                <div class="match-card-meta">${escapeHtml(formatGodName(dungeon.type))} · ${escapeHtml(formatDifficulty(dungeon.difficulty))} · ${escapeHtml(formatCreatorLine(dungeon) || '匿名构筑者')}</div>
                             </div>
                             <button class="btn btn-outline btn-xs match-card-button" onclick='event.stopPropagation(); openMatchDungeon(${jsString(dungeon.id)})'>查看召集</button>
                         </div>
@@ -8802,7 +8867,7 @@
 
         function getAuthoredDungeons(dungeons) {
             if (!inviteSession) return [];
-            return (dungeons || []).filter(d => isSameProfileName(d.invite_name) || isSameProfileName(d.creator));
+            return (dungeons || []).filter(d => isSameProfileName(d.invite_name) || isSameProfileName(d.creator) || isCoCreatorName(d));
         }
 
         function buildLocalClearRecords(dungeons) {
@@ -8992,12 +9057,15 @@
                 container.innerHTML = renderRitualEmpty('请先通过同契召引入局，再查看个人档案。', '命运', '个人档案尚未开启');
                 return;
             }
+            const inviteSnapshot = getInviteSnapshot();
             container.innerHTML = '<div class="loading"><div class="spinner"></div><br>正在读取个人档案...</div>';
             let profile = getCurrentProfile();
             const { state: talentState, error: talentError } = await fetchTalentState();
+            if (!isInviteSnapshotCurrent(inviteSnapshot)) return;
             if (!talentError) profile = getCurrentProfile();
             setCurrentTalentState(talentState, talentError);
             const dungeons = await fetchDungeons();
+            if (!isInviteSnapshotCurrent(inviteSnapshot)) return;
             const clearRecords = await fetchMyClearRecords(dungeons);
             const authored = getAuthoredDungeons(dungeons);
             const { notices, unread } = await getAuthorCommentNotices(dungeons);
@@ -9006,6 +9074,7 @@
                 unread: unreadScoreMessages,
                 error: scoreMessageError
             } = await fetchMyScoreMessages(8);
+            if (!isInviteSnapshotCurrent(inviteSnapshot)) return;
             const uniqueCleared = new Set(clearRecords.map(record => String(record.dungeon_id))).size;
             const totalAuthoredComments = authored.reduce((sum, d) => sum + Number(d.comment_count || 0), 0);
             const avgAuthorRating = authored.length
@@ -9288,6 +9357,7 @@
 
         async function invokeDungeonAction(action, payload = {}, codeOverride = null) {
             const inviteCode = codeOverride ?? inviteSession?.code;
+            const inviteSnapshot = codeOverride ? '' : getInviteSnapshot();
             if (!USE_LOCAL_FALLBACK && !inviteCode) {
                 return { data: null, error: { message: '请先验入局谕令' } };
             }
@@ -9306,7 +9376,8 @@
                 return { data: errorData, error: { message: result.error || '请求失败', data: errorData } };
             }
             const role = normalizeRole(result.role);
-            if (role && inviteCode) saveInviteSession({ role, code: inviteCode, name: result.name || result.label || ROLE_LABELS[role] });
+            const canRefreshSession = !!codeOverride || isInviteSnapshotCurrent(inviteSnapshot);
+            if (role && inviteCode && canRefreshSession) saveInviteSession({ role, code: inviteCode, name: result.name || result.label || ROLE_LABELS[role] });
             return { data: result.data ?? null, error: null, role, name: result.name };
         }
 
@@ -9324,11 +9395,20 @@
 
         async function fetchDungeons() {
             if (USE_LOCAL_FALLBACK) return getLocalData('dungeons', []);
-            const { data, error } = await supabaseClient
+            let { data, error } = await supabaseClient
                 .from('dungeons')
-                .select('id,name,creator,difficulty,type,description,participant_count,run_count,clear_count,clear_rate,invite_name,avg_rating,rating_count,comment_count,created_at,is_one_shot')
+                .select('id,name,creator,co_creators,difficulty,type,description,participant_count,run_count,clear_count,clear_rate,invite_name,avg_rating,rating_count,comment_count,created_at,is_one_shot')
                 .order('avg_rating', { ascending: false })
                 .order('created_at', { ascending: false });
+            if (error?.code === '42703' && String(error.message || '').includes('co_creators')) {
+                const fallback = await supabaseClient
+                    .from('dungeons')
+                    .select('id,name,creator,difficulty,type,description,participant_count,run_count,clear_count,clear_rate,invite_name,avg_rating,rating_count,comment_count,created_at,is_one_shot')
+                    .order('avg_rating', { ascending: false })
+                    .order('created_at', { ascending: false });
+                data = fallback.data;
+                error = fallback.error;
+            }
             if (error) { showToast('❌ 获取数据失败'); return []; }
             return (data || []).map(d => ({ ...d, pinned_note: '' }));
         }
@@ -9887,6 +9967,36 @@
                         <small>证言 ${activeCommentCount} 条 · 神格 ${Number(d.avg_rating || 0).toFixed(1)}</small>
                     </div>
                 </div>`;
+        }
+
+        function normalizeNameKey(value) {
+            return String(value || '').trim().toLowerCase();
+        }
+
+        function parseCoCreators(value) {
+            if (Array.isArray(value)) {
+                return [...new Set(value.map(item => cleanDisplayNameInput(item)).filter(Boolean))].slice(0, 12);
+            }
+            return [...new Set(String(value || '')
+                .split(/[、,，;；\n\r]+/u)
+                .map(item => cleanDisplayNameInput(item))
+                .filter(Boolean))]
+                .slice(0, 12);
+        }
+
+        function getCoCreators(d) {
+            return parseCoCreators(d?.co_creators || d?.coCreators || []);
+        }
+
+        function isCoCreatorName(d, name = inviteSession?.name) {
+            const key = normalizeNameKey(name);
+            return !!key && getCoCreators(d).some(item => normalizeNameKey(item) === key);
+        }
+
+        function formatCreatorLine(d) {
+            const creator = d?.creator || '匿名';
+            const coCreators = getCoCreators(d).filter(name => normalizeNameKey(name) !== normalizeNameKey(creator));
+            return coCreators.length ? `${creator} ｜ 共创：${coCreators.join('、')}` : creator;
         }
 
         function getPathDisplayColor(path) {
@@ -10497,6 +10607,7 @@
                 dungeons = dungeons.filter(d => [
                     d.name,
                     d.creator,
+                    getCoCreators(d).join(' '),
                     d.type,
                     d.description,
                     formatGodName(d.type),
@@ -10563,7 +10674,7 @@
                         </div>
                     </div>
                     <div class="trial-identity-row">
-                        <span class="author-mark ${isVeteranArchitect(d) ? 'master' : ''}">${getArchitectLabel(d)}${escapeHtml(d.creator||'匿名')}</span>
+                        <span class="author-mark ${isVeteranArchitect(d) ? 'master' : ''}">${getArchitectLabel(d)}${escapeHtml(formatCreatorLine(d))}</span>
                         <span class="tag god-tag lore-tag ${godClass}" data-prayer="${escapeHtml(getGodPrayer(d.type))}">${escapeHtml(godLabel)}</span>
                         <span class="tag path-tag lore-tag ${godClass}" data-prayer="${escapeHtml(pathMeta.edict)}">${escapeHtml(godPath)}命途</span>
                         <span class="tag danger-stamp ${getDiffClass(d.difficulty)} ${godClass}-difficulty">${escapeHtml(difficultyLabel)}</span>
@@ -10649,7 +10760,7 @@
                     <div class="oracle-item" data-dungeon-id="${escapeHtml(d.id)}" data-god="${escapeHtml(getGodInfo(d.type).god)}" style="${getGodSkinStyle(d.type)}" onclick='focusArchiveTrial(${jsString(d.id)})'>
                         <div class="oracle-item-main">
                             ${renderGodSigil(d.type, 'xs')}
-                            <strong>${escapeHtml(d.creator || '匿名筑戏人')}</strong>
+                            <strong>${escapeHtml(formatCreatorLine(d) || '匿名筑戏人')}</strong>
                             <span class="oracle-item-time">${escapeHtml(formatDate(d.created_at))}</span>
                         </div>
                         <span class="oracle-item-meta">献祭《${escapeHtml(d.name || '未命名试炼')}》</span>
@@ -10697,7 +10808,9 @@
         }
 
         function canEditPinned(d) {
-            return isAdmin() || (!!inviteSession?.name && !!d.invite_name && inviteSession.name === d.invite_name);
+            return isAdmin() ||
+                (!!inviteSession?.name && !!d.invite_name && inviteSession.name === d.invite_name) ||
+                isCoCreatorName(d);
         }
 
         function canDeleteComment(c) {
@@ -10824,10 +10937,7 @@
             const runCount = getRunCount(d);
             const clearLocalKey = `${id}:${runCount}:${inviteSession?.code || 'guest'}`;
             const clearDone = !!getLocalData('cleared_supabase', {})[clearLocalKey];
-            const clearAction = locked
-                ? `openInviteModal('验入局谕令后可登记通关。')`
-                : (clearDone ? '' : `markClearedUI('${escapeHtml(id)}')`);
-            const clearButtonText = locked ? '验入局谕令' : (clearDone ? '本局已登记' : '我已通过本局');
+            const clearButtonText = clearDone ? '本局已由审核确认' : '等待审核员确认';
             const clearRateNumber = Number.parseFloat(formatClearRate(d)) || 0;
             const godLabel = formatGodName(d.type);
             const godPath = formatGodPath(d.type);
@@ -10868,7 +10978,7 @@
                         <div>
                             <div class="trial-entry-kicker">${escapeHtml(skin.entryTitle)}</div>
                             <h3>${escapeHtml(d.name || '未命名试炼')}</h3>
-                            <p>${escapeHtml(godPath)}命途 · ${escapeHtml(godLabel)} · 筑戏人：${escapeHtml(d.creator)}</p>
+                            <p>${escapeHtml(godPath)}命途 · ${escapeHtml(godLabel)} · 筑戏人：${escapeHtml(formatCreatorLine(d))}</p>
                         </div>
                         <div class="trial-entry-score">
                             <span>神格判定</span>
@@ -10905,13 +11015,13 @@
                     </div>
                     <div class="clear-progress"><div class="clear-progress-fill" style="width:${Math.max(0, Math.min(100, clearRateNumber))}%"></div></div>
                     <div class="feedback-picker">
-                        <div class="feedback-tags">${renderFeedbackTags(locked || clearDone)}</div>
-                        <textarea id="clearFeedbackNote" class="feedback-note" maxlength="200" placeholder="${locked ? '验入局谕令后可留下通关反馈' : (clearDone ? '本局已登记' : '可选：写一句通关反馈，只有标签会进入公开统计')} " ${locked || clearDone ? 'disabled' : ''}></textarea>
+                        <div class="feedback-tags">${renderFeedbackTags(true)}</div>
+                        <textarea id="clearFeedbackNote" class="feedback-note" maxlength="200" placeholder="通关由审核员结算确认；玩家不可自行登记。" disabled></textarea>
                     </div>
                     <div class="feedback-summary">${renderFeedbackSummary(feedbackSummary)}</div>
                     <div class="clear-panel-foot">
                         <span>已穿越裂隙 ${formatClearSlots(d)} 人次</span>
-                        <button class="btn btn-primary btn-sm" ${clearDone?'disabled':''} onclick="${clearAction}">${clearButtonText}</button>
+                        <button class="btn btn-primary btn-sm" disabled>${clearButtonText}</button>
                     </div>
                 </div>
                 <div class="rating-area judgement-area ${rated ? 'is-rated' : ''}">
@@ -11004,6 +11114,7 @@
             btn.disabled = false;
             btn.textContent = '掷骰入局';
             if (error || !role) { showToast(`❌ ${error?.message || '入局谕令无效'}`); return; }
+            resetTalentViewState();
             saveInviteSession({ role, code, name: name || ROLE_LABELS[role] });
             input.value = '';
             closeInviteModal();
@@ -11035,7 +11146,9 @@
 
         function clearInviteSession() {
             inviteSession = null;
+            resetTalentViewState();
             localStorage.removeItem('fog_' + INVITE_STORAGE_KEY);
+            try { sessionStorage.removeItem('fog_' + INVITE_STORAGE_KEY); } catch {}
             updateInviteUI();
             closeProfilePage(false);
             closeLeaderboardPage(false);
@@ -11341,6 +11454,7 @@
             if(!requireInvite(['author','reviewer','admin'], '只有试炼构筑者、结算审核员或神谕馆主可以构筑试炼。')) return;
             const name=document.getElementById('dungeonName').value.trim();
             const creator=document.getElementById('dungeonCreator').value.trim();
+            const coCreators=parseCoCreators(document.getElementById('dungeonCoCreators')?.value || '');
             const difficulty=document.getElementById('dungeonDifficulty').value;
             const selectedTypes=Array.from(document.getElementById('dungeonType').selectedOptions).map(option => option.value);
             const type=selectedTypes.join('、');
@@ -11357,7 +11471,7 @@
             const btn=e.target.querySelector('button[type="submit"]');
             btn.disabled=true;
             btn.textContent='献祭中...';
-            const {error}=await addDungeon({name,creator,difficulty,type,participantCount,runCount,description:desc,pinnedNote,isOneShot,dungeonMode});
+            const {error}=await addDungeon({name,creator,coCreators,difficulty,type,participantCount,runCount,description:desc,pinnedNote,isOneShot,dungeonMode});
             btn.disabled=false;
             btn.textContent='献祭试炼至圣殿';
             if(error){showToast(`❌ ${error.message || '失败'}`);return;}

@@ -2,6 +2,7 @@ create table if not exists public.dungeons (
   id uuid primary key default gen_random_uuid(),
   name text not null check (char_length(trim(name)) between 1 and 80),
   creator text not null check (char_length(trim(creator)) between 1 and 40),
+  co_creators text[] not null default '{}'::text[],
   difficulty text not null default '超凡',
   type text not null default '综合',
   description text not null check (char_length(trim(description)) between 1 and 1800),
