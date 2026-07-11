@@ -4003,6 +4003,38 @@
             font-size: 0.86rem;
             line-height: 1.65;
         }
+        .profile-faith-rank {
+            position: relative;
+            z-index: 1;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            width: fit-content;
+            margin-top: 10px;
+            padding: 7px 10px;
+            border: 1px solid color-mix(in srgb, var(--god-primary, #e7cf8a) 24%, rgba(255,255,255,0.08));
+            border-radius: 999px;
+            background:
+                linear-gradient(90deg, color-mix(in srgb, var(--god-primary, #e7cf8a) 8%, transparent), transparent),
+                rgba(0,0,0,0.18);
+            color: var(--text-muted);
+            font-size: 0.72rem;
+            font-weight: 800;
+            letter-spacing: 0.04em;
+        }
+        .profile-faith-rank strong {
+            color: var(--god-primary, var(--gold-light));
+            font-family: var(--font-display);
+            font-size: 0.86rem;
+        }
+        .profile-faith-rank::before {
+            content: "";
+            width: 7px;
+            height: 7px;
+            border-radius: 999px;
+            background: var(--god-primary, #e7cf8a);
+            box-shadow: 0 0 14px var(--god-glow, rgba(231,207,138,0.18));
+        }
         .profile-hero-stats {
             display: grid;
             gap: 10px;
@@ -4102,18 +4134,42 @@
             font-size: 1.35rem;
         }
         .profile-avatar {
+            position: relative;
             display: grid;
             place-items: center;
             width: 76px;
             height: 76px;
             border-radius: 22px;
-            border: 1px solid rgba(231,207,138,0.28);
+            border: 1px solid color-mix(in srgb, var(--era-base, var(--god-secondary, #7aaec2)) 42%, rgba(255,255,255,0.10));
             background:
-                radial-gradient(circle at 35% 24%, rgba(231,207,138,0.18), transparent 42%),
+                radial-gradient(circle at 35% 24%, color-mix(in srgb, var(--god-primary, #e7cf8a) 20%, transparent), transparent 42%),
                 rgba(0,0,0,0.24);
-            box-shadow: inset 0 0 24px rgba(0,0,0,0.34);
+            box-shadow:
+                0 0 0 6px color-mix(in srgb, var(--god-primary, #e7cf8a) 5%, transparent),
+                0 0 28px color-mix(in srgb, var(--god-primary, #e7cf8a) 16%, transparent),
+                inset 0 0 24px rgba(0,0,0,0.34);
+        }
+        .profile-avatar::before {
+            content: "";
+            position: absolute;
+            inset: 7px;
+            border-radius: 17px;
+            border: 1px solid color-mix(in srgb, var(--god-primary, #e7cf8a) 34%, transparent);
+            pointer-events: none;
+        }
+        .profile-avatar::after {
+            content: "";
+            position: absolute;
+            inset: -5px;
+            border-radius: 27px;
+            background: conic-gradient(from 90deg, transparent, color-mix(in srgb, var(--god-primary, #e7cf8a) 22%, transparent), transparent 44%);
+            opacity: 0.55;
+            pointer-events: none;
+            animation: profileAvatarGlint 8s linear infinite;
         }
         .profile-avatar .god-sigil {
+            position: relative;
+            z-index: 1;
             width: 42px;
             height: 42px;
         }
@@ -4419,6 +4475,94 @@
             gap: 10px;
             flex-wrap: wrap;
             margin-top: 16px;
+        }
+        .profile-chronicle-card {
+            position: relative;
+            overflow: hidden;
+            display: grid;
+            grid-template-columns: auto minmax(0, 1fr) auto;
+            gap: 14px;
+            align-items: center;
+            margin-top: 18px;
+            padding: 15px 16px;
+            border: 1px solid color-mix(in srgb, var(--god-primary, #e7cf8a) 24%, rgba(255,255,255,0.08));
+            border-radius: 14px;
+            background:
+                radial-gradient(circle at 8% 20%, color-mix(in srgb, var(--god-primary, #e7cf8a) 10%, transparent), transparent 38%),
+                repeating-linear-gradient(135deg, color-mix(in srgb, var(--god-primary, #e7cf8a) 4%, transparent) 0 1px, transparent 1px 24px),
+                rgba(7,8,12,0.74);
+            box-shadow: 0 10px 28px rgba(0,0,0,0.24), inset 0 0 7px rgba(255,255,255,0.025);
+        }
+        .profile-chronicle-card::after {
+            content: attr(data-motif);
+            position: absolute;
+            right: 16px;
+            bottom: -10px;
+            color: color-mix(in srgb, var(--god-primary, #e7cf8a) 9%, transparent);
+            font-family: var(--font-display);
+            font-size: clamp(2rem, 7vw, 4.6rem);
+            letter-spacing: 0.08em;
+            pointer-events: none;
+        }
+        .profile-chronicle-icon {
+            position: relative;
+            z-index: 1;
+            display: grid;
+            place-items: center;
+            width: 46px;
+            height: 46px;
+            border-radius: 14px;
+            border: 1px solid color-mix(in srgb, var(--god-primary, #e7cf8a) 26%, rgba(255,255,255,0.08));
+            background: rgba(0,0,0,0.20);
+            color: var(--god-primary, #e7cf8a);
+        }
+        .profile-chronicle-icon .god-sigil {
+            width: 28px;
+            height: 28px;
+        }
+        .profile-chronicle-copy {
+            position: relative;
+            z-index: 1;
+            display: grid;
+            gap: 4px;
+            min-width: 0;
+        }
+        .profile-chronicle-copy small {
+            color: var(--text-muted);
+            font-size: 0.66rem;
+            font-weight: 900;
+            letter-spacing: 0.14em;
+        }
+        .profile-chronicle-copy strong {
+            color: var(--god-primary, var(--gold-light));
+            font-family: var(--font-display);
+            font-size: 1.02rem;
+            line-height: 1.2;
+        }
+        .profile-chronicle-copy span {
+            color: rgba(234,234,242,0.68);
+            font-size: 0.78rem;
+            line-height: 1.55;
+        }
+        .profile-chronicle-step {
+            position: relative;
+            z-index: 1;
+            color: var(--text-muted);
+            font-size: 0.68rem;
+            font-weight: 900;
+            letter-spacing: 0.12em;
+        }
+        .profile-chronicle-card.is-rotating .profile-chronicle-copy strong,
+        .profile-chronicle-card.is-rotating .profile-chronicle-copy span {
+            animation: chronicleReveal 0.48s ease both;
+        }
+        body.visual-effects-muted .profile-chronicle-card.is-rotating .profile-chronicle-copy strong,
+        body.visual-effects-muted .profile-chronicle-card.is-rotating .profile-chronicle-copy span {
+            animation: none;
+        }
+        @keyframes profileAvatarGlint {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
         }
         .talent-pool-card {
             border: 1px solid rgba(122,174,194,0.18);
@@ -5644,6 +5788,15 @@
             .profile-panel {
                 padding: 15px;
             }
+            .profile-chronicle-card {
+                grid-template-columns: auto minmax(0, 1fr);
+                align-items: start;
+                padding: 13px;
+            }
+            .profile-chronicle-step {
+                grid-column: 2;
+                justify-self: start;
+            }
             .public-profile-content {
                 padding: 14px;
                 max-height: calc(100dvh - 24px);
@@ -6837,6 +6990,42 @@
                 default: '尚未构筑试炼切片；构筑完成后会进入筑戏人记录。'
             }
         };
+        const GOD_FAITH_TITLES = {
+            诞育: ['萌芽受印者', '生命执枝人', '诞育环主'],
+            繁荣: ['初穗收录者', '丰饶执枝人', '繁荣园主'],
+            死亡: ['安眠见证者', '终焉守墓人', '死亡钟主'],
+            记忆: ['残页拾取者', '流光誊录人', '记忆册主'],
+            时间: ['沙粒观测者', '时序执针人', '时间钟主'],
+            秩序: ['刻度受审者', '规训执衡人', '秩序庭主'],
+            真理: ['典页求索者', '真相执笔人', '真理法主'],
+            战争: ['战痕见习者', '烽火执旗人', '战争席主'],
+            欺诈: ['假面试戴者', '谎言执戏人', '欺诈幕主'],
+            命运: ['星轨旁观者', '骰面执命人', '命运盘主'],
+            混乱: ['异序旁观者', '无序执涡人', '混乱核主'],
+            痴愚: ['幻视旁观者', '虚妄执眸人', '痴愚剧主'],
+            沉默: ['无声旁观者', '寂默守夜人', '沉默殿主'],
+            污堕: ['沉溺观者', '欲望执持人', '沉沦宴主'],
+            腐朽: ['凋零旁观者', '腐痕执杖人', '腐朽冢主'],
+            湮灭: ['空隙旁观者', '虚无执烬人', '湮灭核主']
+        };
+        const PROFILE_CHRONICLE_LINES = {
+            诞育: ['新芽沿档案缝隙生长。', '每一次入局都像胎动，被生命纪元重新计数。', '枝蔓不会询问胜败，只记录你是否仍在生长。'],
+            繁荣: ['丰收纹在仓库边缘亮起。', '你的每一枚记录都可能结成下一轮果实。', '繁荣并非安逸，而是不断扩张的试炼根系。'],
+            死亡: ['钟声在履迹录深处回荡。', '已结束的试炼没有消失，只是换成安静的骨纹。', '死亡替你保管终点，也替后来者标出边界。'],
+            记忆: ['残页正在重新排序。', '你留下的证言会先成为回声，再成为别人可读的路标。', '记忆不要求真实无缺，只要求痕迹仍可被追索。'],
+            时间: ['沙漏将本页翻慢了一息。', '旧选择并未远去，它们只是排在下一次刷新之前。', '时间把你的履历切成可回看的光片。'],
+            秩序: ['刻度线校准了你的档案边框。', '每一场试炼都等待被归档、审阅、裁定。', '秩序让混杂记录拥有可被复核的骨架。'],
+            真理: ['典页在你的名字下展开。', '所有分数与证言都会走向同一个问题：它是否成立。', '真理不负责温柔，只负责剥开遮蔽。'],
+            战争: ['红铜战痕压住了档案角。', '你的履历不是收藏品，而是一列仍可点燃的战线。', '战争把每一次通关都改写成战果。'],
+            欺诈: ['假面在头像框后轻轻偏转。', '这里保存的不只是你，也是你允许他人看到的你。', '欺诈替档案留一条缝，让谎言和真实都能呼吸。'],
+            命运: ['骰面停在尚未宣告的一格。', '你的分数不是结论，只是星轨暂时给出的坐标。', '命运喜欢迟到，因为它要等所有选择先入场。'],
+            混乱: ['漩涡把观测条轻轻扭歪。', '任何稳定排序都只是暂时同意的幻觉。', '混乱不拆毁档案，它让档案学会变形。'],
+            痴愚: ['空洞斜眸注视着你的携带槽。', '越认真封存的记录，越可能在下一刻露出笑意。', '痴愚替你保存那些自以为清醒的瞬间。'],
+            沉默: ['无声波纹压低了所有提醒。', '没有证言并不代表空白，也可能是沉默正在归档。', '沉默让档案停止解释，只留下可被凝视的形状。'],
+            污堕: ['玫红浊气贴着信封边缘游走。', '欲望不是污点，它是记录开始发热的位置。', '污堕会替你保存每一次沉溺前的犹豫。'],
+            腐朽: ['枯木断面在卡片底层浮现。', '旧记录没有坏掉，它们只是开始发酵。', '腐朽把过时的胜利变成更顽固的纹理。'],
+            湮灭: ['黑洞剪影吞下了一段空白。', '被删除的并非不存在，它只是不再替你解释。', '湮灭让档案学会留下空位。']
+        };
         const LOADING_ORACLES = ['不辨真伪，勿论虚实', '昔我长铭，流光拓影', '时光如隙，我亦如风', '感孕生命，衍育自然', '凡骨入局，诸神设戏'];
         const DIFFICULTY_OPTIONS = [
             { value: '新手', label: '新手本' },
@@ -6861,6 +7050,8 @@
         let leaderboardScrollY = 0;
         let matchScrollY = 0;
         let scoreScrollY = 0;
+        let profileChronicleTimer = null;
+        let profileChronicleIndex = 0;
         let leaderboardMode = 'overall';
         let leaderboardPath = 'all';
         let chronicleRotationTimer = null;
@@ -8785,6 +8976,7 @@
             const profession = getProfessionInfo(profile.profession);
             const roleLabel = ROLE_LABELS[getInviteRole()] || '入局信徒';
             const faithProgress = Math.min(100, Math.max(6, Math.round(uniqueCleared * 12 + authored.length * 8 + Number(profile.audienceScore || 0))));
+            const faithRank = getProfileFaithRank(faithGod, faithProgress);
             const authorPanel = (authored.length || canSubmit()) ? `
                 <section class="profile-panel" data-god="${escapeHtml(faithGod)}" style="${faithStyle}">
                     <div class="profile-panel-title">
@@ -8834,6 +9026,7 @@
                             ${unread.length ? `<span class="metric-pill">楼主提醒 <strong>${unread.length}</strong></span>` : ''}
                         </div>
                         <div class="profile-faith-prayer">${escapeHtml(getGodPrayer(faithGod))} · ${escapeHtml(faithSkin.pattern)}</div>
+                        <div class="profile-faith-rank">当前信仰阶位 <strong>${escapeHtml(faithRank.title)}</strong></div>
                     </div>
                     <div class="profile-hero-stats">
                         <div class="profile-hero-score"><span>登神之路</span><strong>${Number(profile.ascensionScore || 0)}</strong></div>
@@ -8929,7 +9122,9 @@
                         ${renderTalentPoolPanel(talentState, talentError, profile)}
                         ${authorPanel}
                     </div>
-                </div>`;
+                </div>
+                ${renderProfileChronicle(faithGod, profileChronicleIndex)}`;
+            startProfileChronicleRotation(faithGod);
         }
 
         async function openProfilePage() {
@@ -8954,6 +9149,7 @@
         }
 
         function closeProfilePage(restoreScroll = true) {
+            stopProfileChronicleRotation();
             const page = document.getElementById('profilePage');
             if (page) page.style.display = 'none';
             document.body.classList.remove('profile-view-open');
@@ -9416,6 +9612,69 @@
             return GOD_EMPTY_TEXT[type]?.[god] || GOD_EMPTY_TEXT[type]?.default || fallback;
         }
 
+        function getProfileFaithRank(god, progress = 0) {
+            const titles = GOD_FAITH_TITLES[getGodInfo(god).god] || ['初阶观测者', '执印信徒', '纪元执掌者'];
+            const index = progress >= 72 ? 2 : (progress >= 36 ? 1 : 0);
+            return { stage: index + 1, title: titles[index], next: titles[Math.min(index + 1, titles.length - 1)] };
+        }
+
+        function getProfileChronicleEntries(god) {
+            const info = getGodInfo(god);
+            const skin = getGodSkin(god);
+            const eraLines = ERA_CHRONICLE_LIBRARY[info.path] || ERA_CHRONICLE_LIBRARY.虚无 || [];
+            const godLines = PROFILE_CHRONICLE_LINES[info.god] || [];
+            const entries = [
+                ...godLines.map((line, index) => ({
+                    lead: index === 0 ? `${info.god}之神正在观测本页。` : getGodPrayer(info.god),
+                    note: line
+                })),
+                ...eraLines
+            ];
+            return entries.length ? entries : [{ lead: skin.oracle || getGodPrayer(god), note: `${skin.pattern}在档案底层缓慢浮现。` }];
+        }
+
+        function renderProfileChronicle(god = '命运', index = profileChronicleIndex) {
+            const info = getGodInfo(god);
+            const skin = getGodSkin(god);
+            const entries = getProfileChronicleEntries(god);
+            const safeIndex = ((Number(index) || 0) % entries.length + entries.length) % entries.length;
+            const entry = entries[safeIndex];
+            return `
+                <section class="profile-chronicle-card" id="profileChronicleCard" data-god="${escapeHtml(info.god)}" data-motif="${escapeHtml(skin.motif)}" style="${getGodSkinStyle(god)}">
+                    <div class="profile-chronicle-icon">${renderGodSigil(god, 'sm')}</div>
+                    <div class="profile-chronicle-copy">
+                        <small>信徒现世记事 · ${escapeHtml(info.path)}纪元</small>
+                        <strong>${escapeHtml(entry.lead)}</strong>
+                        <span>${escapeHtml(entry.note)}</span>
+                    </div>
+                    <div class="profile-chronicle-step">${safeIndex + 1}/${entries.length}</div>
+                </section>`;
+        }
+
+        function stopProfileChronicleRotation() {
+            if (profileChronicleTimer) {
+                clearInterval(profileChronicleTimer);
+                profileChronicleTimer = null;
+            }
+        }
+
+        function startProfileChronicleRotation(god = '命运') {
+            stopProfileChronicleRotation();
+            const entries = getProfileChronicleEntries(god);
+            if (entries.length <= 1) return;
+            profileChronicleTimer = setInterval(() => {
+                if (document.getElementById('profilePage')?.style.display === 'none') {
+                    stopProfileChronicleRotation();
+                    return;
+                }
+                profileChronicleIndex = (profileChronicleIndex + 1) % entries.length;
+                const oldCard = document.getElementById('profileChronicleCard');
+                if (!oldCard) return;
+                oldCard.outerHTML = renderProfileChronicle(god, profileChronicleIndex);
+                document.getElementById('profileChronicleCard')?.classList.add('is-rotating');
+            }, 15000);
+        }
+
         function renderRitualEmpty(text, god = '命运', title = '神谕暂未留存') {
             const info = getGodInfo(god);
             const skin = getGodSkin(god);
@@ -9483,9 +9742,20 @@
             if (avatar) avatar.innerHTML = renderGodSigil(info.god, 'lg');
             const prayer = content.querySelector('.profile-hero .profile-faith-prayer');
             if (prayer) prayer.textContent = `${getGodPrayer(info.god)} · ${skin.pattern}`;
+            const rank = content.querySelector('.profile-faith-rank strong');
+            if (rank) {
+                const currentProgress = Number(content.querySelector('.faith-progress-fill')?.style.getPropertyValue('--faith-progress')?.replace('%', '') || 0);
+                rank.textContent = getProfileFaithRank(info.god, currentProgress).title;
+            }
             content.querySelector('.profile-atmosphere')?.remove();
             content.querySelector('.profile-god-badge')?.remove();
             content.insertAdjacentHTML('afterbegin', renderProfileAtmosphere(info.god));
+            const chronicle = content.querySelector('#profileChronicleCard');
+            if (chronicle) {
+                profileChronicleIndex = 0;
+                chronicle.outerHTML = renderProfileChronicle(info.god, 0);
+                startProfileChronicleRotation(info.god);
+            }
         }
 
         function renderArchiveEmptyState(filtered) {
