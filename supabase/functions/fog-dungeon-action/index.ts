@@ -229,6 +229,18 @@ function toPublicTitle(title: Record<string, unknown> | null | undefined) {
   };
 }
 
+function toPublicCurse(curse: Record<string, unknown> | null | undefined) {
+  if (!curse) return null;
+  return {
+    curse_text: cleanText(curse.curse_text, 32),
+    curse_god: cleanText(curse.curse_god, 20),
+    curse_note: cleanText(curse.curse_note, 120),
+    granted_by_type: cleanText(curse.granted_by_type, 20) || "admin",
+    granted_by_name: cleanText(curse.granted_by_name, 40),
+    granted_at: cleanText(curse.granted_at, 80),
+  };
+}
+
 async function getActiveTitlesByHashes(
   supabase: ReturnType<typeof createClient>,
   inviteCodeHashes: string[],
@@ -259,6 +271,36 @@ async function getActiveTitleForHash(
   return { title: result.titles.get(inviteCodeHash) || null };
 }
 
+async function getActiveCursesByHashes(
+  supabase: ReturnType<typeof createClient>,
+  inviteCodeHashes: string[],
+) {
+  const hashes = [...new Set(inviteCodeHashes.map((hash) => cleanText(hash, 64)).filter(Boolean))];
+  const curses = new Map<string, Record<string, unknown>>();
+  if (!hashes.length) return { curses };
+  const { data, error } = await supabase
+    .from("profile_curses")
+    .select("invite_code_hash, curse_text, curse_god, curse_note, granted_by_type, granted_by_name, granted_at")
+    .in("invite_code_hash", hashes)
+    .eq("is_active", true);
+  if (isMissingTitleTable(error)) return { curses };
+  if (error) return { curses, error };
+  for (const curse of data || []) {
+    const hash = cleanText((curse as Record<string, unknown>).invite_code_hash, 64);
+    if (hash) curses.set(hash, toPublicCurse(curse as Record<string, unknown>) as Record<string, unknown>);
+  }
+  return { curses };
+}
+
+async function getActiveCurseForHash(
+  supabase: ReturnType<typeof createClient>,
+  inviteCodeHash: string,
+) {
+  const result = await getActiveCursesByHashes(supabase, [inviteCodeHash]);
+  if (result.error) return { error: result.error };
+  return { curse: result.curses.get(inviteCodeHash) || null };
+}
+
 async function getProfileByDisplayName(
   supabase: ReturnType<typeof createClient>,
   displayNameInput: unknown,
@@ -267,7 +309,7 @@ async function getProfileByDisplayName(
   if (!displayName) return { error: { message: "请填写玩家昵称" } };
   const { data, error } = await supabase
     .from("player_profiles")
-    .select("invite_code_hash, display_name, role")
+    .select("invite_code_hash, display_name, role, faith_god")
     .eq("display_name", displayName)
     .maybeSingle();
   if (error) return { error };
@@ -309,6 +351,7 @@ function toPublicProfile(profile: Record<string, unknown>, profileKey: string, i
     items: cleanText(profile.items, 800),
     talents: cleanText(profile.talents, 800),
     active_title: profile.active_title || null,
+    active_curse: profile.active_curse || null,
     updated_at: cleanText(profile.updated_at, 80),
     is_current: isCurrent,
   };
@@ -358,6 +401,16 @@ function canGrantTitles(role: InviteRole) {
 function getTitleGrantGod(identity: InviteIdentity, requestedGod: unknown) {
   if (identity.role === "god") return identity.displayName;
   return cleanText(requestedGod, 20);
+}
+
+function canManageDungeonRecord(dungeon: Record<string, unknown>, identity: InviteIdentity) {
+  const displayName = cleanText(identity.displayName, 40);
+  const creator = cleanText(dungeon.creator, 40);
+  const inviteName = cleanText(dungeon.invite_name, 40);
+  const inviteHash = cleanText(dungeon.invite_code_hash, 64);
+  if (inviteHash && inviteHash === identity.codeHash) return true;
+  if (displayName && (displayName === creator || displayName === inviteName)) return true;
+  return cleanCoCreators(dungeon.co_creators).some((name) => cleanText(name, 40) === displayName);
 }
 
 function isMissingInviteColumn(error: { code?: string; message?: string } | null) {
@@ -569,10 +622,13 @@ async function getTalentProfile(
   if (!data) return { error: { message: "请先保存个人档案，再开启天赋池" } };
   const titleResult = await getActiveTitleForHash(supabase, identity.codeHash);
   if (titleResult.error) return { error: titleResult.error };
+  const curseResult = await getActiveCurseForHash(supabase, identity.codeHash);
+  if (curseResult.error) return { error: curseResult.error };
   return {
     data: {
       ...data,
       active_title: titleResult.title,
+      active_curse: curseResult.curse,
     },
   };
 }
@@ -1394,9 +1450,12 @@ Deno.serve(async (req) => {
 
       const titleResult = await getActiveTitleForHash(supabase, identity.codeHash);
       if (titleResult.error) return json({ error: titleResult.error.message }, 400);
+      const curseResult = await getActiveCurseForHash(supabase, identity.codeHash);
+      if (curseResult.error) return json({ error: curseResult.error.message }, 400);
       const dataWithTitle = {
         ...data,
         active_title: titleResult.title,
+        active_curse: curseResult.curse,
       };
 
       return json({ role, name: identity.displayName, data: dataWithTitle });
@@ -1418,6 +1477,11 @@ Deno.serve(async (req) => {
         (data || []).map((profile: Record<string, unknown>) => cleanText(profile.invite_code_hash, 64)),
       );
       if (titleResult.error) return json({ error: titleResult.error.message }, 400);
+      const curseResult = await getActiveCursesByHashes(
+        supabase,
+        (data || []).map((profile: Record<string, unknown>) => cleanText(profile.invite_code_hash, 64)),
+      );
+      if (curseResult.error) return json({ error: curseResult.error.message }, 400);
 
       const publicProfiles = await Promise.all((data || []).map(async (profile: Record<string, unknown>) => {
         const inviteCodeHash = cleanText(profile.invite_code_hash, 64);
@@ -1425,6 +1489,7 @@ Deno.serve(async (req) => {
         return {
           ...rest,
           active_title: titleResult.titles.get(inviteCodeHash) || null,
+          active_curse: curseResult.curses.get(inviteCodeHash) || null,
           profile_key: await getPublicProfileKey(inviteCodeHash),
           is_current: inviteCodeHash === identity.codeHash,
         };
@@ -1467,7 +1532,10 @@ Deno.serve(async (req) => {
       const targetDisplayName = cleanText(targetProfile.display_name, 40);
       const titleResult = await getActiveTitleForHash(supabase, targetInviteHash);
       if (titleResult.error) return json({ error: titleResult.error.message }, 400);
+      const curseResult = await getActiveCurseForHash(supabase, targetInviteHash);
+      if (curseResult.error) return json({ error: curseResult.error.message }, 400);
       targetProfile.active_title = titleResult.title;
+      targetProfile.active_curse = curseResult.curse;
       let clearRecords: Record<string, unknown>[] = [];
       const clearResult = await supabase
         .from("clear_records")
@@ -1598,6 +1666,9 @@ Deno.serve(async (req) => {
       const titleGod = getTitleGrantGod(identity, payload.titleGod);
       const titleNote = cleanText(payload.titleNote, 120);
       if (!targetHash || !titleText) return json({ error: "请填写受封昵称和称号" }, 400);
+      if (role === "god" && cleanText(target.faith_god, 20) !== identity.displayName) {
+        return json({ error: "神明只能为对应信徒降下称号" }, 403);
+      }
 
       const { error: deactivateError } = await supabase
         .from("profile_titles")
@@ -1640,6 +1711,101 @@ Deno.serve(async (req) => {
       });
     }
 
+    if (action === "grantBetrayalCurse") {
+      if (!canGrantTitles(role)) return json({ error: "需要馆主或神明谕令" }, 403);
+
+      const targetResult = await getProfileByDisplayName(supabase, payload.targetName);
+      if (targetResult.error) {
+        if (targetResult.error.code === "42P01") return json({ error: "请先运行 player_profiles_migration.sql" }, 400);
+        return json({ error: targetResult.error.message }, 400);
+      }
+
+      const target = targetResult.data as Record<string, unknown>;
+      const targetHash = cleanText(target.invite_code_hash, 64);
+      const targetFaithGod = cleanText(target.faith_god, 20);
+      const curseGod = getTitleGrantGod(identity, payload.curseGod || payload.titleGod);
+      const curseNote = cleanText(payload.curseNote ?? payload.titleNote, 120);
+      if (!targetHash) return json({ error: "请填写受诅昵称" }, 400);
+      if (!curseGod) return json({ error: "请选择诅咒名义" }, 400);
+      if (role === "god" && (!targetFaithGod || targetFaithGod === identity.displayName)) {
+        return json({ error: "对应神明只能对已改信者下放背弃诅咒" }, 403);
+      }
+
+      const { error: deactivateTitleError } = await supabase
+        .from("profile_titles")
+        .update({
+          is_active: false,
+          revoked_at: new Date().toISOString(),
+          revoked_by_hash: identity.codeHash,
+          revoked_by_name: identity.displayName,
+        })
+        .eq("invite_code_hash", targetHash)
+        .eq("is_active", true);
+      if (deactivateTitleError?.code === "42P01") return json({ error: "请先运行 profile_titles_migration.sql" }, 400);
+      if (deactivateTitleError) return json({ error: deactivateTitleError.message }, 400);
+
+      const { error: deactivateCurseError } = await supabase
+        .from("profile_curses")
+        .update({
+          is_active: false,
+          revoked_at: new Date().toISOString(),
+          revoked_by_hash: identity.codeHash,
+          revoked_by_name: identity.displayName,
+        })
+        .eq("invite_code_hash", targetHash)
+        .eq("is_active", true);
+      if (deactivateCurseError?.code === "42P01") return json({ error: "请先运行 profile_curses_migration.sql" }, 400);
+      if (deactivateCurseError) return json({ error: deactivateCurseError.message }, 400);
+
+      const curseText = "背弃诅咒";
+      const apostateTitle = "背弃者";
+      const { data: curseData, error: curseError } = await supabase
+        .from("profile_curses")
+        .insert({
+          invite_code_hash: targetHash,
+          display_name: cleanText(target.display_name, 40),
+          curse_text: curseText,
+          curse_god: curseGod,
+          curse_note: curseNote,
+          granted_by_type: role === "god" || curseGod ? "god" : "admin",
+          granted_by_hash: identity.codeHash,
+          granted_by_name: identity.displayName,
+          is_active: true,
+        })
+        .select("id, curse_text, curse_god, curse_note, granted_by_type, granted_by_name, granted_at")
+        .single();
+      if (curseError?.code === "42P01") return json({ error: "请先运行 profile_curses_migration.sql" }, 400);
+      if (curseError) return json({ error: curseError.message }, 400);
+
+      const { data: titleData, error: titleError } = await supabase
+        .from("profile_titles")
+        .insert({
+          invite_code_hash: targetHash,
+          display_name: cleanText(target.display_name, 40),
+          title_text: apostateTitle,
+          title_god: curseGod,
+          title_note: curseNote || curseText,
+          granted_by_type: "god",
+          granted_by_hash: identity.codeHash,
+          granted_by_name: identity.displayName,
+          is_active: true,
+        })
+        .select("id, title_text, title_god, title_note, granted_by_type, granted_by_name, granted_at")
+        .single();
+      if (titleError?.code === "42P01") return json({ error: "请先运行 profile_titles_migration.sql" }, 400);
+      if (titleError) return json({ error: titleError.message }, 400);
+
+      return json({
+        role,
+        name: identity.displayName,
+        data: {
+          targetName: cleanText(target.display_name, 40),
+          activeTitle: toPublicTitle(titleData as Record<string, unknown>),
+          activeCurse: toPublicCurse(curseData as Record<string, unknown>),
+        },
+      });
+    }
+
     if (action === "revokeProfileTitle") {
       if (!canGrantTitles(role)) return json({ error: "需要馆主或神明谕令" }, 403);
 
@@ -1651,7 +1817,24 @@ Deno.serve(async (req) => {
 
       const target = targetResult.data as Record<string, unknown>;
       const targetHash = cleanText(target.invite_code_hash, 64);
-      let revokeQuery = supabase
+      const { data: activeTitle, error: activeTitleError } = await supabase
+        .from("profile_titles")
+        .select("id, title_text, title_god, granted_by_hash")
+        .eq("invite_code_hash", targetHash)
+        .eq("is_active", true)
+        .maybeSingle();
+      if (activeTitleError?.code === "42P01") return json({ error: "请先运行 profile_titles_migration.sql" }, 400);
+      if (activeTitleError) return json({ error: activeTitleError.message }, 400);
+      if (!activeTitle) return json({ error: "这个玩家当前没有生效称号" }, 404);
+      if (
+        role === "god" &&
+        cleanText((activeTitle as Record<string, unknown>).granted_by_hash, 64) !== identity.codeHash &&
+        cleanText((activeTitle as Record<string, unknown>).title_god, 20) !== identity.displayName
+      ) {
+        return json({ error: "神明只能回收本神名义下的称号" }, 403);
+      }
+
+      const { data, error } = await supabase
         .from("profile_titles")
         .update({
           is_active: false,
@@ -1659,13 +1842,9 @@ Deno.serve(async (req) => {
           revoked_by_hash: identity.codeHash,
           revoked_by_name: identity.displayName,
         })
-        .eq("invite_code_hash", targetHash)
-        .eq("is_active", true);
-      if (role === "god") revokeQuery = revokeQuery.eq("granted_by_hash", identity.codeHash);
-      const { data, error } = await revokeQuery
+        .eq("id", (activeTitle as Record<string, unknown>).id)
         .select("id, title_text")
         .maybeSingle();
-      if (error?.code === "42P01") return json({ error: "请先运行 profile_titles_migration.sql" }, 400);
       if (error) return json({ error: error.message }, 400);
       if (!data) return json({ error: "这个玩家当前没有生效称号" }, 404);
 
@@ -2574,6 +2753,48 @@ Deno.serve(async (req) => {
       }
       if (!Number.isInteger(runCount) || runCount < 1 || runCount > 999) return json({ error: "当前周目不正确" }, 400);
 
+      const editDungeonId = cleanText(payload.dungeonId ?? payload.dungeon_id, 80);
+      if (editDungeonId) {
+        if (!isUuid(editDungeonId)) return json({ error: "副本 ID 不正确" }, 400);
+        const { data: existingDungeon, error: readError } = await supabase
+          .from("dungeons")
+          .select("id, invite_code_hash, invite_name, creator, co_creators, clear_count")
+          .eq("id", editDungeonId)
+          .single();
+        if (isMissingInviteColumn(readError)) return json({ error: "请先运行邀请码数据库升级 SQL" }, 400);
+        if (isMissingCoCreatorsColumn(readError)) return json({ error: "请先运行同契共筑数据库升级 SQL" }, 400);
+        if (readError) return json({ error: readError.message }, 400);
+        if (role !== "admin" && !canManageDungeonRecord(existingDungeon as Record<string, unknown>, identity)) {
+          return json({ error: "只有副本作者、同契共筑者或馆主可以重铸绝境" }, 403);
+        }
+
+        const clearCount = Number((existingDungeon as Record<string, unknown>).clear_count || 0);
+        const slots = Math.max(1, participantCount * runCount);
+        const clearRate = Math.round((clearCount / slots) * 1000) / 10;
+        const { data, error } = await supabase
+          .from("dungeons")
+          .update({
+            name,
+            creator,
+            co_creators: coCreators,
+            difficulty,
+            type,
+            description,
+            pinned_note: pinnedNote,
+            participant_count: participantCount,
+            run_count: runCount,
+            is_one_shot: isOneShot,
+            clear_rate: clearRate,
+          })
+          .eq("id", editDungeonId)
+          .select()
+          .single();
+        if (isMissingCoCreatorsColumn(error)) return json({ error: "请先运行同契共筑数据库升级 SQL" }, 400);
+        if (isMissingForumColumn(error)) return json({ error: "请先运行论坛功能数据库升级 SQL" }, 400);
+        if (error) return json({ error: error.message }, 400);
+        return json({ role, name: identity.displayName, data });
+      }
+
       const { data, error } = await supabase
         .from("dungeons")
         .insert({
@@ -2871,13 +3092,13 @@ Deno.serve(async (req) => {
 
       const { data: dungeon, error: readError } = await supabase
         .from("dungeons")
-        .select("id, invite_code_hash")
+        .select("id, invite_code_hash, invite_name, creator, co_creators")
         .eq("id", dungeonId)
         .single();
       if (isMissingInviteColumn(readError)) return json({ error: "请先运行邀请码数据库升级 SQL" }, 400);
       if (readError) return json({ error: readError.message }, 400);
-      if (role !== "admin" && dungeon.invite_code_hash !== identity.codeHash) {
-        return json({ error: "只有副本作者或馆主可以修改置顶说明" }, 403);
+      if (role !== "admin" && !canManageDungeonRecord(dungeon as Record<string, unknown>, identity)) {
+        return json({ error: "只有副本作者、同契共筑者或馆主可以修改置顶说明" }, 403);
       }
 
       const { data, error } = await supabase
@@ -2892,10 +3113,21 @@ Deno.serve(async (req) => {
     }
 
     if (action === "deleteDungeon") {
-      if (!hasRole(role, ["admin"])) return json({ error: "需要馆主邀请码" }, 403);
+      if (!hasRole(role, ["author", "reviewer", "admin", "god"])) return json({ error: "需要作者、审核员、神明或馆主邀请码" }, 403);
 
       const dungeonId = cleanText(payload.dungeonId, 80);
       if (!isUuid(dungeonId)) return json({ error: "副本 ID 不正确" }, 400);
+
+      const { data: dungeon, error: readError } = await supabase
+        .from("dungeons")
+        .select("id, invite_code_hash, invite_name, creator, co_creators")
+        .eq("id", dungeonId)
+        .single();
+      if (isMissingInviteColumn(readError)) return json({ error: "请先运行邀请码数据库升级 SQL" }, 400);
+      if (readError) return json({ error: readError.message }, 400);
+      if (role !== "admin" && !canManageDungeonRecord(dungeon as Record<string, unknown>, identity)) {
+        return json({ error: "只有副本作者、同契共筑者或馆主可以封存试炼" }, 403);
+      }
 
       const { error } = await supabase.from("dungeons").delete().eq("id", dungeonId);
       if (error) return json({ error: error.message }, 400);

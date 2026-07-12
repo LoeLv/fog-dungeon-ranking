@@ -4235,6 +4235,20 @@
             padding: 3px 8px;
             font-size: 0.66rem;
         }
+        .divine-curse-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 5px 9px;
+            border: 1px solid color-mix(in srgb, var(--god-primary, #b84545) 34%, rgba(255,255,255,0.08));
+            border-radius: 8px;
+            background:
+                linear-gradient(90deg, color-mix(in srgb, var(--god-primary, #b84545) 18%, rgba(80,15,22,0.44)), rgba(0,0,0,0.16)),
+                rgba(80,15,22,0.28);
+            color: var(--text-bright);
+            font-size: 0.72rem;
+            font-weight: 900;
+        }
         .profile-title-status {
             display: grid;
             gap: 8px;
@@ -4260,6 +4274,12 @@
             color: var(--text-muted);
             font-size: 0.76rem;
             line-height: 1.55;
+        }
+        .profile-curse-status {
+            border-color: color-mix(in srgb, var(--god-primary, #b84545) 32%, rgba(255,255,255,0.08));
+            background:
+                linear-gradient(90deg, color-mix(in srgb, var(--god-primary, #b84545) 15%, rgba(70,12,20,0.34)), rgba(0,0,0,0.22)),
+                rgba(30,6,10,0.30);
         }
         .profile-subline {
             position: relative;
@@ -7287,6 +7307,7 @@
         let leaderboardScrollY = 0;
         let matchScrollY = 0;
         let scoreScrollY = 0;
+        let editingDungeonId = '';
         let profileChronicleTimer = null;
         let profileChronicleIndex = 0;
         let leaderboardMode = 'overall';
@@ -7440,7 +7461,8 @@
                 scoresLockedAt: '',
                 items: '',
                 talents: '',
-                activeTitle: null
+                activeTitle: null,
+                activeCurse: null
             };
         }
 
@@ -7459,6 +7481,8 @@
             stored.ascensionScore = normalizeProfileScore(stored.ascensionScore);
             stored.audienceScore = normalizeProfileScore(stored.audienceScore);
             stored.scoresLockedAt = stored.scoresLockedAt || '';
+            stored.activeTitle = normalizeProfileTitle(stored.activeTitle);
+            stored.activeCurse = normalizeProfileCurse(stored.activeCurse);
             return stored;
         }
 
@@ -7593,6 +7617,20 @@
             };
         }
 
+        function normalizeProfileCurse(value) {
+            if (!value) return null;
+            const curseText = String(value.curse_text || value.curseText || '').trim().slice(0, 32);
+            if (!curseText) return null;
+            return {
+                curseText,
+                curseGod: cleanGodName(value.curse_god || value.curseGod || ''),
+                curseNote: String(value.curse_note || value.curseNote || '').trim().slice(0, 120),
+                grantedByType: String(value.granted_by_type || value.grantedByType || 'god').trim(),
+                grantedByName: String(value.granted_by_name || value.grantedByName || '').trim().slice(0, 40),
+                grantedAt: value.granted_at || value.grantedAt || ''
+            };
+        }
+
         function renderProfileTitleBadge(title, options = {}) {
             const normalized = normalizeProfileTitle(title);
             if (!normalized) return '';
@@ -7613,7 +7651,33 @@
                 </div>`;
         }
 
-        function renderProfileTitleStatus(title, fallbackGod = '命运') {
+        function renderProfileCurseStatus(curse, fallbackGod = '命运') {
+            const normalized = normalizeProfileCurse(curse);
+            if (!normalized) {
+                return `
+                    <div class="profile-title-status profile-curse-status" style="${getGodSkinStyle(fallbackGod)}">
+                        <div class="profile-title-status-head">
+                            <strong>当前诅咒</strong>
+                            <span class="metric-pill">暂无诅咒</span>
+                        </div>
+                        <div class="profile-title-status-note">未被神明下放背弃诅咒。</div>
+                    </div>`;
+            }
+            const god = normalized.curseGod || fallbackGod;
+            const issuer = normalized.grantedByType === 'god'
+                ? `${god}之神下放`
+                : (normalized.grantedByName ? `${normalized.grantedByName}下放` : '馆主下放');
+            return `
+                <div class="profile-title-status profile-curse-status" style="${getGodSkinStyle(god)}">
+                    <div class="profile-title-status-head">
+                        <strong>当前诅咒</strong>
+                        <span class="divine-curse-badge">背弃诅咒</span>
+                    </div>
+                    <div class="profile-title-status-note">${escapeHtml(issuer)}｜自动赋予称号「背弃者」${normalized.curseNote ? `｜${escapeHtml(normalized.curseNote)}` : ''}</div>
+                </div>`;
+        }
+
+        function renderProfileTitleStatus(title, curse = null, fallbackGod = '命运') {
             const normalized = normalizeProfileTitle(title);
             if (!normalized) {
                 return `
@@ -7623,7 +7687,8 @@
                             <span class="metric-pill">暂无称号</span>
                         </div>
                         <div class="profile-title-status-note">尚未有馆主或神明为你降下称号。获得称号后，会绑定昵称显示在个人面板、公开档案和榜单里。</div>
-                    </div>`;
+                    </div>
+                    ${renderProfileCurseStatus(curse, fallbackGod)}`;
             }
             const issuer = normalized.grantedByType === 'god'
                 ? `${normalized.titleGod || fallbackGod}之神降下`
@@ -7635,7 +7700,8 @@
                         ${renderProfileTitleBadge(normalized, { fallbackGod })}
                     </div>
                     <div class="profile-title-status-note">${escapeHtml(issuer)}${normalized.titleNote ? `｜${escapeHtml(normalized.titleNote)}` : ''}</div>
-                </div>`;
+                </div>
+                ${renderProfileCurseStatus(curse, normalized.titleGod || fallbackGod)}`;
         }
 
         function formatProfileScore(value) {
@@ -7673,6 +7739,7 @@
                 ascensionScore: normalizeProfileScore(profile.ascensionScore),
                 audienceScore: normalizeProfileScore(profile.audienceScore),
                 activeTitle: normalizeProfileTitle(profile.activeTitle || profile.active_title),
+                activeCurse: normalizeProfileCurse(profile.activeCurse || profile.active_curse),
                 updatedAt: profile.updatedAt || '',
                 isCurrent: key === getProfileKey()
             };
@@ -7697,6 +7764,7 @@
                 items: String(profile.items || '').trim().slice(0, 800),
                 talents: String(profile.talents || '').trim().slice(0, 800),
                 activeTitle: normalizeProfileTitle(profile.active_title || profile.activeTitle),
+                activeCurse: normalizeProfileCurse(profile.active_curse || profile.activeCurse),
                 scoresLockedAt: profile.scores_locked_at || profile.scoresLockedAt || '',
                 updatedAt: profile.updated_at || profile.updatedAt || ''
             };
@@ -8473,6 +8541,7 @@
                         items: profile.items,
                         talents: profile.talents,
                         active_title: normalizeProfileTitle(profile.activeTitle),
+                        active_curse: normalizeProfileCurse(profile.activeCurse),
                         updated_at: profile.updatedAt,
                         is_current: key === getProfileKey()
                     },
@@ -8839,10 +8908,21 @@
                 </article>`).join('')}</div>`;
         }
 
-        function renderTitlePlayerOptions(entries) {
+        function renderTitlePlayerOptions(entries, mode = 'title') {
+            const godName = isGodRole() ? cleanGodName(inviteSession?.name || '') : '';
             return (entries || [])
-                .filter(entry => entry.displayName && entry.displayName !== '未命名信徒')
-                .map(entry => `<option value="${escapeHtml(entry.displayName)}">${escapeHtml(entry.displayName)}${entry.activeTitle ? `｜${escapeHtml(entry.activeTitle.titleText)}` : ''}</option>`)
+                .filter(entry => {
+                    if (!entry.displayName || entry.displayName === '未命名信徒') return false;
+                    if (!godName) return true;
+                    const faithGod = cleanGodName(entry.faithGod || '');
+                    return mode === 'curse' ? faithGod && faithGod !== godName : faithGod === godName;
+                })
+                .map(entry => {
+                    const titleLabel = entry.activeTitle ? `｜${entry.activeTitle.titleText}` : '';
+                    const curseLabel = entry.activeCurse ? `｜${entry.activeCurse.curseText}` : '';
+                    const faithLabel = entry.faithGod ? `｜${entry.faithGod}信徒` : '';
+                    return `<option value="${escapeHtml(entry.displayName)}">${escapeHtml(entry.displayName)}${escapeHtml(faithLabel + titleLabel + curseLabel)}</option>`;
+                })
                 .join('');
         }
 
@@ -8855,14 +8935,21 @@
 
         function renderTitleAdminPanel(entries) {
             if (!canGrantTitlesUI()) return '';
-            const options = renderTitlePlayerOptions(entries);
             const godName = isGodRole() ? cleanGodName(inviteSession?.name || '') : '';
+            const titleOptions = renderTitlePlayerOptions(entries, 'title');
+            const curseOptions = renderTitlePlayerOptions(entries, 'curse');
             const titleGodControl = isGodRole()
                 ? `<input id="titleGodSelect" value="${escapeHtml(godName)}" disabled>`
                 : `<select id="titleGodSelect">${renderGodSelectOptions()}</select>`;
+            const curseGodControl = isGodRole()
+                ? `<input id="curseGodSelect" value="${escapeHtml(godName)}" disabled>`
+                : `<select id="curseGodSelect">${renderGodSelectOptions(godName)}</select>`;
             const titleGodHelp = isGodRole()
-                ? `${escapeHtml(godName)}之名`
+                ? `${escapeHtml(godName)}之神只能为当前 ${escapeHtml(godName)} 信徒降下称号`
                 : '选择降号名义';
+            const curseHelp = isGodRole()
+                ? `${escapeHtml(godName)}之神可对已改信者下放背弃诅咒，并自动赋予「背弃者」称号`
+                : '馆主可代任一神明下放背弃诅咒，并自动赋予「背弃者」称号';
             return `
                 <section class="profile-panel" data-god="${escapeHtml(godName || '命运')}" style="${getGodSkinStyle(godName || '命运')}">
                     <div class="profile-panel-title"><span>称号敕令</span><small>${isGodRole() ? '神明降号' : '馆主降下 / 神明名义'}</small></div>
@@ -8870,7 +8957,7 @@
                         <div class="form-group full">
                             <label>受封昵称</label>
                             <input id="titleTargetName" list="titlePlayerList" maxlength="40" placeholder="选择或输入玩家昵称">
-                            <datalist id="titlePlayerList">${options}</datalist>
+                            <datalist id="titlePlayerList">${titleOptions}</datalist>
                         </div>
                         <div class="form-group full"><label>称号</label><input id="titleTextInput" maxlength="32" placeholder="例如：雾中执灯者"></div>
                         <div class="form-group"><label>降号名义</label>${titleGodControl}</div>
@@ -8880,6 +8967,22 @@
                     <div class="profile-tools">
                         <button class="btn btn-primary btn-sm" onclick="grantProfileTitleUI()">降下称号</button>
                         <button class="btn btn-outline btn-sm" onclick="revokeProfileTitleUI()">撤销当前称号</button>
+                    </div>
+                </section>
+                <section class="profile-panel" data-god="${escapeHtml(godName || '命运')}" style="${getGodSkinStyle(godName || '命运')}">
+                    <div class="profile-panel-title"><span>背弃诅咒</span><small>改信处置 / 自动称号</small></div>
+                    <div class="profile-form-grid">
+                        <div class="form-group full">
+                            <label>受诅昵称</label>
+                            <input id="curseTargetName" list="cursePlayerList" maxlength="40" placeholder="选择已改信的玩家昵称">
+                            <datalist id="cursePlayerList">${curseOptions}</datalist>
+                        </div>
+                        <div class="form-group"><label>诅咒名义</label>${curseGodControl}</div>
+                        <div class="form-group"><label>诅咒备注</label><input id="curseNoteInput" maxlength="120" placeholder="可选，背弃缘由"></div>
+                    </div>
+                    <div class="identity-help">${curseHelp}</div>
+                    <div class="profile-tools">
+                        <button class="btn btn-danger btn-sm" onclick="grantBetrayalCurseUI()">背弃诅咒</button>
                     </div>
                 </section>`;
         }
@@ -8895,6 +8998,22 @@
             if (error) { showToast(`❌ ${error.message || '称号授予失败'}`); return; }
             showToast(`已为 ${targetName} 降下称号：${titleText}`);
             await renderScorePage();
+        }
+
+        async function grantBetrayalCurseUI() {
+            if (!canGrantTitlesUI()) { showToast('需要馆主或神明谕令'); return; }
+            const targetName = cleanDisplayNameInput(document.getElementById('curseTargetName')?.value || '');
+            const curseGod = isGodRole() ? cleanGodName(inviteSession?.name || '') : cleanGodName(document.getElementById('curseGodSelect')?.value || '');
+            const curseNote = String(document.getElementById('curseNoteInput')?.value || '').trim().slice(0, 120);
+            if (!targetName) { showToast('请填写受诅昵称'); return; }
+            if (!curseGod) { showToast('请选择诅咒名义'); return; }
+            if (!window.confirm(`对 ${targetName} 下放背弃诅咒，并自动赋予「背弃者」称号？`)) return;
+            const { error } = await invokeDungeonAction('grantBetrayalCurse', { targetName, curseGod, curseNote });
+            if (error) { showToast(`❌ ${error.message || '背弃诅咒失败'}`); return; }
+            showToast(`已对 ${targetName} 下放背弃诅咒`);
+            await renderScorePage();
+            if (document.getElementById('profilePage')?.style.display !== 'none') await renderProfilePage();
+            if (document.getElementById('leaderboardPage')?.style.display !== 'none') await renderLeaderboardPage();
         }
 
         async function revokeProfileTitleUI() {
@@ -9651,7 +9770,7 @@
                                 </div>
                                 <div class="form-group full">
                                     <label>当前称号</label>
-                                    ${renderProfileTitleStatus(profile.activeTitle, faithGod)}
+                                    ${renderProfileTitleStatus(profile.activeTitle, profile.activeCurse, faithGod)}
                                 </div>
                                 <div class="form-group full">
                                     <label for="profileItems">个人道具</label>
@@ -9788,7 +9907,8 @@
                 scoresLockedAt: nextScoresLockedAt,
                 items: String(document.getElementById('profileItems')?.value || '').trim().slice(0, 800),
                 talents: String(currentProfile.talents || '').trim().slice(0, 800),
-                activeTitle: currentProfile.activeTitle || null
+                activeTitle: currentProfile.activeTitle || null,
+                activeCurse: currentProfile.activeCurse || null
             };
             if (name !== inviteSession.name) {
                 const { error } = await updateDisplayName(name);
@@ -9868,10 +9988,10 @@
             if (USE_LOCAL_FALLBACK) return getLocalData('dungeons', []);
             let { data, error } = await supabaseClient
                 .from('dungeons')
-                .select('id,name,creator,co_creators,difficulty,type,description,participant_count,run_count,clear_count,clear_rate,invite_name,avg_rating,rating_count,comment_count,created_at,is_one_shot')
+                .select('id,name,creator,co_creators,difficulty,type,description,pinned_note,participant_count,run_count,clear_count,clear_rate,invite_name,avg_rating,rating_count,comment_count,created_at,is_one_shot')
                 .order('avg_rating', { ascending: false })
                 .order('created_at', { ascending: false });
-            if (error?.code === '42703' && String(error.message || '').includes('co_creators')) {
+            if (error?.code === '42703') {
                 const fallback = await supabaseClient
                     .from('dungeons')
                     .select('id,name,creator,difficulty,type,description,participant_count,run_count,clear_count,clear_rate,invite_name,avg_rating,rating_count,comment_count,created_at,is_one_shot')
@@ -9881,7 +10001,7 @@
                 error = fallback.error;
             }
             if (error) { showToast('❌ 获取数据失败'); return []; }
-            return (data || []).map(d => ({ ...d, pinned_note: '' }));
+            return (data || []).map(d => ({ ...d, pinned_note: d.pinned_note || '' }));
         }
 
         async function fetchComments(dungeonId) {
@@ -9963,6 +10083,20 @@
         async function addDungeon(dungeonData) {
             if (USE_LOCAL_FALLBACK) {
                 const dungeons = getLocalData('dungeons', []);
+                if (dungeonData.dungeonId) {
+                    const d = dungeons.find(item => item.id === dungeonData.dungeonId);
+                    if (!d) return { error: { message: '试炼未找到' } };
+                    Object.assign(d, dungeonData, {
+                        id: dungeonData.dungeonId,
+                        pinned_note: dungeonData.pinnedNote || '',
+                        co_creators: dungeonData.coCreators || [],
+                        participant_count: dungeonData.participantCount,
+                        run_count: dungeonData.runCount,
+                        is_one_shot: !!dungeonData.isOneShot
+                    });
+                    setLocalData('dungeons', dungeons);
+                    return { data: [d], error: null };
+                }
                 const newDungeon = { id: 'local_' + Date.now() + '_' + Math.random().toString(36).substr(2,6), ...dungeonData, clear_count:0, clear_rate:0, avg_rating:0, rating_count:0, comment_count:0, created_at: new Date().toISOString() };
                 dungeons.push(newDungeon); setLocalData('dungeons', dungeons); return { data: [newDungeon], error: null };
             }
@@ -10838,6 +10972,14 @@
             return select ? Array.from(select.selectedOptions).map(option => option.value).filter(Boolean) : [];
         }
 
+        function setSelectedSubmitGods(gods = []) {
+            const select = document.getElementById('dungeonType');
+            if (!select) return;
+            const selected = new Set((Array.isArray(gods) ? gods : splitGodTags(gods)).map(cleanGodName).filter(Boolean));
+            Array.from(select.options).forEach(option => { option.selected = selected.has(cleanGodName(option.value)); });
+            syncSubmitGodPicker();
+        }
+
         function syncSubmitGodPicker() {
             const selected = new Set(getSelectedSubmitGods());
             document.querySelectorAll('[data-submit-god]').forEach(button => {
@@ -11329,6 +11471,10 @@
                 isCoCreatorName(d);
         }
 
+        function canManageDungeon(d) {
+            return canEditPinned(d);
+        }
+
         function canDeleteComment(c) {
             return isAdmin() || (!!inviteSession?.name && !!c.invite_name && inviteSession.name === c.invite_name) || (USE_LOCAL_FALLBACK && c.invite_code_hash === inviteSession?.code);
         }
@@ -11515,7 +11661,8 @@
                         <span class="trial-data-pill">通关留存率：${formatClearRate(d)}</span>
                         <span class="trial-data-pill">证言条数：${activeCommentCount}</span>
                         ${canSubmit() ? `<button class="btn btn-outline btn-xs" onclick="advanceRunUI('${escapeHtml(id)}')">重掷下一局</button>` : ''}
-                        ${isAdmin() ? `<button class="btn btn-danger btn-xs" onclick="deleteDungeon('${escapeHtml(id)}')">封存试炼</button>` : ''}
+                        ${canManageDungeon(d) ? `<button class="btn btn-outline btn-xs" onclick="editDungeonUI('${escapeHtml(id)}')">重铸绝境</button>` : ''}
+                        ${canManageDungeon(d) ? `<button class="btn btn-danger btn-xs" onclick="deleteDungeon('${escapeHtml(id)}')">封存试炼</button>` : ''}
                     </div>
                     <div class="trial-entry-body">
                         <p><strong>神明专属说明：</strong>${escapeHtml(skin.entryHint)}</p>
@@ -11940,16 +12087,53 @@
             await renderDungeonList();
         }
 
-        function openSubmitModal(){
+        async function editDungeonUI(id) {
+            if(!requireInvite(['author','reviewer','admin','god'], '只有试炼构筑者、同契共筑者或神谕馆主可以重铸绝境。')) return;
+            const dungeons = await fetchDungeons();
+            const dungeon = dungeons.find(item => String(item.id) === String(id));
+            if (!dungeon) { showToast('试炼未找到'); return; }
+            if (!canManageDungeon(dungeon)) { showToast('只有副本作者、同契共筑者或馆主可以重铸绝境'); return; }
+            openSubmitModal(dungeon);
+        }
+
+        function setSubmitModalMode(dungeon = null) {
+            editingDungeonId = dungeon?.id || '';
+            const isEditing = !!editingDungeonId;
+            const modalTitle = document.querySelector('#submitModal h2');
+            const submitButton = document.querySelector('#submitForm button[type="submit"]');
+            if (modalTitle) modalTitle.textContent = isEditing ? '🜂 《重铸绝境》' : (isGodRole() ? '✦ 《祈愿创本》' : '🎭 《构筑你的试炼愚戏》');
+            if (submitButton) submitButton.textContent = isEditing ? '重铸绝境' : (isGodRole() ? '降下祈愿创本' : '献祭试炼至圣殿');
+        }
+
+        function fillSubmitModal(dungeon = null) {
+            const form = document.getElementById('submitForm');
+            if (!form) return;
+            form.reset();
+            resetSubmitDefaults();
+            if (!dungeon) {
+                const creatorInput = document.getElementById('dungeonCreator');
+                if (creatorInput && !creatorInput.value && inviteSession?.name && !inviteSession.name.includes('共享')) creatorInput.value = inviteSession.name;
+                return;
+            }
+            document.getElementById('dungeonName').value = dungeon.name || '';
+            document.getElementById('dungeonCreator').value = dungeon.creator || '';
+            document.getElementById('dungeonCoCreators').value = getCoCreators(dungeon).join('、');
+            document.getElementById('dungeonDifficulty').value = normalizeDifficulty(dungeon);
+            document.getElementById('participantCount').value = Number(dungeon.participant_count || dungeon.participantCount || 1) || 1;
+            document.getElementById('runCount').value = getRunCount(dungeon);
+            document.getElementById('dungeonDesc').value = dungeon.description || '';
+            document.getElementById('pinnedNoteInput').value = dungeon.pinned_note || '';
+            document.getElementById('dungeonMode').value = isOneShotDungeon(dungeon) ? 'one_shot' : 'cycle';
+            setSelectedSubmitGods(splitGodTags(dungeon.type));
+        }
+
+        function openSubmitModal(dungeon = null){
             if(!requireInvite(['author','reviewer','admin','god'], '只有试炼构筑者、结算审核员、神明或神谕馆主可以构筑试炼。')) return;
             document.getElementById('submitModalOverlay').style.display='flex';
             document.body.style.overflow='hidden';
-            const modalTitle = document.querySelector('#submitModal h2');
-            const submitButton = document.querySelector('#submitForm button[type="submit"]');
-            if (modalTitle) modalTitle.textContent = isGodRole() ? '✦ 《祈愿创本》' : '🎭 《构筑你的试炼愚戏》';
-            if (submitButton) submitButton.textContent = isGodRole() ? '降下祈愿创本' : '献祭试炼至圣殿';
+            setSubmitModalMode(dungeon);
+            fillSubmitModal(dungeon);
             const creatorInput = document.getElementById('dungeonCreator');
-            if (creatorInput && !creatorInput.value && inviteSession?.name && !inviteSession.name.includes('共享')) creatorInput.value = inviteSession.name;
             if (creatorInput) creatorInput.disabled = isGodRole();
             document.getElementById('dungeonName').focus();
         }
@@ -11969,9 +12153,11 @@
             document.getElementById('submitModalOverlay').style.display='none';
             document.body.style.overflow='';
             document.getElementById('submitForm').reset();
+            editingDungeonId = '';
             const creatorInput = document.getElementById('dungeonCreator');
             if (creatorInput) creatorInput.disabled = false;
             resetSubmitDefaults();
+            setSubmitModalMode(null);
         }
 
         async function submitDungeon(e){
@@ -11994,14 +12180,16 @@
             if(!Number.isInteger(participantCount)||participantCount<1||participantCount>99){showToast('请检查固定人数');return;}
             if(!Number.isInteger(runCount)||runCount<1||runCount>999){showToast('请检查当前局数');return;}
             const btn=e.target.querySelector('button[type="submit"]');
+            const dungeonId = editingDungeonId;
             btn.disabled=true;
-            btn.textContent='献祭中...';
-            const {error}=await addDungeon({name,creator,coCreators,difficulty,type,participantCount,runCount,description:desc,pinnedNote,isOneShot,dungeonMode});
+            btn.textContent=dungeonId ? '重铸中...' : '献祭中...';
+            const {error}=await addDungeon({dungeonId,name,creator,coCreators,difficulty,type,participantCount,runCount,description:desc,pinnedNote,isOneShot,dungeonMode});
             btn.disabled=false;
-            btn.textContent=isGodRole() ? '降下祈愿创本' : '献祭试炼至圣殿';
+            btn.textContent=dungeonId ? '重铸绝境' : (isGodRole() ? '降下祈愿创本' : '献祭试炼至圣殿');
             if(error){showToast(`❌ ${error.message || '失败'}`);return;}
-            showToast('你已代行神明权柄，一场愚戏试炼，正式落位切片宇宙。静待信徒入局，降下他们的神格判定。');
+            showToast(dungeonId ? '绝境已重铸' : '你已代行神明权柄，一场愚戏试炼，正式落位切片宇宙。静待信徒入局，降下他们的神格判定。');
             closeSubmitModal();
+            if (dungeonId) await openDetail(dungeonId);
             await renderDungeonList();
             await renderLatestComments();
             await updateProfileNoticeBadge();
@@ -12009,7 +12197,7 @@
         }
 
         async function deleteDungeon(id) {
-            if(!requireInvite(['admin'], '只有神谕馆主谕令可以封存试炼。')) return;
+            if(!requireInvite(['author','reviewer','admin','god'], '只有副本作者、同契共筑者或神谕馆主可以封存试炼。')) return;
             if(!confirm('确定封存这场试炼吗？神格判定和证言会一起消失。')) return;
             const { error } = await removeDungeon(id);
             if(error){ showToast(`❌ ${error.message || '删除失败'}`); return; }
