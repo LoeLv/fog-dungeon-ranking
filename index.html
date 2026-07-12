@@ -6647,62 +6647,62 @@
         const ROLE_UI_COPY = {
             guest: {
                 title: '旁观者只读',
-                note: '可浏览试炼、榜单与公开证言；验入局谕令后开启个人档案。',
+                note: '公开观览',
                 cards: [
-                    ['🎲', '旁观者', '浏览试炼与证言，确认是否入局。'],
-                    ['✦', '信徒入口', '判定、证言、通关登记需要入局谕令。'],
-                    ['🎭', '构筑入口', '作者 / 审核员 / 馆主会开放构筑愚戏。'],
-                    ['⚖', '结算入口', '审核员 / 馆主才会看到分数结算。']
+                    ['🎲', '旁观者', '公开试炼'],
+                    ['✦', '信徒入口', '同契谕令'],
+                    ['🎭', '构筑入口', '构筑席位'],
+                    ['⚖', '结算入口', '审核席位']
                 ]
             },
             player: {
                 title: '入局信徒',
-                note: '你可以浏览、评分、证言、登记通关、保存个人档案；网站端召集入口仍交给小程序。',
+                note: '信徒铭牌',
                 cards: [
-                    ['🎲', '神格判定', '为试炼降下 1-5 阶判定。'],
-                    ['💬', '试炼证言', '递交主证言或回应楼中副证。'],
-                    ['✦', '个人档案', '保存信仰、职业、道具与天赋。'],
-                    ['⚖', '分数结算', '仅审核席开放，你不会看到入口。']
+                    ['🎲', '神格判定', '一至五阶'],
+                    ['💬', '试炼证言', '主证 / 副证'],
+                    ['✦', '个人档案', '信仰档纹'],
+                    ['⚖', '分数结算', '审核席']
                 ]
             },
             author: {
                 title: '试炼构筑者',
-                note: '你可以构筑试炼，也拥有信徒能力；分数结算不会向作者开放。',
+                note: '构筑席位',
                 cards: [
-                    ['🎭', '构筑愚戏', '创建轮回试炼或绝响试炼。'],
-                    ['📌', '置顶神谕', '维护自己试炼下的构筑者提示。'],
-                    ['💬', '楼主提醒', '个人档案中收束新证言提醒。'],
-                    ['⚖', '分数结算', '作者身份不进入审核席。']
+                    ['🎭', '构筑愚戏', '轮回 / 绝响'],
+                    ['📌', '置顶神谕', '构筑者留痕'],
+                    ['💬', '楼主提醒', '证言回声'],
+                    ['⚖', '分数结算', '审核席']
                 ]
             },
             reviewer: {
                 title: '结算审核员',
-                note: '你同时拥有信徒、构筑者与审核员能力；可以构筑试炼，也可以进入分数结算神谕台。',
+                note: '审核席位',
                 cards: [
-                    ['⚖', '批量结算', '按名单预览校验后提交。'],
-                    ['🎭', '构筑愚戏', '创建并维护自己的轮回试炼或绝响试炼。'],
-                    ['📌', '作者维护', '可维护自己试炼的置顶神谕与下一周目。'],
-                    ['↩', '撤销回滚', '近期结算可回滚并通知玩家。']
+                    ['⚖', '批量结算', '名单校验'],
+                    ['🎭', '构筑愚戏', '试炼构筑'],
+                    ['📌', '作者维护', '置顶 / 周目'],
+                    ['↩', '撤销回滚', '结算信封']
                 ]
             },
             admin: {
                 title: '神谕馆主',
-                note: '馆主拥有构筑、封存、结算与管理入口；仍以玩家视角浏览公开内容。',
+                note: '神谕馆册',
                 cards: [
-                    ['🎭', '构筑管理', '创建与封存试炼。'],
-                    ['⚖', '分数结算', '可进入结算神谕台。'],
-                    ['📌', '神谕维护', '可管理置顶与试炼状态。'],
-                    ['✦', '档案观测', '保留个人档案与榜单能力。']
+                    ['🎭', '构筑管理', '创建 / 封存'],
+                    ['⚖', '分数结算', '结算神谕台'],
+                    ['📌', '神谕维护', '置顶 / 状态'],
+                    ['✦', '档案观测', '档案 / 榜单']
                 ]
             },
             god: {
                 title: '祈愿神明',
-                note: '神明可创建祈愿试炼，也可为信徒降下称号；神明不参与普通试炼与信徒榜竞争。',
+                note: '祈愿创本，降下称号。',
                 cards: [
-                    ['✦', '降下称号', '以本神名义为信徒授予或撤销称号。'],
-                    ['🎭', '祈愿创本', '写下祈愿试炼，供信徒祈愿道具或愿望。'],
-                    ['◇', '第零神席', '榜单展示为第 0 名，不占据信徒名次。'],
-                    ['⊘', '不入试炼', '不登记通关、不参与评分和信徒分数竞争。']
+                    ['✦', '称号敕令', '神名降号'],
+                    ['🎭', '祈愿创本', '祈愿试炼'],
+                    ['◇', '第零神席', '寰宇至尊'],
+                    ['✧', '神明证言', '试炼证言']
                 ]
             }
         };
@@ -8205,6 +8205,31 @@
         function getLeaderboardGodSeats(scoreType, options = {}) {
             const gods = getAllGods();
             const filtered = options.path ? gods.filter(item => item.path === options.path) : gods;
+            if (options.mergeGodSeats && !options.path) {
+                return [{
+                    key: 'god-seat-cosmos',
+                    displayName: '寰宇至尊',
+                    role: 'god',
+                    faithGod: '命运',
+                    faithPath: '诸神',
+                    faithClass: 'path-void',
+                    profession: '',
+                    professionClass: '',
+                    ascensionScore: '∞',
+                    audienceScore: '∞',
+                    updatedAt: new Date(0).toISOString(),
+                    isCurrent: false,
+                    isGodSeat: true,
+                    isMergedGodSeat: true,
+                    activeTitle: {
+                        titleText: '第零神席',
+                        titleGod: '命运',
+                        grantedByType: 'god',
+                        grantedByName: '十六神明'
+                    },
+                    scoreType
+                }];
+            }
             return filtered.map(({ god, path, className }) => ({
                 key: `god-seat-${god}`,
                 displayName: god,
@@ -8237,7 +8262,12 @@
             const renderEntryRow = (entry, index) => {
                 const role = ROLE_LABELS[entry.role] || '入局信徒';
                 const faith = entry.faithGod ? `${entry.faithGod}之神 · ${entry.faithPath}命途` : '未立信仰';
-                const profession = entry.isGodSeat ? '无职业 · 无信仰登记' : (entry.profession ? `${entry.professionClass} · ${entry.profession}` : '未定职业');
+                const profession = entry.profession ? `${entry.professionClass} · ${entry.profession}` : '未定职业';
+                const metaHtml = entry.isMergedGodSeat
+                    ? '<span class="mini-tag path-void">十六神明</span><span class="metric-pill">第零神席</span>'
+                    : entry.isGodSeat
+                    ? `<span class="mini-tag ${entry.faithClass}">${escapeHtml(faith)}</span><span class="metric-pill">第零神席</span>`
+                    : `<span class="mini-tag ${entry.faithClass}">${escapeHtml(faith)}</span><span class="metric-pill">${escapeHtml(profession)}</span><span class="metric-pill">${escapeHtml(role)}</span>`;
                 const score = getLeaderboardScore(entry, scoreType);
                 const scoreText = entry.isGodSeat ? '∞' : scoreType === 'total'
                     ? `${formatProfileScore(entry.ascensionScore)} / ${formatProfileScore(entry.audienceScore)}`
@@ -8261,9 +8291,7 @@
                                 ${renderProfileTitleBadge(entry.activeTitle, { fallbackGod: entry.faithGod || '命运', compact: true })}
                             </div>
                             <div class="leaderboard-meta">
-                                <span class="mini-tag ${entry.faithClass}">${escapeHtml(faith)}</span>
-                                <span class="metric-pill">${escapeHtml(profession)}</span>
-                                <span class="metric-pill">${escapeHtml(role)}</span>
+                                ${metaHtml}
                             </div>
                             <div class="leaderboard-progress"><div class="leaderboard-progress-fill"></div></div>
                         </div>
@@ -8307,10 +8335,10 @@
 
         function renderLeaderboardContent(entries) {
             if (leaderboardMode === 'ascension') {
-                return `<div class="leaderboard-layout">${renderLeaderboardBoard('命运骰录 · 登神阶途总榜', entries, 'ascension', { full: true, includeGodSeats: true })}</div><div class="leaderboard-observer-note">登神之路分数越高，代表信徒踏遍试炼切片越多，见证神明权柄愈深；神明固定列第 0 位，不参与信徒争榜。</div>`;
+                return `<div class="leaderboard-layout">${renderLeaderboardBoard('命运骰录 · 登神阶途总榜', entries, 'ascension', { full: true, includeGodSeats: true, mergeGodSeats: true })}</div><div class="leaderboard-observer-note">第 0 位为寰宇至尊；登神之路分数越高，代表信徒踏遍试炼切片越多。</div>`;
             }
             if (leaderboardMode === 'audience') {
-                return `<div class="leaderboard-layout">${renderLeaderboardBoard('星轨观览 · 觐见之梯总榜', entries, 'audience', { full: true, includeGodSeats: true })}</div><div class="leaderboard-observer-note">觐见之梯源自信徒对试炼的评判证言；神明固定列第 0 位，不参与信徒争榜。</div>`;
+                return `<div class="leaderboard-layout">${renderLeaderboardBoard('星轨观览 · 觐见之梯总榜', entries, 'audience', { full: true, includeGodSeats: true, mergeGodSeats: true })}</div><div class="leaderboard-observer-note">第 0 位为寰宇至尊；觐见之梯源自信徒对试炼的评判证言。</div>`;
             }
             if (leaderboardMode === 'path') {
                 const pathTabs = renderLeaderboardPathTabs();
@@ -8327,8 +8355,8 @@
             }
             return `
                 <div class="leaderboard-layout">
-                    ${renderLeaderboardBoard('命运骰录 · 登神阶途总榜', entries, 'ascension', { limit: 30, includeGodSeats: true })}
-                    ${renderLeaderboardBoard('星轨观览 · 觐见之梯总榜', entries, 'audience', { limit: 30, includeGodSeats: true })}
+                    ${renderLeaderboardBoard('命运骰录 · 登神阶途总榜', entries, 'ascension', { limit: 30, includeGodSeats: true, mergeGodSeats: true })}
+                    ${renderLeaderboardBoard('星轨观览 · 觐见之梯总榜', entries, 'audience', { limit: 30, includeGodSeats: true, mergeGodSeats: true })}
                 </div>`;
         }
 
@@ -8833,8 +8861,8 @@
                 ? `<input id="titleGodSelect" value="${escapeHtml(godName)}" disabled>`
                 : `<select id="titleGodSelect">${renderGodSelectOptions()}</select>`;
             const titleGodHelp = isGodRole()
-                ? `${escapeHtml(godName)}之神只能以本神名义降下称号；撤销时也只能撤销本神授予的当前称号。`
-                : '馆主可选择馆主亲授，或代填某位神明名义。';
+                ? `${escapeHtml(godName)}之名`
+                : '选择降号名义';
             return `
                 <section class="profile-panel" data-god="${escapeHtml(godName || '命运')}" style="${getGodSkinStyle(godName || '命运')}">
                     <div class="profile-panel-title"><span>称号敕令</span><small>${isGodRole() ? '神明降号' : '馆主降下 / 神明名义'}</small></div>
@@ -8906,17 +8934,11 @@
                                     <span class="metric-pill">神明 <strong>${escapeHtml(inviteSession?.name || godName)}</strong></span>
                                     <span class="metric-pill">第零神席 <strong>∞</strong></span>
                                 </div>
-                                <div class="profile-faith-prayer">神明可为信徒降下称号、撤销本神授予的称号；不进入分数结算，也不登记普通试炼成绩。</div>
+                                <div class="profile-faith-prayer">以神名降下称号。</div>
                             </div>
                         </section>
                         <div class="profile-grid">
                             <div>${renderTitleAdminPanel(titleEntries)}</div>
-                            <div>
-                                <section class="profile-panel" data-god="${escapeHtml(godName)}" style="${getGodSkinStyle(godName)}">
-                                    <div class="profile-panel-title"><span>神明边界</span><small>不参与信徒试炼</small></div>
-                                    <div class="profile-empty">此账号可祈愿创本、递交证言、降下称号；不会建立信徒个人档案，不进入通关、匹配、抽天赋和分数结算流程。</div>
-                                </section>
-                            </div>
                         </div>`;
                     return;
                 }
