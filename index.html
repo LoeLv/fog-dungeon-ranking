@@ -9227,29 +9227,67 @@
             if (panel) panel.innerHTML = renderScorePreview(scorePreviewState);
         }
 
+        const scoreActionLocks = new Set();
+
+        function createSettlementRequestId(action) {
+            const randomPart = (window.crypto?.randomUUID?.() || `${Date.now()}-${Math.random().toString(36).slice(2)}`);
+            return `${action}-${randomPart}`;
+        }
+
+        function setScoreActionBusy(lockKey, busy, label = '处理中...') {
+            document.querySelectorAll(`[data-score-action="${lockKey}"]`).forEach(button => {
+                if (!(button instanceof HTMLButtonElement)) return;
+                if (busy) {
+                    button.dataset.originalText = button.dataset.originalText || button.textContent || '';
+                    button.textContent = label;
+                    button.disabled = true;
+                } else {
+                    if (button.dataset.originalText) button.textContent = button.dataset.originalText;
+                    delete button.dataset.originalText;
+                    button.disabled = false;
+                }
+            });
+        }
+
         async function submitScoreBatchUI() {
+            const lockKey = 'submit-score-batch';
+            if (scoreActionLocks.has(lockKey)) { showToast('结算正在提交，请等待结果'); return; }
+            scoreActionLocks.add(lockKey);
+            setScoreActionBusy(lockKey, true, '结算中...');
+            showToast('结算提交中，请勿重复点击');
             const dungeonSelect = document.getElementById('scoreDungeonId');
             const dungeonId = dungeonSelect?.value || '';
             const dungeonName = dungeonSelect?.selectedOptions?.[0]?.dataset?.name || '';
             const textContent = document.getElementById('scoreBatchText')?.value || '';
             const remark = document.getElementById('scoreBatchRemark')?.value || '';
             const confirmClear = !!document.getElementById('scoreBatchConfirmClear')?.checked;
-            const { data, error } = await invokeDungeonAction('submitScoreBatch', { dungeonId, dungeonName, textContent, remark, confirmClear });
-            if (error) {
-                if (error.data) {
-                    scorePreviewState = error.data;
-                    const panel = document.getElementById('scorePreviewPanel');
-                    if (panel) panel.innerHTML = renderScorePreview(scorePreviewState);
+            const settlementRequestId = createSettlementRequestId('batch');
+            try {
+                const { data, error } = await invokeDungeonAction('submitScoreBatch', { dungeonId, dungeonName, textContent, remark, confirmClear, settlementRequestId });
+                if (error) {
+                    if (error.data) {
+                        scorePreviewState = error.data;
+                        const panel = document.getElementById('scorePreviewPanel');
+                        if (panel) panel.innerHTML = renderScorePreview(scorePreviewState);
+                    }
+                    showToast(`❌ ${error.message || '结算失败'}`);
+                    return;
                 }
-                showToast(`❌ ${error.message || '结算失败'}`);
-                return;
+                scorePreviewState = null;
+                showToast(`结算完成：${data?.entries?.length || 0} 人${data?.clearConfirmed ? `，通关确认 ${data.clearConfirmed} 人` : ''}`);
+                await renderScorePage();
+            } finally {
+                scoreActionLocks.delete(lockKey);
+                setScoreActionBusy(lockKey, false);
             }
-            scorePreviewState = null;
-            showToast(`结算完成：${data?.entries?.length || 0} 人${data?.clearConfirmed ? `，通关确认 ${data.clearConfirmed} 人` : ''}`);
-            await renderScorePage();
         }
 
         async function submitScoreSingleUI() {
+            const lockKey = 'submit-score-single';
+            if (scoreActionLocks.has(lockKey)) { showToast('补分正在提交，请等待结果'); return; }
+            scoreActionLocks.add(lockKey);
+            setScoreActionBusy(lockKey, true, '补分中...');
+            showToast('补分提交中，请勿重复点击');
             const dungeonSelect = document.getElementById('singleDungeonId');
             const payload = {
                 dungeonId: dungeonSelect?.value || '',
@@ -9258,12 +9296,18 @@
                 dengScore: document.getElementById('singleDengScore')?.value || 0,
                 jinScore: document.getElementById('singleJinScore')?.value || 0,
                 remark: document.getElementById('singleRemark')?.value || '',
-                confirmClear: !!document.getElementById('singleConfirmClear')?.checked
+                confirmClear: !!document.getElementById('singleConfirmClear')?.checked,
+                settlementRequestId: createSettlementRequestId('single')
             };
-            const { data, error } = await invokeDungeonAction('submitScoreSingle', payload);
-            if (error) { showToast(`❌ ${error.message || '补分失败'}`); return; }
-            showToast(`补分完成：${data?.entries?.[0]?.player_name || payload.playerName}${data?.clearConfirmed ? '，通关已确认' : ''}`);
-            await renderScorePage();
+            try {
+                const { data, error } = await invokeDungeonAction('submitScoreSingle', payload);
+                if (error) { showToast(`❌ ${error.message || '补分失败'}`); return; }
+                showToast(`补分完成：${data?.entries?.[0]?.player_name || payload.playerName}${data?.clearConfirmed ? '，通关已确认' : ''}`);
+                await renderScorePage();
+            } finally {
+                scoreActionLocks.delete(lockKey);
+                setScoreActionBusy(lockKey, false);
+            }
         }
 
         function renderScoreDungeonOptions(dungeons) {
@@ -9298,7 +9342,7 @@
                         <span class="metric-pill">觐见 <strong>${escapeHtml(formatScoreNumber(item.total_audience, true))}</strong></span>
                         <span class="metric-pill">总变化 <strong>${escapeHtml(formatScoreNumber(item.total_score, true))}</strong></span>
                     </div>
-                    ${item.is_revoked ? `<div class="profile-list-meta">撤销备注：${escapeHtml(item.revoke_remark || '')}</div>` : `<div class="profile-tools" style="margin-top:10px;"><button class="btn btn-outline btn-sm" onclick='revokeScoreSettlementUI(${jsString(item.id)})'>撤销本场结算</button></div>`}
+                    ${item.is_revoked ? `<div class="profile-list-meta">撤销备注：${escapeHtml(item.revoke_remark || '')}</div>` : `<div class="profile-tools" style="margin-top:10px;"><button class="btn btn-outline btn-sm" data-score-action="revoke-${escapeHtml(item.id)}" onclick='revokeScoreSettlementUI(${jsString(item.id)})'>撤销本场结算</button></div>`}
                 </article>`).join('')}</div>`;
         }
 
@@ -9443,12 +9487,23 @@
         }
 
         async function revokeScoreSettlementUI(settlementId) {
+            const lockKey = `revoke-${settlementId}`;
+            if (scoreActionLocks.has(lockKey)) { showToast('撤销正在处理中，请等待结果'); return; }
             const revokeRemark = window.prompt('请输入撤销备注');
             if (!revokeRemark) return;
-            const { error } = await invokeDungeonAction('revokeScoreSettlement', { settlementId, revokeRemark });
-            if (error) { showToast(`❌ ${error.message || '撤销失败'}`); return; }
-            showToast('结算已撤销并回滚分数');
-            await renderScorePage();
+            if (!window.confirm('确认撤销这场结算并回滚对应分数？')) return;
+            scoreActionLocks.add(lockKey);
+            setScoreActionBusy(lockKey, true, '撤销中...');
+            showToast('撤销处理中，请勿重复点击');
+            try {
+                const { error } = await invokeDungeonAction('revokeScoreSettlement', { settlementId, revokeRemark });
+                if (error) { showToast(`❌ ${error.message || '撤销失败'}`); return; }
+                showToast('结算已撤销并回滚分数');
+                await renderScorePage();
+            } finally {
+                scoreActionLocks.delete(lockKey);
+                setScoreActionBusy(lockKey, false);
+            }
         }
 
         async function renderScorePage() {
@@ -9517,7 +9572,7 @@
                             <label class="identity-help" style="display:flex;align-items:center;gap:8px;margin-bottom:12px;"><input id="scoreBatchConfirmClear" type="checkbox" style="width:auto;"> 本次结算同时确认这些玩家通过该副本</label>
                             <div class="profile-tools">
                                 <button class="btn btn-outline btn-sm" onclick="checkScorePreviewUI()">预览校验</button>
-                                <button class="btn btn-primary btn-sm" onclick="submitScoreBatchUI()">确认结算</button>
+                                <button class="btn btn-primary btn-sm" data-score-action="submit-score-batch" onclick="submitScoreBatchUI()">确认结算</button>
                             </div>
                             <div id="scorePreviewPanel" style="margin-top:14px;">${renderScorePreview(scorePreviewState)}</div>
                         </section>
@@ -9531,7 +9586,7 @@
                                 <div class="form-group full"><label>备注</label><input id="singleRemark" maxlength="500" placeholder="补发原因"></div>
                                 <label class="identity-help full" style="display:flex;align-items:center;gap:8px;margin-bottom:0;"><input id="singleConfirmClear" type="checkbox" style="width:auto;"> 同时确认该玩家通过该副本</label>
                             </div>
-                            <div class="profile-tools"><button class="btn btn-primary btn-sm" onclick="submitScoreSingleUI()">提交补分</button></div>
+                            <div class="profile-tools"><button class="btn btn-primary btn-sm" data-score-action="submit-score-single" onclick="submitScoreSingleUI()">提交补分</button></div>
                         </section>
                     </div>
                     <div>

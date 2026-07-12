@@ -164,6 +164,11 @@ function cleanText(value: unknown, maxLength: number) {
   return String(value ?? "").trim().slice(0, maxLength);
 }
 
+function cleanRequestKey(value: unknown, maxLength = 96) {
+  const text = cleanText(value, maxLength);
+  return /^[A-Za-z0-9._:-]{8,96}$/.test(text) ? text : "";
+}
+
 function cleanDisplayName(value: unknown, role: InviteRole) {
   const name = cleanText(value, 16).replace(/\s+/g, " ");
   if (!name || name.length < 1) return { error: "昵称不能为空" };
@@ -1508,11 +1513,12 @@ async function commitScoreSettlement(
   sourceType: "batch" | "single",
   dungeonNameInput: unknown,
   entries: { nick: string; deng: number; jin: number; total: number; line: number; raw: string }[],
-  options: { rawText?: string; remark?: string; confirmClear?: boolean; dungeonId?: unknown } = {},
+  options: { rawText?: string; remark?: string; confirmClear?: boolean; dungeonId?: unknown; settlementRequestId?: unknown } = {},
 ) {
   const rawText = cleanText(options.rawText ?? "", 20000);
   const remark = cleanText(options.remark ?? "", 500);
   const confirmClear = !!options.confirmClear;
+  const clientRequestId = cleanRequestKey(options.settlementRequestId);
   const dungeonResult = await resolveSettlementDungeon(supabase, options.dungeonId, dungeonNameInput);
   if (dungeonResult.error) return { error: dungeonResult.error };
   const dungeon = dungeonResult.data;
@@ -1541,9 +1547,15 @@ async function commitScoreSettlement(
       total_ascension: Math.round(totalDeng * 10) / 10,
       total_audience: Math.round(totalJin * 10) / 10,
       total_score: Math.round((totalDeng + totalJin) * 10) / 10,
+      client_request_id: clientRequestId || null,
     })
     .select()
     .single();
+  if (settlementError?.code === "23505" && clientRequestId) {
+    const existing = await getScoreSettlementResultByRequestId(supabase, identity, clientRequestId);
+    if (existing.data) return existing;
+    return { error: { message: "这次结算正在处理，请刷新最近结算后确认结果" } };
+  }
   if (settlementError) return { error: settlementError };
 
   const entryRows = entries.map((entry) => {
@@ -1615,6 +1627,26 @@ async function commitScoreSettlement(
   if (messageError) return { error: messageError };
 
   return { data: { settlement, entries: entryRows, clearConfirmed: Number(clearResult.confirmed || 0) } };
+}
+
+async function getScoreSettlementResultByRequestId(
+  supabase: ReturnType<typeof createClient>,
+  identity: InviteIdentity,
+  clientRequestId: string,
+) {
+  const { data: settlement, error: settlementError } = await supabase
+    .from("score_settlements")
+    .select("*")
+    .eq("operator_code_hash", identity.codeHash)
+    .eq("client_request_id", clientRequestId)
+    .maybeSingle();
+  if (settlementError || !settlement) return { data: null, error: settlementError || null };
+  const { data: entries, error: entriesError } = await supabase
+    .from("score_settlement_entries")
+    .select("settlement_id, player_code_hash, player_name, score_deng, score_jin")
+    .eq("settlement_id", settlement.id);
+  if (entriesError) return { data: null, error: entriesError };
+  return { data: { settlement, entries: entries || [], clearConfirmed: 0 } };
 }
 
 Deno.serve(async (req) => {
@@ -2193,6 +2225,7 @@ Deno.serve(async (req) => {
           remark: cleanText(payload.remark, 500),
           confirmClear: payload.confirmClear === true,
           dungeonId: payload.dungeonId,
+          settlementRequestId: payload.settlementRequestId,
         },
       );
       if (result.error?.code === "42P01") return json({ error: "请先运行 score_system_migration.sql" }, 400);
@@ -2217,6 +2250,7 @@ Deno.serve(async (req) => {
           remark: cleanText(payload.remark, 500),
           confirmClear: payload.confirmClear === true,
           dungeonId: payload.dungeonId,
+          settlementRequestId: payload.settlementRequestId,
         },
       );
       if (result.error?.code === "42P01") return json({ error: "请先运行 score_system_migration.sql" }, 400);

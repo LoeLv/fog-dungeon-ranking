@@ -27,6 +27,7 @@ create table if not exists public.score_settlements (
   total_ascension numeric(8, 1) not null default 0,
   total_audience numeric(8, 1) not null default 0,
   total_score numeric(8, 1) not null default 0,
+  client_request_id text,
   is_revoked boolean not null default false,
   revoke_remark text,
   revoked_by_hash text,
@@ -75,6 +76,9 @@ create index if not exists score_settlements_created_idx
   on public.score_settlements(created_at desc);
 create index if not exists score_settlements_operator_idx
   on public.score_settlements(operator_code_hash, created_at desc);
+create unique index if not exists score_settlements_client_request_uidx
+  on public.score_settlements(operator_code_hash, client_request_id)
+  where client_request_id is not null;
 create index if not exists score_entries_settlement_idx
   on public.score_settlement_entries(settlement_id);
 create index if not exists score_entries_player_idx
