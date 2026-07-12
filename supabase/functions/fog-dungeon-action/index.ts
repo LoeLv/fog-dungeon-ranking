@@ -60,7 +60,7 @@ const godNames = new Set([
 const defaultAscensionScore = 1000;
 const defaultAudienceScore = 0;
 const drawScoreStep = 5;
-const starterTalentDrawGrant = 10;
+const starterTalentDrawGrant = 15;
 const bTalentDrawRate = 0.2;
 const bTalentGuaranteeDraws = 10;
 const cTalentFragmentGain = 5;
@@ -626,10 +626,10 @@ function pickDrawTalent(items: TalentPoolItem[]): TalentPoolItem {
   return pickRandomTalent(cItems.length ? cItems : items);
 }
 
-function pickDrawTalentWithGuarantee(items: TalentPoolItem[], continueDraw: number) {
+function pickDrawTalentWithGuarantee(items: TalentPoolItem[], continueDraw: number, guaranteeEnabled = true) {
   const bItems = items.filter((item) => item.rank === "B");
   const cItems = items.filter((item) => item.rank === "C");
-  const shouldGuarantee = bItems.length > 0 && cItems.length > 0 && continueDraw >= bTalentGuaranteeDraws - 1;
+  const shouldGuarantee = guaranteeEnabled && bItems.length > 0 && cItems.length > 0 && continueDraw >= bTalentGuaranteeDraws - 1;
   if (shouldGuarantee) return { talent: pickRandomTalent(bItems), isGuarantee: true };
   return { talent: pickDrawTalent(items), isGuarantee: false };
 }
@@ -2200,11 +2200,14 @@ Deno.serve(async (req) => {
       }
 
       for (let i = 0; i < drawCount; i += 1) {
-        const drawResult = pickDrawTalentWithGuarantee(talentItems, continueDraw);
+        const isStarterDraw = spentDraws + i < starterTalentDrawGrant;
+        const drawResult = pickDrawTalentWithGuarantee(talentItems, continueDraw, !isStarterDraw);
         const target = drawResult.talent;
         const isB = target.rank === "B";
         const isGuarantee = drawResult.isGuarantee && isB;
-        continueDraw = isB ? 0 : continueDraw + 1;
+        if (!isStarterDraw) {
+          continueDraw = isB ? 0 : continueDraw + 1;
+        }
 
         const { data: existingOwned, error: ownedReadError } = await supabase
           .from("owned_talents")
