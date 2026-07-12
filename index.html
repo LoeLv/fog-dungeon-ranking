@@ -7371,6 +7371,7 @@
         let replyTarget = null;
         let testimonyTargetId = null;
         let pendingRating = { dungeonId: null, value: 5 };
+        const uiActionLocks = new Set();
 
         function getInviteRole() { return inviteSession?.role || null; }
         function canUseRole(roles) { return roles.includes(getInviteRole()); }
@@ -7381,6 +7382,7 @@
         function isGodRole() { return getInviteRole() === 'god'; }
         function canGrantTitlesUI() { return canUseRole(['admin', 'god']); }
         function canSettleScores() { return canUseRole(['reviewer', 'admin']); }
+        function canEditDisplayName() { return isAdmin(); }
         function canOverrideProfileLocks() { return isAdmin(); }
         function canEditProfileScores() { return canOverrideProfileLocks(); }
         function shouldAutoFocusModalInput() {
@@ -7389,6 +7391,19 @@
 
         function normalizeRole(role) {
             return ['player', 'author', 'reviewer', 'admin', 'god'].includes(role) ? role : null;
+        }
+
+        function acquireUiActionLock(key, busyMessage = '操作正在处理中，请勿重复点击') {
+            if (uiActionLocks.has(key)) {
+                showToast(busyMessage);
+                return false;
+            }
+            uiActionLocks.add(key);
+            return true;
+        }
+
+        function releaseUiActionLock(key) {
+            uiActionLocks.delete(key);
         }
 
         function saveInviteSession(session) {
@@ -7423,6 +7438,9 @@
             const identityCard = document.getElementById('identityCard');
             const identityRoleText = document.getElementById('identityRoleText');
             const displayNameInput = document.getElementById('displayNameInput');
+            const displayNameRow = displayNameInput?.closest('.identity-row');
+            const displayNameHelp = identityCard?.querySelector('.identity-help');
+            const showDisplayNameBinding = !role || canEditDisplayName();
             if (roleBadge) {
                 const registry = role === 'god' ? '神明席' : role === 'admin' ? '神谕馆册' : role === 'reviewer' ? '审核席' : role === 'author' ? '构筑者名录' : '信徒名录';
                 roleBadge.textContent = role ? `${registry} · ${inviteSession?.name || ROLE_LABELS[role]}` : '旁观者只读';
@@ -7445,14 +7463,23 @@
             }
             if (identityCard) identityCard.classList.toggle('active', !!role);
             if (identityRoleText) identityRoleText.textContent = role ? `${ROLE_LABELS[role]}` : '未入局';
+            if (displayNameRow) displayNameRow.style.display = showDisplayNameBinding ? '' : 'none';
+            if (displayNameHelp) {
+                displayNameHelp.style.display = showDisplayNameBinding ? '' : 'none';
+                displayNameHelp.textContent = canEditDisplayName()
+                    ? '馆主可校正自己的身份昵称；其他身份昵称由入局谕令绑定。'
+                    : '保存后，这枚谕令在证言、判定、构筑愚戏和分数结算时都会显示这个昵称。';
+            }
             if (displayNameInput && role) {
                 displayNameInput.value = inviteSession?.name || ROLE_LABELS[role];
-                displayNameInput.disabled = isGodRole();
+                displayNameInput.disabled = !canEditDisplayName();
+                displayNameInput.title = canEditDisplayName() ? '馆主可更改身份昵称' : '昵称为身份绑定字段，只有馆主可以更改';
             }
             const displayNameButton = document.getElementById('displayNameButton');
             if (displayNameButton) {
-                displayNameButton.disabled = isGodRole();
-                displayNameButton.textContent = isGodRole() ? '神名固定' : '保存昵称';
+                displayNameButton.disabled = !canEditDisplayName();
+                displayNameButton.textContent = canEditDisplayName() ? '保存昵称' : '昵称固定';
+                displayNameButton.title = canEditDisplayName() ? '保存馆主昵称' : '昵称为身份绑定字段，只有馆主可以更改';
             }
             updateRoleCards(role);
             updateRoleInsightPanel(role);
@@ -8563,33 +8590,44 @@
 
         async function exchangeTalentUI() {
             if (!inviteSession?.code) { openInviteModal('先验入局谕令后可兑换天赋。'); return; }
+            if (!acquireUiActionLock('exchangeTalent', '天赋兑换正在处理中，请勿重复点击')) return;
             const poolKey = document.getElementById('talentPoolSelect')?.value || selectedTalentPool;
             const targetTalentId = Number(document.getElementById('talentExchangeSelect')?.value || 0);
-            if (!targetTalentId) { showToast('请选择可兑换的 B 级天赋'); return; }
+            if (!targetTalentId) { releaseUiActionLock('exchangeTalent'); showToast('请选择可兑换的 B 级天赋'); return; }
             const inviteSnapshot = getInviteSnapshot();
-            const { data, error } = await invokeDungeonAction('exchangeTalent', { poolKey, targetTalentId });
-            if (!isInviteSnapshotCurrent(inviteSnapshot)) return;
-            if (error) { showToast(`❌ ${error.message || '兑换失败'}`); return; }
-            selectedTalentPool = poolKey;
-            lastTalentDrawResult = data?.talent ? [data.talent] : [];
-            applyTalentActionState(data);
-            showToast('碎片兑换完成');
-            if (document.getElementById('leaderboardPage')?.style.display !== 'none') await renderLeaderboardPage();
+            try {
+                const { data, error } = await invokeDungeonAction('exchangeTalent', { poolKey, targetTalentId });
+                if (!isInviteSnapshotCurrent(inviteSnapshot)) return;
+                if (error) { showToast(`❌ ${error.message || '兑换失败'}`); return; }
+                selectedTalentPool = poolKey;
+                lastTalentDrawResult = data?.talent ? [data.talent] : [];
+                applyTalentActionState(data);
+                showToast('碎片兑换完成');
+                if (document.getElementById('leaderboardPage')?.style.display !== 'none') await renderLeaderboardPage();
+            } finally {
+                releaseUiActionLock('exchangeTalent');
+            }
         }
 
         async function equipTalentUI(equippedSlot, ownedTalentId) {
             if (!inviteSession?.code) { openInviteModal('先验入局谕令后可调整携带天赋。'); return; }
+            const lockKey = `equipTalent:${equippedSlot}`;
+            if (!acquireUiActionLock(lockKey, '天赋携带正在更新，请勿重复点击')) return;
             const payload = {
                 equippedSlot: Number(equippedSlot),
                 ownedTalentId: ownedTalentId ? Number(ownedTalentId) : null
             };
             const inviteSnapshot = getInviteSnapshot();
-            const { data, error } = await invokeDungeonAction('setEquippedTalent', payload);
-            if (!isInviteSnapshotCurrent(inviteSnapshot)) return;
-            if (error) { showToast(`❌ ${error.message || '设置失败'}`); return; }
-            lastTalentDrawResult = [];
-            applyTalentActionState(data);
-            showToast('携带天赋已更新');
+            try {
+                const { data, error } = await invokeDungeonAction('setEquippedTalent', payload);
+                if (!isInviteSnapshotCurrent(inviteSnapshot)) return;
+                if (error) { showToast(`❌ ${error.message || '设置失败'}`); return; }
+                lastTalentDrawResult = [];
+                applyTalentActionState(data);
+                showToast('携带天赋已更新');
+            } finally {
+                releaseUiActionLock(lockKey);
+            }
         }
 
         async function resolveTalentOverflowUI(choiceId, decision) {
@@ -9436,10 +9474,16 @@
             const titleGod = isGodRole() ? cleanGodName(inviteSession?.name || '') : cleanGodName(document.getElementById('titleGodSelect')?.value || '');
             const titleNote = String(document.getElementById('titleNoteInput')?.value || '').trim().slice(0, 120);
             if (!targetName || !titleText) { showToast('请填写受封昵称和称号'); return; }
-            const { error } = await invokeDungeonAction('grantProfileTitle', { targetName, titleText, titleGod, titleNote });
-            if (error) { showToast(`❌ ${error.message || '称号授予失败'}`); return; }
-            showToast(`已为 ${targetName} 降下称号：${titleText}`);
-            await renderScorePage();
+            const lockKey = `grantTitle:${targetName}:${titleText}`;
+            if (!acquireUiActionLock(lockKey, '称号正在授予，请勿重复点击')) return;
+            try {
+                const { error } = await invokeDungeonAction('grantProfileTitle', { targetName, titleText, titleGod, titleNote });
+                if (error) { showToast(`❌ ${error.message || '称号授予失败'}`); return; }
+                showToast(`已为 ${targetName} 降下称号：${titleText}`);
+                await renderScorePage();
+            } finally {
+                releaseUiActionLock(lockKey);
+            }
         }
 
         async function grantBetrayalCurseUI() {
@@ -9450,12 +9494,18 @@
             if (!targetName) { showToast('请填写受诅昵称'); return; }
             if (!curseGod) { showToast('请选择诅咒名义'); return; }
             if (!window.confirm(`对 ${targetName} 下放背弃诅咒，并自动赋予「背弃者」称号？`)) return;
-            const { error } = await invokeDungeonAction('grantBetrayalCurse', { targetName, curseGod, curseNote });
-            if (error) { showToast(`❌ ${error.message || '背弃诅咒失败'}`); return; }
-            showToast(`已对 ${targetName} 下放背弃诅咒`);
-            await renderScorePage();
-            if (document.getElementById('profilePage')?.style.display !== 'none') await renderProfilePage();
-            if (document.getElementById('leaderboardPage')?.style.display !== 'none') await renderLeaderboardPage();
+            const lockKey = `grantCurse:${targetName}`;
+            if (!acquireUiActionLock(lockKey, '背弃诅咒正在下放，请勿重复点击')) return;
+            try {
+                const { error } = await invokeDungeonAction('grantBetrayalCurse', { targetName, curseGod, curseNote });
+                if (error) { showToast(`❌ ${error.message || '背弃诅咒失败'}`); return; }
+                showToast(`已对 ${targetName} 下放背弃诅咒`);
+                await renderScorePage();
+                if (document.getElementById('profilePage')?.style.display !== 'none') await renderProfilePage();
+                if (document.getElementById('leaderboardPage')?.style.display !== 'none') await renderLeaderboardPage();
+            } finally {
+                releaseUiActionLock(lockKey);
+            }
         }
 
         async function revokeProfileTitleUI() {
@@ -9464,12 +9514,18 @@
             const titleText = String(document.getElementById('titleTextInput')?.value || '').trim().slice(0, 32);
             if (!targetName) { showToast('请填写要回收称号的昵称'); return; }
             if (!window.confirm(titleText ? `回收 ${targetName} 的称号「${titleText}」？` : `回收 ${targetName} 最新生效称号？`)) return;
-            const { data, error } = await invokeDungeonAction('revokeProfileTitle', { targetName, titleText });
-            if (error) { showToast(`❌ ${error.message || '撤销失败'}`); return; }
-            showToast(`已回收 ${targetName} 的称号：${data?.revokedTitle || titleText || '最新称号'}`);
-            await renderScorePage();
-            if (document.getElementById('profilePage')?.style.display !== 'none') await renderProfilePage();
-            if (document.getElementById('leaderboardPage')?.style.display !== 'none') await renderLeaderboardPage();
+            const lockKey = `revokeTitle:${targetName}:${titleText || 'latest'}`;
+            if (!acquireUiActionLock(lockKey, '称号正在回收，请勿重复点击')) return;
+            try {
+                const { data, error } = await invokeDungeonAction('revokeProfileTitle', { targetName, titleText });
+                if (error) { showToast(`❌ ${error.message || '撤销失败'}`); return; }
+                showToast(`已回收 ${targetName} 的称号：${data?.revokedTitle || titleText || '最新称号'}`);
+                await renderScorePage();
+                if (document.getElementById('profilePage')?.style.display !== 'none') await renderProfilePage();
+                if (document.getElementById('leaderboardPage')?.style.display !== 'none') await renderLeaderboardPage();
+            } finally {
+                releaseUiActionLock(lockKey);
+            }
         }
 
         async function revokeProfileCurseUI() {
@@ -9478,12 +9534,18 @@
             const curseText = String(document.getElementById('curseTextInput')?.value || '').trim().slice(0, 32);
             if (!targetName) { showToast('请填写要回收诅咒的昵称'); return; }
             if (!window.confirm(curseText ? `回收 ${targetName} 的诅咒「${curseText}」？` : `回收 ${targetName} 最新生效诅咒？`)) return;
-            const { error } = await invokeDungeonAction('revokeProfileCurse', { targetName, curseText });
-            if (error) { showToast(`❌ ${error.message || '回收失败'}`); return; }
-            showToast(`已回收 ${targetName} 的诅咒`);
-            await renderScorePage();
-            if (document.getElementById('profilePage')?.style.display !== 'none') await renderProfilePage();
-            if (document.getElementById('leaderboardPage')?.style.display !== 'none') await renderLeaderboardPage();
+            const lockKey = `revokeCurse:${targetName}:${curseText || 'latest'}`;
+            if (!acquireUiActionLock(lockKey, '诅咒正在回收，请勿重复点击')) return;
+            try {
+                const { error } = await invokeDungeonAction('revokeProfileCurse', { targetName, curseText });
+                if (error) { showToast(`❌ ${error.message || '回收失败'}`); return; }
+                showToast(`已回收 ${targetName} 的诅咒`);
+                await renderScorePage();
+                if (document.getElementById('profilePage')?.style.display !== 'none') await renderProfilePage();
+                if (document.getElementById('leaderboardPage')?.style.display !== 'none') await renderLeaderboardPage();
+            } finally {
+                releaseUiActionLock(lockKey);
+            }
         }
 
         async function revokeScoreSettlementUI(settlementId) {
@@ -9925,6 +9987,14 @@
             return (dungeons || []).filter(d => isSameProfileName(d.invite_name) || isSameProfileName(d.creator) || isCoCreatorName(d));
         }
 
+        async function fetchMyAuthoredDungeons(dungeons = null) {
+            if (!inviteSession) return [];
+            if (USE_LOCAL_FALLBACK) return getAuthoredDungeons(dungeons || await fetchDungeons());
+            const { data, error } = await invokeDungeonAction('listMyDungeons', { limit: 100 });
+            if (error) return getAuthoredDungeons(dungeons || []);
+            return Array.isArray(data) ? data : [];
+        }
+
         function buildLocalClearRecords(dungeons) {
             const dungeonMap = new Map((dungeons || []).map(d => [String(d.id), d]));
             const records = new Map();
@@ -9987,7 +10057,7 @@
         async function getAuthorCommentNotices(dungeons = null) {
             if (!inviteSession) return { notices: [], unread: [] };
             const sourceDungeons = dungeons || await fetchDungeons();
-            const authored = getAuthoredDungeons(sourceDungeons);
+            const authored = await fetchMyAuthoredDungeons(sourceDungeons);
             if (!authored.length) return { notices: [], unread: [] };
             const seenAt = getProfileNoticeSeenTime();
             const seenTime = seenAt ? new Date(seenAt).getTime() : 0;
@@ -10122,8 +10192,8 @@
             const dungeons = await fetchDungeons();
             if (!isInviteSnapshotCurrent(inviteSnapshot)) return;
             const clearRecords = await fetchMyClearRecords(dungeons);
-            const authored = getAuthoredDungeons(dungeons);
-            const { notices, unread } = await getAuthorCommentNotices(dungeons);
+            const authored = await fetchMyAuthoredDungeons(dungeons);
+            const { notices, unread } = await getAuthorCommentNotices(authored);
             const {
                 messages: scoreMessages,
                 unread: unreadScoreMessages,
@@ -10217,7 +10287,8 @@
                             <div class="profile-form-grid">
                                 <div class="form-group">
                                     <label for="profileDisplayName">个人昵称</label>
-                                    <input id="profileDisplayName" maxlength="16" value="${escapeHtml(inviteSession.name || '')}" placeholder="例如：无我">
+                                    <input id="profileDisplayName" maxlength="16" value="${escapeHtml(inviteSession.name || '')}" placeholder="例如：无我" ${canEditDisplayName() ? '' : 'disabled'} title="${canEditDisplayName() ? '馆主可更改身份昵称' : '昵称为身份绑定字段，只有馆主可以更改'}">
+                                    <div class="identity-help">${canEditDisplayName() ? '馆主可在这里校正自己的身份昵称。' : '昵称由入局谕令绑定；玩家、作者、审核员和神明不可自行更改。'}</div>
                                 </div>
                                 <div class="form-group">
                                     <label for="profileFaithGod">信仰神明</label>
@@ -10341,12 +10412,16 @@
                 openInviteModal('先验入局谕令后可保存个人档案。');
                 return;
             }
-            const name = cleanDisplayNameInput(document.getElementById('profileDisplayName')?.value);
-            if (!name) { showToast('请输入个人昵称'); return; }
+            if (!acquireUiActionLock('saveProfilePage', '个人档案正在保存，请勿重复点击')) return;
+            const name = canEditDisplayName()
+                ? cleanDisplayNameInput(document.getElementById('profileDisplayName')?.value)
+                : cleanDisplayNameInput(inviteSession.name || ROLE_LABELS[getInviteRole()] || '');
+            if (!name) { releaseUiActionLock('saveProfilePage'); showToast('请输入个人昵称'); return; }
             const currentProfile = getCurrentProfile();
             const lockedFaithGod = isFaithLocked(currentProfile) ? getProfileFaithGod(currentProfile) : '';
             const selectedFaithGod = lockedFaithGod || cleanGodName(document.getElementById('profileFaithGod')?.value);
             if (!selectedFaithGod || !getGodInfo(selectedFaithGod).known) {
+                releaseUiActionLock('saveProfilePage');
                 showToast('请选择你的信仰神明');
                 return;
             }
@@ -10354,6 +10429,7 @@
             const lockedProfession = isProfessionLocked(currentProfile) ? currentProfile.profession : '';
             const selectedProfession = lockedProfession || normalizeProfession(document.getElementById('profileProfession')?.value);
             if (!selectedProfession) {
+                releaseUiActionLock('saveProfilePage');
                 showToast('请选择游戏里的 96 职业之一');
                 return;
             }
@@ -10383,21 +10459,25 @@
                 activeCurse: currentProfile.activeCurse || null,
                 activeCurses: normalizeProfileCurseList(currentProfile.activeCurses, currentProfile.activeCurse)
             };
-            if (name !== inviteSession.name) {
-                const { error } = await updateDisplayName(name);
-                if (error) { showToast(`❌ ${error.message || '昵称保存失败'}`); return; }
+            try {
+                if (canEditDisplayName() && name !== inviteSession.name) {
+                    const { error } = await updateDisplayName(name);
+                    if (error) { showToast(`❌ ${error.message || '昵称保存失败'}`); return; }
+                }
+                saveCurrentProfile(profile);
+                const cloudSync = await syncProfileToCloud(profile);
+                if (cloudSync.error) {
+                    showToast(`个人档案已本地保存，云端榜单未同步：${cloudSync.error.message || '请检查 Supabase 档案表'}`);
+                } else {
+                    showToast('个人档案已保存');
+                }
+                updateInviteUI();
+                await renderProfilePage();
+                if (document.getElementById('leaderboardPage')?.style.display !== 'none') await renderLeaderboardPage();
+                await renderDungeonList();
+            } finally {
+                releaseUiActionLock('saveProfilePage');
             }
-            saveCurrentProfile(profile);
-            const cloudSync = await syncProfileToCloud(profile);
-            if (cloudSync.error) {
-                showToast(`个人档案已本地保存，云端榜单未同步：${cloudSync.error.message || '请检查 Supabase 档案表'}`);
-            } else {
-                showToast('个人档案已保存');
-            }
-            updateInviteUI();
-            await renderProfilePage();
-            if (document.getElementById('leaderboardPage')?.style.display !== 'none') await renderLeaderboardPage();
-            await renderDungeonList();
         }
 
         async function markProfileNoticesRead() {
@@ -10449,6 +10529,7 @@
             const name = cleanDisplayNameInput(displayName);
             if (!name) return { error: { message: '昵称不能为空' } };
             if (/[<>@#]/.test(name)) return { error: { message: '昵称不能包含特殊符号' } };
+            if (!canEditDisplayName()) return { error: { message: '昵称为身份绑定字段，只有馆主可以更改' } };
             if (USE_LOCAL_FALLBACK) {
                 if (!inviteSession) return { error: { message: '请先验入局谕令' } };
                 saveInviteSession({ ...inviteSession, name });
@@ -12321,6 +12402,7 @@
 
         async function saveDisplayName() {
             if (!inviteSession?.code) { showToast('请先验入局谕令'); return; }
+            if (!canEditDisplayName()) { showToast('昵称为身份绑定字段，只有馆主可以更改'); updateInviteUI(); return; }
             const input = document.getElementById('displayNameInput');
             const btn = document.getElementById('displayNameButton');
             const name = cleanDisplayNameInput(input?.value);
@@ -12535,87 +12617,118 @@
 
         async function rateDungeon(id, val){
             if(!requireInvite(['player','author','reviewer','admin'], '验入局谕令后可为试炼降下神格判定。')) return;
+            const lockKey = `rateDungeon:${id}`;
+            if (!acquireUiActionLock(lockKey, '神格评议正在封存，请勿重复点击')) return;
             if (await checkHasRated(id)) {
+                releaseUiActionLock(lockKey);
                 showToast('你已经封存过这场试炼的神格评议。');
                 if(currentDetailId===id) await openDetail(id);
                 return;
             }
-            const {error}=await addRating(id,val);
-            if(error){
-                if (error.message?.includes('已经')) {
-                    markAsRated(id);
-                    showToast('⚠️ 你已经封存过神格评议了');
-                    if(currentDetailId===id) await openDetail(id);
+            try {
+                const {error}=await addRating(id,val);
+                if(error){
+                    if (error.message?.includes('已经')) {
+                        markAsRated(id);
+                        showToast('⚠️ 你已经封存过神格评议了');
+                        if(currentDetailId===id) await openDetail(id);
+                        return;
+                    }
+                    showToast(`❌ ${error.message || '判定失败'}`);
                     return;
                 }
-                showToast(`❌ ${error.message || '判定失败'}`);
-                return;
+                markAsRated(id);
+                showToast('🎲 神格评议已封存');
+                if(currentDetailId===id) await openDetail(id);
+                await renderDungeonList();
+            } finally {
+                releaseUiActionLock(lockKey);
             }
-            markAsRated(id);
-            showToast('🎲 神格评议已封存');
-            if(currentDetailId===id) await openDetail(id);
-            await renderDungeonList();
         }
 
         async function submitComment(id){
             if(!requireInvite(['player','author','reviewer','admin','god'], '验入局谕令后可递交试炼证言。')) return;
+            const lockKey = `submitComment:${id}:${replyTarget?.id || 'root'}`;
+            if (!acquireUiActionLock(lockKey, '证言正在递交，请勿重复点击')) return;
             const a=inviteSession?.name || ROLE_LABELS[getInviteRole()] || '';
             const input = document.getElementById('testimonyContentInput') || document.getElementById('commentContentInput');
             const c=input?.value.trim();
-            if(!c){showToast('请输入证言');return;}
-            const {error}=await addComment(id,a,c, replyTarget?.id || null);
-            if(error){showToast(`❌ ${error.message || '证言失败'}`);return;}
-            showToast(replyTarget ? '↩️ 副证言已递交' : '💬 主证言已递交');
-            clearReplyTarget();
-            closeTestimonyModal();
-            if(input) input.value='';
-            if(currentDetailId===id) await openDetail(id);
-            await renderDungeonList();
-            await renderLatestComments();
-            await updateProfileNoticeBadge();
-            if (document.getElementById('profilePage')?.style.display !== 'none') await renderProfilePage();
+            if(!c){releaseUiActionLock(lockKey);showToast('请输入证言');return;}
+            try {
+                const {error}=await addComment(id,a,c, replyTarget?.id || null);
+                if(error){showToast(`❌ ${error.message || '证言失败'}`);return;}
+                showToast(replyTarget ? '↩️ 副证言已递交' : '💬 主证言已递交');
+                clearReplyTarget();
+                closeTestimonyModal();
+                if(input) input.value='';
+                if(currentDetailId===id) await openDetail(id);
+                await renderDungeonList();
+                await renderLatestComments();
+                await updateProfileNoticeBadge();
+                if (document.getElementById('profilePage')?.style.display !== 'none') await renderProfilePage();
+            } finally {
+                releaseUiActionLock(lockKey);
+            }
         }
 
         async function deleteCommentUI(commentId){
             if(!requireInvite(['player','author','reviewer','admin','god'], '验入局谕令后才可抹去自己的证言。')) return;
             if(!confirm('确定抹去这条证言吗？')) return;
-            const {error}=await removeComment(commentId);
-            if(error){showToast(`❌ ${error.message || '删除失败'}`);return;}
-            showToast('证言已抹去');
-            if(currentDetailId) await openDetail(currentDetailId);
-            await renderDungeonList();
-            await renderLatestComments();
-            await updateProfileNoticeBadge();
-            if (document.getElementById('profilePage')?.style.display !== 'none') await renderProfilePage();
+            const lockKey = `deleteComment:${commentId}`;
+            if (!acquireUiActionLock(lockKey, '证言正在抹去，请勿重复点击')) return;
+            try {
+                const {error}=await removeComment(commentId);
+                if(error){showToast(`❌ ${error.message || '删除失败'}`);return;}
+                showToast('证言已抹去');
+                if(currentDetailId) await openDetail(currentDetailId);
+                await renderDungeonList();
+                await renderLatestComments();
+                await updateProfileNoticeBadge();
+                if (document.getElementById('profilePage')?.style.display !== 'none') await renderProfilePage();
+            } finally {
+                releaseUiActionLock(lockKey);
+            }
         }
 
         async function markClearedUI(id){
             if(!requireInvite(['player','author','reviewer','admin'], '验入局谕令后可登记通关。')) return;
+            const lockKey = `markCleared:${id}`;
+            if (!acquireUiActionLock(lockKey, '通关登记正在提交，请勿重复点击')) return;
             const feedbackTags = getSelectedFeedbackTags();
             const feedbackNote = document.getElementById('clearFeedbackNote')?.value || '';
-            const {error}=await markDungeonCleared(id, feedbackTags, feedbackNote);
-            if(error){ showToast(`❌ ${error.message || '登记失败'}`); return; }
-            const dungeons = await fetchDungeons();
-            const d = dungeons.find(d => d.id === id);
-            const key = `${id}:${getRunCount(d || {})}:${inviteSession?.code || 'guest'}`;
-            const cleared = getLocalData('cleared_supabase', {});
-            cleared[key] = true;
-            setLocalData('cleared_supabase', cleared);
-            showToast('🎲 已记录本局通关');
-            if(currentDetailId===id) await openDetail(id);
-            await renderDungeonList();
-            await renderLatestComments();
-            if (document.getElementById('profilePage')?.style.display !== 'none') await renderProfilePage();
+            try {
+                const {error}=await markDungeonCleared(id, feedbackTags, feedbackNote);
+                if(error){ showToast(`❌ ${error.message || '登记失败'}`); return; }
+                const dungeons = await fetchDungeons();
+                const d = dungeons.find(d => d.id === id);
+                const key = `${id}:${getRunCount(d || {})}:${inviteSession?.code || 'guest'}`;
+                const cleared = getLocalData('cleared_supabase', {});
+                cleared[key] = true;
+                setLocalData('cleared_supabase', cleared);
+                showToast('🎲 已记录本局通关');
+                if(currentDetailId===id) await openDetail(id);
+                await renderDungeonList();
+                await renderLatestComments();
+                if (document.getElementById('profilePage')?.style.display !== 'none') await renderProfilePage();
+            } finally {
+                releaseUiActionLock(lockKey);
+            }
         }
 
         async function advanceRunUI(id){
             if(!requireInvite(['author','reviewer','admin','god'], '只有试炼构筑者、结算审核员、神明或神谕馆主可以重掷下一局。')) return;
             if(!confirm('确定重掷下一局吗？通关率会按新的总参与人次重新计算。')) return;
-            const {error}=await advanceDungeonRun(id);
-            if(error){ showToast(`❌ ${error.message || '开启失败'}`); return; }
-            showToast('🎲 已重掷下一局');
-            if(currentDetailId===id) await openDetail(id);
-            await renderDungeonList();
+            const lockKey = `advanceRun:${id}`;
+            if (!acquireUiActionLock(lockKey, '下一局正在重掷，请勿重复点击')) return;
+            try {
+                const {error}=await advanceDungeonRun(id);
+                if(error){ showToast(`❌ ${error.message || '开启失败'}`); return; }
+                showToast('🎲 已重掷下一局');
+                if(currentDetailId===id) await openDetail(id);
+                await renderDungeonList();
+            } finally {
+                releaseUiActionLock(lockKey);
+            }
         }
 
         async function editDungeonUI(id) {
@@ -12712,32 +12825,44 @@
             if(!Number.isInteger(runCount)||runCount<1||runCount>999){showToast('请检查当前局数');return;}
             const btn=e.target.querySelector('button[type="submit"]');
             const dungeonId = editingDungeonId;
+            const lockKey = dungeonId ? `submitDungeon:${dungeonId}` : 'submitDungeon:new';
+            if (!acquireUiActionLock(lockKey, dungeonId ? '试炼正在重铸，请勿重复点击' : '试炼正在献祭，请勿重复点击')) return;
             btn.disabled=true;
             btn.textContent=dungeonId ? '重铸中...' : '献祭中...';
-            const {error}=await addDungeon({dungeonId,name,creator,coCreators,difficulty,type,participantCount,runCount,description:desc,pinnedNote,isOneShot,dungeonMode});
-            btn.disabled=false;
-            btn.textContent=dungeonId ? '重铸绝境' : (isGodRole() ? '降下祈愿创本' : '献祭试炼至圣殿');
-            if(error){showToast(`❌ ${error.message || '失败'}`);return;}
-            showToast(dungeonId ? '绝境已重铸' : '你已代行神明权柄，一场愚戏试炼，正式落位切片宇宙。静待信徒入局，降下他们的神格判定。');
-            closeSubmitModal();
-            if (dungeonId) await openDetail(dungeonId);
-            await renderDungeonList();
-            await renderLatestComments();
-            await updateProfileNoticeBadge();
-            if (document.getElementById('profilePage')?.style.display !== 'none') await renderProfilePage();
+            try {
+                const {error}=await addDungeon({dungeonId,name,creator,coCreators,difficulty,type,participantCount,runCount,description:desc,pinnedNote,isOneShot,dungeonMode});
+                if(error){showToast(`❌ ${error.message || '失败'}`);return;}
+                showToast(dungeonId ? '绝境已重铸' : '你已代行神明权柄，一场愚戏试炼，正式落位切片宇宙。静待信徒入局，降下他们的神格判定。');
+                closeSubmitModal();
+                if (dungeonId) await openDetail(dungeonId);
+                await renderDungeonList();
+                await renderLatestComments();
+                await updateProfileNoticeBadge();
+                if (document.getElementById('profilePage')?.style.display !== 'none') await renderProfilePage();
+            } finally {
+                btn.disabled=false;
+                btn.textContent=dungeonId ? '重铸绝境' : (isGodRole() ? '降下祈愿创本' : '献祭试炼至圣殿');
+                releaseUiActionLock(lockKey);
+            }
         }
 
         async function deleteDungeon(id) {
             if(!requireInvite(['author','reviewer','admin','god'], '只有副本作者、同契共筑者或神谕馆主可以封存试炼。')) return;
             if(!confirm('确定封存这场试炼吗？神格判定和证言会一起消失。')) return;
-            const { error } = await removeDungeon(id);
-            if(error){ showToast(`❌ ${error.message || '删除失败'}`); return; }
-            showToast('🗑️ 试炼已封存');
-            closeDetail();
-            await renderDungeonList();
-            await renderLatestComments();
-            await updateProfileNoticeBadge();
-            if (document.getElementById('profilePage')?.style.display !== 'none') await renderProfilePage();
+            const lockKey = `deleteDungeon:${id}`;
+            if (!acquireUiActionLock(lockKey, '试炼正在封存，请勿重复点击')) return;
+            try {
+                const { error } = await removeDungeon(id);
+                if(error){ showToast(`❌ ${error.message || '删除失败'}`); return; }
+                showToast('🗑️ 试炼已封存');
+                closeDetail();
+                await renderDungeonList();
+                await renderLatestComments();
+                await updateProfileNoticeBadge();
+                if (document.getElementById('profilePage')?.style.display !== 'none') await renderProfilePage();
+            } finally {
+                releaseUiActionLock(lockKey);
+            }
         }
         function setSort(sort,btn){ currentSort=sort; archivePage=1; document.querySelectorAll('.sort-btn').forEach(b=>b.classList.remove('active')); btn.classList.add('active'); renderDungeonList(); }
         function debounceSearch(){ clearTimeout(searchTimeout); searchTimeout=setTimeout(()=>{ searchQuery=document.getElementById('searchInput').value; archivePage=1; renderDungeonList(); },350); }

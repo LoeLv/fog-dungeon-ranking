@@ -1687,7 +1687,7 @@ Deno.serve(async (req) => {
 
     if (action === "updateDisplayName") {
       if (!identity.inviteId) return json({ error: "共享邀请码不能绑定个人昵称，请使用专属码" }, 403);
-      if (role === "god") return json({ error: "神明账号昵称固定为神名，不能改名" }, 403);
+      if (role !== "admin") return json({ error: "昵称为身份绑定字段，只有馆主可以更改" }, 403);
 
       const display = cleanDisplayName(payload.displayName, role);
       if (display.error || !display.name) return json({ error: display.error || "昵称不正确" }, 400);
@@ -1888,6 +1888,19 @@ Deno.serve(async (req) => {
           if (id && !authoredById.has(id)) authoredById.set(id, dungeon);
         }
       };
+      if (targetInviteHash) {
+        const byInviteHash = await supabase
+          .from("dungeons")
+          .select(dungeonFieldsWithCoCreators)
+          .eq("invite_code_hash", targetInviteHash)
+          .order("created_at", { ascending: false })
+          .limit(100);
+        if (byInviteHash.error) {
+          if (byInviteHash.error.code !== "42703") return json({ error: byInviteHash.error.message }, 400);
+        } else {
+          addAuthoredRows((byInviteHash.data || []) as Record<string, unknown>[]);
+        }
+      }
       if (targetDisplayName) {
         const byInviteName = await supabase
           .from("dungeons")
@@ -3111,6 +3124,73 @@ Deno.serve(async (req) => {
       if (isMissingMatchMusterSystem(state.error)) return json({ error: "请先运行 match_muster_migration.sql" }, 400);
       if (state.error) return json({ error: state.error.message }, 400);
       return json({ role, name: identity.displayName, data: { result, state: state.data } });
+    }
+
+    if (action === "listMyDungeons") {
+      if (!hasRole(role, ["author", "reviewer", "admin", "god"])) return json({ error: "需要作者、审核员、神明或馆主邀请码" }, 403);
+      const limit = Math.max(1, Math.min(100, Number(payload.limit || 80)));
+      const dungeonFields = "id, name, creator, co_creators, difficulty, type, participant_count, run_count, clear_count, clear_rate, avg_rating, rating_count, comment_count, created_at, is_one_shot";
+      const authoredById = new Map<string, Record<string, unknown>>();
+      const addRows = (rows: Record<string, unknown>[] | null | undefined) => {
+        for (const dungeon of rows || []) {
+          const id = cleanText(dungeon.id, 80);
+          if (id && !authoredById.has(id)) authoredById.set(id, dungeon);
+        }
+      };
+
+      const byHash = await supabase
+        .from("dungeons")
+        .select(dungeonFields)
+        .eq("invite_code_hash", identity.codeHash)
+        .order("created_at", { ascending: false })
+        .limit(limit);
+      if (byHash.error) {
+        if (byHash.error.code !== "42703") return json({ error: byHash.error.message }, 400);
+      } else {
+        addRows((byHash.data || []) as Record<string, unknown>[]);
+      }
+
+      if (identity.displayName) {
+        const byInviteName = await supabase
+          .from("dungeons")
+          .select(dungeonFields)
+          .eq("invite_name", identity.displayName)
+          .order("created_at", { ascending: false })
+          .limit(limit);
+        if (byInviteName.error) {
+          if (byInviteName.error.code !== "42703") return json({ error: byInviteName.error.message }, 400);
+        } else {
+          addRows((byInviteName.data || []) as Record<string, unknown>[]);
+        }
+
+        const byCreator = await supabase
+          .from("dungeons")
+          .select(dungeonFields)
+          .eq("creator", identity.displayName)
+          .order("created_at", { ascending: false })
+          .limit(limit);
+        if (byCreator.error) return json({ error: byCreator.error.message }, 400);
+        addRows((byCreator.data || []) as Record<string, unknown>[]);
+
+        const byCoCreator = await supabase
+          .from("dungeons")
+          .select(dungeonFields)
+          .contains("co_creators", [identity.displayName])
+          .order("created_at", { ascending: false })
+          .limit(limit);
+        if (byCoCreator.error) {
+          if (!isMissingCoCreatorsColumn(byCoCreator.error)) return json({ error: byCoCreator.error.message }, 400);
+        } else {
+          addRows((byCoCreator.data || []) as Record<string, unknown>[]);
+        }
+      }
+
+      const dungeons = [...authoredById.values()]
+        .sort((a, b) => String(b.created_at || "").localeCompare(String(a.created_at || "")))
+        .slice(0, limit)
+        .map(toPublicDungeonSummary)
+        .filter(Boolean);
+      return json({ role, name: identity.displayName, data: dungeons });
     }
 
     if (action === "submitDungeon") {
