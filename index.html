@@ -4743,6 +4743,11 @@
             border-style: dashed;
             color: var(--text-muted);
         }
+        .talent-slot-card.pending {
+            opacity: 0.72;
+            border-style: dashed;
+            background: rgba(255,255,255,0.035);
+        }
         .talent-slot-head {
             display: flex;
             align-items: center;
@@ -7823,12 +7828,16 @@
                 profile: state.profile || null,
                 inventorySlotLimit: Number(state.inventorySlotLimit || 8),
                 equippedSlotLimit: Number(state.equippedSlotLimit || 3),
+                maxEquippedSlotLimit: Number(state.maxEquippedSlotLimit || state.equippedSlotLimit || 3),
+                talentSlotRule: state.talentSlotRule || null,
+                talentSlotScoreRules: Array.isArray(state.talentSlotScoreRules) ? state.talentSlotScoreRules : [],
                 starterTalentDrawGrant: Number(state.starterTalentDrawGrant || 10),
                 bTalentDrawRate: Number(state.bTalentDrawRate || 0.2),
                 bTalentGuaranteeDraws: Number(state.bTalentGuaranteeDraws || 10),
                 cTalentFragmentGain: Number(state.cTalentFragmentGain || 5),
                 bTalentFragmentGain: Number(state.bTalentFragmentGain || 10),
                 targetTalentExchangeCost: Number(state.targetTalentExchangeCost || 180),
+                aTalentExchangeCost: Number(state.aTalentExchangeCost || 260),
                 totalDrawsEarned: Number(state.totalDrawsEarned || 0),
                 spentDraws: Number(state.spentDraws || 0),
                 availableDraws: Number(state.availableDraws || 0),
@@ -7965,25 +7974,47 @@
                 : Number(state.cTalentFragmentGain || 5);
         }
 
+        function getTalentRankWeight(rank) {
+            return ({ C: 1, B: 2, A: 3, S: 4 })[String(rank || '').toUpperCase()] || 0;
+        }
+
+        function canTalentFitSlot(talent, slotRankLimit) {
+            if (!talent || slotRankLimit === 'LOCKED') return false;
+            return getTalentRankWeight(talent.rank) <= getTalentRankWeight(slotRankLimit);
+        }
+
+        function renderTalentSlotRuleText(state) {
+            const rule = state.talentSlotRule || {};
+            const slots = Array.isArray(rule.slots) ? rule.slots : [];
+            if (!slots.length) return '携带槽规则读取中';
+            return slots.map((rank, index) => `槽${index + 1}:${rank === 'LOCKED' ? '未开' : rank}`).join(' · ');
+        }
+
         function renderEquippedTalentSlots(state, god = getProfileFaithGod(getCurrentProfile()) || '命运') {
             const talents = state.ownedTalents || [];
             const byEquippedSlot = new Map(talents.filter(t => t.equipped_slot).map(t => [Number(t.equipped_slot), t]));
-            const limit = Number(state.equippedSlotLimit || 3);
-            const options = (selectedId) => [
-                '<option value="">暂不收纳此天赋</option>',
-                ...talents.map(talent => {
-                    const id = Number(talent.id);
-                    return `<option value="${id}" ${id === Number(selectedId || 0) ? 'selected' : ''}>${escapeHtml(renderTalentOptionLabel(talent))}</option>`;
-                })
-            ].join('');
+            const activeLimit = Number(state.equippedSlotLimit || 3);
+            const limit = Number(state.maxEquippedSlotLimit || activeLimit || 3);
+            const slotLimits = Array.isArray(state.talentSlotRule?.slots) ? state.talentSlotRule.slots : [];
             return `<div class="talent-equipped-grid">${Array.from({ length: limit }, (_, index) => {
                 const slot = index + 1;
                 const talent = byEquippedSlot.get(slot);
+                const rankLimit = slotLimits[index] || (slot <= activeLimit ? 'C' : 'LOCKED');
+                const locked = rankLimit === 'LOCKED' || slot > activeLimit;
+                const optionHtml = [
+                    '<option value="">暂不收纳此天赋</option>',
+                    ...talents.map(item => {
+                        const id = Number(item.id);
+                        const disabled = !canTalentFitSlot(item, rankLimit) && id !== Number(talent?.id || 0);
+                        const disabledText = disabled ? ` disabled title="槽${slot}最高只允许${rankLimit}级"` : '';
+                        return `<option value="${id}" ${id === Number(talent?.id || 0) ? 'selected' : ''}${disabledText}>${escapeHtml(renderTalentOptionLabel(item))}${disabled ? '（品级过高）' : ''}</option>`;
+                    })
+                ].join('');
                 return `
-                    <div class="talent-slot-card ${talent ? '' : 'empty'}">
-                        <div class="talent-slot-head"><span>携带槽 ${slot}</span><span>${talent ? '已嵌入' : '空槽'}</span></div>
-                        <select onchange="equipTalentUI(${slot}, this.value)">${options(talent?.id)}</select>
-                        ${talent ? `<div class="talent-slot-meta">${escapeHtml(renderTalentOptionLabel(talent))}</div>` : renderMiniRitualEmpty(getGodEmptyText(god, 'equipped'), god, '携带环空置')}
+                    <div class="talent-slot-card ${talent ? '' : 'empty'} ${locked ? 'pending' : ''}">
+                        <div class="talent-slot-head"><span>携带槽 ${slot}</span><span>${locked ? '未开启' : `上限 ${rankLimit}`}</span></div>
+                        <select onchange="equipTalentUI(${slot}, this.value)" ${locked ? 'disabled' : ''}>${optionHtml}</select>
+                        ${locked ? renderMiniRitualEmpty('分数达到对应门槛后开启此携带槽。', god, '携带环封锁') : (talent ? `<div class="talent-slot-meta">${escapeHtml(renderTalentOptionLabel(talent))}</div>` : renderMiniRitualEmpty(getGodEmptyText(god, 'equipped'), god, '携带环空置'))}
                     </div>`;
             }).join('')}</div>`;
         }
@@ -8067,6 +8098,7 @@
             const inventoryLimit = Number(state.inventorySlotLimit || 8);
             const equippedCount = (state.ownedTalents || []).filter(talent => talent.equipped_slot).length;
             const exchangeCost = Number(state.targetTalentExchangeCost || 180);
+            const aExchangeCost = Number(state.aTalentExchangeCost || 260);
             const bRateText = `${Math.round(Number(state.bTalentDrawRate || 0.2) * 100)}%`;
             const guaranteeDraws = Number(state.bTalentGuaranteeDraws || 10);
             const currentMisses = Math.min(guaranteeDraws - 1, getTalentPoolCounter(state, selectedPool));
@@ -8095,7 +8127,8 @@
                             <span>每池 <strong>${guaranteeDraws}</strong> 抽保底 B</span>
                             <span>重复 C/B：<strong>+${Number(state.cTalentFragmentGain || 5)} / +${Number(state.bTalentFragmentGain || 10)}</strong> 碎片</span>
                             <span>分解 C/B：<strong>+${Number(state.cTalentFragmentGain || 5)} / +${Number(state.bTalentFragmentGain || 10)}</strong> 碎片</span>
-                            <span>指定 B 兑换：<strong>${exchangeCost}</strong> 碎片</span>
+                            <span>携带上限：<strong>${escapeHtml(renderTalentSlotRuleText(state))}</strong></span>
+                            <span>指定 B/A 兑换：<strong>${exchangeCost} / ${aExchangeCost}</strong> 碎片</span>
                         </div>
                         <div class="talent-control-row">
                             <div class="form-group" style="margin:0;">

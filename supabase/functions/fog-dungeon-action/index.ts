@@ -65,9 +65,25 @@ const bTalentDrawRate = 0.2;
 const bTalentGuaranteeDraws = 10;
 const cTalentFragmentGain = 5;
 const bTalentFragmentGain = 10;
-const targetTalentExchangeCost = 180;
+const targetTalentExchangeCost = 80;
+const aTalentExchangeCost = 260;
 const inventorySlotLimit = 8;
-const equippedSlotLimit = 3;
+const equippedSlotLimit = 4;
+const talentSlotScoreRules = [
+  { minScore: 1000, slots: ["C", "C", "LOCKED", "LOCKED"], summary: "CC" },
+  { minScore: 1100, slots: ["B", "C", "C", "LOCKED"], summary: "BCC" },
+  { minScore: 1200, slots: ["B", "C", "C", "C"], summary: "BCCC" },
+  { minScore: 1300, slots: ["B", "B", "C", "C"], summary: "BBCC" },
+  { minScore: 1400, slots: ["B", "B", "C", "C"], summary: "BBCC" },
+  { minScore: 1500, slots: ["A", "B", "C", "C"], summary: "ABCC" },
+  { minScore: 1600, slots: ["A", "B", "B", "C"], summary: "ABBC" },
+  { minScore: 1700, slots: ["A", "B", "B", "B"], summary: "ABBB" },
+  { minScore: 1800, slots: ["A", "A", "B", "B"], summary: "AABB" },
+  { minScore: 1900, slots: ["A", "A", "A", "B"], summary: "AAAB" },
+  { minScore: 2000, slots: ["A", "A", "A", "A"], summary: "AAAA" },
+  { minScore: 2100, slots: ["S", "A", "A", "A"], summary: "SAAA" },
+];
+const talentRankOrder: Record<string, number> = { C: 1, B: 2, A: 3, S: 4 };
 const scoreDengMin = -20;
 const scoreDengMax = 20;
 const scoreJinMin = 0;
@@ -470,6 +486,25 @@ function getEarnedDraws(ascensionScore: unknown) {
   return starterTalentDrawGrant + Math.max(0, Math.floor((score - defaultAscensionScore) / drawScoreStep));
 }
 
+function getTalentSlotRule(ascensionScore: unknown) {
+  const score = cleanScore(ascensionScore);
+  return talentSlotScoreRules.reduce((active, rule) => (score >= rule.minScore ? rule : active), talentSlotScoreRules[0]);
+}
+
+function getTalentSlotLimit(ascensionScore: unknown) {
+  return getTalentSlotRule(ascensionScore).slots.filter((rank) => rank !== "LOCKED").length;
+}
+
+function getTalentSlotRankLimit(ascensionScore: unknown, slot: number) {
+  return getTalentSlotRule(ascensionScore).slots[slot - 1] || "LOCKED";
+}
+
+function canEquipTalentRank(rank: unknown, maxRank: string) {
+  const current = String(rank || "").toUpperCase();
+  if (maxRank === "LOCKED") return false;
+  return (talentRankOrder[current] || 0) <= (talentRankOrder[maxRank] || 0);
+}
+
 function getAllowedTalentPools(profile: Record<string, unknown>) {
   const poolSet = new Set<string>();
   const faithGod = cleanText(profile.faith_god, 20);
@@ -574,6 +609,10 @@ async function buildScorePreview(
 
 function getTalentFragmentGain(rank: unknown) {
   return String(rank || "").toUpperCase() === "B" ? bTalentFragmentGain : cTalentFragmentGain;
+}
+
+function getTalentExchangeCost(rank: unknown) {
+  return String(rank || "").toUpperCase() === "A" ? aTalentExchangeCost : targetTalentExchangeCost;
 }
 
 function pickRandomTalent<T>(items: T[]): T {
@@ -823,6 +862,8 @@ async function buildTalentState(
   const spentDraws = drawState.spentDraws;
   const availableDraws = Math.max(0, totalDrawsEarned - spentDraws);
   const allowedPoolKeys = getAllowedTalentPools(profile);
+  const talentSlotRule = getTalentSlotRule(profile.ascension_score);
+  const activeEquippedSlotLimit = getTalentSlotLimit(profile.ascension_score);
 
   let poolItems: { pool_key: string; talent_id: number; talent_name: string; rank: string }[] = [];
   if (allowedPoolKeys.length > 0) {
@@ -953,13 +994,17 @@ async function buildTalentState(
     data: {
       profile,
       inventorySlotLimit,
-      equippedSlotLimit,
+      equippedSlotLimit: activeEquippedSlotLimit,
+      maxEquippedSlotLimit: equippedSlotLimit,
+      talentSlotRule,
+      talentSlotScoreRules,
       starterTalentDrawGrant,
       bTalentDrawRate,
       bTalentGuaranteeDraws,
       cTalentFragmentGain,
       bTalentFragmentGain,
       targetTalentExchangeCost,
+      aTalentExchangeCost,
       totalDrawsEarned,
       spentDraws,
       availableDraws,
@@ -2290,6 +2335,7 @@ Deno.serve(async (req) => {
         if (targetError) return json({ error: targetError.message }, 400);
       }
       if (!targetTalentRow || targetTalentRow.rank !== "B") return json({ error: "只能兑换该池的 B 级天赋" }, 400);
+      const exchangeCost = getTalentExchangeCost(targetTalentRow.rank);
 
       const { data: owned, error: ownedError } = await supabase
         .from("owned_talents")
@@ -2314,9 +2360,9 @@ Deno.serve(async (req) => {
 
       const fragmentState = await getFragmentTotal(supabase, identity.codeHash);
       if (fragmentState.error) return json({ error: fragmentState.error.message }, 400);
-      if (fragmentState.fragmentTotal < targetTalentExchangeCost) {
+      if (fragmentState.fragmentTotal < exchangeCost) {
         return json({
-          error: `碎片不足：需要 ${targetTalentExchangeCost}，当前 ${fragmentState.fragmentTotal}`,
+          error: `碎片不足：需要 ${exchangeCost}，当前 ${fragmentState.fragmentTotal}`,
         }, 400);
       }
 
@@ -2324,7 +2370,7 @@ Deno.serve(async (req) => {
         .from("user_fragments")
         .upsert({
           invite_code_hash: identity.codeHash,
-          fragment_total: fragmentState.fragmentTotal - targetTalentExchangeCost,
+          fragment_total: fragmentState.fragmentTotal - exchangeCost,
           updated_at: new Date().toISOString(),
         });
       if (fragmentUpdateError) return json({ error: fragmentUpdateError.message }, 400);
@@ -2339,7 +2385,7 @@ Deno.serve(async (req) => {
           pool_key: poolKey,
           target_talent_id: targetTalentRow.talent_id,
           target_talent_name: targetTalentRow.talent_name,
-          cost_fragment: targetTalentExchangeCost,
+          cost_fragment: exchangeCost,
         });
       if (logError) return json({ error: logError.message }, 400);
 
@@ -2362,7 +2408,7 @@ Deno.serve(async (req) => {
             isOverflow: !!addResult.overflowChoice,
             overflowChoiceId: addResult.overflowChoice?.id || null,
           },
-          costFragment: targetTalentExchangeCost,
+          costFragment: exchangeCost,
           state: state.data,
         },
       });
@@ -2449,16 +2495,26 @@ Deno.serve(async (req) => {
       const ownedTalentId = cleanBigIntId(payload.ownedTalentId);
       if (!equippedSlot) return json({ error: "携带槽位不正确" }, 400);
 
+      const profileResult = await getTalentProfile(supabase, identity);
+      if (profileResult.error) return json({ error: profileResult.error.message }, 400);
+      const slotRankLimit = getTalentSlotRankLimit(profileResult.data.ascension_score, equippedSlot);
+      if (slotRankLimit === "LOCKED") {
+        return json({ error: "当前分数尚未开启这个携带槽" }, 403);
+      }
+
       if (ownedTalentId) {
         const { data: owned, error: ownedError } = await supabase
           .from("owned_talents")
-          .select("id")
+          .select("id, rank")
           .eq("id", ownedTalentId)
           .eq("invite_code_hash", identity.codeHash)
           .not("storage_slot", "is", null)
           .maybeSingle();
         if (ownedError) return json({ error: ownedError.message }, 400);
         if (!owned) return json({ error: "只能携带仓库中的天赋" }, 404);
+        if (!canEquipTalentRank(owned.rank, slotRankLimit)) {
+          return json({ error: `携带槽 ${equippedSlot} 当前最高只能嵌入 ${slotRankLimit} 级天赋` }, 403);
+        }
       }
 
       const { error: clearSlotError } = await supabase
