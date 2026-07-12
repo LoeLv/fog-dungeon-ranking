@@ -62,7 +62,11 @@ const defaultAudienceScore = 0;
 const drawScoreStep = 5;
 const starterTalentDrawGrant = 15;
 const bTalentDrawRate = 0.2;
+const advancedBTalentDrawRate = 0.25;
+const aTalentDrawRate = 0.02;
+const sTalentDrawRate = 0.001;
 const bTalentGuaranteeDraws = 10;
+const sTalentGuaranteeDraws = 60;
 const cTalentFragmentGain = 5;
 const bTalentFragmentGain = 10;
 const targetTalentExchangeCost = 80;
@@ -70,19 +74,20 @@ const aTalentExchangeCost = 260;
 const inventorySlotLimit = 8;
 const equippedSlotLimit = 4;
 const talentSlotScoreRules = [
-  { minScore: 1000, slots: ["C", "C", "LOCKED", "LOCKED"], summary: "CC" },
-  { minScore: 1100, slots: ["B", "C", "C", "LOCKED"], summary: "BCC" },
-  { minScore: 1200, slots: ["B", "C", "C", "C"], summary: "BCCC" },
-  { minScore: 1300, slots: ["B", "B", "C", "C"], summary: "BBCC" },
-  { minScore: 1400, slots: ["B", "B", "C", "C"], summary: "BBCC" },
-  { minScore: 1500, slots: ["A", "B", "C", "C"], summary: "ABCC" },
-  { minScore: 1600, slots: ["A", "B", "B", "C"], summary: "ABBC" },
-  { minScore: 1700, slots: ["A", "B", "B", "B"], summary: "ABBB" },
-  { minScore: 1800, slots: ["A", "A", "B", "B"], summary: "AABB" },
-  { minScore: 1900, slots: ["A", "A", "A", "B"], summary: "AAAB" },
-  { minScore: 2000, slots: ["A", "A", "A", "A"], summary: "AAAA" },
-  { minScore: 2100, slots: ["S", "A", "A", "A"], summary: "SAAA" },
+  { minScore: 1000, ranks: ["C", "C"], summary: "CC" },
+  { minScore: 1100, ranks: ["B", "C", "C"], summary: "BCC" },
+  { minScore: 1200, ranks: ["B", "C", "C", "C"], summary: "BCCC" },
+  { minScore: 1300, ranks: ["B", "B", "C", "C"], summary: "BBCC" },
+  { minScore: 1400, ranks: ["B", "B", "C", "C"], summary: "BBCC" },
+  { minScore: 1500, ranks: ["A", "B", "C", "C"], summary: "ABCC" },
+  { minScore: 1600, ranks: ["A", "B", "B", "C"], summary: "ABBC" },
+  { minScore: 1700, ranks: ["A", "B", "B", "B"], summary: "ABBB" },
+  { minScore: 1800, ranks: ["A", "A", "B", "B"], summary: "AABB" },
+  { minScore: 1900, ranks: ["A", "A", "A", "B"], summary: "AAAB" },
+  { minScore: 2000, ranks: ["A", "A", "A", "A"], summary: "AAAA" },
+  { minScore: 2100, ranks: ["S", "A", "A", "A"], summary: "SAAA" },
 ];
+const talentSlotKinds = ["faith", "profession", "any", "any"];
 const talentRankOrder: Record<string, number> = { C: 1, B: 2, A: 3, S: 4 };
 const scoreDengMin = -20;
 const scoreDengMax = 20;
@@ -492,26 +497,58 @@ function getTalentSlotRule(ascensionScore: unknown) {
 }
 
 function getTalentSlotLimit(ascensionScore: unknown) {
-  return getTalentSlotRule(ascensionScore).slots.filter((rank) => rank !== "LOCKED").length;
+  const score = cleanScore(ascensionScore);
+  if (score < 1100) return 2;
+  if (score < 1200) return 3;
+  return 4;
 }
 
-function getTalentSlotRankLimit(ascensionScore: unknown, slot: number) {
-  return getTalentSlotRule(ascensionScore).slots[slot - 1] || "LOCKED";
+function getTalentRankAllowance(ascensionScore: unknown) {
+  return getTalentSlotRule(ascensionScore).ranks || ["C", "C"];
 }
 
-function canEquipTalentRank(rank: unknown, maxRank: string) {
-  const current = String(rank || "").toUpperCase();
-  if (maxRank === "LOCKED") return false;
-  return (talentRankOrder[current] || 0) <= (talentRankOrder[maxRank] || 0);
+function canEquipTalentRanks(ranks: unknown[], allowance: string[]) {
+  const sortedRanks = ranks.map((rank) => String(rank || "").toUpperCase()).sort((a, b) => (talentRankOrder[b] || 0) - (talentRankOrder[a] || 0));
+  const sortedAllowance = allowance.map((rank) => String(rank || "").toUpperCase()).sort((a, b) => (talentRankOrder[b] || 0) - (talentRankOrder[a] || 0));
+  if (sortedRanks.length > sortedAllowance.length) return false;
+  return sortedRanks.every((rank, index) => (talentRankOrder[rank] || 0) <= (talentRankOrder[sortedAllowance[index]] || 0));
+}
+
+function getFaithTalentPoolKey(profile: Record<string, unknown>) {
+  const faithGod = cleanText(profile.faith_god, 20);
+  const poolKey = faithGod ? `Pool${faithGod}` : "";
+  return knownTalentPools.includes(poolKey) ? poolKey : "";
+}
+
+function getProfessionTalentPoolKey(profile: Record<string, unknown>) {
+  const profession = cleanText(profile.profession, 40);
+  const professionClass = professionClassByName.get(profession);
+  const poolKey = professionClass ? `Pool${professionClass}` : "";
+  return knownTalentPools.includes(poolKey) ? poolKey : "";
+}
+
+function getTalentSlotKind(slot: number) {
+  return talentSlotKinds[slot - 1] || "any";
+}
+
+function getTalentSlotRequirement(profile: Record<string, unknown>, slot: number) {
+  const kind = getTalentSlotKind(slot);
+  if (kind === "faith") return { kind, poolKey: getFaithTalentPoolKey(profile), label: "信仰" };
+  if (kind === "profession") return { kind, poolKey: getProfessionTalentPoolKey(profile), label: "职业" };
+  return { kind, poolKey: "", label: "任意" };
+}
+
+function canEquipTalentPool(poolKey: unknown, requirement: { kind: string; poolKey: string }) {
+  if (requirement.kind === "any") return true;
+  return !!requirement.poolKey && String(poolKey || "") === requirement.poolKey;
 }
 
 function getAllowedTalentPools(profile: Record<string, unknown>) {
   const poolSet = new Set<string>();
-  const faithGod = cleanText(profile.faith_god, 20);
-  const profession = cleanText(profile.profession, 40);
-  const professionClass = professionClassByName.get(profession);
-  if (faithGod) poolSet.add(`Pool${faithGod}`);
-  if (professionClass) poolSet.add(`Pool${professionClass}`);
+  const faithPoolKey = getFaithTalentPoolKey(profile);
+  const professionPoolKey = getProfessionTalentPoolKey(profile);
+  if (faithPoolKey) poolSet.add(faithPoolKey);
+  if (professionPoolKey) poolSet.add(professionPoolKey);
   return [...poolSet].filter((poolKey) => knownTalentPools.includes(poolKey));
 }
 
@@ -619,19 +656,49 @@ function pickRandomTalent<T>(items: T[]): T {
   return items[Math.floor(Math.random() * items.length)] ?? items[0];
 }
 
-function pickDrawTalent(items: TalentPoolItem[]): TalentPoolItem {
-  const bItems = items.filter((item) => item.rank === "B");
-  const cItems = items.filter((item) => item.rank === "C");
-  if (bItems.length && (!cItems.length || Math.random() < bTalentDrawRate)) return pickRandomTalent(bItems);
-  return pickRandomTalent(cItems.length ? cItems : items);
+function isAdvancedTalentDrawUnlocked(ascensionScore: unknown) {
+  return cleanScore(ascensionScore) >= 1500;
 }
 
-function pickDrawTalentWithGuarantee(items: TalentPoolItem[], continueDraw: number, guaranteeEnabled = true) {
+function pickTalentFromRank(items: TalentPoolItem[], rank: string) {
+  const rankItems = items.filter((item) => item.rank === rank);
+  return rankItems.length ? pickRandomTalent(rankItems) : null;
+}
+
+function pickDrawTalent(items: TalentPoolItem[], advancedDraw = false): TalentPoolItem {
+  const availableItems = advancedDraw ? items : items.filter((item) => ["B", "C"].includes(item.rank));
+  const drawItems = availableItems.length ? availableItems : items;
+  const bItems = items.filter((item) => item.rank === "B");
+  const cItems = drawItems.filter((item) => item.rank === "C");
+  if (!advancedDraw) {
+    if (bItems.length && (!cItems.length || Math.random() < bTalentDrawRate)) return pickRandomTalent(bItems);
+    return pickRandomTalent(cItems.length ? cItems : drawItems);
+  }
+  const roll = Math.random();
+  const sPick = roll < sTalentDrawRate ? pickTalentFromRank(drawItems, "S") : null;
+  if (sPick) return sPick;
+  const aPick = roll < sTalentDrawRate + aTalentDrawRate ? pickTalentFromRank(drawItems, "A") : null;
+  if (aPick) return aPick;
+  const bPick = roll < sTalentDrawRate + aTalentDrawRate + advancedBTalentDrawRate ? pickTalentFromRank(drawItems, "B") : null;
+  if (bPick) return bPick;
+  return pickRandomTalent(cItems.length ? cItems : drawItems);
+}
+
+function pickDrawTalentWithGuarantee(
+  items: TalentPoolItem[],
+  continueDraw: number,
+  sContinueDraw: number,
+  guaranteeEnabled = true,
+  advancedDraw = false,
+) {
   const bItems = items.filter((item) => item.rank === "B");
   const cItems = items.filter((item) => item.rank === "C");
-  const shouldGuarantee = guaranteeEnabled && bItems.length > 0 && cItems.length > 0 && continueDraw >= bTalentGuaranteeDraws - 1;
-  if (shouldGuarantee) return { talent: pickRandomTalent(bItems), isGuarantee: true };
-  return { talent: pickDrawTalent(items), isGuarantee: false };
+  const sItems = items.filter((item) => item.rank === "S");
+  const shouldGuaranteeS = advancedDraw && guaranteeEnabled && sItems.length > 0 && sContinueDraw >= sTalentGuaranteeDraws - 1;
+  if (shouldGuaranteeS) return { talent: pickRandomTalent(sItems), isGuarantee: true };
+  const shouldGuaranteeB = guaranteeEnabled && bItems.length > 0 && cItems.length > 0 && continueDraw >= bTalentGuaranteeDraws - 1;
+  if (shouldGuaranteeB) return { talent: pickRandomTalent(bItems), isGuarantee: true };
+  return { talent: pickDrawTalent(items, advancedDraw), isGuarantee: false };
 }
 
 function getTalentKey(poolKey: unknown, talentId: unknown) {
@@ -902,11 +969,11 @@ async function buildTalentState(
     poolMap.set(item.pool_key, existing);
   });
 
-  let counters: { pool_key: string; continue_draw: number }[] = [];
+  let counters: { pool_key: string; continue_draw: number; s_continue_draw?: number }[] = [];
   if (allowedPoolKeys.length > 0) {
     const countersResult = await supabase
       .from("talent_pool_counters")
-      .select("pool_key, continue_draw")
+      .select("pool_key, continue_draw, s_continue_draw")
       .eq("invite_code_hash", identity.codeHash)
       .in("pool_key", allowedPoolKeys);
     if (countersResult.error) return { error: countersResult.error };
@@ -998,9 +1065,16 @@ async function buildTalentState(
       maxEquippedSlotLimit: equippedSlotLimit,
       talentSlotRule,
       talentSlotScoreRules,
+      talentSlotKinds,
+      faithTalentPoolKey: getFaithTalentPoolKey(profile),
+      professionTalentPoolKey: getProfessionTalentPoolKey(profile),
       starterTalentDrawGrant,
       bTalentDrawRate,
+      advancedBTalentDrawRate,
+      aTalentDrawRate,
+      sTalentDrawRate,
       bTalentGuaranteeDraws,
+      sTalentGuaranteeDraws,
       cTalentFragmentGain,
       bTalentFragmentGain,
       targetTalentExchangeCost,
@@ -2163,12 +2237,14 @@ Deno.serve(async (req) => {
       const talentItems = (poolRows || []) as TalentPoolItem[];
       const { data: counterRow, error: counterError } = await supabase
         .from("talent_pool_counters")
-        .select("continue_draw")
+        .select("continue_draw, s_continue_draw")
         .eq("invite_code_hash", identity.codeHash)
         .eq("pool_key", poolKey)
         .maybeSingle();
       if (counterError) return json({ error: counterError.message }, 400);
       let continueDraw = Number(counterRow?.continue_draw || 0);
+      let sContinueDraw = Number(counterRow?.s_continue_draw || 0);
+      const advancedDraw = isAdvancedTalentDrawUnlocked(profile.ascension_score);
       const results: Record<string, unknown>[] = [];
       let fragmentGainTotal = 0;
       const nextSpentDraws = spentDraws + drawCount;
@@ -2201,12 +2277,14 @@ Deno.serve(async (req) => {
 
       for (let i = 0; i < drawCount; i += 1) {
         const isStarterDraw = spentDraws + i < starterTalentDrawGrant;
-        const drawResult = pickDrawTalentWithGuarantee(talentItems, continueDraw, !isStarterDraw);
+        const drawResult = pickDrawTalentWithGuarantee(talentItems, continueDraw, sContinueDraw, !isStarterDraw, advancedDraw);
         const target = drawResult.talent;
         const isB = target.rank === "B";
-        const isGuarantee = drawResult.isGuarantee && isB;
+        const isS = target.rank === "S";
+        const isGuarantee = drawResult.isGuarantee && (isB || isS);
         if (!isStarterDraw) {
           continueDraw = isB ? 0 : continueDraw + 1;
+          if (advancedDraw) sContinueDraw = isS ? 0 : sContinueDraw + 1;
         }
 
         const { data: existingOwned, error: ownedReadError } = await supabase
@@ -2273,6 +2351,7 @@ Deno.serve(async (req) => {
           invite_code_hash: identity.codeHash,
           pool_key: poolKey,
           continue_draw: continueDraw,
+          s_continue_draw: sContinueDraw,
           updated_at: new Date().toISOString(),
         });
       if (counterUpdateError) return json({ error: counterUpdateError.message }, 400);
@@ -2337,7 +2416,10 @@ Deno.serve(async (req) => {
         if (isMissingTalentTable(targetError)) return json({ error: "请先运行 talent_pool_migration.sql" }, 400);
         if (targetError) return json({ error: targetError.message }, 400);
       }
-      if (!targetTalentRow || targetTalentRow.rank !== "B") return json({ error: "只能兑换该池的 B 级天赋" }, 400);
+      if (!targetTalentRow || !["A", "B"].includes(targetTalentRow.rank)) return json({ error: "只能兑换该池的 B/A 级天赋" }, 400);
+      if (targetTalentRow.rank === "A" && !isAdvancedTalentDrawUnlocked(profileResult.data.ascension_score)) {
+        return json({ error: "1500 分后才开放 A 级天赋兑换" }, 403);
+      }
       const exchangeCost = getTalentExchangeCost(targetTalentRow.rank);
 
       const { data: owned, error: ownedError } = await supabase
@@ -2500,23 +2582,47 @@ Deno.serve(async (req) => {
 
       const profileResult = await getTalentProfile(supabase, identity);
       if (profileResult.error) return json({ error: profileResult.error.message }, 400);
-      const slotRankLimit = getTalentSlotRankLimit(profileResult.data.ascension_score, equippedSlot);
-      if (slotRankLimit === "LOCKED") {
+      const activeEquippedSlotLimit = getTalentSlotLimit(profileResult.data.ascension_score);
+      if (equippedSlot > activeEquippedSlotLimit) {
         return json({ error: "当前分数尚未开启这个携带槽" }, 403);
+      }
+      const rankAllowance = getTalentRankAllowance(profileResult.data.ascension_score);
+      const slotRequirement = getTalentSlotRequirement(profileResult.data, equippedSlot);
+
+      const { data: currentEquipped, error: currentEquippedError } = await supabase
+        .from("owned_talents")
+        .select("id, rank, equipped_slot")
+        .eq("invite_code_hash", identity.codeHash)
+        .not("equipped_slot", "is", null);
+      if (currentEquippedError) return json({ error: currentEquippedError.message }, 400);
+      const hasOtherEquipped = (currentEquipped || []).some((item) => Number(item.equipped_slot) !== equippedSlot);
+      const professionEquipped = (currentEquipped || []).some((item) => Number(item.equipped_slot) === 2 && Number(item.id) !== ownedTalentId);
+      if (ownedTalentId && equippedSlot !== 2 && !professionEquipped) {
+        return json({ error: "必须先携带一个职业池天赋" }, 403);
+      }
+      if (!ownedTalentId && equippedSlot === 2 && hasOtherEquipped) {
+        return json({ error: "已有其它携带天赋时，职业天赋不能为空" }, 403);
       }
 
       if (ownedTalentId) {
         const { data: owned, error: ownedError } = await supabase
           .from("owned_talents")
-          .select("id, rank")
+          .select("id, pool_key, rank")
           .eq("id", ownedTalentId)
           .eq("invite_code_hash", identity.codeHash)
           .not("storage_slot", "is", null)
           .maybeSingle();
         if (ownedError) return json({ error: ownedError.message }, 400);
         if (!owned) return json({ error: "只能携带仓库中的天赋" }, 404);
-        if (!canEquipTalentRank(owned.rank, slotRankLimit)) {
-          return json({ error: `携带槽 ${equippedSlot} 当前最高只能嵌入 ${slotRankLimit} 级天赋` }, 403);
+        if (!canEquipTalentPool(owned.pool_key, slotRequirement)) {
+          return json({ error: `${slotRequirement.label}槽只能嵌入${slotRequirement.label}池天赋` }, 403);
+        }
+        const prospectiveRanks = (currentEquipped || [])
+          .filter((item) => Number(item.equipped_slot) !== equippedSlot && Number(item.id) !== ownedTalentId)
+          .map((item) => item.rank);
+        prospectiveRanks.push(owned.rank);
+        if (!canEquipTalentRanks(prospectiveRanks, rankAllowance)) {
+          return json({ error: `当前分数最多只能携带 ${rankAllowance.join("/")} 品阶组合` }, 403);
         }
       }
 

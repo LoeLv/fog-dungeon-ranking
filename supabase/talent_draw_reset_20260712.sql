@@ -15,6 +15,7 @@ set spent_draws = 0,
 
 update public.talent_pool_counters
 set continue_draw = 0,
+    s_continue_draw = 0,
     updated_at = now();
 
 update public.player_profiles
