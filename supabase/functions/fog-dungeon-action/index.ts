@@ -967,6 +967,89 @@ async function settleDuplicateOverflowChoices(
   };
 }
 
+async function settleOpenSlotOverflowChoices(
+  supabase: ReturnType<typeof createClient>,
+  codeHash: string,
+  ownedTalents: {
+    id: number;
+    pool_key: string;
+    talent_id: number;
+    talent_name: string;
+    rank: string;
+    acquired_from: string;
+    storage_slot: number | null;
+    equipped_slot: number | null;
+    acquired_at: string;
+  }[],
+  overflowChoices: {
+    id: number;
+    pool_key: string;
+    talent_id: number;
+    talent_name: string;
+    rank: string;
+    source: string;
+    created_at: string;
+  }[],
+) {
+  const remainingChoices = [...overflowChoices];
+  const settledChoices: Record<string, unknown>[] = [];
+  const usedSlots = new Set(ownedTalents.map((item) => Number(item.storage_slot)).filter(Boolean));
+  const ownedKeys = new Set(ownedTalents.map((item) => getTalentKey(item.pool_key, item.talent_id)));
+  const settledAt = new Date().toISOString();
+
+  for (const choice of overflowChoices) {
+    let openSlot = 0;
+    for (let slot = 1; slot <= inventorySlotLimit; slot += 1) {
+      if (!usedSlots.has(slot)) {
+        openSlot = slot;
+        break;
+      }
+    }
+    if (!openSlot) break;
+
+    const choiceKey = getTalentKey(choice.pool_key, choice.talent_id);
+    const { data: deletedChoice, error: deleteChoiceError } = await supabase
+      .from("talent_overflow_choices")
+      .delete()
+      .eq("id", choice.id)
+      .eq("invite_code_hash", codeHash)
+      .select("id, pool_key, talent_id, talent_name, rank, source")
+      .maybeSingle();
+    if (deleteChoiceError) return { error: deleteChoiceError };
+    if (!deletedChoice) continue;
+
+    const remainingIndex = remainingChoices.findIndex((item) => Number(item.id) === Number(choice.id));
+    if (remainingIndex >= 0) remainingChoices.splice(remainingIndex, 1);
+
+    if (ownedKeys.has(choiceKey)) continue;
+
+    const { data: insertedTalent, error: insertError } = await supabase
+      .from("owned_talents")
+      .insert({
+        invite_code_hash: codeHash,
+        pool_key: choice.pool_key,
+        talent_id: choice.talent_id,
+        talent_name: choice.talent_name,
+        rank: choice.rank,
+        acquired_from: choice.source === "exchange" ? "exchange" : "draw",
+        storage_slot: openSlot,
+      })
+      .select("id, pool_key, talent_id, talent_name, rank, acquired_from, storage_slot, equipped_slot, acquired_at")
+      .single();
+    if (insertError) return { error: insertError };
+
+    usedSlots.add(openSlot);
+    ownedKeys.add(choiceKey);
+    settledChoices.push({
+      ...(insertedTalent as Record<string, unknown>),
+      overflow_choice_id: choice.id,
+      settled_from_overflow_at: settledAt,
+    });
+  }
+
+  return { overflowChoices: remainingChoices, settledChoices };
+}
+
 async function buildTalentState(
   supabase: ReturnType<typeof createClient>,
   identity: InviteIdentity,
@@ -1110,6 +1193,23 @@ async function buildTalentState(
     overflowChoices || [],
   );
   if (overflowSettlement.error) return { error: overflowSettlement.error };
+  const openSlotSettlement = await settleOpenSlotOverflowChoices(
+    supabase,
+    identity.codeHash,
+    ownedTalents,
+    overflowSettlement.overflowChoices || [],
+  );
+  if (openSlotSettlement.error) return { error: openSlotSettlement.error };
+  if ((openSlotSettlement.settledChoices || []).length) {
+    const refreshedOwnedResult = await supabase
+      .from("owned_talents")
+      .select("id, pool_key, talent_id, talent_name, rank, acquired_from, storage_slot, equipped_slot, acquired_at")
+      .eq("invite_code_hash", identity.codeHash)
+      .not("storage_slot", "is", null)
+      .order("storage_slot", { ascending: true });
+    if (refreshedOwnedResult.error) return { error: refreshedOwnedResult.error };
+    ownedTalents = refreshedOwnedResult.data || [];
+  }
   const settledFragmentTotal = fragmentState.fragmentTotal + Number(overflowSettlement.fragmentGain || 0);
 
   return {
@@ -1143,7 +1243,8 @@ async function buildTalentState(
       poolItems,
       counters,
       ownedTalents,
-      overflowChoices: overflowSettlement.overflowChoices || [],
+      overflowChoices: openSlotSettlement.overflowChoices || [],
+      settledOverflowChoices: openSlotSettlement.settledChoices || [],
       drawLogs,
       exchangeLogs,
     },

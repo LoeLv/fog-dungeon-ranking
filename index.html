@@ -7920,6 +7920,7 @@
                 counters: Array.isArray(state.counters) ? state.counters : [],
                 ownedTalents: Array.isArray(state.ownedTalents) ? state.ownedTalents : [],
                 overflowChoices: Array.isArray(state.overflowChoices) ? state.overflowChoices : [],
+                settledOverflowChoices: Array.isArray(state.settledOverflowChoices) ? state.settledOverflowChoices : [],
                 drawLogs: Array.isArray(state.drawLogs) ? state.drawLogs : [],
                 exchangeLogs: Array.isArray(state.exchangeLogs) ? state.exchangeLogs : []
             };
@@ -8296,6 +8297,7 @@
             lastTalentDrawResult = [];
             replaceTalentPoolPanel();
             if (error) showToast(`❌ ${error.message || '刷新失败'}`);
+            else if ((state?.settledOverflowChoices || []).length) showToast(`已将 ${state.settledOverflowChoices.length} 个待取舍天赋补入空仓位`);
             else if (showToastOnSuccess) showToast('天赋池已刷新');
         }
 
@@ -8305,6 +8307,7 @@
             setCurrentTalentState(nextState, null);
             applyTalentStateProfile(nextState);
             replaceTalentPoolPanel();
+            if ((nextState.settledOverflowChoices || []).length) showToast(`已将 ${nextState.settledOverflowChoices.length} 个待取舍天赋补入空仓位`);
         }
 
         async function drawTalentUI(drawType) {
