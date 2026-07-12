@@ -9189,11 +9189,11 @@
             if (!canGrantTitlesUI()) { showToast('需要馆主或神明谕令'); return; }
             const targetName = cleanDisplayNameInput(document.getElementById('titleTargetName')?.value || '');
             const titleText = String(document.getElementById('titleTextInput')?.value || '').trim().slice(0, 32);
-            if (!targetName) { showToast('请填写要撤销称号的昵称'); return; }
+            if (!targetName) { showToast('请填写要回收称号的昵称'); return; }
             if (!window.confirm(titleText ? `回收 ${targetName} 的称号「${titleText}」？` : `回收 ${targetName} 最新生效称号？`)) return;
-            const { error } = await invokeDungeonAction('revokeProfileTitle', { targetName, titleText });
+            const { data, error } = await invokeDungeonAction('revokeProfileTitle', { targetName, titleText });
             if (error) { showToast(`❌ ${error.message || '撤销失败'}`); return; }
-            showToast(`已回收 ${targetName} 的称号`);
+            showToast(`已回收 ${targetName} 的称号：${data?.revokedTitle || titleText || '最新称号'}`);
             await renderScorePage();
             if (document.getElementById('profilePage')?.style.display !== 'none') await renderProfilePage();
             if (document.getElementById('leaderboardPage')?.style.display !== 'none') await renderLeaderboardPage();
