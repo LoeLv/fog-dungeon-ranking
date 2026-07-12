@@ -897,7 +897,6 @@ async function addOwnedTalentToStorage(
     .eq("invite_code_hash", codeHash)
     .eq("pool_key", talent.pool_key)
     .eq("talent_id", talent.talent_id)
-    .not("storage_slot", "is", null)
     .maybeSingle();
   if (existingError) return { error: existingError };
   if (existingOwned) {
@@ -1138,10 +1137,9 @@ async function buildTalentState(
     .from("owned_talents")
     .select("id, pool_key, talent_id, talent_name, rank, acquired_from, storage_slot, equipped_slot, acquired_at")
     .eq("invite_code_hash", identity.codeHash)
-    .not("storage_slot", "is", null)
     .order("storage_slot", { ascending: true });
   if (ownedResult.error) return { error: ownedResult.error };
-  ownedTalents = ownedResult.data || [];
+  ownedTalents = (ownedResult.data || []).filter((item) => item.storage_slot || item.equipped_slot);
 
   let drawLogs: {
     pool_key: string;
@@ -1210,10 +1208,9 @@ async function buildTalentState(
       .from("owned_talents")
       .select("id, pool_key, talent_id, talent_name, rank, acquired_from, storage_slot, equipped_slot, acquired_at")
       .eq("invite_code_hash", identity.codeHash)
-      .not("storage_slot", "is", null)
       .order("storage_slot", { ascending: true });
     if (refreshedOwnedResult.error) return { error: refreshedOwnedResult.error };
-    ownedTalents = refreshedOwnedResult.data || [];
+    ownedTalents = (refreshedOwnedResult.data || []).filter((item) => item.storage_slot || item.equipped_slot);
   }
   const settledFragmentTotal = fragmentState.fragmentTotal + Number(overflowSettlement.fragmentGain || 0);
 
@@ -2534,7 +2531,6 @@ Deno.serve(async (req) => {
           .eq("invite_code_hash", identity.codeHash)
           .eq("pool_key", poolKey)
           .eq("talent_id", target.talent_id)
-          .not("storage_slot", "is", null)
           .maybeSingle();
         if (ownedReadError) return json({ error: ownedReadError.message }, 400);
         let isRepeat = !!existingOwned;
@@ -2669,7 +2665,6 @@ Deno.serve(async (req) => {
         .eq("invite_code_hash", identity.codeHash)
         .eq("pool_key", poolKey)
         .eq("talent_id", targetTalentId)
-        .not("storage_slot", "is", null)
         .maybeSingle();
       if (ownedError) return json({ error: ownedError.message }, 400);
       if (owned) return json({ error: "你已经拥有这个天赋了，不需要重复兑换" }, 409);
@@ -2832,23 +2827,31 @@ Deno.serve(async (req) => {
 
       const { data: currentEquipped, error: currentEquippedError } = await supabase
         .from("owned_talents")
-        .select("id, rank, equipped_slot")
+        .select("id, rank, equipped_slot, storage_slot")
         .eq("invite_code_hash", identity.codeHash)
         .not("equipped_slot", "is", null);
       if (currentEquippedError) return json({ error: currentEquippedError.message }, 400);
 
+      const currentSlotTalent = (currentEquipped || []).find((item) => Number(item.equipped_slot) === equippedSlot) || null;
+      let owned: Record<string, unknown> | null = null;
       if (ownedTalentId) {
-        const { data: owned, error: ownedError } = await supabase
-          .from("owned_talents")
-          .select("id, pool_key, rank")
-          .eq("id", ownedTalentId)
-          .eq("invite_code_hash", identity.codeHash)
-          .not("storage_slot", "is", null)
-          .maybeSingle();
-        if (ownedError) return json({ error: ownedError.message }, 400);
-        if (!owned) return json({ error: "只能携带仓库中的天赋" }, 404);
-        if (!canEquipTalentPool(owned.pool_key, slotRequirement)) {
-          return json({ error: `${slotRequirement.label}槽只能嵌入${slotRequirement.label}池天赋` }, 403);
+        if (currentSlotTalent && Number(currentSlotTalent.id) === ownedTalentId) {
+          owned = currentSlotTalent as Record<string, unknown>;
+        } else {
+          const { data: ownedRow, error: ownedError } = await supabase
+            .from("owned_talents")
+            .select("id, pool_key, rank, storage_slot, equipped_slot")
+            .eq("id", ownedTalentId)
+            .eq("invite_code_hash", identity.codeHash)
+            .not("storage_slot", "is", null)
+            .is("equipped_slot", null)
+            .maybeSingle();
+          if (ownedError) return json({ error: ownedError.message }, 400);
+          if (!ownedRow) return json({ error: "只能携带仓库中的未佩戴天赋" }, 404);
+          owned = ownedRow as Record<string, unknown>;
+          if (!canEquipTalentPool(owned.pool_key, slotRequirement)) {
+            return json({ error: `${slotRequirement.label}槽只能嵌入${slotRequirement.label}池天赋` }, 403);
+          }
         }
         const prospectiveRanks = (currentEquipped || [])
           .filter((item) => Number(item.equipped_slot) !== equippedSlot && Number(item.id) !== ownedTalentId)
@@ -2859,27 +2862,47 @@ Deno.serve(async (req) => {
         }
       }
 
-      const { error: clearSlotError } = await supabase
-        .from("owned_talents")
-        .update({ equipped_slot: null })
-        .eq("invite_code_hash", identity.codeHash)
-        .eq("equipped_slot", equippedSlot);
-      if (clearSlotError) return json({ error: clearSlotError.message }, 400);
+      if (ownedTalentId && currentSlotTalent && Number(currentSlotTalent.id) === ownedTalentId) {
+        // No state change needed; the request kept the current equipped talent selected.
+      } else if (ownedTalentId) {
+        const sourceStorageSlot = Number(owned?.storage_slot || 0);
+        if (!sourceStorageSlot) return json({ error: "仓库位状态异常，请刷新后重试" }, 400);
 
-      if (ownedTalentId) {
-        const { error: clearPreviousError } = await supabase
-          .from("owned_talents")
-          .update({ equipped_slot: null })
-          .eq("invite_code_hash", identity.codeHash)
-          .eq("id", ownedTalentId);
-        if (clearPreviousError) return json({ error: clearPreviousError.message }, 400);
+        if (currentSlotTalent) {
+          const { error: clearCurrentSlotError } = await supabase
+            .from("owned_talents")
+            .update({ equipped_slot: null })
+            .eq("id", currentSlotTalent.id)
+            .eq("invite_code_hash", identity.codeHash);
+          if (clearCurrentSlotError) return json({ error: clearCurrentSlotError.message }, 400);
+        }
 
         const { error: equipError } = await supabase
           .from("owned_talents")
-          .update({ equipped_slot: equippedSlot })
+          .update({ storage_slot: null, equipped_slot: equippedSlot })
           .eq("id", ownedTalentId)
           .eq("invite_code_hash", identity.codeHash);
         if (equipError) return json({ error: equipError.message }, 400);
+
+        if (currentSlotTalent) {
+          const { error: storePreviousError } = await supabase
+            .from("owned_talents")
+            .update({ storage_slot: sourceStorageSlot, equipped_slot: null })
+            .eq("id", currentSlotTalent.id)
+            .eq("invite_code_hash", identity.codeHash);
+          if (storePreviousError) return json({ error: storePreviousError.message }, 400);
+        }
+      } else if (currentSlotTalent) {
+        const slotResult = await getAvailableStorageSlot(supabase, identity.codeHash);
+        if (slotResult.error) return json({ error: slotResult.error.message }, 400);
+        if (!slotResult.slot) return json({ error: "仓库已满，无法卸下该天赋；请先分解一个仓库天赋" }, 409);
+
+        const { error: unequipError } = await supabase
+          .from("owned_talents")
+          .update({ storage_slot: slotResult.slot, equipped_slot: null })
+          .eq("id", currentSlotTalent.id)
+          .eq("invite_code_hash", identity.codeHash);
+        if (unequipError) return json({ error: unequipError.message }, 400);
       }
 
       const talentTextUpdate = await updateProfileTalentText(supabase, identity.codeHash);

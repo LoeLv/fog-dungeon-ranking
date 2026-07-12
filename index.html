@@ -8150,8 +8150,8 @@
                 const requirement = getTalentSlotRequirement(state, slot);
                 const slotLabel = getTalentSlotKindLabel(requirement.kind);
                 const optionHtml = [
-                    '<option value="">暂不收纳此天赋</option>',
-                    ...talents.map(item => {
+                    '<option value="">卸下到仓库</option>',
+                    ...talents.filter(item => item.storage_slot || Number(item.id) === Number(talent?.id || 0)).map(item => {
                         const id = Number(item.id);
                         const isCurrent = id === Number(talent?.id || 0);
                         const rankBlocked = !canTalentFitCurrentRankRule(state, item, slot, talent);
@@ -8175,7 +8175,6 @@
         function renderTalentWarehouse(state, god = getProfileFaithGod(getCurrentProfile()) || '命运') {
             const talents = state.ownedTalents || [];
             const byStorageSlot = new Map(talents.filter(t => t.storage_slot).map(t => [Number(t.storage_slot), t]));
-            const equippedIds = new Set(talents.filter(t => t.equipped_slot).map(t => Number(t.id)));
             const limit = Number(state.inventorySlotLimit || 8);
             return `<div class="talent-inventory-grid">${Array.from({ length: limit }, (_, index) => {
                 const slot = index + 1;
@@ -8187,17 +8186,16 @@
                             ${renderMiniRitualEmpty(getGodEmptyText(god, 'warehouse'), god, '仓库格空置')}
                         </div>`;
                 }
-                const equippedText = talent.equipped_slot ? `携带槽 ${talent.equipped_slot}` : '未携带';
                 const effect = getTalentEffectText(state, talent);
                 const fragmentGain = getTalentDismantleGain(state, talent.rank);
                 return `
                     <div class="talent-slot-card">
-                        <div class="talent-slot-head"><span>仓库位 ${slot}</span><span>${escapeHtml(equippedText)}</span></div>
+                        <div class="talent-slot-head"><span>仓库位 ${slot}</span><span>未佩戴</span></div>
                         <div class="talent-slot-name">${escapeHtml(talent.talent_name)}</div>
                         <div class="talent-slot-meta">${escapeHtml(talent.rank)}级 · ${escapeHtml(formatTalentPoolLabel(talent.pool_key))}池</div>
                         ${effect ? `<div class="talent-effect-text">${escapeHtml(effect)}</div>` : ''}
                         <div class="talent-slot-actions">
-                            <button type="button" class="btn btn-outline btn-sm" onclick="discardOwnedTalentUI(${Number(talent.id)})" ${talentManageInFlight || equippedIds.has(Number(talent.id)) ? 'disabled' : ''} ${equippedIds.has(Number(talent.id)) ? 'title="已携带的天赋请先卸下"' : ''}>${talentManageInFlight ? '处理中' : `分解 +${fragmentGain}`}</button>
+                            <button type="button" class="btn btn-outline btn-sm" onclick="discardOwnedTalentUI(${Number(talent.id)})" ${talentManageInFlight ? 'disabled' : ''}>${talentManageInFlight ? '处理中' : `分解 +${fragmentGain}`}</button>
                         </div>
                     </div>`;
             }).join('')}</div>`;
@@ -8207,6 +8205,7 @@
             const choices = state.overflowChoices || [];
             if (!choices.length) return '';
             const replacementOptions = (state.ownedTalents || [])
+                .filter(talent => talent.storage_slot)
                 .map(talent => `<option value="${Number(talent.id)}">仓库${Number(talent.storage_slot || 0)} · ${escapeHtml(renderTalentOptionLabel(talent))}</option>`)
                 .join('');
             return `
@@ -8247,7 +8246,7 @@
             const selectedPoolReady = Number(selectedPoolMeta.total || 0) > 0;
             const latestResults = lastTalentDrawResult.length ? renderTalentCards(lastTalentDrawResult, '') : '';
             const allowedPoolText = (state.pools || []).map(pool => formatTalentPoolLabel(pool.poolKey)).join(' / ') || '未绑定';
-            const inventoryCount = (state.ownedTalents || []).length;
+            const inventoryCount = (state.ownedTalents || []).filter(talent => talent.storage_slot).length;
             const inventoryLimit = Number(state.inventorySlotLimit || 8);
             const equippedCount = (state.ownedTalents || []).filter(talent => talent.equipped_slot).length;
             const exchangeCost = Number(state.targetTalentExchangeCost || 180);
