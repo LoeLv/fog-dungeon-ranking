@@ -7382,7 +7382,12 @@
         function isGodRole() { return getInviteRole() === 'god'; }
         function canGrantTitlesUI() { return canUseRole(['admin', 'god']); }
         function canSettleScores() { return canUseRole(['reviewer', 'admin']); }
-        function canEditDisplayName() { return isAdmin(); }
+        function isInitialDisplayNameBinding() {
+            if (!inviteSession?.code || !inviteSession?.name || isGodRole()) return false;
+            return String(inviteSession.name).trim().toLowerCase() === String(inviteSession.code).trim().toLowerCase();
+        }
+        function canEditDisplayName() { return isAdmin() || isInitialDisplayNameBinding(); }
+        function isAdminDisplayNameEdit() { return isAdmin() && !isInitialDisplayNameBinding(); }
         function canOverrideProfileLocks() { return isAdmin(); }
         function canEditProfileScores() { return canOverrideProfileLocks(); }
         function shouldAutoFocusModalInput() {
@@ -7441,6 +7446,7 @@
             const displayNameRow = displayNameInput?.closest('.identity-row');
             const displayNameHelp = identityCard?.querySelector('.identity-help');
             const showDisplayNameBinding = !role || canEditDisplayName();
+            const initialDisplayNameBinding = isInitialDisplayNameBinding();
             if (roleBadge) {
                 const registry = role === 'god' ? '神明席' : role === 'admin' ? '神谕馆册' : role === 'reviewer' ? '审核席' : role === 'author' ? '构筑者名录' : '信徒名录';
                 roleBadge.textContent = role ? `${registry} · ${inviteSession?.name || ROLE_LABELS[role]}` : '旁观者只读';
@@ -7466,20 +7472,22 @@
             if (displayNameRow) displayNameRow.style.display = showDisplayNameBinding ? '' : 'none';
             if (displayNameHelp) {
                 displayNameHelp.style.display = showDisplayNameBinding ? '' : 'none';
-                displayNameHelp.textContent = canEditDisplayName()
+                displayNameHelp.textContent = initialDisplayNameBinding
+                    ? '这是首次绑定昵称，保存后这枚谕令会固定显示该昵称，之后不可自行更改。'
+                    : isAdminDisplayNameEdit()
                     ? '馆主可校正自己的身份昵称；其他身份昵称由入局谕令绑定。'
                     : '保存后，这枚谕令在证言、判定、构筑愚戏和分数结算时都会显示这个昵称。';
             }
             if (displayNameInput && role) {
-                displayNameInput.value = inviteSession?.name || ROLE_LABELS[role];
+                displayNameInput.value = initialDisplayNameBinding ? '' : (inviteSession?.name || ROLE_LABELS[role]);
                 displayNameInput.disabled = !canEditDisplayName();
-                displayNameInput.title = canEditDisplayName() ? '馆主可更改身份昵称' : '昵称为身份绑定字段，只有馆主可以更改';
+                displayNameInput.title = initialDisplayNameBinding ? '首次绑定昵称，保存后不可自行更改' : (isAdminDisplayNameEdit() ? '馆主可更改身份昵称' : '昵称为身份绑定字段，只有馆主可以更改');
             }
             const displayNameButton = document.getElementById('displayNameButton');
             if (displayNameButton) {
                 displayNameButton.disabled = !canEditDisplayName();
-                displayNameButton.textContent = canEditDisplayName() ? '保存昵称' : '昵称固定';
-                displayNameButton.title = canEditDisplayName() ? '保存馆主昵称' : '昵称为身份绑定字段，只有馆主可以更改';
+                displayNameButton.textContent = initialDisplayNameBinding ? '绑定昵称' : (canEditDisplayName() ? '保存昵称' : '昵称固定');
+                displayNameButton.title = initialDisplayNameBinding ? '首次绑定昵称' : (isAdminDisplayNameEdit() ? '保存馆主昵称' : '昵称为身份绑定字段，只有馆主可以更改');
             }
             updateRoleCards(role);
             updateRoleInsightPanel(role);
@@ -10287,8 +10295,8 @@
                             <div class="profile-form-grid">
                                 <div class="form-group">
                                     <label for="profileDisplayName">个人昵称</label>
-                                    <input id="profileDisplayName" maxlength="16" value="${escapeHtml(inviteSession.name || '')}" placeholder="例如：无我" ${canEditDisplayName() ? '' : 'disabled'} title="${canEditDisplayName() ? '馆主可更改身份昵称' : '昵称为身份绑定字段，只有馆主可以更改'}">
-                                    <div class="identity-help">${canEditDisplayName() ? '馆主可在这里校正自己的身份昵称。' : '昵称由入局谕令绑定；玩家、作者、审核员和神明不可自行更改。'}</div>
+                                    <input id="profileDisplayName" maxlength="16" value="${escapeHtml(isInitialDisplayNameBinding() ? '' : (inviteSession.name || ''))}" placeholder="例如：无我" ${canEditDisplayName() ? '' : 'disabled'} title="${isInitialDisplayNameBinding() ? '首次绑定昵称，保存后不可自行更改' : (isAdminDisplayNameEdit() ? '馆主可更改身份昵称' : '昵称为身份绑定字段，只有馆主可以更改')}">
+                                    <div class="identity-help">${isInitialDisplayNameBinding() ? '这是首次绑定昵称，封存后会固定到当前谕令，之后不可自行更改。' : (isAdminDisplayNameEdit() ? '馆主可在这里校正自己的身份昵称。' : '昵称由入局谕令绑定；玩家、作者、审核员和神明不可自行更改。')}</div>
                                 </div>
                                 <div class="form-group">
                                     <label for="profileFaithGod">信仰神明</label>

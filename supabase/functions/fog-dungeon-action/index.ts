@@ -1687,7 +1687,9 @@ Deno.serve(async (req) => {
 
     if (action === "updateDisplayName") {
       if (!identity.inviteId) return json({ error: "共享邀请码不能绑定个人昵称，请使用专属码" }, 403);
-      if (role !== "admin") return json({ error: "昵称为身份绑定字段，只有馆主可以更改" }, 403);
+      const inviteCodeText = cleanText(body.inviteCode, 200);
+      const isInitialBinding = role !== "god" && cleanText(identity.displayName, 200).toLowerCase() === inviteCodeText.toLowerCase();
+      if (role !== "admin" && !isInitialBinding) return json({ error: "昵称为身份绑定字段，只有馆主可以更改" }, 403);
 
       const display = cleanDisplayName(payload.displayName, role);
       if (display.error || !display.name) return json({ error: display.error || "昵称不正确" }, 400);
