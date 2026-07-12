@@ -3498,6 +3498,40 @@
             font-size: 0.68rem;
         }
         .comment-item .comment-author { font-weight: 700; color: var(--gold-light); font-size: 0.82rem; }
+        .comment-honor-stack {
+            display: inline-flex;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 5px;
+            min-width: 0;
+        }
+        .comment-honor-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            max-width: 170px;
+            padding: 2px 7px;
+            border: 1px solid color-mix(in srgb, var(--god-primary, #e7cf8a) 34%, rgba(255,255,255,0.08));
+            border-radius: 999px;
+            background:
+                linear-gradient(90deg, color-mix(in srgb, var(--god-primary, #e7cf8a) 14%, transparent), rgba(0,0,0,0.18)),
+                rgba(231,207,138,0.07);
+            color: var(--gold-light);
+            font-size: 0.64rem;
+            font-weight: 900;
+            line-height: 1.25;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .comment-honor-badge.curse {
+            border-radius: 7px;
+            border-color: color-mix(in srgb, var(--god-primary, #b84545) 34%, rgba(255,255,255,0.08));
+            background:
+                linear-gradient(90deg, color-mix(in srgb, var(--god-primary, #b84545) 18%, rgba(80,15,22,0.42)), rgba(0,0,0,0.18)),
+                rgba(80,15,22,0.24);
+            color: var(--text-bright);
+        }
         .comment-item .comment-time { font-size: 0.7rem; color: var(--text-muted); white-space: nowrap; }
         .comment-item .comment-content { margin-top: 6px; color: var(--text); white-space: pre-wrap; line-height: 1.7; }
         .comment-replies {
@@ -7467,7 +7501,9 @@
                 items: '',
                 talents: '',
                 activeTitle: null,
-                activeCurse: null
+                activeTitles: [],
+                activeCurse: null,
+                activeCurses: []
             };
         }
 
@@ -7487,7 +7523,9 @@
             stored.audienceScore = normalizeProfileScore(stored.audienceScore);
             stored.scoresLockedAt = stored.scoresLockedAt || '';
             stored.activeTitle = normalizeProfileTitle(stored.activeTitle);
+            stored.activeTitles = normalizeProfileTitleList(stored.activeTitles, stored.activeTitle);
             stored.activeCurse = normalizeProfileCurse(stored.activeCurse);
+            stored.activeCurses = normalizeProfileCurseList(stored.activeCurses, stored.activeCurse);
             return stored;
         }
 
@@ -7622,6 +7660,14 @@
             };
         }
 
+        function normalizeProfileTitleList(value, fallback = null) {
+            const source = Array.isArray(value) ? value : (value ? [value] : []);
+            const titles = source.map(normalizeProfileTitle).filter(Boolean);
+            const fallbackTitle = normalizeProfileTitle(fallback);
+            if (!titles.length && fallbackTitle) return [fallbackTitle];
+            return titles;
+        }
+
         function normalizeProfileCurse(value) {
             if (!value) return null;
             const curseText = String(value.curse_text || value.curseText || '').trim().slice(0, 32);
@@ -7636,6 +7682,14 @@
             };
         }
 
+        function normalizeProfileCurseList(value, fallback = null) {
+            const source = Array.isArray(value) ? value : (value ? [value] : []);
+            const curses = source.map(normalizeProfileCurse).filter(Boolean);
+            const fallbackCurse = normalizeProfileCurse(fallback);
+            if (!curses.length && fallbackCurse) return [fallbackCurse];
+            return curses;
+        }
+
         function renderProfileTitleBadge(title, options = {}) {
             const normalized = normalizeProfileTitle(title);
             if (!normalized) return '';
@@ -7645,20 +7699,21 @@
                 : (normalized.grantedByName ? `${normalized.grantedByName}降下` : '馆主降下');
             const small = options.compact ? '' : `<small>${escapeHtml(issuer)}</small>`;
             const extraClass = options.compact ? ' leaderboard-title-badge' : '';
-            return `<span class="divine-title-badge${extraClass}" style="${getGodSkinStyle(god)}" title="${escapeHtml(`${issuer}｜${normalized.titleText}${normalized.titleNote ? `｜${normalized.titleNote}` : ''}`)}">✦ ${escapeHtml(normalized.titleText)}${small}</span>`;
+            return `<span class="divine-title-badge${extraClass}" style="${getGodSkinStyle(god)}" title="${escapeHtml(`${issuer}｜${normalized.titleText}${normalized.titleNote ? `｜${normalized.titleNote}` : ''}`)}">神诞 · ${escapeHtml(normalized.titleText)}${small}</span>`;
         }
 
         function renderProfileNameWithTitle(displayName, title, options = {}) {
+            const titles = normalizeProfileTitleList(options.titles, title);
             return `
                 <div class="profile-name-row">
                     <h1 class="profile-name">${escapeHtml(displayName)}</h1>
-                    ${renderProfileTitleBadge(title, { fallbackGod: options.fallbackGod })}
+                    ${titles.slice(0, 3).map(item => renderProfileTitleBadge(item, { fallbackGod: options.fallbackGod })).join('')}
                 </div>`;
         }
 
-        function renderProfileCurseStatus(curse, fallbackGod = '命运') {
-            const normalized = normalizeProfileCurse(curse);
-            if (!normalized) {
+        function renderProfileCurseStatus(curse, fallbackGod = '命运', curses = null) {
+            const normalizedCurses = normalizeProfileCurseList(curses, curse);
+            if (!normalizedCurses.length) {
                 return `
                     <div class="profile-title-status profile-curse-status" style="${getGodSkinStyle(fallbackGod)}">
                         <div class="profile-title-status-head">
@@ -7668,23 +7723,28 @@
                         <div class="profile-title-status-note">未被神明下放背弃诅咒。</div>
                     </div>`;
             }
-            const god = normalized.curseGod || fallbackGod;
-            const issuer = normalized.grantedByType === 'god'
+            const primary = normalizedCurses[0];
+            const god = primary.curseGod || fallbackGod;
+            const curseBadges = normalizedCurses.slice(0, 5).map(item => {
+                const itemGod = item.curseGod || fallbackGod;
+                return `<span class="divine-curse-badge" style="${getGodSkinStyle(itemGod)}" title="${escapeHtml(`${itemGod}｜${item.curseText}${item.curseNote ? `｜${item.curseNote}` : ''}`)}">叛誓 · ${escapeHtml(item.curseText)}</span>`;
+            }).join('');
+            const issuer = primary.grantedByType === 'god'
                 ? `${god}之神下放`
-                : (normalized.grantedByName ? `${normalized.grantedByName}下放` : '馆主下放');
+                : (primary.grantedByName ? `${primary.grantedByName}下放` : '馆主下放');
             return `
                 <div class="profile-title-status profile-curse-status" style="${getGodSkinStyle(god)}">
                     <div class="profile-title-status-head">
                         <strong>当前诅咒</strong>
-                        <span class="divine-curse-badge">背弃诅咒</span>
+                        <div class="comment-honor-stack">${curseBadges}</div>
                     </div>
-                    <div class="profile-title-status-note">${escapeHtml(issuer)}｜自动赋予称号「背弃者」${normalized.curseNote ? `｜${escapeHtml(normalized.curseNote)}` : ''}</div>
+                    <div class="profile-title-status-note">${escapeHtml(issuer)}｜自动赋予称号「背弃者」${primary.curseNote ? `｜${escapeHtml(primary.curseNote)}` : ''}</div>
                 </div>`;
         }
 
-        function renderProfileTitleStatus(title, curse = null, fallbackGod = '命运') {
-            const normalized = normalizeProfileTitle(title);
-            if (!normalized) {
+        function renderProfileTitleStatus(title, curse = null, fallbackGod = '命运', titles = null, curses = null) {
+            const normalizedTitles = normalizeProfileTitleList(titles, title);
+            if (!normalizedTitles.length) {
                 return `
                     <div class="profile-title-status" style="${getGodSkinStyle(fallbackGod)}">
                         <div class="profile-title-status-head">
@@ -7693,20 +7753,21 @@
                         </div>
                         <div class="profile-title-status-note">尚未有馆主或神明为你降下称号。获得称号后，会绑定昵称显示在个人面板、公开档案和榜单里。</div>
                     </div>
-                    ${renderProfileCurseStatus(curse, fallbackGod)}`;
+                    ${renderProfileCurseStatus(curse, fallbackGod, curses)}`;
             }
-            const issuer = normalized.grantedByType === 'god'
-                ? `${normalized.titleGod || fallbackGod}之神降下`
-                : (normalized.grantedByName ? `${normalized.grantedByName}降下` : '馆主降下');
+            const primary = normalizedTitles[0];
+            const issuer = primary.grantedByType === 'god'
+                ? `${primary.titleGod || fallbackGod}之神降下`
+                : (primary.grantedByName ? `${primary.grantedByName}降下` : '馆主降下');
             return `
-                <div class="profile-title-status" style="${getGodSkinStyle(normalized.titleGod || fallbackGod)}">
+                <div class="profile-title-status" style="${getGodSkinStyle(primary.titleGod || fallbackGod)}">
                     <div class="profile-title-status-head">
                         <strong>当前称号</strong>
-                        ${renderProfileTitleBadge(normalized, { fallbackGod })}
+                        <div class="comment-honor-stack">${normalizedTitles.slice(0, 5).map(item => renderProfileTitleBadge(item, { fallbackGod })).join('')}</div>
                     </div>
-                    <div class="profile-title-status-note">${escapeHtml(issuer)}${normalized.titleNote ? `｜${escapeHtml(normalized.titleNote)}` : ''}</div>
+                    <div class="profile-title-status-note">${escapeHtml(issuer)}${primary.titleNote ? `｜${escapeHtml(primary.titleNote)}` : ''}</div>
                 </div>
-                ${renderProfileCurseStatus(curse, normalized.titleGod || fallbackGod)}`;
+                ${renderProfileCurseStatus(curse, primary.titleGod || fallbackGod, curses)}`;
         }
 
         function formatProfileScore(value) {
@@ -7744,7 +7805,9 @@
                 ascensionScore: normalizeProfileScore(profile.ascensionScore),
                 audienceScore: normalizeProfileScore(profile.audienceScore),
                 activeTitle: normalizeProfileTitle(profile.activeTitle || profile.active_title),
+                activeTitles: normalizeProfileTitleList(profile.activeTitles || profile.active_titles, profile.activeTitle || profile.active_title),
                 activeCurse: normalizeProfileCurse(profile.activeCurse || profile.active_curse),
+                activeCurses: normalizeProfileCurseList(profile.activeCurses || profile.active_curses, profile.activeCurse || profile.active_curse),
                 updatedAt: profile.updatedAt || '',
                 isCurrent: key === getProfileKey()
             };
@@ -7769,7 +7832,9 @@
                 items: String(profile.items || '').trim().slice(0, 800),
                 talents: String(profile.talents || '').trim().slice(0, 800),
                 activeTitle: normalizeProfileTitle(profile.active_title || profile.activeTitle),
+                activeTitles: normalizeProfileTitleList(profile.active_titles || profile.activeTitles, profile.active_title || profile.activeTitle),
                 activeCurse: normalizeProfileCurse(profile.active_curse || profile.activeCurse),
+                activeCurses: normalizeProfileCurseList(profile.active_curses || profile.activeCurses, profile.active_curse || profile.activeCurse),
                 scoresLockedAt: profile.scores_locked_at || profile.scoresLockedAt || '',
                 updatedAt: profile.updated_at || profile.updatedAt || ''
             };
@@ -8638,7 +8703,9 @@
                         items: profile.items,
                         talents: profile.talents,
                         active_title: normalizeProfileTitle(profile.activeTitle),
+                        active_titles: normalizeProfileTitleList(profile.activeTitles, profile.activeTitle),
                         active_curse: normalizeProfileCurse(profile.activeCurse),
+                        active_curses: normalizeProfileCurseList(profile.activeCurses, profile.activeCurse),
                         updated_at: profile.updatedAt,
                         is_current: key === getProfileKey()
                     },
@@ -8739,7 +8806,7 @@
                     <div class="profile-avatar ${faithClass}" style="${faithStyle}">${renderGodSigil(faithGod, 'lg')}</div>
                     <div class="profile-hero-copy">
                         <div class="profile-kicker">PUBLIC PILGRIM DOSSIER</div>
-                        ${renderProfileNameWithTitle(displayName, profile.activeTitle, { fallbackGod: faithGod })}
+                        ${renderProfileNameWithTitle(displayName, profile.activeTitle, { fallbackGod: faithGod, titles: profile.activeTitles })}
                         <div class="profile-subline">
                             <span class="mini-tag ${faithClass}">${escapeHtml(faith.label)}</span>
                             <span class="mini-tag ${faithClass}">${escapeHtml(faith.path)}命途</span>
@@ -9015,8 +9082,10 @@
                     return mode === 'curse' ? faithGod && faithGod !== godName : faithGod === godName;
                 })
                 .map(entry => {
-                    const titleLabel = entry.activeTitle ? `｜${entry.activeTitle.titleText}` : '';
-                    const curseLabel = entry.activeCurse ? `｜${entry.activeCurse.curseText}` : '';
+                    const titleCount = normalizeProfileTitleList(entry.activeTitles, entry.activeTitle).length;
+                    const curseCount = normalizeProfileCurseList(entry.activeCurses, entry.activeCurse).length;
+                    const titleLabel = titleCount ? `｜称号${titleCount}` : '';
+                    const curseLabel = curseCount ? `｜诅咒${curseCount}` : '';
                     const faithLabel = entry.faithGod ? `｜${entry.faithGod}信徒` : '';
                     return `<option value="${escapeHtml(entry.displayName)}">${escapeHtml(entry.displayName)}${escapeHtml(faithLabel + titleLabel + curseLabel)}</option>`;
                 })
@@ -9056,14 +9125,14 @@
                             <input id="titleTargetName" list="titlePlayerList" maxlength="40" placeholder="选择或输入玩家昵称">
                             <datalist id="titlePlayerList">${titleOptions}</datalist>
                         </div>
-                        <div class="form-group full"><label>称号</label><input id="titleTextInput" maxlength="32" placeholder="例如：雾中执灯者"></div>
+                        <div class="form-group full"><label>称号</label><input id="titleTextInput" maxlength="32" placeholder="发放或回收指定称号，例如：雾中执灯者"></div>
                         <div class="form-group"><label>降号名义</label>${titleGodControl}</div>
                         <div class="form-group"><label>敕令备注</label><input id="titleNoteInput" maxlength="120" placeholder="可选，授予缘由"></div>
                     </div>
                     <div class="identity-help">${titleGodHelp}</div>
                     <div class="profile-tools">
                         <button class="btn btn-primary btn-sm" onclick="grantProfileTitleUI()">降下称号</button>
-                        <button class="btn btn-outline btn-sm" onclick="revokeProfileTitleUI()">撤销当前称号</button>
+                        <button class="btn btn-outline btn-sm" onclick="revokeProfileTitleUI()">回收称号</button>
                     </div>
                 </section>
                 <section class="profile-panel" data-god="${escapeHtml(godName || '命运')}" style="${getGodSkinStyle(godName || '命运')}">
@@ -9075,11 +9144,13 @@
                             <datalist id="cursePlayerList">${curseOptions}</datalist>
                         </div>
                         <div class="form-group"><label>诅咒名义</label>${curseGodControl}</div>
+                        <div class="form-group"><label>诅咒名</label><input id="curseTextInput" maxlength="32" placeholder="默认：背弃诅咒"></div>
                         <div class="form-group"><label>诅咒备注</label><input id="curseNoteInput" maxlength="120" placeholder="可选，背弃缘由"></div>
                     </div>
                     <div class="identity-help">${curseHelp}</div>
                     <div class="profile-tools">
                         <button class="btn btn-danger btn-sm" onclick="grantBetrayalCurseUI()">背弃诅咒</button>
+                        <button class="btn btn-outline btn-sm" onclick="revokeProfileCurseUI()">回收诅咒</button>
                     </div>
                 </section>`;
         }
@@ -9116,12 +9187,29 @@
         async function revokeProfileTitleUI() {
             if (!canGrantTitlesUI()) { showToast('需要馆主或神明谕令'); return; }
             const targetName = cleanDisplayNameInput(document.getElementById('titleTargetName')?.value || '');
+            const titleText = String(document.getElementById('titleTextInput')?.value || '').trim().slice(0, 32);
             if (!targetName) { showToast('请填写要撤销称号的昵称'); return; }
-            if (!window.confirm(`撤销 ${targetName} 当前生效称号？`)) return;
-            const { error } = await invokeDungeonAction('revokeProfileTitle', { targetName });
+            if (!window.confirm(titleText ? `回收 ${targetName} 的称号「${titleText}」？` : `回收 ${targetName} 最新生效称号？`)) return;
+            const { error } = await invokeDungeonAction('revokeProfileTitle', { targetName, titleText });
             if (error) { showToast(`❌ ${error.message || '撤销失败'}`); return; }
-            showToast(`已撤销 ${targetName} 的当前称号`);
+            showToast(`已回收 ${targetName} 的称号`);
             await renderScorePage();
+            if (document.getElementById('profilePage')?.style.display !== 'none') await renderProfilePage();
+            if (document.getElementById('leaderboardPage')?.style.display !== 'none') await renderLeaderboardPage();
+        }
+
+        async function revokeProfileCurseUI() {
+            if (!canGrantTitlesUI()) { showToast('需要馆主或神明谕令'); return; }
+            const targetName = cleanDisplayNameInput(document.getElementById('curseTargetName')?.value || '');
+            const curseText = String(document.getElementById('curseTextInput')?.value || '').trim().slice(0, 32);
+            if (!targetName) { showToast('请填写要回收诅咒的昵称'); return; }
+            if (!window.confirm(curseText ? `回收 ${targetName} 的诅咒「${curseText}」？` : `回收 ${targetName} 最新生效诅咒？`)) return;
+            const { error } = await invokeDungeonAction('revokeProfileCurse', { targetName, curseText });
+            if (error) { showToast(`❌ ${error.message || '回收失败'}`); return; }
+            showToast(`已回收 ${targetName} 的诅咒`);
+            await renderScorePage();
+            if (document.getElementById('profilePage')?.style.display !== 'none') await renderProfilePage();
+            if (document.getElementById('leaderboardPage')?.style.display !== 'none') await renderLeaderboardPage();
         }
 
         async function revokeScoreSettlementUI(settlementId) {
@@ -9812,7 +9900,7 @@
                     <div class="profile-avatar ${faithClass}" style="${faithStyle}">${renderGodSigil(faithGod, 'lg')}</div>
                     <div class="profile-hero-copy">
                         <div class="profile-kicker">PERSONAL PILGRIM ARCHIVE</div>
-                        ${renderProfileNameWithTitle(inviteSession.name || roleLabel, profile.activeTitle, { fallbackGod: faithGod })}
+                        ${renderProfileNameWithTitle(inviteSession.name || roleLabel, profile.activeTitle, { fallbackGod: faithGod, titles: profile.activeTitles })}
                         <div class="profile-subline">
                             <span class="mini-tag ${faithClass}">${escapeHtml(faith.label)}</span>
                             <span class="mini-tag ${faithClass}">${escapeHtml(faith.path)}命途</span>
@@ -9867,7 +9955,7 @@
                                 </div>
                                 <div class="form-group full">
                                     <label>当前称号</label>
-                                    ${renderProfileTitleStatus(profile.activeTitle, profile.activeCurse, faithGod)}
+                                    ${renderProfileTitleStatus(profile.activeTitle, profile.activeCurse, faithGod, profile.activeTitles, profile.activeCurses)}
                                 </div>
                                 <div class="form-group full">
                                     <label for="profileItems">个人道具</label>
@@ -10005,7 +10093,9 @@
                 items: String(document.getElementById('profileItems')?.value || '').trim().slice(0, 800),
                 talents: String(currentProfile.talents || '').trim().slice(0, 800),
                 activeTitle: currentProfile.activeTitle || null,
-                activeCurse: currentProfile.activeCurse || null
+                activeTitles: normalizeProfileTitleList(currentProfile.activeTitles, currentProfile.activeTitle),
+                activeCurse: currentProfile.activeCurse || null,
+                activeCurses: normalizeProfileCurseList(currentProfile.activeCurses, currentProfile.activeCurse)
             };
             if (name !== inviteSession.name) {
                 const { error } = await updateDisplayName(name);
@@ -10101,6 +10191,41 @@
             return (data || []).map(d => ({ ...d, pinned_note: d.pinned_note || '' }));
         }
 
+        function normalizeHonorBuckets(response) {
+            const buckets = response?.data?.byCommentId || response?.byCommentId || {};
+            return buckets && typeof buckets === 'object' ? buckets : {};
+        }
+
+        async function fetchCommentHonorBuckets(commentIds) {
+            if (USE_LOCAL_FALLBACK || !commentIds.length) return {};
+            const response = await fetch(DUNGEON_ACTION_URL, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'apikey': SUPABASE_ANON_KEY,
+                    'Authorization': `Bearer ${SUPABASE_ANON_KEY}`
+                },
+                body: JSON.stringify({ action: 'getCommentHonors', payload: { commentIds } })
+            });
+            if (!response.ok) return {};
+            const result = await response.json().catch(() => ({}));
+            return normalizeHonorBuckets(result);
+        }
+
+        async function enrichCommentsWithHonors(comments) {
+            const commentIds = [...new Set((comments || []).map(comment => String(comment?.id || '').trim()).filter(Boolean))];
+            if (!commentIds.length || USE_LOCAL_FALLBACK) return comments;
+            const byCommentId = await fetchCommentHonorBuckets(commentIds);
+            return (comments || []).map(comment => {
+                const bucket = byCommentId[String(comment?.id || '').trim()] || {};
+                return {
+                    ...comment,
+                    active_titles: bucket.active_titles || [],
+                    active_curses: bucket.active_curses || [],
+                };
+            });
+        }
+
         async function fetchComments(dungeonId) {
             if (USE_LOCAL_FALLBACK) {
                 const all = getLocalData('comments', []);
@@ -10122,11 +10247,13 @@
                 data = fallback.data || [];
                 error = fallback.error;
             }
-            return error ? [] : (data || []).map(c => ({
+            if (error) return [];
+            const comments = (data || []).map(c => ({
                 ...c,
                 parent_comment_id: c.parent_comment_id || c.parentCommentId || null,
                 is_deleted: !!c.is_deleted
             }));
+            return await enrichCommentsWithHonors(comments);
         }
 
         async function fetchLatestComments(limit = 3) {
@@ -10156,12 +10283,12 @@
             }
             if (error) return [];
             const dungeons = await fetchDungeons();
-            return (data || []).map(c => ({
+            return await enrichCommentsWithHonors((data || []).map(c => ({
                 ...c,
                 parent_comment_id: c.parent_comment_id || c.parentCommentId || null,
                 is_deleted: !!c.is_deleted,
                 dungeon: dungeons.find(d => d.id === c.dungeon_id) || null
-            }));
+            })));
         }
 
         async function fetchClearFeedbackSummary(dungeonId) {
@@ -11494,6 +11621,7 @@
                         <div class="oracle-item-main">
                             ${renderGodSigil(item.dungeon?.type || '命运', 'xs')}
                             <strong>${escapeHtml(item.author || '匿名信徒')}</strong>
+                            ${renderCommentHonorBadges(item)}
                             <span class="oracle-item-time">${escapeHtml(formatDate(item.created_at))}</span>
                         </div>
                         <span class="oracle-item-meta">${escapeHtml(truncateText(item.content, 46))}</span>
@@ -11589,6 +11717,23 @@
             return roots;
         }
 
+        function renderCommentHonorBadges(comment) {
+            const titles = normalizeProfileTitleList(comment.active_titles || comment.activeTitles, comment.active_title || comment.activeTitle);
+            const curses = normalizeProfileCurseList(comment.active_curses || comment.activeCurses, comment.active_curse || comment.activeCurse);
+            const titleBadges = titles.slice(0, 3).map(title => {
+                const god = title.titleGod || '命运';
+                return `<span class="comment-honor-badge title" style="${getGodSkinStyle(god)}" title="${escapeHtml(`${god}｜${title.titleText}${title.titleNote ? `｜${title.titleNote}` : ''}`)}">神诞 · ${escapeHtml(title.titleText)}</span>`;
+            });
+            const curseBadges = curses.slice(0, 2).map(curse => {
+                const god = curse.curseGod || '命运';
+                return `<span class="comment-honor-badge curse" style="${getGodSkinStyle(god)}" title="${escapeHtml(`${god}｜${curse.curseText}${curse.curseNote ? `｜${curse.curseNote}` : ''}`)}">叛誓 · ${escapeHtml(curse.curseText)}</span>`;
+            });
+            const extra = Math.max(0, titles.length - 3) + Math.max(0, curses.length - 2);
+            const extraBadge = extra ? [`<span class="comment-honor-badge" title="还有 ${extra} 条称号或诅咒">+${extra}</span>`] : [];
+            const badges = [...titleBadges, ...curseBadges, ...extraBadge];
+            return badges.length ? `<span class="comment-honor-stack">${badges.join('')}</span>` : '';
+        }
+
         function renderCommentNode(comment, depth = 0, floorNumber = '', creator = '') {
             const deleted = !!comment.is_deleted;
             const canReply = canInteract() && !deleted;
@@ -11601,12 +11746,14 @@
                 ? `<button type="button" class="text-action" data-delete-comment-id="${escapeHtml(comment.id)}">抹去证言</button>`
                 : '';
             const replyAuthor = comment.author || comment.invite_name || '匿名';
+            const honorBadges = renderCommentHonorBadges(comment);
             return `
                 <div class="comment-item ${isReply ? 'reply' : 'root'} ${isArchitect ? 'architect' : ''}">
                     <div class="comment-head">
                         <div class="comment-author-line">
                             <span class="comment-role ${isReply ? 'reply' : 'root'}">${roleLabel}</span>
                             <span class="comment-author">${escapeHtml(comment.author || comment.invite_name || '匿名')}</span>
+                            ${honorBadges}
                             <span class="comment-floor">${escapeHtml(floorLabel)}</span>
                         </div>
                         <span class="comment-time">${formatDate(comment.created_at)}</span>
@@ -11664,6 +11811,7 @@
                         <div class="feed-main">
                             <div class="feed-row">
                                 <span class="feed-author">${escapeHtml(comment.author || '匿名探索者')}</span>
+                                ${renderCommentHonorBadges(comment)}
                                 <span class="feed-action">${escapeHtml(action)}</span>
                                 <span class="feed-dungeon">《${escapeHtml(title)}》</span>
                             </div>

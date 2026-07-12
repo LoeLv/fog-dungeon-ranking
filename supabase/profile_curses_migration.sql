@@ -20,12 +20,11 @@ create table if not exists public.profile_curses (
   revoked_by_name text
 );
 
-create unique index if not exists profile_curses_one_active_idx
-  on public.profile_curses(invite_code_hash)
-  where is_active;
-
 create index if not exists profile_curses_player_idx
   on public.profile_curses(invite_code_hash, granted_at desc);
+
+create index if not exists profile_curses_active_player_idx
+  on public.profile_curses(invite_code_hash, is_active, granted_at desc);
 
 create index if not exists profile_curses_display_name_idx
   on public.profile_curses(display_name, is_active);

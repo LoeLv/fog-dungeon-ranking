@@ -20,12 +20,11 @@ create table if not exists public.profile_titles (
   revoked_by_name text
 );
 
-create unique index if not exists profile_titles_one_active_idx
-  on public.profile_titles(invite_code_hash)
-  where is_active;
-
 create index if not exists profile_titles_player_idx
   on public.profile_titles(invite_code_hash, granted_at desc);
+
+create index if not exists profile_titles_active_player_idx
+  on public.profile_titles(invite_code_hash, is_active, granted_at desc);
 
 create index if not exists profile_titles_display_name_idx
   on public.profile_titles(display_name, is_active);

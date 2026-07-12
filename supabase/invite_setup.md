@@ -14,6 +14,9 @@ supabase/per_person_invites_migration.sql
 supabase/forum_features_migration.sql
 supabase/nickname_binding_migration.sql
 supabase/player_profiles_migration.sql
+supabase/profile_titles_migration.sql
+supabase/profile_curses_migration.sql
+supabase/profile_honor_multi_active_20260712.sql
 supabase/score_system_migration.sql
 supabase/talent_pool_migration.sql
 supabase/talent_inventory_migration.sql
@@ -29,6 +32,9 @@ supabase/match_muster_migration.sql
 - `forum_features_migration.sql`：最新评论流、楼中楼回复、评论删除、作者置顶说明、通关反馈标签。
 - `nickname_binding_migration.sql`：每个邀请码绑定唯一昵称。
 - `player_profiles_migration.sql`：个人档案、神格榜单、登神之路、觐见之梯。
+- `profile_titles_migration.sql`：馆主/神明下放个人称号。
+- `profile_curses_migration.sql`：背弃诅咒和背弃者称号记录。
+- `profile_honor_multi_active_20260712.sql`：允许同一玩家同时持有多条生效称号/诅咒。
 - `score_system_migration.sql`：审核员、分数结算、补分、撤销、结算信封。
 - `talent_pool_migration.sql`：天赋池、抽取记录、碎片兑换。
 - `talent_inventory_migration.sql`：8 格天赋仓库、按分数开放最多 4 个携带槽、溢出取舍。
