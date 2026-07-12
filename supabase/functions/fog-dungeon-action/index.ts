@@ -2787,14 +2787,6 @@ Deno.serve(async (req) => {
         .eq("invite_code_hash", identity.codeHash)
         .not("equipped_slot", "is", null);
       if (currentEquippedError) return json({ error: currentEquippedError.message }, 400);
-      const hasOtherEquipped = (currentEquipped || []).some((item) => Number(item.equipped_slot) !== equippedSlot);
-      const professionEquipped = (currentEquipped || []).some((item) => Number(item.equipped_slot) === 2 && Number(item.id) !== ownedTalentId);
-      if (ownedTalentId && equippedSlot !== 2 && !professionEquipped) {
-        return json({ error: "必须先携带一个职业池天赋" }, 403);
-      }
-      if (!ownedTalentId && equippedSlot === 2 && hasOtherEquipped) {
-        return json({ error: "已有其它携带天赋时，职业天赋不能为空" }, 403);
-      }
 
       if (ownedTalentId) {
         const { data: owned, error: ownedError } = await supabase

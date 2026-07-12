@@ -8106,7 +8106,6 @@
         function renderEquippedTalentSlots(state, god = getProfileFaithGod(getCurrentProfile()) || '命运') {
             const talents = state.ownedTalents || [];
             const byEquippedSlot = new Map(talents.filter(t => t.equipped_slot).map(t => [Number(t.equipped_slot), t]));
-            const hasProfessionEquipped = talents.some(t => Number(t.equipped_slot) === 2);
             const activeLimit = Number(state.equippedSlotLimit || 3);
             const limit = Number(state.maxEquippedSlotLimit || activeLimit || 3);
             return `<div class="talent-equipped-grid">${Array.from({ length: limit }, (_, index) => {
@@ -8122,11 +8121,10 @@
                         const isCurrent = id === Number(talent?.id || 0);
                         const rankBlocked = !canTalentFitCurrentRankRule(state, item, slot, talent);
                         const poolBlocked = !canTalentFitSlotRequirement(item, requirement);
-                        const professionMissing = slot !== 2 && !hasProfessionEquipped;
-                        const disabled = !isCurrent && (rankBlocked || poolBlocked || professionMissing);
-                        const reason = rankBlocked ? `当前分数只允许 ${escapeHtml((state.talentSlotRule?.ranks || []).join(''))} 品阶组合` : (poolBlocked ? `${slotLabel}不能嵌入这个池子的天赋` : '必须先携带一个职业池天赋');
+                        const disabled = !isCurrent && (rankBlocked || poolBlocked);
+                        const reason = rankBlocked ? `当前分数只允许 ${escapeHtml((state.talentSlotRule?.ranks || []).join(''))} 品阶组合` : `${slotLabel}不能嵌入这个池子的天赋`;
                         const disabledText = disabled ? ` disabled title="${escapeHtml(reason)}"` : '';
-                        const suffix = disabled ? `（${escapeHtml(rankBlocked ? '品阶超限' : (poolBlocked ? '池子不符' : '先带职业'))}）` : '';
+                        const suffix = disabled ? `（${escapeHtml(rankBlocked ? '品阶超限' : '池子不符')}）` : '';
                         return `<option value="${id}" ${isCurrent ? 'selected' : ''}${disabledText}>${escapeHtml(renderTalentOptionLabel(item))}${suffix}</option>`;
                     })
                 ].join('');
