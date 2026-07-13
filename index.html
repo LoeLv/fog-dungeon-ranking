@@ -7686,16 +7686,20 @@
         function isFaithLocked(profile) {
             if (canOverrideProfileLocks()) return false;
             const god = getProfileFaithGod(profile);
-            return !!god && god !== '欺诈';
+            return !!god && !hasTrickeryFaithPrivilege(profile);
         }
 
         function isTrickeryProfile(profile) {
             return getProfileFaithGod(profile) === '欺诈';
         }
 
+        function hasTrickeryFaithPrivilege(profile) {
+            return isTrickeryProfile(profile) || getProfessionInfo(profile?.profession).god === '欺诈';
+        }
+
         function isProfessionLocked(profile) {
             if (canOverrideProfileLocks()) return false;
-            return !isTrickeryProfile(profile) && getProfessionInfo(profile?.profession).known;
+            return getProfessionInfo(profile?.profession).known && !hasTrickeryFaithPrivilege(profile);
         }
 
         function areProfileScoresLocked(profile) {
@@ -7974,6 +7978,15 @@
                 audienceScore: profile.audienceScore,
                 items: profile.items
             });
+            if (error) return { data: null, error };
+            const cloudProfile = mapCloudProfileToLocal(data);
+            if (cloudProfile) saveCurrentProfile(cloudProfile);
+            return { data: cloudProfile, error: null };
+        }
+
+        async function syncTrickeryFaithToCloud(faithGod) {
+            if (USE_LOCAL_FALLBACK || !inviteSession?.code) return { data: null, error: null };
+            const { data, error } = await invokeDungeonAction('updateTrickeryFaith', { faithGod });
             if (error) return { data: null, error };
             const cloudProfile = mapCloudProfileToLocal(data);
             if (cloudProfile) saveCurrentProfile(cloudProfile);
@@ -10362,12 +10375,12 @@
                                 <div class="form-group">
                                     <label for="profileFaithGod">信仰神明</label>
                                     <select id="profileFaithGod" onchange="previewProfileFaithSkin(this.value)" ${faithLocked ? 'disabled' : ''}>${renderProfileGodOptions(profile.faithGod)}</select>
-                                <div class="identity-help">${faithLocked ? `信仰已封存为 ${escapeHtml(faith.label)}，不可再改。` : (faith.god === '欺诈' ? '欺诈信徒可改写信仰档纹。嘻嘻。' : '首次封存后信仰将刻入档案；欺诈信徒除外。')}</div>
+                                    <div class="identity-help">${faithLocked ? `信仰已封存为 ${escapeHtml(faith.label)}，不可再改。` : (hasTrickeryFaithPrivilege(profile) ? '欺诈信徒可改写信仰档纹。' : '首次封存后信仰将刻入档案；欺诈信徒除外。')}</div>
                                 </div>
                                 <div class="form-group full">
                                     <label for="profileProfession">个人职业</label>
                                 <select id="profileProfession" ${professionLocked ? 'disabled' : ''}>${renderProfileProfessionOptions(profile.profession)}</select>
-                                    <div class="identity-help">${professionLocked ? `职业已封存为 ${escapeHtml(profile.profession)}，不可再改。` : (faith.god === '欺诈' ? '欺诈信徒可改写职业档纹。嘻嘻。' : '请选择 96 职业之一；首次封存后会刻入档案，欺诈信徒除外。')}</div>
+                                    <div class="identity-help">${professionLocked ? `职业已封存为 ${escapeHtml(profile.profession)}，不可再改。` : (hasTrickeryFaithPrivilege(profile) ? '欺诈信徒可改写职业档纹。' : '请选择 96 职业之一；首次封存后会刻入档案，欺诈信徒除外。')}</div>
                                 </div>
                                 <div class="form-group">
                                     <label for="profileAscensionScore">登神之路分数</label>
@@ -10488,6 +10501,7 @@
             if (!name) { releaseUiActionLock('saveProfilePage'); showToast('请输入个人昵称'); return; }
             const currentProfile = getCurrentProfile();
             const lockedFaithGod = isFaithLocked(currentProfile) ? getProfileFaithGod(currentProfile) : '';
+            const originalFaithGod = getProfileFaithGod(currentProfile);
             const selectedFaithGod = lockedFaithGod || cleanGodName(document.getElementById('profileFaithGod')?.value);
             if (!selectedFaithGod || !getGodInfo(selectedFaithGod).known) {
                 releaseUiActionLock('saveProfilePage');
@@ -10535,8 +10549,15 @@
                 }
                 saveCurrentProfile(profile);
                 const cloudSync = await syncProfileToCloud(profile);
-                if (cloudSync.error) {
-                    showToast(`个人档案已本地保存，云端榜单未同步：${cloudSync.error.message || '请检查 Supabase 档案表'}`);
+                const shouldUseTrickeryFaithAction = !!cloudSync.error && hasTrickeryFaithPrivilege(currentProfile) && selectedFaithInfo.god !== originalFaithGod;
+                const trickeryFaithSync = shouldUseTrickeryFaithAction
+                    ? await syncTrickeryFaithToCloud(selectedFaithInfo.god)
+                    : { data: null, error: null };
+                const syncError = cloudSync.error || trickeryFaithSync.error;
+                if (trickeryFaithSync.error) {
+                    showToast(`个人档案已保存，欺诈改信未同步：${trickeryFaithSync.error.message || '请检查专用接口'}`);
+                } else if (cloudSync.error && !trickeryFaithSync.data) {
+                    showToast(`个人档案已本地保存，云端榜单未同步：${syncError.message || '请检查 Supabase 档案表'}`);
                 } else {
                     showToast('个人档案已保存');
                 }

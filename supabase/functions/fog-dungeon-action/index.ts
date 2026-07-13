@@ -143,6 +143,12 @@ const professionClassByName = new Map(
     Object.entries(group.careers).map(([className, professionName]) => [professionName, className]),
   ),
 );
+const professionGodByName = new Map(
+  professionGroups.flatMap((group) =>
+    Object.values(group.careers).map((professionName) => [professionName, group.god]),
+  ),
+);
+const godPathByName = new Map(professionGroups.map((group) => [group.god, group.path]));
 
 const feedbackTagAllowlist = new Set([
   "机制清楚",
@@ -609,6 +615,16 @@ function getProfessionTalentPoolKey(profile: Record<string, unknown>) {
   const professionClass = professionClassByName.get(profession);
   const poolKey = professionClass ? `Pool${professionClass}` : "";
   return knownTalentPools.includes(poolKey) ? poolKey : "";
+}
+
+function getFaithPathByGod(god: string) {
+  return godPathByName.get(god) || "";
+}
+
+function hasTrickeryFaithPrivilege(profile: Record<string, unknown> | null | undefined) {
+  if (!profile) return false;
+  if (cleanText(profile.faith_god, 20) === "欺诈") return true;
+  return professionGodByName.get(cleanText(profile.profession, 40)) === "欺诈";
 }
 
 function getTalentSlotKind(slot: number) {
@@ -1784,7 +1800,7 @@ Deno.serve(async (req) => {
       if (readError) return json({ error: readError.message }, 400);
 
       const canOverride = role === "admin";
-      const locked = !canOverride && existing?.faith_god && existing.faith_god !== "欺诈";
+      const locked = !canOverride && existing?.faith_god && !hasTrickeryFaithPrivilege(existing);
       const nextFaithGod = locked ? existing.faith_god : faithGod;
       const nextFaithPath = locked ? existing.faith_path : faithPath;
       const nextProfession = locked ? existing.profession : profession;
@@ -1833,6 +1849,55 @@ Deno.serve(async (req) => {
       };
 
       return json({ role, name: identity.displayName, data: dataWithTitle });
+    }
+
+    if (action === "updateTrickeryFaith") {
+      if (role === "god") return json({ error: "神明账号不建立信徒个人档案" }, 403);
+      if (!hasRole(role, ["player", "author", "reviewer", "admin"])) return json({ error: "需要入局谕令" }, 403);
+
+      const faithGod = cleanText(payload.faithGod, 20);
+      const faithPath = getFaithPathByGod(faithGod);
+      if (!faithGod || !faithPath) return json({ error: "请选择有效信仰神明" }, 400);
+
+      const { data: existing, error: readError } = await supabase
+        .from("player_profiles")
+        .select("faith_god, faith_path, profession")
+        .eq("invite_code_hash", identity.codeHash)
+        .maybeSingle();
+      if (readError?.code === "42P01") return json({ error: "请先运行 player_profiles_migration.sql" }, 400);
+      if (readError) return json({ error: readError.message }, 400);
+      if (!existing) return json({ error: "请先保存个人档案" }, 400);
+      if (role !== "admin" && !hasTrickeryFaithPrivilege(existing)) {
+        return json({ error: "只有欺诈信徒可以改写信仰档纹" }, 403);
+      }
+
+      const { data, error } = await supabase
+        .from("player_profiles")
+        .update({
+          faith_god: faithGod,
+          faith_path: faithPath,
+          updated_at: new Date().toISOString(),
+        })
+        .eq("invite_code_hash", identity.codeHash)
+        .select("display_name, role, faith_god, faith_path, profession, ascension_score, audience_score, items, talents, scores_locked_at, updated_at")
+        .single();
+      if (error) return json({ error: error.message }, 400);
+
+      const titleResult = await getActiveTitleForHash(supabase, identity.codeHash);
+      if (titleResult.error) return json({ error: titleResult.error.message }, 400);
+      const curseResult = await getActiveCurseForHash(supabase, identity.codeHash);
+      if (curseResult.error) return json({ error: curseResult.error.message }, 400);
+      return json({
+        role,
+        name: identity.displayName,
+        data: {
+          ...data,
+          active_title: titleResult.title,
+          active_titles: titleResult.titles || [],
+          active_curse: curseResult.curse,
+          active_curses: curseResult.curses || [],
+        },
+      });
     }
 
     if (action === "listProfiles") {
