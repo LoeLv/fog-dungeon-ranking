@@ -37,6 +37,7 @@ const roleLabels: Record<InviteRole, string> = {
   admin: "馆主",
   god: "神明",
 };
+const dungeonReviewerNames = new Set(["羔羊", "槐柏"]);
 
 const godNames = new Set([
   "诞育",
@@ -477,6 +478,11 @@ function canGrantTitles(role: InviteRole) {
   return hasRole(role, ["admin", "god"]);
 }
 
+function canReviewDungeons(identity: InviteIdentity) {
+  if (hasRole(identity.role, ["admin", "god"])) return true;
+  return identity.role === "reviewer" && dungeonReviewerNames.has(identity.displayName);
+}
+
 function getTitleGrantGod(identity: InviteIdentity, requestedGod: unknown) {
   if (identity.role === "god") return identity.displayName;
   return cleanText(requestedGod, 20);
@@ -492,6 +498,16 @@ function canManageDungeonRecord(dungeon: Record<string, unknown>, identity: Invi
   return cleanCoCreators(dungeon.co_creators).some((name) => cleanText(name, 40) === displayName);
 }
 
+function getDungeonReviewStatus(dungeon: Record<string, unknown>) {
+  return cleanText(dungeon.review_status, 20) || "approved";
+}
+
+function canViewDungeonRecord(dungeon: Record<string, unknown>, identity: InviteIdentity | null) {
+  if (getDungeonReviewStatus(dungeon) === "approved") return true;
+  if (!identity) return false;
+  return canReviewDungeons(identity) || canManageDungeonRecord(dungeon, identity);
+}
+
 function isMissingInviteColumn(error: { code?: string; message?: string } | null) {
   return error?.code === "42703" && (
     error?.message?.includes("invite_code_hash") ||
@@ -505,6 +521,16 @@ function isMissingForumColumn(error: { code?: string; message?: string } | null)
 
 function isMissingCoCreatorsColumn(error: LooseError) {
   return error?.code === "42703" && !!error.message?.includes("co_creators");
+}
+
+function isMissingDungeonReviewColumn(error: LooseError) {
+  return error?.code === "42703" && (
+    !!error.message?.includes("review_status") ||
+    !!error.message?.includes("reviewed_by_hash") ||
+    !!error.message?.includes("reviewed_by_name") ||
+    !!error.message?.includes("reviewed_at") ||
+    !!error.message?.includes("review_note")
+  );
 }
 
 function cleanFeedbackTags(value: unknown) {
@@ -1671,6 +1697,40 @@ Deno.serve(async (req) => {
     const result = await getCommentHonorBuckets(supabase, payload.commentIds);
     if (result.error) return json({ error: result.error.message }, 400);
     return json({ data: { byCommentId: result.byCommentId } });
+  }
+
+  if (action === "listDungeons") {
+    const identity = body.inviteCode ? await getInviteIdentity(supabase, body.inviteCode) : null;
+    const limit = Math.max(1, Math.min(300, Number(payload.limit || 300)));
+    const selectFields = "id, name, creator, co_creators, difficulty, type, description, pinned_note, participant_count, run_count, clear_count, clear_rate, invite_code_hash, invite_name, avg_rating, rating_count, comment_count, created_at, is_one_shot, review_status, reviewed_at, reviewed_by_name, review_note";
+    const { data, error } = await supabase
+      .from("dungeons")
+      .select(selectFields)
+      .order("avg_rating", { ascending: false })
+      .order("created_at", { ascending: false })
+      .limit(limit);
+    if (error?.code === "42703") return json({ error: "请先运行 dungeon review migration" }, 400);
+    if (error) return json({ error: error.message }, 400);
+    const rows = (data || [])
+      .filter((dungeon) => canViewDungeonRecord(dungeon as Record<string, unknown>, identity))
+      .map((dungeon) => {
+        const record = dungeon as Record<string, unknown>;
+        const reviewStatus = getDungeonReviewStatus(record);
+        const creatorOwned = !!identity && canManageDungeonRecord(record, identity);
+        return {
+          ...toPublicDungeonSummary(record),
+          description: cleanText(record.description, 1800),
+          pinned_note: cleanText(record.pinned_note, 800),
+          review_status: reviewStatus,
+          reviewed_at: cleanText(record.reviewed_at, 80),
+          reviewed_by_name: cleanText(record.reviewed_by_name, 40),
+          review_note: cleanText(record.review_note, 800),
+          can_manage: !!identity && (canReviewDungeons(identity) || creatorOwned),
+          is_pending_review: reviewStatus === "pending",
+          is_rejected: reviewStatus === "rejected",
+        };
+      });
+    return json({ data: rows });
   }
 
   const identity = await getInviteIdentity(supabase, body.inviteCode);
@@ -3242,6 +3302,22 @@ Deno.serve(async (req) => {
       if (!Number.isInteger(runCount) || runCount < 1 || runCount > 999) return json({ error: "当前周目不正确" }, 400);
 
       const editDungeonId = cleanText(payload.dungeonId ?? payload.dungeon_id, 80);
+      const reviewStatus = canReviewDungeons(identity) ? "approved" : "pending";
+      const reviewUpdate = reviewStatus === "approved"
+        ? {
+          review_status: "approved",
+          reviewed_by_hash: identity.codeHash,
+          reviewed_by_name: identity.displayName,
+          reviewed_at: new Date().toISOString(),
+          review_note: "",
+        }
+        : {
+          review_status: "pending",
+          reviewed_by_hash: null,
+          reviewed_by_name: null,
+          reviewed_at: null,
+          review_note: "",
+        };
       if (editDungeonId) {
         if (!isUuid(editDungeonId)) return json({ error: "副本 ID 不正确" }, 400);
         const { data: existingDungeon, error: readError } = await supabase
@@ -3273,11 +3349,13 @@ Deno.serve(async (req) => {
             run_count: runCount,
             is_one_shot: isOneShot,
             clear_rate: clearRate,
+            ...reviewUpdate,
           })
           .eq("id", editDungeonId)
           .select()
           .single();
         if (isMissingCoCreatorsColumn(error)) return json({ error: "请先运行同契共筑数据库升级 SQL" }, 400);
+        if (isMissingDungeonReviewColumn(error)) return json({ error: "请先运行副本审核数据库升级 SQL" }, 400);
         if (isMissingForumColumn(error)) return json({ error: "请先运行论坛功能数据库升级 SQL" }, 400);
         if (error) return json({ error: error.message }, 400);
         return json({ role, name: identity.displayName, data });
@@ -3300,6 +3378,7 @@ Deno.serve(async (req) => {
           clear_rate: 0,
           invite_code_hash: identity.codeHash,
           invite_name: identity.displayName,
+          ...reviewUpdate,
         })
         .select()
         .single();
@@ -3335,6 +3414,7 @@ Deno.serve(async (req) => {
         if (retry.error) return json({ error: retry.error.message }, 400);
         return json({ role, name: identity.displayName, data: retry.data });
       }
+      if (isMissingDungeonReviewColumn(error)) return json({ error: "请先运行副本审核数据库升级 SQL" }, 400);
       if (isMissingForumColumn(error)) {
         const retry = await supabase
           .from("dungeons")
@@ -3360,6 +3440,32 @@ Deno.serve(async (req) => {
       return json({ role, name: identity.displayName, data });
     }
 
+    if (action === "reviewDungeon") {
+      if (!canReviewDungeons(identity)) return json({ error: "需要羔羊、槐柏、神明或馆主权限" }, 403);
+
+      const dungeonId = cleanText(payload.dungeonId, 80);
+      const decision = cleanText(payload.decision, 20);
+      const reviewNote = cleanText(payload.reviewNote, 800);
+      if (!isUuid(dungeonId)) return json({ error: "副本 ID 不正确" }, 400);
+      if (!["approve", "reject"].includes(decision)) return json({ error: "审核结果不正确" }, 400);
+
+      const { data, error } = await supabase
+        .from("dungeons")
+        .update({
+          review_status: decision === "approve" ? "approved" : "rejected",
+          reviewed_by_hash: identity.codeHash,
+          reviewed_by_name: identity.displayName,
+          reviewed_at: new Date().toISOString(),
+          review_note: reviewNote,
+        })
+        .eq("id", dungeonId)
+        .select()
+        .single();
+      if (isMissingDungeonReviewColumn(error)) return json({ error: "请先运行副本审核数据库升级 SQL" }, 400);
+      if (error) return json({ error: error.message }, 400);
+      return json({ role, name: identity.displayName, data });
+    }
+
     if (action === "markCleared") {
       if (!hasRole(role, ["player", "author", "reviewer", "admin"])) return json({ error: "需要入局谕令" }, 403);
 
@@ -3368,10 +3474,13 @@ Deno.serve(async (req) => {
 
       const { data: dungeon, error: dungeonError } = await supabase
         .from("dungeons")
-        .select("run_count")
+        .select("run_count, invite_code_hash, invite_name, creator, co_creators, review_status")
         .eq("id", dungeonId)
         .single();
       if (dungeonError) return json({ error: dungeonError.message }, 400);
+      if (!canViewDungeonRecord(dungeon as Record<string, unknown>, identity) || getDungeonReviewStatus(dungeon as Record<string, unknown>) !== "approved") {
+        return json({ error: "副本尚未正式发布，不能登记通关" }, 403);
+      }
       const runNumber = Number(dungeon.run_count) || 1;
       const feedbackTags = cleanFeedbackTags(payload.feedbackTags);
       const feedbackNote = cleanText(payload.feedbackNote, 200);
@@ -3446,6 +3555,15 @@ Deno.serve(async (req) => {
       if (!isUuid(dungeonId) || !Number.isInteger(rating) || rating < 1 || rating > 5) {
         return json({ error: "评分参数不正确" }, 400);
       }
+      const { data: dungeonForRating, error: dungeonForRatingError } = await supabase
+        .from("dungeons")
+        .select("id, invite_code_hash, invite_name, creator, co_creators, review_status")
+        .eq("id", dungeonId)
+        .single();
+      if (dungeonForRatingError) return json({ error: dungeonForRatingError.message }, 400);
+      if (!canViewDungeonRecord(dungeonForRating as Record<string, unknown>, identity) || getDungeonReviewStatus(dungeonForRating as Record<string, unknown>) !== "approved") {
+        return json({ error: "副本尚未正式发布，不能评分" }, 403);
+      }
 
       const { data, error } = await supabase
         .from("ratings")
@@ -3480,6 +3598,15 @@ Deno.serve(async (req) => {
       const content = cleanText(payload.content, 800);
       const parentCommentId = cleanText(payload.parentCommentId, 80);
       if (!isUuid(dungeonId) || !content) return json({ error: "评论参数不正确" }, 400);
+      const { data: dungeonForComment, error: dungeonForCommentError } = await supabase
+        .from("dungeons")
+        .select("id, invite_code_hash, invite_name, creator, co_creators, review_status")
+        .eq("id", dungeonId)
+        .single();
+      if (dungeonForCommentError) return json({ error: dungeonForCommentError.message }, 400);
+      if (!canViewDungeonRecord(dungeonForComment as Record<string, unknown>, identity) || getDungeonReviewStatus(dungeonForComment as Record<string, unknown>) !== "approved") {
+        return json({ error: "副本尚未正式发布，不能递交证言" }, 403);
+      }
       if (parentCommentId) {
         if (!isUuid(parentCommentId)) return json({ error: "回复目标不正确" }, 400);
         const { data: parent, error: parentError } = await supabase

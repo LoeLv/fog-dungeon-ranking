@@ -7382,6 +7382,9 @@
         function isGodRole() { return getInviteRole() === 'god'; }
         function canGrantTitlesUI() { return canUseRole(['admin', 'god']); }
         function canSettleScores() { return canUseRole(['reviewer', 'admin']); }
+        function canReviewDungeonsUI() {
+            return canUseRole(['admin', 'god']) || (getInviteRole() === 'reviewer' && ['羔羊', '槐柏'].includes(inviteSession?.name || ''));
+        }
         function isInitialDisplayNameBinding() {
             if (!inviteSession?.code || !inviteSession?.name || isGodRole()) return false;
             return String(inviteSession.name).trim().toLowerCase() === String(inviteSession.code).trim().toLowerCase();
@@ -10509,7 +10512,7 @@
         async function invokeDungeonAction(action, payload = {}, codeOverride = null) {
             const inviteCode = codeOverride ?? inviteSession?.code;
             const inviteSnapshot = codeOverride ? '' : getInviteSnapshot();
-            if (!USE_LOCAL_FALLBACK && !inviteCode) {
+            if (!USE_LOCAL_FALLBACK && !inviteCode && action !== 'listDungeons') {
                 return { data: null, error: { message: '请先验入局谕令' } };
             }
             const response = await fetch(DUNGEON_ACTION_URL, {
@@ -10547,20 +10550,7 @@
 
         async function fetchDungeons() {
             if (USE_LOCAL_FALLBACK) return getLocalData('dungeons', []);
-            let { data, error } = await supabaseClient
-                .from('dungeons')
-                .select('id,name,creator,co_creators,difficulty,type,description,pinned_note,participant_count,run_count,clear_count,clear_rate,invite_name,avg_rating,rating_count,comment_count,created_at,is_one_shot')
-                .order('avg_rating', { ascending: false })
-                .order('created_at', { ascending: false });
-            if (error?.code === '42703') {
-                const fallback = await supabaseClient
-                    .from('dungeons')
-                    .select('id,name,creator,difficulty,type,description,participant_count,run_count,clear_count,clear_rate,invite_name,avg_rating,rating_count,comment_count,created_at,is_one_shot')
-                    .order('avg_rating', { ascending: false })
-                    .order('created_at', { ascending: false });
-                data = fallback.data;
-                error = fallback.error;
-            }
+            let { data, error } = await invokeDungeonAction('listDungeons', { limit: 300 });
             if (error) { showToast('❌ 获取数据失败'); return []; }
             return (data || []).map(d => ({ ...d, pinned_note: d.pinned_note || '' }));
         }
@@ -10763,6 +10753,21 @@
                 return { data: [d], error: null };
             }
             return invokeDungeonAction('updatePinnedNote', { dungeonId, pinnedNote: pinnedNote.trim() });
+        }
+
+        async function reviewDungeon(dungeonId, decision, reviewNote = '') {
+            if (USE_LOCAL_FALLBACK) {
+                const dungeons = getLocalData('dungeons', []);
+                const d = dungeons.find(item => item.id === dungeonId);
+                if (!d) return { error: { message: '试炼未找到' } };
+                d.review_status = decision === 'approve' ? 'approved' : 'rejected';
+                d.review_note = reviewNote;
+                d.reviewed_by_name = inviteSession?.name || '';
+                d.reviewed_at = new Date().toISOString();
+                setLocalData('dungeons', dungeons);
+                return { data: d, error: null };
+            }
+            return invokeDungeonAction('reviewDungeon', { dungeonId, decision, reviewNote });
         }
 
         async function removeDungeon(dungeonId) {
@@ -11935,6 +11940,7 @@
                         <span class="tag path-tag lore-tag ${godClass}" data-prayer="${escapeHtml(pathMeta.edict)}">${escapeHtml(godPath)}命途</span>
                         <span class="tag danger-stamp ${getDiffClass(d.difficulty)} ${godClass}-difficulty">${escapeHtml(difficultyLabel)}</span>
                         <span class="tag lore-tag ${isOneShotDungeon(d) ? 'divine-tag' : ''}">${escapeHtml(formatTrialArchive(d))}</span>
+                        ${isDungeonApproved(d) ? '' : `<span class="tag divine-tag">${escapeHtml(formatDungeonReviewStatus(d))}</span>`}
                         ${isDivineTrial(d) ? '<span class="tag divine-tag">神级愚戏</span>' : ''}
                         <span class="trial-data-pill">🎲 ${formatDate(d.created_at)}降下</span>
                     </div>
@@ -12056,6 +12062,18 @@
             const slots = getTotalSlots(d);
             return `${getClearCount(d)} / ${slots || '未定'}`;
         }
+        function getDungeonReviewStatus(d) {
+            return String(d?.review_status || 'approved');
+        }
+        function isDungeonApproved(d) {
+            return getDungeonReviewStatus(d) === 'approved';
+        }
+        function formatDungeonReviewStatus(d) {
+            const status = getDungeonReviewStatus(d);
+            if (status === 'pending') return '待审核';
+            if (status === 'rejected') return '已退回';
+            return '已发布';
+        }
         function formatDate(iso) { if(!iso)return'未知'; const d=new Date(iso),n=new Date(),diff=Math.floor((n-d)/86400000); if(diff===0)return'今天'; if(diff===1)return'昨天'; if(diff<7)return`${diff}天前`; if(diff<30)return`${Math.floor(diff/7)}周前`; return d.toLocaleDateString('zh-CN'); }
         function escapeHtml(s) { const d=document.createElement('div'); d.textContent=s||''; return d.innerHTML; }
         function jsString(value) { return JSON.stringify(String(value ?? '')); }
@@ -12072,6 +12090,9 @@
 
         function canManageDungeon(d) {
             return canEditPinned(d);
+        }
+        function canReviewDungeon(d) {
+            return canReviewDungeonsUI();
         }
 
         function canDeleteComment(c) {
@@ -12211,11 +12232,13 @@
             const comments = await fetchComments(id);
             const feedbackSummary = await fetchClearFeedbackSummary(id);
             const rated = await checkHasRated(id);
-            const ratingLocked = !canInteract();
-            const testimonyLocked = !canTestify();
-            const ratingText = rated ? '✅ 你已经封存神格评议' : (ratingLocked ? '🎲 验入局谕令后可降下判定' : '选择 1-5 阶，封存你的神格评议');
+            const reviewStatus = getDungeonReviewStatus(d);
+            const published = isDungeonApproved(d);
+            const ratingLocked = !canInteract() || !published;
+            const testimonyLocked = !canTestify() || !published;
+            const ratingText = !published ? `此试炼${formatDungeonReviewStatus(d)}，暂不可判定` : (rated ? '✅ 你已经封存神格评议' : (ratingLocked ? '🎲 验入局谕令后可降下判定' : '选择 1-5 阶，封存你的神格评议'));
             const commentLockedAttrs = testimonyLocked ? 'disabled' : '';
-            const commentPlaceholder = testimonyLocked ? '验入局谕令后可递交证言' : getTestimonyPlaceholder(d.type);
+            const commentPlaceholder = !published ? '副本通过审核后才可递交证言' : (testimonyLocked ? '验入局谕令后可递交证言' : getTestimonyPlaceholder(d.type));
             const runCount = getRunCount(d);
             const clearLocalKey = `${id}:${runCount}:${inviteSession?.code || 'guest'}`;
             const clearDone = !!getLocalData('cleared_supabase', {})[clearLocalKey];
@@ -12237,6 +12260,11 @@
                 : `<button class="btn btn-outline btn-sm" onclick="${ratingLocked ? `openInviteModal('验入局谕令后可为试炼降下神格判定。')` : `openRatingModal('${escapeHtml(id)}')`}">${ratingLocked ? '验入局谕令' : '降下你的判定'}</button>`;
             const pinnedNote = d.pinned_note || '';
             const canEditNote = canEditPinned(d);
+            const reviewActionsHtml = canReviewDungeon(d) && reviewStatus !== 'approved' ? `
+                <div class="profile-tools" style="margin:12px 0;">
+                    <button class="btn btn-primary btn-sm" onclick="reviewDungeonUI('${escapeHtml(id)}', 'approve')">审核通过</button>
+                    <button class="btn btn-outline btn-sm" onclick="reviewDungeonUI('${escapeHtml(id)}', 'reject')">退回副本</button>
+                </div>` : '';
             const pinnedNoteHtml = pinnedNote || canEditNote ? `
                 <div class="pinned-note">
                     <div class="pinned-note-head">
@@ -12279,6 +12307,7 @@
                         <span class="trial-data-pill">归档：${escapeHtml(formatTrialArchive(d))}</span>
                         <span class="trial-data-pill">通关留存率：${formatClearRate(d)}</span>
                         <span class="trial-data-pill">证言条数：${activeCommentCount}</span>
+                        <span class="trial-data-pill">审核状态：${escapeHtml(formatDungeonReviewStatus(d))}</span>
                         ${canSubmit() ? `<button class="btn btn-outline btn-xs" onclick="advanceRunUI('${escapeHtml(id)}')">重掷下一局</button>` : ''}
                         ${canManageDungeon(d) ? `<button class="btn btn-outline btn-xs" onclick="editDungeonUI('${escapeHtml(id)}')">重铸绝境</button>` : ''}
                         ${canManageDungeon(d) ? `<button class="btn btn-danger btn-xs" onclick="deleteDungeon('${escapeHtml(id)}')">封存试炼</button>` : ''}
@@ -12290,6 +12319,7 @@
                     </div>
                 </section>
                 ${renderDetailDossier(d, { locked: ratingLocked, rated, clearDone, activeCommentCount })}
+                ${reviewActionsHtml}
                 ${pinnedNoteHtml}
                 <div class="clear-panel">
                     <div class="clear-panel-head">
@@ -12837,9 +12867,13 @@
             btn.disabled=true;
             btn.textContent=dungeonId ? '重铸中...' : '献祭中...';
             try {
-                const {error}=await addDungeon({dungeonId,name,creator,coCreators,difficulty,type,participantCount,runCount,description:desc,pinnedNote,isOneShot,dungeonMode});
+                const {data, error}=await addDungeon({dungeonId,name,creator,coCreators,difficulty,type,participantCount,runCount,description:desc,pinnedNote,isOneShot,dungeonMode});
                 if(error){showToast(`❌ ${error.message || '失败'}`);return;}
-                showToast(dungeonId ? '绝境已重铸' : '你已代行神明权柄，一场愚戏试炼，正式落位切片宇宙。静待信徒入局，降下他们的神格判定。');
+                const submittedStatus = data?.review_status || (canReviewDungeonsUI() ? 'approved' : 'pending');
+                const successText = submittedStatus === 'approved'
+                    ? (dungeonId ? '绝境已重铸并发布' : '试炼已正式发布')
+                    : (dungeonId ? '绝境已重铸，等待副本审核员复核' : '试炼已提交，等待副本审核员审核后发布');
+                showToast(successText);
                 closeSubmitModal();
                 if (dungeonId) await openDetail(dungeonId);
                 await renderDungeonList();
@@ -12849,6 +12883,24 @@
             } finally {
                 btn.disabled=false;
                 btn.textContent=dungeonId ? '重铸绝境' : (isGodRole() ? '降下祈愿创本' : '献祭试炼至圣殿');
+                releaseUiActionLock(lockKey);
+            }
+        }
+
+        async function reviewDungeonUI(id, decision) {
+            if (!canReviewDungeonsUI()) { showToast('需要副本审核员权限'); return; }
+            const approve = decision === 'approve';
+            const note = approve ? '' : (prompt('填写退回原因（可选）') || '').trim().slice(0, 800);
+            if (!approve && !confirm('确定退回这个副本吗？作者可重铸后再次提交。')) return;
+            const lockKey = `reviewDungeon:${id}`;
+            if (!acquireUiActionLock(lockKey, '副本正在审核，请勿重复点击')) return;
+            try {
+                const { error } = await reviewDungeon(id, decision, note);
+                if (error) { showToast(`❌ ${error.message || '审核失败'}`); return; }
+                showToast(approve ? '副本已审核通过并发布' : '副本已退回');
+                await renderDungeonList();
+                await openDetail(id);
+            } finally {
                 releaseUiActionLock(lockKey);
             }
         }
