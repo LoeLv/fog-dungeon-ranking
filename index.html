@@ -7671,6 +7671,12 @@
             return info ? { ...info, known: true } : { name: clean, className: '', god: '', path: '', known: false };
         }
 
+        function isProfileBindingMismatched(profile) {
+            const god = getProfileFaithGod(profile);
+            const profession = getProfessionInfo(profile?.profession);
+            return !!god && profession.known && profession.god !== god;
+        }
+
         function splitProfileLines(value) {
             return String(value || '')
                 .split(/[\n,，;；]/)
@@ -7686,7 +7692,7 @@
         function isFaithLocked(profile) {
             if (canOverrideProfileLocks()) return false;
             const god = getProfileFaithGod(profile);
-            return !!god && !hasTrickeryFaithPrivilege(profile);
+            return !!god && !hasTrickeryFaithPrivilege(profile) && !isProfileBindingMismatched(profile);
         }
 
         function isTrickeryProfile(profile) {
@@ -7699,7 +7705,7 @@
 
         function isProfessionLocked(profile) {
             if (canOverrideProfileLocks()) return false;
-            return getProfessionInfo(profile?.profession).known && !hasTrickeryFaithPrivilege(profile);
+            return getProfessionInfo(profile?.profession).known && !hasTrickeryFaithPrivilege(profile) && !isProfileBindingMismatched(profile);
         }
 
         function areProfileScoresLocked(profile) {
@@ -7729,13 +7735,16 @@
             return emptyOption + GOD_GROUPS.map(group => `<optgroup label="${escapeHtml(group.path)}命途">${group.gods.map(god => `<option value="${escapeHtml(god)}" ${god === cleanSelected ? 'selected' : ''}>${escapeHtml(getGodIcon(god))} ${escapeHtml(god)}之神 · ${escapeHtml(group.path)}命途</option>`).join('')}</optgroup>`).join('');
         }
 
-        function renderProfileProfessionOptions(selected) {
+        function renderProfileProfessionOptions(selected, faithGod = '') {
             const cleanSelected = normalizeProfession(selected || '');
-            const emptyOption = `<option value="" ${cleanSelected ? '' : 'selected'}>请选择游戏职业</option>`;
-            return emptyOption + PROFESSION_GROUPS.map(group => {
+            const selectedGod = cleanGodName(faithGod);
+            const groups = selectedGod ? PROFESSION_GROUPS.filter(group => group.god === selectedGod) : PROFESSION_GROUPS;
+            const hasSelectedInGroups = groups.some(group => Object.values(group.careers).includes(cleanSelected));
+            const emptyOption = `<option value="" ${hasSelectedInGroups ? '' : 'selected'}>请选择游戏职业</option>`;
+            return emptyOption + groups.map(group => {
                 const groupLabel = `${group.path}命途 · ${group.god}之神`;
                 const options = Object.entries(group.careers)
-                    .map(([className, profession]) => `<option value="${escapeHtml(profession)}" ${profession === cleanSelected ? 'selected' : ''}>${escapeHtml(className)} · ${escapeHtml(profession)}</option>`)
+                    .map(([className, profession]) => `<option value="${escapeHtml(profession)}" ${profession === cleanSelected && hasSelectedInGroups ? 'selected' : ''}>${escapeHtml(className)} · ${escapeHtml(profession)}</option>`)
                     .join('');
                 return `<optgroup label="${escapeHtml(groupLabel)}">${options}</optgroup>`;
             }).join('');
@@ -10294,6 +10303,7 @@
             const faithStyle = getGodSkinStyle(faithGod);
             const faithLocked = isFaithLocked(profile);
             const professionLocked = isProfessionLocked(profile);
+            const bindingMismatched = isProfileBindingMismatched(profile);
             const scoresLocked = areProfileScoresLocked(profile);
             const profession = getProfessionInfo(profile.profession);
             const roleLabel = ROLE_LABELS[getInviteRole()] || '入局信徒';
@@ -10375,12 +10385,12 @@
                                 <div class="form-group">
                                     <label for="profileFaithGod">信仰神明</label>
                                     <select id="profileFaithGod" onchange="previewProfileFaithSkin(this.value)" ${faithLocked ? 'disabled' : ''}>${renderProfileGodOptions(profile.faithGod)}</select>
-                                    <div class="identity-help">${faithLocked ? `信仰已封存为 ${escapeHtml(faith.label)}，不可再改。` : (hasTrickeryFaithPrivilege(profile) ? '欺诈信徒可改写信仰档纹。' : '首次封存后信仰将刻入档案；欺诈信徒除外。')}</div>
+                                    <div class="identity-help">${faithLocked ? `信仰已封存为 ${escapeHtml(faith.label)}，不可再改。` : (bindingMismatched ? '当前信仰与职业不匹配，请重新选择信仰与对应职业完成修复。' : (hasTrickeryFaithPrivilege(profile) ? '欺诈信徒可改写信仰档纹。' : '首次封存后信仰将刻入档案；欺诈信徒除外。'))}</div>
                                 </div>
                                 <div class="form-group full">
                                     <label for="profileProfession">个人职业</label>
-                                <select id="profileProfession" ${professionLocked ? 'disabled' : ''}>${renderProfileProfessionOptions(profile.profession)}</select>
-                                    <div class="identity-help">${professionLocked ? `职业已封存为 ${escapeHtml(profile.profession)}，不可再改。` : (hasTrickeryFaithPrivilege(profile) ? '欺诈信徒可改写职业档纹。' : '请选择 96 职业之一；首次封存后会刻入档案，欺诈信徒除外。')}</div>
+                                <select id="profileProfession" ${professionLocked ? 'disabled' : ''}>${renderProfileProfessionOptions(profile.profession, profile.faithGod)}</select>
+                                    <div class="identity-help">${professionLocked ? `职业已封存为 ${escapeHtml(profile.profession)}，不可再改。` : (bindingMismatched ? '职业只能从当前信仰神明下选择，修复后会重新封存。' : (hasTrickeryFaithPrivilege(profile) ? '欺诈信徒可改写职业档纹。' : '请先选择信仰，再选择该信仰下的职业；首次封存后会刻入档案，欺诈信徒除外。'))}</div>
                                 </div>
                                 <div class="form-group">
                                     <label for="profileAscensionScore">登神之路分数</label>
@@ -10514,6 +10524,12 @@
             if (!selectedProfession) {
                 releaseUiActionLock('saveProfilePage');
                 showToast('请选择游戏里的 96 职业之一');
+                return;
+            }
+            const selectedProfessionInfo = getProfessionInfo(selectedProfession);
+            if (!selectedProfessionInfo.known || selectedProfessionInfo.god !== selectedFaithInfo.god) {
+                releaseUiActionLock('saveProfilePage');
+                showToast('职业必须选择当前信仰神明下的职业');
                 return;
             }
             const scoresLocked = areProfileScoresLocked(currentProfile);
@@ -11170,6 +11186,14 @@
             if (!info.known) return;
             const skin = getGodSkin(info.god);
             const style = getGodSkinStyle(info.god);
+            const professionSelect = document.getElementById('profileProfession');
+            if (professionSelect && !professionSelect.disabled) {
+                const currentProfession = normalizeProfession(professionSelect.value);
+                const currentInfo = getProfessionInfo(currentProfession);
+                const nextProfession = currentInfo.known && currentInfo.god === info.god ? currentProfession : '';
+                professionSelect.innerHTML = renderProfileProfessionOptions(nextProfession, info.god);
+                professionSelect.value = nextProfession;
+            }
             const page = document.getElementById('profilePage');
             if (page) {
                 page.setAttribute('data-god', info.god);

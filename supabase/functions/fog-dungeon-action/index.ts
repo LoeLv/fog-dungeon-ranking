@@ -621,10 +621,21 @@ function getFaithPathByGod(god: string) {
   return godPathByName.get(god) || "";
 }
 
+function getProfessionGod(profession: unknown) {
+  return professionGodByName.get(cleanText(profession, 40)) || "";
+}
+
+function isProfileBindingMismatched(profile: Record<string, unknown> | null | undefined) {
+  if (!profile) return false;
+  const faithGod = cleanText(profile.faith_god, 20);
+  const professionGod = getProfessionGod(profile.profession);
+  return !!faithGod && !!professionGod && professionGod !== faithGod;
+}
+
 function hasTrickeryFaithPrivilege(profile: Record<string, unknown> | null | undefined) {
   if (!profile) return false;
   if (cleanText(profile.faith_god, 20) === "欺诈") return true;
-  return professionGodByName.get(cleanText(profile.profession, 40)) === "欺诈";
+  return getProfessionGod(profile.profession) === "欺诈";
 }
 
 function getTalentSlotKind(slot: number) {
@@ -1790,6 +1801,12 @@ Deno.serve(async (req) => {
       const ascensionScore = cleanScore(payload.ascensionScore);
       const audienceScore = cleanScore(payload.audienceScore);
       if (!faithGod || !faithPath || !profession) return json({ error: "个人档案缺少信仰或职业" }, 400);
+      const expectedFaithPath = getFaithPathByGod(faithGod);
+      const professionGod = getProfessionGod(profession);
+      if (!expectedFaithPath) return json({ error: "请选择有效信仰神明" }, 400);
+      if (faithPath !== expectedFaithPath) return json({ error: "信仰命途与神明不匹配" }, 400);
+      if (!professionGod) return json({ error: "请选择有效职业" }, 400);
+      if (professionGod !== faithGod) return json({ error: "职业必须选择当前信仰神明下的职业" }, 400);
 
       const { data: existing, error: readError } = await supabase
         .from("player_profiles")
@@ -1800,7 +1817,7 @@ Deno.serve(async (req) => {
       if (readError) return json({ error: readError.message }, 400);
 
       const canOverride = role === "admin";
-      const locked = !canOverride && existing?.faith_god && !hasTrickeryFaithPrivilege(existing);
+      const locked = !canOverride && existing?.faith_god && !hasTrickeryFaithPrivilege(existing) && !isProfileBindingMismatched(existing);
       const nextFaithGod = locked ? existing.faith_god : faithGod;
       const nextFaithPath = locked ? existing.faith_path : faithPath;
       const nextProfession = locked ? existing.profession : profession;
@@ -1867,7 +1884,7 @@ Deno.serve(async (req) => {
       if (readError?.code === "42P01") return json({ error: "请先运行 player_profiles_migration.sql" }, 400);
       if (readError) return json({ error: readError.message }, 400);
       if (!existing) return json({ error: "请先保存个人档案" }, 400);
-      if (role !== "admin" && !hasTrickeryFaithPrivilege(existing)) {
+      if (role !== "admin" && !hasTrickeryFaithPrivilege(existing) && !isProfileBindingMismatched(existing)) {
         return json({ error: "只有欺诈信徒可以改写信仰档纹" }, 403);
       }
 
