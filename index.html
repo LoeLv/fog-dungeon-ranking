@@ -12865,8 +12865,13 @@
             if (!form) return;
             form.reset();
             resetSubmitDefaults();
+            const creatorInput = document.getElementById('dungeonCreator');
+            if (creatorInput) {
+                creatorInput.disabled = false;
+                creatorInput.readOnly = false;
+                creatorInput.removeAttribute('aria-readonly');
+            }
             if (!dungeon) {
-                const creatorInput = document.getElementById('dungeonCreator');
                 if (creatorInput && !creatorInput.value && inviteSession?.name && !inviteSession.name.includes('共享')) creatorInput.value = inviteSession.name;
                 return;
             }
@@ -12884,13 +12889,21 @@
 
         function openSubmitModal(dungeon = null){
             if(!requireInvite(['author','reviewer','admin','god'], '只有试炼构筑者、结算审核员、神明或神谕馆主可以构筑试炼。')) return;
-            document.getElementById('submitModalOverlay').style.display='flex';
-            document.body.style.overflow='hidden';
-            setSubmitModalMode(dungeon);
-            fillSubmitModal(dungeon);
-            const creatorInput = document.getElementById('dungeonCreator');
-            if (creatorInput) creatorInput.disabled = isGodRole();
-            document.getElementById('dungeonName').focus();
+            try {
+                setSubmitModalMode(dungeon);
+                fillSubmitModal(dungeon);
+                const creatorInput = document.getElementById('dungeonCreator');
+                if (creatorInput) {
+                    creatorInput.readOnly = isGodRole();
+                    creatorInput.setAttribute('aria-readonly', isGodRole() ? 'true' : 'false');
+                }
+                document.getElementById('submitModalOverlay').style.display='flex';
+                document.body.style.overflow='hidden';
+                document.getElementById('dungeonName').focus();
+            } catch (error) {
+                console.error('打开构筑窗口失败:', error);
+                showToast('构筑窗口打开失败，请刷新后再试');
+            }
         }
 
         function resetSubmitDefaults() {
@@ -12910,7 +12923,11 @@
             document.getElementById('submitForm').reset();
             editingDungeonId = '';
             const creatorInput = document.getElementById('dungeonCreator');
-            if (creatorInput) creatorInput.disabled = false;
+            if (creatorInput) {
+                creatorInput.disabled = false;
+                creatorInput.readOnly = false;
+                creatorInput.removeAttribute('aria-readonly');
+            }
             resetSubmitDefaults();
             setSubmitModalMode(null);
         }
