@@ -61,19 +61,23 @@ const godNames = [
 
 const rows = [];
 for (let i = 1; i <= players; i += 1) {
-  rows.push({ role: "player", displayName: `玩家${pad(i, players)}`, code: codeFor("player") });
+  const code = codeFor("player");
+  rows.push({ role: "player", displayName: code, label: `玩家${pad(i, players)}`, code });
 }
 for (let i = 1; i <= authors; i += 1) {
-  rows.push({ role: "author", displayName: `作者${pad(i, authors)}`, code: codeFor("author") });
+  const code = codeFor("author");
+  rows.push({ role: "author", displayName: code, label: `作者${pad(i, authors)}`, code });
 }
 for (let i = 1; i <= reviewers; i += 1) {
-  rows.push({ role: "reviewer", displayName: `审核员${pad(i, reviewers)}`, code: codeFor("reviewer") });
+  const code = codeFor("reviewer");
+  rows.push({ role: "reviewer", displayName: code, label: `审核员${pad(i, reviewers)}`, code });
 }
 for (let i = 1; i <= admins; i += 1) {
-  rows.push({ role: "admin", displayName: `馆主${pad(i, admins)}`, code: codeFor("admin") });
+  const code = codeFor("admin");
+  rows.push({ role: "admin", displayName: code, label: `馆主${pad(i, admins)}`, code });
 }
 for (let i = 0; i < Math.min(gods, godNames.length); i += 1) {
-  rows.push({ role: "god", displayName: godNames[i], code: codeFor("god") });
+  rows.push({ role: "god", displayName: godNames[i], label: godNames[i], code: codeFor("god") });
 }
 
 const stamp = new Date().toISOString().replace(/[-:T]/g, "").slice(0, 14);
@@ -84,12 +88,12 @@ const csvPath = path.join(outputDir, `invite_codes_${stamp}.csv`);
 const sqlPath = path.join(outputDir, `invite_codes_${stamp}.sql`);
 
 const csv = [
-  "display_name,role,invite_code",
-  ...rows.map((row) => `${row.displayName},${row.role},${row.code}`),
+  "display_name,label,role,invite_code",
+  ...rows.map((row) => `${row.displayName},${row.label},${row.role},${row.code}`),
 ].join("\n");
 
 const values = rows.map((row) => {
-  const note = `${prefix} ${row.role} invite`;
+  const note = `${prefix} ${row.role} invite ${row.label}`;
   return `('${sha256(row.code)}', '${escapeSql(row.displayName)}', '${row.role}', '${escapeSql(note)}')`;
 });
 
