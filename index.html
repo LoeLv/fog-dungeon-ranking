@@ -7591,6 +7591,8 @@
                 role: '',
                 faithGod: '',
                 faithPath: '存在',
+                originalFaithGod: '',
+                originalFaithPath: '',
                 profession: '',
                 ascensionScore: DEFAULT_ASCENSION_SCORE,
                 audienceScore: DEFAULT_AUDIENCE_SCORE,
@@ -7615,6 +7617,8 @@
             stored.role = normalizeRole(stored.role || inviteSession?.role || '') || '';
             stored.faithGod = cleanGodName(stored.faithGod || '');
             stored.faithPath = getGodInfo(stored.faithGod).known ? getGodInfo(stored.faithGod).path : (stored.faithPath || '存在');
+            stored.originalFaithGod = cleanGodName(stored.originalFaithGod || stored.original_faith_god || '');
+            stored.originalFaithPath = stored.originalFaithGod ? getGodInfo(stored.originalFaithGod).path : (stored.originalFaithPath || stored.original_faith_path || '');
             stored.profession = normalizeProfession(stored.profession || '');
             stored.ascensionScore = normalizeProfileScore(stored.ascensionScore);
             stored.audienceScore = normalizeProfileScore(stored.audienceScore);
@@ -7696,7 +7700,7 @@
         }
 
         function isTrickeryProfile(profile) {
-            return getProfileFaithGod(profile) === '欺诈';
+            return cleanGodName(profile?.originalFaithGod || profile?.original_faith_god || '') === '欺诈' || getProfileFaithGod(profile) === '欺诈';
         }
 
         function hasTrickeryFaithPrivilege(profile) {
@@ -7936,6 +7940,8 @@
                 role: normalizeRole(profile.role || '') || '',
                 faithGod: cleanGodName(profile.faith_god || profile.faithGod || ''),
                 faithPath: profile.faith_path || profile.faithPath || '',
+                originalFaithGod: cleanGodName(profile.original_faith_god || profile.originalFaithGod || ''),
+                originalFaithPath: profile.original_faith_path || profile.originalFaithPath || '',
                 profession: normalizeProfession(profile.profession || ''),
                 ascensionScore: normalizeProfileScore(profile.ascension_score ?? profile.ascensionScore, DEFAULT_ASCENSION_SCORE),
                 audienceScore: normalizeProfileScore(profile.audience_score ?? profile.audienceScore, DEFAULT_AUDIENCE_SCORE),
@@ -10547,6 +10553,8 @@
                 role: getInviteRole() || '',
                 faithGod: selectedFaithInfo.god,
                 faithPath: selectedFaithInfo.path,
+                originalFaithGod: currentProfile.originalFaithGod || selectedFaithInfo.god,
+                originalFaithPath: currentProfile.originalFaithPath || selectedFaithInfo.path,
                 profession: selectedProfession,
                 ascensionScore,
                 audienceScore,

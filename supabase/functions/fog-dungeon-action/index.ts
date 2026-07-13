@@ -634,6 +634,7 @@ function isProfileBindingMismatched(profile: Record<string, unknown> | null | un
 
 function hasTrickeryFaithPrivilege(profile: Record<string, unknown> | null | undefined) {
   if (!profile) return false;
+  if (cleanText(profile.original_faith_god, 20) === "欺诈") return true;
   if (cleanText(profile.faith_god, 20) === "欺诈") return true;
   return getProfessionGod(profile.profession) === "欺诈";
 }
@@ -832,7 +833,7 @@ async function getTalentProfile(
 ) {
   const { data, error } = await supabase
     .from("player_profiles")
-    .select("display_name, role, faith_god, faith_path, profession, ascension_score, audience_score, items, talents, updated_at")
+    .select("display_name, role, faith_god, faith_path, original_faith_god, original_faith_path, profession, ascension_score, audience_score, items, talents, updated_at")
     .eq("invite_code_hash", identity.codeHash)
     .maybeSingle();
   if (error) return { error };
@@ -1810,7 +1811,7 @@ Deno.serve(async (req) => {
 
       const { data: existing, error: readError } = await supabase
         .from("player_profiles")
-        .select("faith_god, faith_path, profession, ascension_score, audience_score, items, talents, scores_locked_at")
+        .select("faith_god, faith_path, original_faith_god, original_faith_path, profession, ascension_score, audience_score, items, talents, scores_locked_at")
         .eq("invite_code_hash", identity.codeHash)
         .maybeSingle();
       if (readError?.code === "42P01") return json({ error: "请先运行 player_profiles_migration.sql" }, 400);
@@ -1821,6 +1822,8 @@ Deno.serve(async (req) => {
       const nextFaithGod = locked ? existing.faith_god : faithGod;
       const nextFaithPath = locked ? existing.faith_path : faithPath;
       const nextProfession = locked ? existing.profession : profession;
+      const nextOriginalFaithGod = existing?.original_faith_god || faithGod;
+      const nextOriginalFaithPath = existing?.original_faith_path || faithPath;
       const nextAscension = canOverride
         ? ascensionScore
         : (existing?.ascension_score ?? defaultAscensionScore);
@@ -1840,6 +1843,8 @@ Deno.serve(async (req) => {
           role,
           faith_god: nextFaithGod,
           faith_path: nextFaithPath,
+          original_faith_god: nextOriginalFaithGod,
+          original_faith_path: nextOriginalFaithPath,
           profession: nextProfession,
           ascension_score: nextAscension,
           audience_score: nextAudience,
@@ -1848,7 +1853,7 @@ Deno.serve(async (req) => {
           scores_locked_at: nextScoresLockedAt,
           updated_at: new Date().toISOString(),
         })
-        .select("display_name, role, faith_god, faith_path, profession, ascension_score, audience_score, items, talents, scores_locked_at, updated_at")
+        .select("display_name, role, faith_god, faith_path, original_faith_god, original_faith_path, profession, ascension_score, audience_score, items, talents, scores_locked_at, updated_at")
         .single();
       if (error?.code === "42P01") return json({ error: "请先运行 player_profiles_migration.sql" }, 400);
       if (error) return json({ error: error.message }, 400);
@@ -1878,7 +1883,7 @@ Deno.serve(async (req) => {
 
       const { data: existing, error: readError } = await supabase
         .from("player_profiles")
-        .select("faith_god, faith_path, profession")
+        .select("faith_god, faith_path, original_faith_god, original_faith_path, profession")
         .eq("invite_code_hash", identity.codeHash)
         .maybeSingle();
       if (readError?.code === "42P01") return json({ error: "请先运行 player_profiles_migration.sql" }, 400);
@@ -1896,7 +1901,7 @@ Deno.serve(async (req) => {
           updated_at: new Date().toISOString(),
         })
         .eq("invite_code_hash", identity.codeHash)
-        .select("display_name, role, faith_god, faith_path, profession, ascension_score, audience_score, items, talents, scores_locked_at, updated_at")
+        .select("display_name, role, faith_god, faith_path, original_faith_god, original_faith_path, profession, ascension_score, audience_score, items, talents, scores_locked_at, updated_at")
         .single();
       if (error) return json({ error: error.message }, 400);
 
@@ -1922,7 +1927,7 @@ Deno.serve(async (req) => {
 
       const { data, error } = await supabase
         .from("player_profiles")
-        .select("invite_code_hash, display_name, role, faith_god, faith_path, profession, ascension_score, audience_score, updated_at")
+        .select("invite_code_hash, display_name, role, faith_god, faith_path, original_faith_god, original_faith_path, profession, ascension_score, audience_score, updated_at")
         .order("ascension_score", { ascending: false })
         .limit(300);
       if (error?.code === "42P01") return json({ error: "请先运行 player_profiles_migration.sql" }, 400);
@@ -1968,7 +1973,7 @@ Deno.serve(async (req) => {
 
       const { data: profiles, error: profileError } = await supabase
         .from("player_profiles")
-        .select("invite_code_hash, display_name, role, faith_god, faith_path, profession, ascension_score, audience_score, items, talents, updated_at")
+        .select("invite_code_hash, display_name, role, faith_god, faith_path, original_faith_god, original_faith_path, profession, ascension_score, audience_score, items, talents, updated_at")
         .order("ascension_score", { ascending: false })
         .limit(1000);
       if (profileError?.code === "42P01") return json({ error: "请先运行 player_profiles_migration.sql" }, 400);
