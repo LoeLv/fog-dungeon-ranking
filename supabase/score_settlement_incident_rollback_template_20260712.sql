@@ -127,8 +127,8 @@ order by s.created_at desc;
 --   p.display_name,
 --   p.ascension_score,
 --   coalesce(ds.spent_draws, 0) as spent_draws,
---   15 + greatest(0, floor((p.ascension_score - 1000) / 5)) as earned_draws_after_rollback,
---   greatest(0, coalesce(ds.spent_draws, 0) - (15 + greatest(0, floor((p.ascension_score - 1000) / 5)))) as overspent_draws
+--   15 + greatest(0, floor((p.ascension_score - 1000) / 10)) as earned_draws_after_rollback,
+--   greatest(0, coalesce(ds.spent_draws, 0) - (15 + greatest(0, floor((p.ascension_score - 1000) / 10)))) as overspent_draws
 -- from public.player_profiles p
 -- left join public.talent_draw_state ds on ds.invite_code_hash = p.invite_code_hash
 -- where p.invite_code_hash in (

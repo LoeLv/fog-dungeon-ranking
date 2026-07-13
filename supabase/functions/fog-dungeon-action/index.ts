@@ -60,7 +60,7 @@ const godNames = new Set([
 
 const defaultAscensionScore = 1000;
 const defaultAudienceScore = 0;
-const drawScoreStep = 5;
+const drawScoreStep = 10;
 const starterTalentDrawGrant = 15;
 const bTalentDrawRate = 0.2;
 const advancedBTalentDrawRate = 0.25;
