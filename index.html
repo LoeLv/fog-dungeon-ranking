@@ -6350,6 +6350,7 @@
                     <button class="sort-btn" data-sort="rating" onclick="setSort('rating', this)">神格判定</button>
                     <button class="sort-btn" data-sort="newest" onclick="setSort('newest', this)">新降试炼</button>
                     <button class="sort-btn" data-sort="comments" onclick="setSort('comments', this)">证言热度</button>
+                    <button class="sort-btn" id="reviewFilterBtn" onclick="toggleReviewFilter()" style="display:none;">待审核</button>
                 </div>
                 <label class="search-shell" for="searchInput"><span class="search-mark" aria-hidden="true">⌕</span><input type="text" class="search-input" placeholder="搜寻试炼切片、构筑信徒、神明命途" oninput="debounceSearch()" id="searchInput" autocomplete="off" autocapitalize="off" spellcheck="false"></label>
                 <button class="filter-toggle-btn" id="filterToggleBtn" onclick="toggleAdvancedFilters()" aria-expanded="false">
@@ -7336,7 +7337,7 @@
         const ARCHIVE_PAGE_SIZE = 5;
         const VISUAL_EFFECTS_STORAGE_KEY = 'visual_effects_enabled_v1';
         let inviteSession = getLocalData(INVITE_STORAGE_KEY, null);
-        let currentSort = 'popular', searchQuery = '', selectedGod = 'all', selectedPath = 'all', selectedDifficulty = 'all', searchTimeout = null, currentDetailId = null;
+        let currentSort = 'popular', searchQuery = '', selectedGod = 'all', selectedPath = 'all', selectedDifficulty = 'all', reviewFilter = 'all', searchTimeout = null, currentDetailId = null;
         let archivePage = 1;
         let archiveFilteredDungeons = [];
         let archiveFocusId = null;
@@ -7384,6 +7385,14 @@
         function canSettleScores() { return canUseRole(['reviewer', 'admin']); }
         function canReviewDungeonsUI() {
             return canUseRole(['admin', 'god']) || (getInviteRole() === 'reviewer' && ['羔羊', '槐柏'].includes(inviteSession?.name || ''));
+        }
+        function updateReviewFilterButton() {
+            const button = document.getElementById('reviewFilterBtn');
+            if (!button) return;
+            const visible = canReviewDungeonsUI();
+            button.style.display = visible ? '' : 'none';
+            button.classList.toggle('active', reviewFilter === 'pending');
+            button.textContent = reviewFilter === 'pending' ? '待审核中' : '待审核';
         }
         function isInitialDisplayNameBinding() {
             if (!inviteSession?.code || !inviteSession?.name || isGodRole()) return false;
@@ -7494,6 +7503,8 @@
             }
             updateRoleCards(role);
             updateRoleInsightPanel(role);
+            updateReviewFilterButton();
+            updateFilterSummary();
             updateProfileNoticeBadge();
         }
 
@@ -11426,7 +11437,8 @@
             if (!summary) return;
             const godText = selectedGod !== 'all' ? `${selectedGod}之神` : (selectedPath !== 'all' ? `${selectedPath}命途` : '全神席');
             const difficultyText = selectedDifficulty === 'all' ? '全部难度' : formatDifficulty(selectedDifficulty);
-            summary.textContent = `${godText} · ${difficultyText}`;
+            const reviewText = reviewFilter === 'pending' ? '待审核' : '全部发布';
+            summary.textContent = canReviewDungeonsUI() ? `${godText} · ${difficultyText} · ${reviewText}` : `${godText} · ${difficultyText}`;
         }
 
         function toggleAdvancedFilters(force) {
@@ -11543,9 +11555,11 @@
             selectedGod = 'all';
             selectedPath = 'all';
             selectedDifficulty = 'all';
+            reviewFilter = 'all';
             archivePage = 1;
             const input = document.getElementById('searchInput');
             if (input) input.value = '';
+            updateReviewFilterButton();
         }
 
         function populateGodSelect() {
@@ -11642,7 +11656,8 @@
             return Boolean(searchQuery.trim()) ||
                 selectedGod !== 'all' ||
                 selectedPath !== 'all' ||
-                selectedDifficulty !== 'all';
+                selectedDifficulty !== 'all' ||
+                reviewFilter !== 'all';
         }
 
         function updateDiscoveryFilterStatus(totalCount, visibleCount) {
@@ -11658,6 +11673,7 @@
             if (selectedGod !== 'all') parts.push(`${selectedGod}之神`);
             if (selectedPath !== 'all') parts.push(`${selectedPath}命途`);
             if (selectedDifficulty !== 'all') parts.push(`${formatDifficulty(selectedDifficulty)}难度`);
+            if (reviewFilter === 'pending') parts.push('待审核');
             text.innerHTML = `当前只显示 <strong>${visibleCount}</strong> / ${totalCount} 个试炼，条件：${escapeHtml(parts.join(' · '))}`;
             box.hidden = false;
         }
@@ -11671,6 +11687,15 @@
             syncEdgeAtmosphere();
             renderDungeonList();
             showToast('已显示全部试炼');
+        }
+
+        function toggleReviewFilter() {
+            if (!canReviewDungeonsUI()) return;
+            reviewFilter = reviewFilter === 'pending' ? 'all' : 'pending';
+            archivePage = 1;
+            updateReviewFilterButton();
+            updateFilterSummary();
+            renderDungeonList();
         }
 
         function renderArchivePagination(totalCount, page, pageCount) {
@@ -11879,6 +11904,7 @@
             if (selectedPath !== 'all') dungeons = dungeons.filter(d => dungeonHasPath(d.type, selectedPath));
             if (selectedGod !== 'all') dungeons = dungeons.filter(d => dungeonHasGod(d.type, selectedGod));
             if (selectedDifficulty !== 'all') dungeons = dungeons.filter(d => normalizeDifficulty(d.difficulty) === selectedDifficulty);
+            if (reviewFilter === 'pending') dungeons = dungeons.filter(d => getDungeonReviewStatus(d) === 'pending');
             if (currentSort === 'popular') dungeons.sort((a,b) =>
                 (b.rating_count||0) - (a.rating_count||0) ||
                 (b.avg_rating||0) - (a.avg_rating||0) ||
@@ -11892,7 +11918,7 @@
             archiveFilteredDungeons = [...dungeons];
             if (!dungeons.length) {
                 archivePage = 1;
-                const filtered = searchQuery || selectedGod !== 'all' || selectedPath !== 'all' || selectedDifficulty !== 'all';
+                const filtered = searchQuery || selectedGod !== 'all' || selectedPath !== 'all' || selectedDifficulty !== 'all' || reviewFilter !== 'all';
                 listEl.innerHTML = renderArchiveEmptyState(!!filtered);
                 await renderOracleSidebar([]);
                 return;
@@ -12923,7 +12949,7 @@
                 releaseUiActionLock(lockKey);
             }
         }
-        function setSort(sort,btn){ currentSort=sort; archivePage=1; document.querySelectorAll('.sort-btn').forEach(b=>b.classList.remove('active')); btn.classList.add('active'); renderDungeonList(); }
+        function setSort(sort,btn){ currentSort=sort; archivePage=1; document.querySelectorAll('.sort-btn[data-sort]').forEach(b=>b.classList.remove('active')); btn.classList.add('active'); updateReviewFilterButton(); renderDungeonList(); }
         function debounceSearch(){ clearTimeout(searchTimeout); searchTimeout=setTimeout(()=>{ searchQuery=document.getElementById('searchInput').value; archivePage=1; renderDungeonList(); },350); }
         function showToast(msg){ const c=document.getElementById('toastContainer'); const t=document.createElement('div'); t.className='toast'; t.textContent=msg; c.appendChild(t); setTimeout(()=>{if(t.parentNode)t.remove();},3200); }
         document.addEventListener('click', event => {
