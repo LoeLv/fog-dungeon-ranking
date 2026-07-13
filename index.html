@@ -5,8 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>诸神愚戏 · 祈愿试炼留存地</title>
     <link rel="icon" href='data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"%3E%3Crect width="64" height="64" rx="14" fill="%23101218"/%3E%3Cpath d="M15 26c4-11 30-11 34 0v7c0 10-8 18-17 18S15 43 15 33z" fill="none" stroke="%23e7cf8a" stroke-width="4"/%3E%3Cpath d="M23 31c3-3 7-3 10 0M31 31c3-3 7-3 10 0M24 41c5 3 11 3 16 0" fill="none" stroke="%238fd8cf" stroke-width="3" stroke-linecap="round"/%3E%3Ccircle cx="47" cy="17" r="7" fill="%23e7cf8a"/%3E%3Ccircle cx="45" cy="15" r="1.5" fill="%23101218"/%3E%3Ccircle cx="49" cy="19" r="1.5" fill="%23101218"/%3E%3C/svg%3E'>
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2">
-    </script>
+    <script src="assets/vendor/supabase-js-2.110.2.js"></script>
     <style>
         :root {
             --bg: #101218;
@@ -90,6 +89,39 @@
             line-height: 1.6;
             backdrop-filter: blur(1px);
             overflow-x: hidden;
+        }
+        .boot-error {
+            display: none;
+            position: fixed;
+            inset: 0;
+            z-index: 99999;
+            place-items: center;
+            padding: 24px;
+            background: radial-gradient(circle at top, rgba(31,37,54,0.95), rgba(7,8,12,0.98));
+            color: var(--text);
+            text-align: center;
+        }
+        .boot-error.visible {
+            display: grid;
+        }
+        .boot-error-card {
+            max-width: 520px;
+            border: 1px solid rgba(231,207,138,0.28);
+            background: rgba(10,12,18,0.9);
+            padding: 22px;
+            border-radius: var(--radius-sm);
+            box-shadow: 0 20px 60px rgba(0,0,0,0.42);
+        }
+        .boot-error-title {
+            color: var(--gold-light);
+            font-size: 1.1rem;
+            font-weight: 800;
+            margin-bottom: 10px;
+        }
+        .boot-error-copy {
+            color: var(--text-muted);
+            font-size: 0.92rem;
+            line-height: 1.75;
         }
         body.detail-view-open > .header,
         body.detail-view-open > .container,
@@ -6280,6 +6312,20 @@
     </style>
 </head>
 <body>
+    <div class="boot-error" id="bootError" role="alert" aria-live="assertive">
+        <div class="boot-error-card">
+            <div class="boot-error-title">网站加载被当前浏览器或网络拦截</div>
+            <div class="boot-error-copy">请刷新页面，或换用系统浏览器打开；如果正在微信内，请点右上角选择在浏览器中打开。</div>
+        </div>
+    </div>
+    <script>
+        window.__fogDungeonBootStarted = false;
+        window.setTimeout(function () {
+            if (!window.__fogDungeonBootStarted) {
+                document.getElementById('bootError')?.classList.add('visible');
+            }
+        }, 4500);
+    </script>
     <div class="edge-atmosphere" id="edgeAtmosphere" data-era="虚无" aria-hidden="true">
         <div class="era-wall era-wall-left"></div>
         <div class="era-wall era-wall-right"></div>
@@ -6647,6 +6693,8 @@
     <div id="toastContainer"></div>
 
     <script>
+        window.__fogDungeonBootStarted = true;
+        document.getElementById('bootError')?.classList.remove('visible');
         // ==================== SUPABASE 配置 ====================
         const SUPABASE_URL = 'https://trosjcbvfhnfkelflijc.supabase.co';
         const SUPABASE_ANON_KEY = 'sb_publishable_sZYKAIzDJJYQgzC2Buzhyw_art6KnAS';
