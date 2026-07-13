@@ -6617,7 +6617,7 @@
         <div class="modal submit-modal" id="submitModal" onclick="event.stopPropagation()">
             <button class="submit-modal-close" onclick="closeSubmitModal()" title="关闭构筑窗口" aria-label="关闭构筑窗口">✕</button>
             <h2>🎭 《构筑你的试炼愚戏》</h2>
-            <form id="submitForm" onsubmit="submitDungeon(event)">
+            <form id="submitForm" onsubmit="submitDungeon(event)" novalidate>
                 <div class="form-grid">
                     <div class="form-group"><label>试炼名 *</label><input type="text" id="dungeonName" placeholder="为这枚切片宇宙命名..." required maxlength="60"></div>
                     <div class="form-group"><label>构筑者 *</label><input type="text" id="dungeonCreator" placeholder="你的神名或代号..." required maxlength="30"></div>
@@ -12932,6 +12932,16 @@
             setSubmitModalMode(null);
         }
 
+        function focusSubmitField(targetId, message) {
+            showToast(message);
+            const target = document.getElementById(targetId);
+            const focusTarget = target?.closest('.form-group') || target;
+            focusTarget?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            if (target && typeof target.focus === 'function' && target.tabIndex !== -1 && !target.disabled) {
+                setTimeout(() => target.focus(), 180);
+            }
+        }
+
         async function submitDungeon(e){
             e.preventDefault();
             if(!requireInvite(['author','reviewer','admin','god'], '只有试炼构筑者、结算审核员、神明或神谕馆主可以构筑试炼。')) return;
@@ -12947,10 +12957,12 @@
             const pinnedNote=document.getElementById('pinnedNoteInput')?.value.trim() || '';
             const dungeonMode=document.getElementById('dungeonMode')?.value || 'cycle';
             const isOneShot=dungeonMode==='one_shot';
-            if(!name||!creator||!desc){showToast('请填写所有必填项');return;}
-            if(!selectedTypes.length){showToast('请至少选择一个神明标签');return;}
-            if(!Number.isInteger(participantCount)||participantCount<1||participantCount>99){showToast('请检查固定人数');return;}
-            if(!Number.isInteger(runCount)||runCount<1||runCount>999){showToast('请检查当前局数');return;}
+            if(!name){focusSubmitField('dungeonName', '请填写试炼名');return;}
+            if(!creator){focusSubmitField('dungeonCreator', '请填写构筑者');return;}
+            if(!selectedTypes.length){focusSubmitField('dungeonGodPicker', '请至少选择一个神明标签');return;}
+            if(!Number.isInteger(participantCount)||participantCount<1||participantCount>99){focusSubmitField('participantCount', '请检查固定人数');return;}
+            if(!Number.isInteger(runCount)||runCount<1||runCount>999){focusSubmitField('runCount', '请检查当前局数');return;}
+            if(!desc){focusSubmitField('dungeonDesc', '请填写试炼简介');return;}
             const btn=e.target.querySelector('button[type="submit"]');
             const dungeonId = editingDungeonId;
             const lockKey = dungeonId ? `submitDungeon:${dungeonId}` : 'submitDungeon:new';
