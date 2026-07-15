@@ -5940,6 +5940,7 @@
         }
         .mobile-bottom-nav,
         .mobile-fab,
+        .mobile-action-strip,
         .mobile-profile-tabs,
         .mobile-onboarding {
             display: none;
@@ -5947,6 +5948,7 @@
         @media (min-width: 721px) {
             .mobile-bottom-nav,
             .mobile-fab,
+            .mobile-action-strip,
             .mobile-profile-tabs,
             .mobile-onboarding {
                 display: none !important;
@@ -6107,6 +6109,28 @@
                 color: var(--gold-light);
                 background: linear-gradient(180deg, rgba(231,207,138,0.16), rgba(122,174,194,0.08));
                 box-shadow: inset 0 0 0 1px rgba(231,207,138,0.18), 0 0 18px rgba(231,207,138,0.08);
+            }
+            .mobile-action-strip {
+                display: grid;
+                grid-template-columns: 1fr 1fr;
+                gap: 8px;
+                margin: 0 0 10px;
+            }
+            .mobile-action-strip .btn {
+                width: 100%;
+                min-height: 44px;
+                justify-content: center;
+                padding: 10px 9px;
+                border-radius: 12px;
+                font-size: 0.82rem;
+                font-weight: 900;
+            }
+            .mobile-action-strip .btn small {
+                display: block;
+                color: var(--text-muted);
+                font-size: 0.62rem;
+                font-weight: 700;
+                line-height: 1.2;
             }
             .mobile-onboarding {
                 position: fixed;
@@ -6721,6 +6745,9 @@
             .controls { align-items: stretch; }
             .control-topline { align-items: stretch; }
             .controls .sort-group { width: 100%; }
+            body.mobile-app-mode.mobile-screen-dungeons .mobile-action-strip {
+                display: grid;
+            }
             .world-altar {
                 min-height: 0;
                 margin-bottom: 10px;
@@ -7004,6 +7031,11 @@
                 </div>
             </div>
         </section>
+
+        <div class="mobile-action-strip" aria-label="手机端常用操作">
+            <button type="button" class="btn btn-outline btn-sm" onclick="openInviteModal()">◇ 入局谕令<small>登录 / 绑定身份</small></button>
+            <button type="button" class="btn btn-primary btn-sm" onclick="openSubmitModal()">🎭 上传副本<small>构筑祈愿试炼</small></button>
+        </div>
 
         <div class="controls">
             <div class="control-topline">
