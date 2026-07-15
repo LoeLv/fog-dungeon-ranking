@@ -4457,6 +4457,76 @@
             font-size: 1.95rem;
             line-height: 1.1;
         }
+        .profile-battle-grid {
+            display: grid;
+            grid-template-columns: minmax(180px, 0.9fr) minmax(0, 1.1fr);
+            gap: 12px;
+        }
+        .profile-battle-hp {
+            min-height: 100%;
+            display: grid;
+            align-content: center;
+            gap: 8px;
+            padding: 18px;
+            border: 1px solid color-mix(in srgb, var(--god-primary, #e7cf8a) 24%, rgba(255,255,255,0.08));
+            border-radius: 14px;
+            background:
+                radial-gradient(circle at 18% 12%, color-mix(in srgb, var(--god-primary, #e7cf8a) 13%, transparent), transparent 46%),
+                rgba(0,0,0,0.24);
+        }
+        .profile-battle-hp span,
+        .profile-battle-line span {
+            color: var(--text-muted);
+            font-size: 0.72rem;
+            font-weight: 800;
+            letter-spacing: 0.08em;
+        }
+        .profile-battle-hp strong {
+            color: var(--god-primary, var(--gold-light));
+            font-family: var(--font-display);
+            font-size: clamp(2.3rem, 7vw, 3.7rem);
+            line-height: 1;
+        }
+        .profile-battle-hp small {
+            color: var(--text-muted);
+            font-size: 0.78rem;
+            line-height: 1.55;
+        }
+        .profile-battle-breakdown {
+            display: grid;
+            gap: 9px;
+        }
+        .profile-battle-line {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+            padding: 11px 12px;
+            border: 1px solid rgba(255,255,255,0.06);
+            border-radius: 12px;
+            background: rgba(255,255,255,0.025);
+        }
+        .profile-battle-line strong {
+            color: var(--text-bright);
+            font-size: 0.95rem;
+            text-align: right;
+        }
+        .profile-battle-trait {
+            margin-top: 12px;
+            padding: 13px 14px;
+            border: 1px solid color-mix(in srgb, var(--god-secondary, #7aaec2) 18%, rgba(255,255,255,0.07));
+            border-radius: 12px;
+            background: linear-gradient(135deg, color-mix(in srgb, var(--god-secondary, #7aaec2) 7%, transparent), rgba(0,0,0,0.18));
+            color: var(--text);
+            font-size: 0.84rem;
+            line-height: 1.75;
+        }
+        .profile-battle-trait strong {
+            display: block;
+            margin-bottom: 4px;
+            color: var(--god-primary, var(--gold-light));
+            font-size: 0.84rem;
+        }
         .profile-list {
             display: grid;
             gap: 10px;
@@ -5868,6 +5938,20 @@
         @media (prefers-reduced-motion: reduce) {
             .orbit-one, .orbit-two { animation: none; }
         }
+        .mobile-bottom-nav,
+        .mobile-fab,
+        .mobile-profile-tabs,
+        .mobile-onboarding {
+            display: none;
+        }
+        @media (min-width: 721px) {
+            .mobile-bottom-nav,
+            .mobile-fab,
+            .mobile-profile-tabs,
+            .mobile-onboarding {
+                display: none !important;
+            }
+        }
         @media (max-width: 1100px) {
             .header {
                 grid-template-columns: 1fr;
@@ -5919,12 +6003,277 @@
             }
         }
         @media (max-width: 720px) {
+            body {
+                padding-bottom: calc(82px + env(safe-area-inset-bottom, 0px));
+                backdrop-filter: none;
+            }
+            .container {
+                width: min(100%, calc(100vw - 20px));
+                margin-top: 12px;
+                gap: 12px;
+            }
+            body.mobile-app-mode > .header,
+            body.mobile-app-mode > .container,
+            body.mobile-app-mode > .profile-page {
+                animation: mobileScreenIn 0.18s ease both;
+            }
+            @keyframes mobileScreenIn {
+                from { opacity: 0.72; transform: translateX(var(--mobile-screen-shift, 12px)); }
+                to { opacity: 1; transform: translateX(0); }
+            }
+            body.mobile-app-mode .mobile-home-only,
+            body.mobile-app-mode .mobile-message-only,
+            body.mobile-app-mode .mobile-oracle-only {
+                display: none !important;
+            }
+            body.mobile-app-mode.mobile-screen-dungeons .world-altar,
+            body.mobile-app-mode.mobile-screen-dungeons #roleInsightPanel,
+            body.mobile-app-mode.mobile-screen-dungeons #forumFeed {
+                display: none !important;
+            }
+            body.mobile-app-mode.mobile-screen-dungeons .container {
+                margin-top: 8px;
+            }
+            body.mobile-app-mode.mobile-screen-dungeons .archive-layout {
+                min-height: calc(100dvh - 154px);
+            }
+            .path-nav {
+                position: sticky;
+                top: 0;
+                z-index: 70;
+                margin: 0 -10px;
+                padding: 8px 10px;
+                flex-wrap: nowrap;
+                overflow-x: auto;
+                background:
+                    linear-gradient(180deg, rgba(12,14,20,0.98), rgba(12,14,20,0.88)),
+                    rgba(12,14,20,0.94);
+                border-bottom: 1px solid rgba(231,207,138,0.10);
+                scrollbar-width: none;
+            }
+            .path-nav::-webkit-scrollbar { display: none; }
+            .path-nav-btn {
+                min-height: 36px;
+                padding: 7px 10px;
+                font-size: 0.74rem;
+            }
+            body.mobile-keyboard-active .mobile-bottom-nav {
+                transform: translateY(calc(100% + 18px));
+                opacity: 0;
+                pointer-events: none;
+            }
+            .mobile-bottom-nav {
+                position: fixed;
+                left: 10px;
+                right: 10px;
+                bottom: 8px;
+                bottom: calc(8px + env(safe-area-inset-bottom, 0px));
+                z-index: 9000;
+                display: grid;
+                grid-template-columns: repeat(5, minmax(0, 1fr));
+                gap: 5px;
+                padding: 8px;
+                border: 1px solid rgba(231,207,138,0.18);
+                border-radius: 18px;
+                background:
+                    linear-gradient(180deg, rgba(22,24,34,0.94), rgba(10,11,17,0.98)),
+                    rgba(12,14,20,0.96);
+                box-shadow: 0 -18px 42px rgba(0,0,0,0.62), inset 0 1px 0 rgba(255,255,255,0.05);
+                backdrop-filter: blur(16px);
+                transition: transform 0.22s ease, opacity 0.22s ease;
+            }
+            .mobile-nav-item {
+                appearance: none;
+                border: 0;
+                min-width: 0;
+                min-height: 50px;
+                padding: 6px 3px;
+                border-radius: 13px;
+                background: transparent;
+                color: var(--text-muted);
+                display: grid;
+                justify-items: center;
+                align-content: center;
+                gap: 3px;
+                font: inherit;
+                font-size: 0.68rem;
+                line-height: 1.1;
+            }
+            .mobile-nav-item span {
+                font-size: 1.05rem;
+                line-height: 1;
+            }
+            .mobile-nav-item.active {
+                color: var(--gold-light);
+                background: linear-gradient(180deg, rgba(231,207,138,0.16), rgba(122,174,194,0.08));
+                box-shadow: inset 0 0 0 1px rgba(231,207,138,0.18), 0 0 18px rgba(231,207,138,0.08);
+            }
+            .mobile-onboarding {
+                position: fixed;
+                inset: 0;
+                z-index: 9400;
+                display: none;
+                align-items: flex-end;
+                padding: 16px 12px calc(16px + env(safe-area-inset-bottom, 0px));
+                background: linear-gradient(180deg, rgba(2,3,6,0.34), rgba(2,3,6,0.78));
+                backdrop-filter: blur(8px);
+            }
+            .mobile-onboarding.visible {
+                display: flex !important;
+            }
+            .mobile-onboarding-card {
+                width: 100%;
+                border: 1px solid rgba(231,207,138,0.22);
+                border-radius: 18px;
+                background:
+                    radial-gradient(circle at 18% 0%, rgba(231,207,138,0.14), transparent 36%),
+                    linear-gradient(180deg, rgba(22,24,34,0.98), rgba(9,10,15,0.99));
+                box-shadow: 0 -22px 70px rgba(0,0,0,0.72);
+                padding: 18px;
+            }
+            .mobile-onboarding-kicker {
+                color: var(--gold-light);
+                font-size: 0.68rem;
+                font-weight: 900;
+                letter-spacing: 0.16em;
+                margin-bottom: 6px;
+            }
+            .mobile-onboarding-title {
+                color: var(--text-bright);
+                font-family: var(--font-display);
+                font-size: 1.28rem;
+                margin-bottom: 8px;
+            }
+            .mobile-onboarding-copy {
+                color: var(--text-muted);
+                font-size: 0.84rem;
+                line-height: 1.65;
+            }
+            .mobile-onboarding-steps {
+                display: grid;
+                gap: 8px;
+                margin: 14px 0;
+            }
+            .mobile-onboarding-step {
+                display: grid;
+                grid-template-columns: 28px minmax(0, 1fr);
+                gap: 9px;
+                align-items: start;
+                padding: 10px;
+                border: 1px solid rgba(255,255,255,0.07);
+                border-radius: 12px;
+                background: rgba(255,255,255,0.035);
+                color: var(--text);
+                font-size: 0.80rem;
+                line-height: 1.45;
+            }
+            .mobile-onboarding-step span {
+                display: grid;
+                place-items: center;
+                width: 28px;
+                height: 28px;
+                border-radius: 10px;
+                color: var(--gold-light);
+                background: rgba(231,207,138,0.10);
+            }
+            .mobile-onboarding-actions {
+                display: grid;
+                grid-template-columns: 1fr 1fr;
+                gap: 8px;
+            }
+            .mobile-onboarding-actions .btn {
+                width: 100%;
+                min-height: 42px;
+                justify-content: center;
+            }
+            .mobile-fab {
+                position: fixed;
+                right: 14px;
+                bottom: 92px;
+                bottom: calc(92px + env(safe-area-inset-bottom, 0px));
+                z-index: 8990;
+                display: grid;
+                justify-items: end;
+                gap: 8px;
+            }
+            .mobile-fab-actions {
+                display: none;
+                gap: 7px;
+                justify-items: end;
+            }
+            .mobile-fab.open .mobile-fab-actions {
+                display: grid;
+            }
+            .mobile-fab button {
+                border: 1px solid rgba(231,207,138,0.22);
+                border-radius: 999px;
+                background: rgba(14,16,24,0.94);
+                color: var(--text-bright);
+                box-shadow: 0 10px 24px rgba(0,0,0,0.48);
+                font: inherit;
+            }
+            .mobile-fab-toggle {
+                width: 46px;
+                height: 46px;
+                color: var(--gold-light) !important;
+                font-size: 1.05rem;
+            }
+            .mobile-fab-action {
+                min-height: 38px;
+                padding: 0 13px;
+                font-size: 0.75rem;
+            }
+            .mobile-profile-tabs {
+                position: sticky;
+                top: 0;
+                z-index: 12;
+                display: flex;
+                gap: 8px;
+                margin: 0 -12px 14px;
+                padding: 10px 12px;
+                overflow-x: auto;
+                scrollbar-width: none;
+                background:
+                    linear-gradient(180deg, rgba(16,18,26,0.98), rgba(16,18,26,0.86)),
+                    rgba(16,18,26,0.92);
+                border-bottom: 1px solid rgba(231,207,138,0.11);
+                backdrop-filter: blur(12px);
+            }
+            .mobile-profile-tabs::-webkit-scrollbar { display: none; }
+            .mobile-profile-tab {
+                flex: 0 0 auto;
+                min-height: 38px;
+                padding: 0 14px;
+                border: 1px solid rgba(231,207,138,0.15);
+                border-radius: 999px;
+                background: rgba(255,255,255,0.035);
+                color: var(--text-muted);
+                font: inherit;
+                font-size: 0.78rem;
+            }
+            .mobile-profile-tab.active {
+                color: var(--gold-light);
+                background: rgba(231,207,138,0.13);
+                border-color: rgba(231,207,138,0.34);
+            }
+            .profile-mobile-section {
+                display: none;
+            }
+            .profile-mobile-section.active {
+                display: block;
+            }
+            .profile-mobile-section > .profile-panel:first-child {
+                margin-top: 0;
+            }
             .header { align-items: flex-start; }
             .header-actions {
                 display: grid;
                 grid-template-columns: 1fr;
                 width: 100%;
                 justify-content: stretch;
+            }
+            body.mobile-app-mode .header-actions {
+                display: none;
             }
             .header-actions .role-badge { grid-column: 1 / -1; width: fit-content; max-width: 100%; }
             .header-actions .btn {
@@ -5950,6 +6299,27 @@
             .trial-dossier-grid,
             .role-guide {
                 grid-template-columns: 1fr;
+            }
+            .role-insight-panel {
+                padding: 10px 12px;
+                margin-bottom: 10px;
+            }
+            .role-insight-panel::after,
+            .forum-feed::after,
+            .dungeon-card::after,
+            .profile-hero::after,
+            .leaderboard-row::after {
+                opacity: 0.14;
+            }
+            .role-insight-cards {
+                display: none;
+            }
+            .role-insight-title {
+                font-size: 0.82rem;
+            }
+            .role-insight-note {
+                font-size: 0.70rem;
+                line-height: 1.45;
             }
             .trial-dossier-card {
                 min-height: 0;
@@ -6026,6 +6396,32 @@
                 grid-template-columns: 1fr;
                 padding: 18px;
             }
+            .profile-hero,
+            .leaderboard-hero {
+                gap: 12px;
+                padding: 14px;
+                border-radius: 14px;
+            }
+            .profile-kicker {
+                font-size: 0.62rem;
+                margin-bottom: 2px;
+            }
+            .profile-name {
+                font-size: 1.42rem;
+                margin-bottom: 6px;
+            }
+            .profile-faith-prayer,
+            .leaderboard-summary,
+            .leaderboard-observer-note {
+                font-size: 0.74rem;
+                line-height: 1.55;
+            }
+            .profile-page {
+                padding-bottom: calc(86px + env(safe-area-inset-bottom, 0px));
+            }
+            .profile-content {
+                padding-bottom: 22px;
+            }
             .profile-hero[data-god],
             .leaderboard-hero {
                 grid-template-columns: 1fr;
@@ -6055,12 +6451,54 @@
             .leaderboard-board.full {
                 grid-column: auto;
             }
+            .leaderboard-board {
+                padding: 14px;
+            }
+            .leaderboard-list {
+                gap: 8px;
+            }
             .leaderboard-row {
                 grid-template-columns: auto minmax(0, 1fr);
+                gap: 8px;
+                padding: 10px;
+            }
+            .leaderboard-rank {
+                width: 34px;
+                height: 34px;
+                font-size: 0.86rem;
+            }
+            .leaderboard-name-line {
+                gap: 6px;
+            }
+            .leaderboard-name {
+                font-size: 0.88rem;
+            }
+            .leaderboard-meta {
+                gap: 5px;
+            }
+            .leaderboard-meta .metric-pill,
+            .leaderboard-meta .mini-tag {
+                font-size: 0.62rem;
+                padding: 3px 6px;
             }
             .leaderboard-score {
                 grid-column: 2;
                 text-align: left;
+            }
+            .leaderboard-score strong {
+                font-size: 1rem;
+            }
+            .leaderboard-mobile-more {
+                width: 100%;
+                min-height: 40px;
+                margin-top: 4px;
+                border: 1px solid rgba(231,207,138,0.18);
+                border-radius: 10px;
+                background: rgba(231,207,138,0.08);
+                color: var(--gold-light);
+                font: inherit;
+                font-size: 0.78rem;
+                font-weight: 800;
             }
             .profile-form-grid .full {
                 grid-column: auto;
@@ -6095,6 +6533,41 @@
             }
             .profile-tools .btn {
                 width: 100%;
+            }
+            .profile-battle-grid {
+                grid-template-columns: 1fr;
+            }
+            .profile-battle-hp {
+                padding: 16px;
+            }
+            .profile-battle-line {
+                align-items: flex-start;
+            }
+            .profile-battle-line strong {
+                max-width: 58%;
+            }
+            .talent-equipped-grid,
+            .talent-inventory-grid,
+            .talent-result-grid {
+                grid-template-columns: repeat(2, minmax(0, 1fr));
+                gap: 9px;
+            }
+            .talent-slot-card,
+            .talent-card {
+                min-width: 0;
+            }
+            .leaderboard-tabs,
+            .leaderboard-path-tabs {
+                overflow-x: auto;
+                flex-wrap: nowrap;
+                padding-bottom: 4px;
+                scrollbar-width: none;
+            }
+            .leaderboard-tabs::-webkit-scrollbar,
+            .leaderboard-path-tabs::-webkit-scrollbar { display: none; }
+            .leaderboard-tab {
+                flex: 0 0 auto;
+                white-space: nowrap;
             }
             .match-state-grid {
                 grid-template-columns: 1fr;
@@ -6248,6 +6721,59 @@
             .controls { align-items: stretch; }
             .control-topline { align-items: stretch; }
             .controls .sort-group { width: 100%; }
+            .world-altar {
+                min-height: 0;
+                margin-bottom: 10px;
+            }
+            .world-altar-copy {
+                gap: 10px;
+            }
+            .world-title {
+                font-size: 1.72rem;
+                line-height: 1.16;
+            }
+            .world-line {
+                font-size: 0.82rem;
+                line-height: 1.55;
+            }
+            .world-altar-symbols {
+                display: none;
+            }
+            .controls {
+                padding: 12px;
+                border-radius: 14px;
+                gap: 10px;
+            }
+            .sort-group {
+                overflow-x: auto;
+                flex-wrap: nowrap;
+                scrollbar-width: none;
+            }
+            .sort-group::-webkit-scrollbar { display: none; }
+            .sort-btn {
+                flex: 0 0 auto;
+                min-height: 36px;
+                padding: 7px 10px;
+                font-size: 0.72rem;
+            }
+            .advanced-filters {
+                position: fixed;
+                left: 0;
+                right: 0;
+                bottom: 0;
+                z-index: 320;
+                max-height: min(78dvh, 620px);
+                overflow-y: auto;
+                padding: 16px 14px calc(18px + env(safe-area-inset-bottom, 0px));
+                border-radius: 18px 18px 0 0;
+                border-left: 0;
+                border-right: 0;
+                border-bottom: 0;
+                background:
+                    linear-gradient(180deg, rgba(22,24,34,0.98), rgba(9,10,15,0.99)),
+                    var(--bg-card);
+                box-shadow: 0 -24px 70px rgba(0,0,0,0.72);
+            }
             .filter-toggle-btn {
                 width: 100%;
                 justify-content: space-between;
@@ -6262,6 +6788,18 @@
             .archive-page-btn {
                 flex: 1 1 44px;
             }
+            .dungeon-list {
+                gap: 10px;
+            }
+            .dungeon-card {
+                padding: 12px;
+                border-radius: 13px;
+                box-shadow: 0 8px 20px rgba(0,0,0,0.34);
+                backdrop-filter: none;
+            }
+            .dungeon-card:hover {
+                transform: none;
+            }
             .god-cluster { grid-template-columns: 1fr; gap: 8px; }
             .god-cluster-title { padding-top: 0; }
             .card-path-rune {
@@ -6271,16 +6809,79 @@
             }
             .trial-card-head {
                 display: grid;
+                gap: 9px;
+                margin-bottom: 8px;
             }
             .trial-title-block {
                 grid-template-columns: auto minmax(0, 1fr);
+                gap: 8px;
+                align-items: start;
+            }
+            .god-emblem {
+                width: 32px;
+                height: 32px;
+                border-radius: 10px;
+            }
+            .dungeon-card .card-title {
+                display: -webkit-box;
+                overflow: hidden;
+                -webkit-line-clamp: 2;
+                -webkit-box-orient: vertical;
+                font-size: 1.02rem;
+                line-height: 1.25;
+            }
+            .trial-number {
+                display: none;
+            }
+            .trial-subline {
+                font-size: 0.68rem;
+            }
+            .trial-identity-row,
+            .trial-data-row {
+                gap: 5px;
+                margin-top: 7px;
+            }
+            .author-mark {
+                width: 100%;
+                font-size: 0.70rem;
+            }
+            .tag,
+            .trial-data-pill {
+                max-width: 100%;
+                padding: 4px 7px;
+                font-size: 0.64rem;
+                letter-spacing: 0.02em;
+                white-space: normal;
+                line-height: 1.25;
+            }
+            .trial-data-row .trial-data-pill:nth-child(2),
+            .trial-data-row .trial-data-pill:nth-child(3) {
+                display: none;
             }
             .judgement-badge {
                 justify-items: start;
                 width: 100%;
+                min-width: 0;
+                padding: 7px 9px;
+                border-radius: 11px;
+                font-size: 0.76rem;
+                white-space: normal;
+            }
+            .judgement-count {
+                display: none;
+            }
+            .trial-oracle {
+                display: -webkit-box;
+                overflow: hidden;
+                -webkit-line-clamp: 2;
+                -webkit-box-orient: vertical;
+                margin-top: 9px;
+                padding: 8px 9px;
+                font-size: 0.72rem;
+                line-height: 1.45;
             }
             .oracle-sidebar {
-                grid-template-columns: 1fr;
+                display: none;
             }
             .oracle-panel {
                 padding: 12px;
@@ -6289,10 +6890,19 @@
                 grid-template-columns: repeat(4, minmax(0, 1fr));
             }
             .search-input { max-width: none; width: 100%; }
-            .forum-feed { padding: 16px 14px; }
+            .forum-feed {
+                padding: 10px 12px;
+                margin-bottom: 10px;
+            }
             .forum-feed-head { flex-direction: column; align-items: stretch; }
             .forum-feed.is-collapsed .forum-feed-head { align-items: stretch; }
             .forum-feed-actions { justify-content: space-between; }
+            .forum-feed-note {
+                display: none;
+            }
+            .forum-feed-title {
+                font-size: 0.95rem;
+            }
             .feed-count-badge { width: fit-content; }
             .latest-comments-feed::before { left: 18px; }
             .feed-item {
@@ -6308,6 +6918,12 @@
             }
             .comment-item.reply { margin-left: 10px; }
             .clear-panel-foot { align-items: stretch; }
+            #mobileBottomNav.mobile-bottom-nav {
+                display: grid !important;
+            }
+            #mobileFab.mobile-fab {
+                display: grid !important;
+            }
         }
     </style>
 </head>
@@ -6692,6 +7308,43 @@
 
     <div id="toastContainer"></div>
 
+    <nav class="mobile-bottom-nav" id="mobileBottomNav" aria-label="手机端主入口">
+        <button type="button" class="mobile-nav-item active" data-mobile-dest="dungeons" onclick="mobileNavigate('dungeons')"><span aria-hidden="true">◇</span>副本</button>
+        <button type="button" class="mobile-nav-item" data-mobile-dest="leaderboard" onclick="mobileNavigate('leaderboard')"><span aria-hidden="true">◈</span>榜单</button>
+        <button type="button" class="mobile-nav-item" data-mobile-dest="profile" onclick="mobileNavigate('profile')"><span aria-hidden="true">✦</span>档案</button>
+        <button type="button" class="mobile-nav-item" data-mobile-dest="talent" onclick="mobileNavigate('talent')"><span aria-hidden="true">✧</span>天赋</button>
+        <button type="button" class="mobile-nav-item" data-mobile-dest="messages" onclick="mobileNavigate('messages')"><span aria-hidden="true">□</span>消息</button>
+    </nav>
+
+    <div class="mobile-fab" id="mobileFab">
+        <div class="mobile-fab-actions">
+            <button type="button" class="mobile-fab-action" onclick="mobileQuickAction('top')">回顶部</button>
+            <button type="button" class="mobile-fab-action" onclick="mobileQuickAction('invite')">入局</button>
+            <button type="button" class="mobile-fab-action" onclick="mobileQuickAction('build')">构筑</button>
+            <button type="button" class="mobile-fab-action" onclick="mobileQuickAction('save')">保存档案</button>
+            <button type="button" class="mobile-fab-action" onclick="mobileQuickAction('refresh')">刷新</button>
+            <button type="button" class="mobile-fab-action" onclick="mobileQuickAction('profile')">回档案</button>
+        </div>
+        <button type="button" class="mobile-fab-toggle" onclick="toggleMobileFab()" aria-label="展开快捷操作">✦</button>
+    </div>
+
+    <div class="mobile-onboarding" id="mobileOnboarding" role="dialog" aria-modal="true" aria-labelledby="mobileOnboardingTitle">
+        <div class="mobile-onboarding-card">
+            <div class="mobile-onboarding-kicker">MOBILE GUIDE</div>
+            <div class="mobile-onboarding-title" id="mobileOnboardingTitle">手机端已改为分屏浏览</div>
+            <div class="mobile-onboarding-copy">底部五个入口就是五个页面；左右滑动也能切换，不用再从一整条长页面里找功能。</div>
+            <div class="mobile-onboarding-steps">
+                <div class="mobile-onboarding-step"><span>◇</span><div><strong>副本</strong><br>只看筛选和试炼列表。</div></div>
+                <div class="mobile-onboarding-step"><span>◈</span><div><strong>榜单</strong><br>进入登神觐见录，手机端先分段显示。</div></div>
+                <div class="mobile-onboarding-step"><span>✦</span><div><strong>档案 / 天赋 / 消息</strong><br>分别直达个人档案不同分区。</div></div>
+            </div>
+            <div class="mobile-onboarding-actions">
+                <button type="button" class="btn btn-outline btn-sm" onclick="dismissMobileOnboarding(false)">稍后再看</button>
+                <button type="button" class="btn btn-primary btn-sm" onclick="dismissMobileOnboarding(true)">知道了</button>
+            </div>
+        </div>
+    </div>
+
     <script>
         window.__fogDungeonBootStarted = true;
         document.getElementById('bootError')?.classList.remove('visible');
@@ -6751,6 +7404,7 @@
         const INVITE_STORAGE_KEY = 'invite_session_v1';
         const PROFILE_STORAGE_KEY = 'personal_profiles_v1';
         const PROFILE_NOTICE_SEEN_KEY = 'profile_notice_seen_v1';
+        const MOBILE_ONBOARDING_STORAGE_KEY = 'mobile_onboarding_seen_v1';
         const ROLE_LABELS = { player: '入局信徒', author: '试炼构筑者', reviewer: '结算审核员', admin: '神谕馆主', god: '祈愿神明' };
         const ROLE_UI_COPY = {
             guest: {
@@ -6890,6 +7544,40 @@
             }))
         );
         const PROFESSION_NAMES = new Set(PROFESSIONS.map(item => item.name));
+        const CLASS_HEALTH_RULES = {
+            战士: { baseHp: 120, growthPer100: 6 },
+            刺客: { baseHp: 80, growthPer100: 4 },
+            法师: { baseHp: 80, growthPer100: 4 },
+            猎人: { baseHp: 80, growthPer100: 4 },
+            牧师: { baseHp: 105, growthPer100: 5 },
+            歌者: { baseHp: 100, growthPer100: 5 }
+        };
+        const PROSPERITY_HEALTH_BONUS = {
+            战士: 24,
+            牧师: 20,
+            歌者: 18,
+            刺客: 16,
+            猎人: 16,
+            法师: 16
+        };
+        const FAITH_TRAITS = {
+            诞育: '攻击或治疗会使目标怀孕，同时最多存在两个婴儿。【怀孕】：2 轮后分娩，受到 10 伤害，然后诞下一个 0 攻 1 血的婴儿。',
+            繁荣: '生命值提高：战士 +24，牧师 +20，歌者 +18，刺客/猎人/法师 +16。',
+            死亡: '每局一次，积攒 7 具尸体后可以复活，复活后为 1 血，先手 +1，无法行动一轮；尸体可积攒 15 具，但无法带入下轮试炼。',
+            污堕: '可以与其他人共赴沉沦，强制自己与一个目标无法行动一回合，CD 5 回合。',
+            腐朽: '可以燃烧自己 15 血，对指定目标造成 25 伤害，CD 5 回合。',
+            湮灭: '开局获得一次湮灭，湮灭人或物后获得加成，仅一次。战士：+15 血；法/刺/猎/歌：首次单体攻击 +15 伤；牧师：治疗最终 +5。',
+            秩序: '开局使自身获得律令：守序。每回合不主动攻击 +1 层守序，每层提升 2 点减伤；初始 2 层守序。违规后移除减伤并获得惩罚。',
+            真理: '解析：每次进行攻击或治疗获得 1 层，每层提升 2 点攻击或 2 点治疗加成，最多 3 层。',
+            战争: '每局一次，击败一个玩家后获得永久攻击 +12。',
+            混乱: '使一个目标进入混乱一回合，CD 6 回合。混乱后所有行动随机取目标。',
+            痴愚: '每次攻击会对一个目标附带一次愚昧效果，使其攻击 -2，最多 4 层。',
+            沉默: '指定一个目标获得一回合沉默，CD 5 回合。',
+            记忆: '可以记录一个自己的 C 级天赋，使其在下回合再次发动，一局一次。',
+            时间: '每经过四回合后，获得一个额外行动回合；第 5、10、15 回合获得。',
+            欺诈: '可以进行说谎，对指定单位造成 30 虚假伤害。说谎后再秘密选择伤害对象；同时对方获得真言护盾，可加护在一名队友身上，CD 4 回合。',
+            命运: '可以在自己丢出骰子时，再丢一个骰子，并选择是否替换它，一局 2 次。'
+        };
         const GOD_SKINS = {
             欺诈: {
                 primary: '#d7a95f',
@@ -7382,6 +8070,9 @@
         const LEGACY_DIFFICULTY_MAP = { 凡尘: '新手', 觉醒: '低', 超凡: '中', 神话: '高', 愚者: '高' };
         const DEFAULT_ASCENSION_SCORE = 1000;
         const DEFAULT_AUDIENCE_SCORE = 0;
+        const LEADERBOARD_DISPLAY_LIMIT = 300;
+        const MOBILE_LEADERBOARD_BOARD_LIMIT = 24;
+        const MOBILE_LEADERBOARD_PATH_OVERVIEW_LIMIT = 8;
         const ARCHIVE_PAGE_SIZE = 5;
         const VISUAL_EFFECTS_STORAGE_KEY = 'visual_effects_enabled_v1';
         let inviteSession = getLocalData(INVITE_STORAGE_KEY, null);
@@ -7417,6 +8108,10 @@
         let talentManageInFlight = false;
         let currentTalentState = normalizeTalentState(null);
         let currentTalentError = null;
+        let mobileProfileTab = 'base';
+        let mobileActiveDestination = 'dungeons';
+        let mobileTouchStart = null;
+        const leaderboardMobileExpandedBoards = new Set();
         let replyTarget = null;
         let testimonyTargetId = null;
         let pendingRating = { dungeonId: null, value: 5 };
@@ -7451,7 +8146,171 @@
         function canOverrideProfileLocks() { return isAdmin(); }
         function canEditProfileScores() { return canOverrideProfileLocks(); }
         function shouldAutoFocusModalInput() {
-            return !window.matchMedia('(max-width: 720px), (pointer: coarse)').matches;
+            return !window.matchMedia('(max-width: 720px)').matches;
+        }
+
+        function isMobileViewport() {
+            return window.matchMedia('(max-width: 720px)').matches;
+        }
+
+        function getMobileDestinations() {
+            return ['dungeons', 'leaderboard', 'profile', 'talent', 'messages'];
+        }
+
+        function setMobileScreenClass(destination, direction = 0) {
+            mobileActiveDestination = getMobileDestinations().includes(destination) ? destination : 'dungeons';
+            document.body.classList.toggle('mobile-app-mode', isMobileViewport());
+            document.body.style.setProperty('--mobile-screen-shift', direction < 0 ? '-14px' : '14px');
+            document.body.classList.remove(
+                'mobile-screen-dungeons',
+                'mobile-screen-leaderboard',
+                'mobile-screen-profile',
+                'mobile-screen-talent',
+                'mobile-screen-messages'
+            );
+            document.body.classList.add(`mobile-screen-${mobileActiveDestination}`);
+        }
+
+        function setMobileNavActive(destination) {
+            mobileActiveDestination = getMobileDestinations().includes(destination) ? destination : 'dungeons';
+            setMobileScreenClass(mobileActiveDestination);
+            document.querySelectorAll('.mobile-nav-item').forEach(button => {
+                button.classList.toggle('active', button.dataset.mobileDest === mobileActiveDestination);
+            });
+        }
+
+        function renderMobileProfileTabs() {
+            const tabs = [
+                ['base', '基础'],
+                ['talent', '天赋'],
+                ['trials', '试炼'],
+                ['titles', '称号'],
+                ['messages', '消息']
+            ];
+            return `<div class="mobile-profile-tabs" role="tablist" aria-label="信徒档案分区">${tabs.map(([key, label]) => `<button type="button" class="mobile-profile-tab ${mobileProfileTab === key ? 'active' : ''}" data-profile-tab="${key}" onclick="setMobileProfileTab('${key}')">${label}</button>`).join('')}</div>`;
+        }
+
+        function setMobileProfileTab(tab, options = {}) {
+            const allowed = ['base', 'talent', 'trials', 'titles', 'messages'];
+            mobileProfileTab = allowed.includes(tab) ? tab : 'base';
+            document.querySelectorAll('.mobile-profile-tab').forEach(button => {
+                button.classList.toggle('active', button.dataset.profileTab === mobileProfileTab);
+            });
+            document.querySelectorAll('.profile-mobile-section').forEach(section => {
+                section.classList.toggle('active', section.dataset.mobileProfileSection === mobileProfileTab);
+            });
+            if (options.scroll !== false && isMobileViewport()) {
+                document.getElementById('profileContent')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }
+            if (mobileProfileTab === 'talent') setMobileNavActive('talent');
+            else if (mobileProfileTab === 'messages') setMobileNavActive('messages');
+            else setMobileNavActive('profile');
+        }
+
+        async function mobileNavigate(destination) {
+            const dest = destination || 'dungeons';
+            const order = getMobileDestinations();
+            const fromIndex = order.indexOf(mobileActiveDestination);
+            const toIndex = order.indexOf(dest);
+            setMobileScreenClass(dest, toIndex >= fromIndex ? 1 : -1);
+            if (dest === 'dungeons') {
+                closeProfilePage(false);
+                closeLeaderboardPage(false);
+                closeMatchPage(false);
+                closeScorePage(false);
+                const detailOverlay = document.getElementById('detailOverlay');
+                if (detailOverlay) detailOverlay.style.display = 'none';
+                document.body.classList.remove('detail-view-open');
+                setMobileNavActive('dungeons');
+                requestAnimationFrame(() => window.scrollTo({ top: 0, behavior: 'smooth' }));
+                return;
+            }
+            if (dest === 'leaderboard') {
+                setMobileNavActive('leaderboard');
+                await openLeaderboardPage();
+                return;
+            }
+            if (dest === 'talent' || dest === 'messages' || dest === 'profile') {
+                mobileProfileTab = dest === 'talent' ? 'talent' : dest === 'messages' ? 'messages' : 'base';
+                setMobileNavActive(dest);
+                await openProfilePage(mobileProfileTab);
+            }
+        }
+
+        function dismissMobileOnboarding(remember = false) {
+            if (remember) setLocalData(MOBILE_ONBOARDING_STORAGE_KEY, true);
+            document.getElementById('mobileOnboarding')?.classList.remove('visible');
+        }
+
+        function maybeShowMobileOnboarding() {
+            if (!isMobileViewport()) return;
+            setMobileScreenClass(mobileActiveDestination || 'dungeons');
+            if (getLocalData(MOBILE_ONBOARDING_STORAGE_KEY, false)) return;
+            window.setTimeout(() => {
+                if (isMobileViewport()) document.getElementById('mobileOnboarding')?.classList.add('visible');
+            }, 650);
+        }
+
+        function shouldIgnoreMobileSwipe(target) {
+            if (!isMobileViewport()) return true;
+            if (!(target instanceof Element)) return false;
+            return !!target.closest('input, textarea, select, button, a, .modal-overlay, .detail-overlay, .mobile-onboarding, .advanced-filters, .mobile-profile-tabs, .leaderboard-tabs, .leaderboard-path-tabs, .sort-group, .path-nav');
+        }
+
+        function handleMobileTouchStart(event) {
+            if (shouldIgnoreMobileSwipe(event.target) || event.touches.length !== 1) return;
+            const touch = event.touches[0];
+            mobileTouchStart = { x: touch.clientX, y: touch.clientY, time: Date.now() };
+        }
+
+        function handleMobileTouchEnd(event) {
+            if (!mobileTouchStart || shouldIgnoreMobileSwipe(event.target)) {
+                mobileTouchStart = null;
+                return;
+            }
+            const touch = event.changedTouches[0];
+            const dx = touch.clientX - mobileTouchStart.x;
+            const dy = touch.clientY - mobileTouchStart.y;
+            const dt = Date.now() - mobileTouchStart.time;
+            mobileTouchStart = null;
+            if (dt > 700 || Math.abs(dx) < 72 || Math.abs(dx) < Math.abs(dy) * 1.4) return;
+            const order = getMobileDestinations();
+            const currentIndex = Math.max(0, order.indexOf(mobileActiveDestination));
+            const nextIndex = dx < 0 ? Math.min(order.length - 1, currentIndex + 1) : Math.max(0, currentIndex - 1);
+            if (nextIndex !== currentIndex) mobileNavigate(order[nextIndex]);
+        }
+
+        function toggleMobileFab() {
+            document.getElementById('mobileFab')?.classList.toggle('open');
+        }
+
+        async function mobileQuickAction(action) {
+            document.getElementById('mobileFab')?.classList.remove('open');
+            if (action === 'top') {
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+                return;
+            }
+            if (action === 'invite') {
+                openInviteModal();
+                return;
+            }
+            if (action === 'build') {
+                openSubmitModal();
+                return;
+            }
+            if (action === 'save') {
+                if (document.getElementById('profilePage')?.style.display !== 'none') await saveProfilePage();
+                else showToast('请先进入个人档案');
+                return;
+            }
+            if (action === 'refresh') {
+                if (document.getElementById('profilePage')?.style.display !== 'none') await renderProfilePage();
+                else if (document.getElementById('leaderboardPage')?.style.display !== 'none') await renderLeaderboardPage();
+                else await renderDungeonList();
+                showToast('已刷新当前数据');
+                return;
+            }
+            if (action === 'profile') await mobileNavigate('profile');
         }
 
         function normalizeRole(role) {
@@ -7469,6 +8328,33 @@
 
         function releaseUiActionLock(key) {
             uiActionLocks.delete(key);
+        }
+
+        function setActionButtonsBusy(selector, busyText = '处理中...') {
+            const buttons = [...document.querySelectorAll(selector)].filter(button => button instanceof HTMLButtonElement);
+            buttons.forEach(button => {
+                if (!button.dataset.idleText) button.dataset.idleText = button.textContent || '';
+                button.disabled = true;
+                button.textContent = busyText;
+            });
+            return () => {
+                buttons.forEach(button => {
+                    button.disabled = false;
+                    button.textContent = button.dataset.idleText || button.textContent || '';
+                    delete button.dataset.idleText;
+                });
+            };
+        }
+
+        function getFriendlyActionError(error, fallback = '操作失败') {
+            const raw = String(error?.message || error || '').trim();
+            if (/duplicate key|already exists|unique|display_name|昵称.*(重复|占用|存在)|重复|唯一约束/i.test(raw)) {
+                return '这个昵称已经被使用，请换一个昵称';
+            }
+            if (/failed to fetch|networkerror|load failed|请求失败|network/i.test(raw)) {
+                return '网络请求失败，请检查连接后重试';
+            }
+            return raw || fallback;
         }
 
         function saveInviteSession(session) {
@@ -7752,6 +8638,93 @@
                     .join('');
                 return `<optgroup label="${escapeHtml(groupLabel)}">${options}</optgroup>`;
             }).join('');
+        }
+
+        function getClassHealthRule(className) {
+            const clean = String(className || '').trim();
+            const rule = CLASS_HEALTH_RULES[clean];
+            return rule ? { className: clean, ...rule, known: true } : { className: clean, baseHp: 0, growthPer100: 0, known: false };
+        }
+
+        function getFaithHealthBonus(god, className) {
+            return cleanGodName(god) === '繁荣' ? Number(PROSPERITY_HEALTH_BONUS[className] || 0) : 0;
+        }
+
+        function getProfileHealthSummary(profile) {
+            const profession = getProfessionInfo(profile?.profession);
+            const rule = getClassHealthRule(profession.className);
+            const ascensionScore = normalizeProfileScore(profile?.ascensionScore, DEFAULT_ASCENSION_SCORE);
+            const growthSteps = rule.known ? Math.max(0, Math.floor((ascensionScore - DEFAULT_ASCENSION_SCORE) / 100)) : 0;
+            const growthHp = growthSteps * rule.growthPer100;
+            const faithGod = getProfileFaithGod(profile);
+            const faithBonus = rule.known ? getFaithHealthBonus(faithGod, rule.className) : 0;
+            return {
+                profession,
+                rule,
+                ascensionScore,
+                growthSteps,
+                growthHp,
+                faithGod,
+                faithBonus,
+                maxHp: rule.known ? rule.baseHp + growthHp + faithBonus : 0,
+                trait: FAITH_TRAITS[faithGod] || ''
+            };
+        }
+
+        function renderProfileBattlePanel(profile) {
+            const faithGod = getProfileFaithGod(profile) || '命运';
+            const summary = getProfileHealthSummary(profile);
+            const hasProfession = summary.rule.known;
+            const hasFaith = !!summary.trait;
+            return `
+                <section id="profileBattlePanel" class="profile-panel" data-god="${escapeHtml(faithGod)}" style="${getGodSkinStyle(faithGod)}">
+                    <div class="profile-panel-title">
+                        <span>战斗面板</span>
+                        <small>由职业、登神之路与信仰特性实时推导</small>
+                    </div>
+                    ${hasProfession ? `
+                        <div class="profile-battle-grid">
+                            <div class="profile-battle-hp">
+                                <span>血量上限</span>
+                                <strong>${summary.maxHp}</strong>
+                                <small>${escapeHtml(summary.profession.className)} · ${escapeHtml(summary.profession.name)}，登神 ${summary.ascensionScore} 分</small>
+                            </div>
+                            <div class="profile-battle-breakdown">
+                                <div class="profile-battle-line"><span>职业基础血量</span><strong>${summary.rule.baseHp}</strong></div>
+                                <div class="profile-battle-line"><span>成长血量</span><strong>+${summary.growthHp}</strong></div>
+                                <div class="profile-battle-line"><span>信仰生命加成</span><strong>${summary.faithBonus ? `+${summary.faithBonus}` : '0'}</strong></div>
+                                <div class="profile-battle-line"><span>职业成长规则</span><strong>每 100 分 +${summary.rule.growthPer100} 血</strong></div>
+                            </div>
+                        </div>` : `
+                        <div class="profile-empty">请选择职业后查看血量成长。</div>`}
+                    <div class="profile-battle-trait">
+                        <strong>${hasFaith ? `${escapeHtml(faithGod)}之神 · 信仰特性` : '信仰特性'}</strong>
+                        ${hasFaith ? escapeHtml(summary.trait) : '请选择信仰后查看信仰特性。'}
+                    </div>
+                </section>`;
+        }
+
+        function getProfileBattlePreviewProfile() {
+            const current = getCurrentProfile();
+            const faithSelect = document.getElementById('profileFaithGod');
+            const professionSelect = document.getElementById('profileProfession');
+            const scoreInput = document.getElementById('profileAscensionScore');
+            const selectedFaithGod = faithSelect ? cleanGodName(faithSelect.value) : getProfileFaithGod(current);
+            const selectedProfession = professionSelect ? normalizeProfession(professionSelect.value) : (current.profession || '');
+            const ascensionScore = scoreInput ? normalizeProfileScore(scoreInput.value, current.ascensionScore ?? DEFAULT_ASCENSION_SCORE) : normalizeProfileScore(current.ascensionScore, DEFAULT_ASCENSION_SCORE);
+            return {
+                ...current,
+                faithGod: selectedFaithGod,
+                faithPath: getGodInfo(selectedFaithGod).path || current.faithPath || '',
+                profession: selectedProfession,
+                ascensionScore
+            };
+        }
+
+        function updateProfileBattlePanel() {
+            const panel = document.getElementById('profileBattlePanel');
+            if (!panel) return;
+            panel.outerHTML = renderProfileBattlePanel(getProfileBattlePreviewProfile());
         }
 
         function renderProfileChips(value, emptyText, god = '') {
@@ -8081,6 +9054,9 @@
             if (panel) panel.outerHTML = renderTalentPoolPanel(currentTalentState, currentTalentError, profile);
             const equipPanel = document.getElementById('profileTalentEquipPanel');
             if (equipPanel) equipPanel.innerHTML = renderEquippedTalentSlots(currentTalentState, getProfileFaithGod(profile) || '命运');
+            if (isMobileViewport() && document.getElementById('profilePage')?.style.display !== 'none') {
+                setMobileProfileTab(mobileProfileTab, { scroll: false });
+            }
         }
 
         function getSelectedTalentPool(profile, state) {
@@ -8475,6 +9451,7 @@
             const faithGod = getProfileFaithGod(profile) || '命运';
             const profession = profile.profession || '未填写职业';
             const titles = normalizeProfileTitleList(profile.activeTitles, profile.activeTitle).map(title => title.titleText).filter(Boolean);
+            const healthSummary = getProfileHealthSummary(profile);
             const equippedTalents = (state.ownedTalents || [])
                 .filter(talent => Number(talent.equipped_slot || 0) > 0)
                 .sort((a, b) => Number(a.equipped_slot || 0) - Number(b.equipped_slot || 0))
@@ -8491,6 +9468,15 @@
                 profession,
                 ascensionScore: Number(profile.ascensionScore || 0),
                 audienceScore: Number(profile.audienceScore || 0),
+                health: {
+                    maxHp: healthSummary.maxHp,
+                    baseHp: healthSummary.rule.baseHp,
+                    growthHp: healthSummary.growthHp,
+                    faithBonus: healthSummary.faithBonus,
+                    growthPer100: healthSummary.rule.growthPer100,
+                    className: healthSummary.rule.className || healthSummary.profession.className || '',
+                    trait: healthSummary.trait || ''
+                },
                 titles,
                 equippedTalents,
                 exportedAt: new Date(),
@@ -8500,7 +9486,7 @@
         function drawProfileCardImage(payload) {
             const canvas = document.createElement('canvas');
             const width = 1200;
-            const height = 1600;
+            const height = 1800;
             const scale = Math.max(1, Math.floor(window.devicePixelRatio || 1));
             canvas.width = width * scale;
             canvas.height = height * scale;
@@ -8598,20 +9584,59 @@
 
             ctx.fillStyle = main;
             ctx.font = '900 30px "Microsoft YaHei", sans-serif';
-            ctx.fillText('神诞称号', 108, 608);
-            const titleText = payload.titles.length ? payload.titles.slice(0, 5).join(' / ') : '暂无称号';
-            wrapCanvasText(ctx, titleText, 960, 2).forEach((line, index) => {
-                ctx.fillStyle = index ? 'rgba(244,240,223,0.72)' : '#f4f0df';
-                ctx.font = '800 34px "Microsoft YaHei", sans-serif';
-                ctx.fillText(line, 108, 660 + index * 44);
+            ctx.fillText('战斗面板', 108, 596);
+            drawRoundRect(ctx, 108, 630, 310, 170, 20);
+            ctx.fillStyle = 'rgba(213,167,66,0.12)';
+            ctx.fill();
+            ctx.strokeStyle = main;
+            ctx.globalAlpha = 0.42;
+            ctx.stroke();
+            ctx.globalAlpha = 1;
+            ctx.fillStyle = 'rgba(234,234,242,0.62)';
+            ctx.font = '800 24px "Microsoft YaHei", sans-serif';
+            ctx.fillText('血量上限', 136, 674);
+            ctx.fillStyle = '#f4f0df';
+            ctx.font = '900 70px "Microsoft YaHei", sans-serif';
+            ctx.fillText(payload.health.maxHp ? String(payload.health.maxHp) : '未定', 136, 748);
+            ctx.fillStyle = 'rgba(234,234,242,0.62)';
+            ctx.font = '600 21px "Microsoft YaHei", sans-serif';
+            const healthParts = payload.health.maxHp
+                ? [`基础 ${payload.health.baseHp}`, `成长 +${payload.health.growthHp}`, `信仰 +${payload.health.faithBonus}`]
+                : ['请选择职业后查看血量成长'];
+            ctx.fillText(healthParts.join(' / '), 136, 778);
+
+            drawRoundRect(ctx, 444, 630, 648, 170, 20);
+            ctx.fillStyle = 'rgba(255,255,255,0.045)';
+            ctx.fill();
+            ctx.strokeStyle = accent;
+            ctx.globalAlpha = 0.36;
+            ctx.stroke();
+            ctx.globalAlpha = 1;
+            ctx.fillStyle = 'rgba(231,207,138,0.86)';
+            ctx.font = '800 24px "Microsoft YaHei", sans-serif';
+            ctx.fillText(`${payload.faithGod}之神 · 信仰特性`, 474, 674);
+            ctx.fillStyle = 'rgba(244,240,223,0.84)';
+            ctx.font = '600 23px "Microsoft YaHei", sans-serif';
+            wrapCanvasText(ctx, payload.health.trait || '请选择信仰后查看信仰特性。', 570, 3).forEach((line, index) => {
+                ctx.fillText(line, 474, 718 + index * 31);
             });
 
             ctx.fillStyle = main;
             ctx.font = '900 30px "Microsoft YaHei", sans-serif';
-            ctx.fillText('携带天赋', 108, 800);
+            ctx.fillText('神诞称号', 108, 874);
+            const titleText = payload.titles.length ? payload.titles.slice(0, 5).join(' / ') : '暂无称号';
+            wrapCanvasText(ctx, titleText, 960, 2).forEach((line, index) => {
+                ctx.fillStyle = index ? 'rgba(244,240,223,0.72)' : '#f4f0df';
+                ctx.font = '800 34px "Microsoft YaHei", sans-serif';
+                ctx.fillText(line, 108, 926 + index * 44);
+            });
+
+            ctx.fillStyle = main;
+            ctx.font = '900 30px "Microsoft YaHei", sans-serif';
+            ctx.fillText('携带天赋', 108, 1066);
             const talents = payload.equippedTalents.length ? payload.equippedTalents : [{ slot: 0, name: '尚未携带天赋', rank: '', pool: '', effect: '打开个人面板后可在天赋仓库配置携带槽。' }];
             talents.slice(0, 4).forEach((talent, index) => {
-                const y = 838 + index * 160;
+                const y = 1104 + index * 150;
                 drawRoundRect(ctx, 108, y, 984, 128, 18);
                 ctx.fillStyle = 'rgba(255,255,255,0.045)';
                 ctx.fill();
@@ -8849,7 +9874,7 @@
             }));
         }
 
-        function renderLeaderboardRows(entries, scoreType, limit = 50, options = {}) {
+        function renderLeaderboardRows(entries, scoreType, limit = LEADERBOARD_DISPLAY_LIMIT, options = {}) {
             const godRows = options.includeGodSeats ? getLeaderboardGodSeats(scoreType, options).slice(0, options.godLimit || 16) : [];
             const ranked = sortLeaderboardEntries(entries, scoreType).slice(0, limit);
             if (!ranked.length && !godRows.length) return renderRitualEmpty('此途暂无留存信徒档案，静待众生踏入新的愚戏。', '命运', '信徒名录暂空');
@@ -8903,14 +9928,35 @@
         function renderLeaderboardBoard(title, entries, scoreType, options = {}) {
             const boardClass = options.full ? 'leaderboard-board full' : 'leaderboard-board';
             const subtitle = options.subtitle || `${entries.length} 位信徒`;
+            const requestedLimit = options.limit || LEADERBOARD_DISPLAY_LIMIT;
+            const boardKey = [
+                leaderboardMode,
+                leaderboardPath,
+                scoreType,
+                options.path || 'all',
+                title
+            ].join('|');
+            const isPathOverview = leaderboardMode === 'path' && leaderboardPath === 'all';
+            const mobileLimit = isPathOverview ? MOBILE_LEADERBOARD_PATH_OVERVIEW_LIMIT : MOBILE_LEADERBOARD_BOARD_LIMIT;
+            const shouldCollapseOnMobile = isMobileViewport() && entries.length > mobileLimit && !leaderboardMobileExpandedBoards.has(boardKey);
+            const renderLimit = shouldCollapseOnMobile ? Math.min(requestedLimit, mobileLimit) : requestedLimit;
+            const moreButton = shouldCollapseOnMobile
+                ? `<button type="button" class="leaderboard-mobile-more" onclick="expandLeaderboardMobileBoard(${jsString(boardKey)})">展开全部 ${entries.length} 位</button>`
+                : '';
             return `
                 <section class="${boardClass} ${options.path ? getPathClassByPath(options.path) : ''}">
                     <div class="profile-panel-title">
                         <span>${escapeHtml(title)}</span>
                         <small>${escapeHtml(subtitle)}</small>
                     </div>
-                    <div class="leaderboard-list">${renderLeaderboardRows(entries, scoreType, options.limit || 50, options)}</div>
+                    <div class="leaderboard-list">${renderLeaderboardRows(entries, scoreType, renderLimit, options)}</div>
+                    ${moreButton}
                 </section>`;
+        }
+
+        async function expandLeaderboardMobileBoard(boardKey) {
+            leaderboardMobileExpandedBoards.add(String(boardKey || ''));
+            await renderLeaderboardPage();
         }
 
         function renderLeaderboardTabs() {
@@ -8944,14 +9990,14 @@
                 const boards = GOD_GROUPS.map(group => {
                     const pathEntries = entries.filter(entry => entry.faithPath === group.path);
                     const gods = group.gods.map(god => `${god}`).join('、');
-                    return renderLeaderboardBoard(`${group.path}命途 · ${gods}信徒录`, pathEntries, 'audience', { limit: 10, subtitle: `${pathEntries.length} 位信徒 · 第 0 位为神席`, path: group.path, showAscensionInParentheses: true, includeGodSeats: true });
+                    return renderLeaderboardBoard(`${group.path}命途 · ${gods}信徒录`, pathEntries, 'audience', { limit: LEADERBOARD_DISPLAY_LIMIT, subtitle: `${pathEntries.length} 位信徒 · 第 0 位为神席`, path: group.path, showAscensionInParentheses: true, includeGodSeats: true });
                 }).join('');
                 return `${pathTabs}<div class="leaderboard-layout">${boards}</div>`;
             }
             return `
                 <div class="leaderboard-layout">
-                    ${renderLeaderboardBoard('命运骰录 · 登神阶途总榜', entries, 'ascension', { limit: 30, includeGodSeats: true, mergeGodSeats: true })}
-                    ${renderLeaderboardBoard('星轨观览 · 觐见之梯总榜', entries, 'audience', { limit: 30, includeGodSeats: true, mergeGodSeats: true })}
+                    ${renderLeaderboardBoard('命运骰录 · 登神阶途总榜', entries, 'ascension', { limit: LEADERBOARD_DISPLAY_LIMIT, includeGodSeats: true, mergeGodSeats: true })}
+                    ${renderLeaderboardBoard('星轨观览 · 觐见之梯总榜', entries, 'audience', { limit: LEADERBOARD_DISPLAY_LIMIT, includeGodSeats: true, mergeGodSeats: true })}
                 </div>`;
         }
 
@@ -9009,6 +10055,7 @@
         }
 
         async function openLeaderboardPage() {
+            setMobileNavActive('leaderboard');
             leaderboardScrollY = window.scrollY || document.documentElement.scrollTop || 0;
             const detailOverlay = document.getElementById('detailOverlay');
             if (detailOverlay) detailOverlay.style.display = 'none';
@@ -9029,6 +10076,7 @@
             const page = document.getElementById('leaderboardPage');
             if (page) page.style.display = 'none';
             document.body.classList.remove('leaderboard-view-open');
+            setMobileNavActive('dungeons');
             if (restoreScroll !== false) requestAnimationFrame(() => window.scrollTo(0, leaderboardScrollY || 0));
         }
 
@@ -10375,8 +11423,9 @@
                         <div class="faith-progress-track"><div class="faith-progress-fill" style="--faith-progress:${faithProgress}%"></div></div>
                     </div>
                 </section>
-                <div class="profile-grid">
-                    <div>
+                ${renderMobileProfileTabs()}
+                <div class="profile-grid mobile-profile-layout">
+                    <div class="profile-mobile-section ${mobileProfileTab === 'base' ? 'active' : ''}" data-mobile-profile-section="base">
                         <section class="profile-panel" data-god="${escapeHtml(faithGod)}" style="${faithStyle}">
                             <div class="profile-panel-title">
                                 <span>基础信仰设定</span>
@@ -10395,12 +11444,12 @@
                                 </div>
                                 <div class="form-group full">
                                     <label for="profileProfession">个人职业</label>
-                                <select id="profileProfession" ${professionLocked ? 'disabled' : ''}>${renderProfileProfessionOptions(profile.profession, profile.faithGod)}</select>
+                                <select id="profileProfession" onchange="updateProfileBattlePanel()" ${professionLocked ? 'disabled' : ''}>${renderProfileProfessionOptions(profile.profession, profile.faithGod)}</select>
                                     <div class="identity-help">${professionLocked ? `职业已封存为 ${escapeHtml(profile.profession)}，不可再改。` : (bindingMismatched ? '职业只能从当前信仰神明下选择，修复后会重新封存。' : (hasTrickeryFaithPrivilege(profile) ? '欺诈信徒可改写职业档纹。' : '请先选择信仰，再选择该信仰下的职业；首次封存后会刻入档案，欺诈信徒除外。'))}</div>
                                 </div>
                                 <div class="form-group">
                                     <label for="profileAscensionScore">登神之路分数</label>
-                                    <input id="profileAscensionScore" type="number" min="0" step="0.1" value="${Number(profile.ascensionScore ?? DEFAULT_ASCENSION_SCORE)}" ${scoresLocked ? 'disabled' : ''}>
+                                    <input id="profileAscensionScore" type="number" min="0" step="0.1" value="${Number(profile.ascensionScore ?? DEFAULT_ASCENSION_SCORE)}" oninput="updateProfileBattlePanel()" ${scoresLocked ? 'disabled' : ''}>
                                 </div>
                                 <div class="form-group">
                                     <label for="profileAudienceScore">觐见之梯分数</label>
@@ -10424,18 +11473,9 @@
                             <div class="profile-tools">
                                 <button class="btn btn-outline btn-sm" onclick="openLeaderboardPage()">踏入登神观星台</button>
                                 <button class="btn btn-outline btn-sm" onclick="exportProfileCardImage()">进献神恩</button>
-                                <button class="btn btn-primary btn-sm" onclick="saveProfilePage()">封存信徒档案</button>
+                                <button class="btn btn-primary btn-sm" data-profile-save-button onclick="saveProfilePage()">封存信徒档案</button>
                             </div>
                         </section>
-                        <section class="profile-panel" data-god="${escapeHtml(faithGod)}" style="${faithStyle}">
-                            <div class="profile-panel-title">
-                                <span>试炼履迹录</span>
-                                <small>${uniqueCleared} 个副本 / ${clearRecords.length} 条记录</small>
-                            </div>
-                            <div class="profile-list">${renderProfileClearRecords(clearRecords, faithGod)}</div>
-                        </section>
-                    </div>
-                    <div>
                         <section class="profile-panel" data-god="${escapeHtml(faithGod)}" style="${faithStyle}">
                             <div class="profile-panel-title">
                                 <span>个人数值</span>
@@ -10451,7 +11491,24 @@
                                 <span class="metric-pill">当前身份 <strong>${escapeHtml(roleLabel)}</strong></span>
                             </div>
                         </section>
+                        ${renderProfileBattlePanel(profile)}
+                        <section class="profile-panel" data-god="${escapeHtml(faithGod)}" style="${faithStyle}">
+                            <div class="profile-panel-title"><span>个人道具</span></div>
+                            ${renderProfileChips(profile.items, getGodEmptyText(faithGod, 'items', '还没有填写个人道具。'), faithGod)}
+                        </section>
+                    </div>
+                    <div class="profile-mobile-section ${mobileProfileTab === 'trials' ? 'active' : ''}" data-mobile-profile-section="trials">
+                        <section class="profile-panel" data-god="${escapeHtml(faithGod)}" style="${faithStyle}">
+                            <div class="profile-panel-title">
+                                <span>试炼履迹录</span>
+                                <small>${uniqueCleared} 个副本 / ${clearRecords.length} 条记录</small>
+                            </div>
+                            <div class="profile-list">${renderProfileClearRecords(clearRecords, faithGod)}</div>
+                        </section>
                         ${renderProfileFaithObservatory(clearRecords, authored, faithGod, profile)}
+                        ${authorPanel}
+                    </div>
+                    <div class="profile-mobile-section ${mobileProfileTab === 'messages' ? 'active' : ''}" data-mobile-profile-section="messages">
                         <section class="profile-panel" data-god="${escapeHtml(faithGod)}" style="${faithStyle}">
                             <div class="profile-panel-title">
                                 <span>结算信封</span>
@@ -10460,22 +11517,40 @@
                             ${renderScoreMessages(scoreMessages, scoreMessageError, faithGod)}
                         </section>
                         <section class="profile-panel" data-god="${escapeHtml(faithGod)}" style="${faithStyle}">
-                            <div class="profile-panel-title"><span>个人道具</span></div>
-                            ${renderProfileChips(profile.items, getGodEmptyText(faithGod, 'items', '还没有填写个人道具。'), faithGod)}
+                            <div class="profile-panel-title">
+                                <span>📣 楼主提醒</span>
+                                <small>${unread.length ? `${unread.length} 条未读` : '暂无未读'}</small>
+                            </div>
+                            <div class="profile-tools">
+                                <button class="btn btn-outline btn-sm" onclick="markProfileNoticesRead()">封缄楼主谕响</button>
+                            </div>
+                            <div class="profile-list" style="margin-top:14px;">${renderProfileNotices(notices, faithGod)}</div>
                         </section>
+                    </div>
+                    <div class="profile-mobile-section ${mobileProfileTab === 'talent' ? 'active' : ''}" data-mobile-profile-section="talent">
                         ${renderTalentPoolPanel(talentState, talentError, profile)}
-                        ${authorPanel}
+                    </div>
+                    <div class="profile-mobile-section ${mobileProfileTab === 'titles' ? 'active' : ''}" data-mobile-profile-section="titles">
+                        <section class="profile-panel" data-god="${escapeHtml(faithGod)}" style="${faithStyle}">
+                            <div class="profile-panel-title">
+                                <span>当前称号</span>
+                                <small>称号 / 诅咒状态</small>
+                            </div>
+                            ${renderProfileTitleStatus(profile.activeTitle, profile.activeCurse, faithGod, profile.activeTitles, profile.activeCurses)}
+                        </section>
                     </div>
                 </div>
                 ${renderProfileChronicle(faithGod, profileChronicleIndex)}`;
             startProfileChronicleRotation(faithGod);
+            setMobileProfileTab(mobileProfileTab, { scroll: false });
         }
 
-        async function openProfilePage() {
+        async function openProfilePage(initialTab = mobileProfileTab || 'base') {
             if (!inviteSession) {
                 openInviteModal('先验入局谕令后可查看个人档案。');
                 return;
             }
+            mobileProfileTab = ['base', 'talent', 'trials', 'titles', 'messages'].includes(initialTab) ? initialTab : 'base';
             profileScrollY = window.scrollY || document.documentElement.scrollTop || 0;
             const detailOverlay = document.getElementById('detailOverlay');
             if (detailOverlay) detailOverlay.style.display = 'none';
@@ -10490,6 +11565,7 @@
             document.getElementById('profilePage').style.display = 'block';
             window.scrollTo(0, 0);
             await renderProfilePage();
+            setMobileProfileTab(mobileProfileTab, { scroll: false });
         }
 
         function closeProfilePage(restoreScroll = true) {
@@ -10497,6 +11573,7 @@
             const page = document.getElementById('profilePage');
             if (page) page.style.display = 'none';
             document.body.classList.remove('profile-view-open');
+            setMobileNavActive('dungeons');
             if (restoreScroll !== false) requestAnimationFrame(() => window.scrollTo(0, profileScrollY || 0));
         }
 
@@ -10511,65 +11588,64 @@
                 return;
             }
             if (!acquireUiActionLock('saveProfilePage', '个人档案正在保存，请勿重复点击')) return;
-            const name = canEditDisplayName()
-                ? cleanDisplayNameInput(document.getElementById('profileDisplayName')?.value)
-                : cleanDisplayNameInput(inviteSession.name || ROLE_LABELS[getInviteRole()] || '');
-            if (!name) { releaseUiActionLock('saveProfilePage'); showToast('请输入个人昵称'); return; }
-            const currentProfile = getCurrentProfile();
-            const lockedFaithGod = isFaithLocked(currentProfile) ? getProfileFaithGod(currentProfile) : '';
-            const originalFaithGod = getProfileFaithGod(currentProfile);
-            const selectedFaithGod = lockedFaithGod || cleanGodName(document.getElementById('profileFaithGod')?.value);
-            if (!selectedFaithGod || !getGodInfo(selectedFaithGod).known) {
-                releaseUiActionLock('saveProfilePage');
-                showToast('请选择你的信仰神明');
-                return;
-            }
-            const selectedFaithInfo = getGodInfo(selectedFaithGod);
-            const lockedProfession = isProfessionLocked(currentProfile) ? currentProfile.profession : '';
-            const selectedProfession = lockedProfession || normalizeProfession(document.getElementById('profileProfession')?.value);
-            if (!selectedProfession) {
-                releaseUiActionLock('saveProfilePage');
-                showToast('请选择游戏里的 96 职业之一');
-                return;
-            }
-            const selectedProfessionInfo = getProfessionInfo(selectedProfession);
-            if (!selectedProfessionInfo.known || selectedProfessionInfo.god !== selectedFaithInfo.god) {
-                releaseUiActionLock('saveProfilePage');
-                showToast('职业必须选择当前信仰神明下的职业');
-                return;
-            }
-            const scoresLocked = areProfileScoresLocked(currentProfile);
-            const ascensionScore = scoresLocked
-                ? (currentProfile.ascensionScore ?? DEFAULT_ASCENSION_SCORE)
-                : normalizeProfileScore(document.getElementById('profileAscensionScore')?.value, DEFAULT_ASCENSION_SCORE);
-            const audienceScore = scoresLocked
-                ? (currentProfile.audienceScore ?? DEFAULT_AUDIENCE_SCORE)
-                : normalizeProfileScore(document.getElementById('profileAudienceScore')?.value, DEFAULT_AUDIENCE_SCORE);
-            const nextScoresLockedAt = canEditProfileScores()
-                ? (currentProfile.scoresLockedAt || '')
-                : (currentProfile.scoresLockedAt || new Date().toISOString());
-            const profile = {
-                displayName: name,
-                role: getInviteRole() || '',
-                faithGod: selectedFaithInfo.god,
-                faithPath: selectedFaithInfo.path,
-                originalFaithGod: currentProfile.originalFaithGod || selectedFaithInfo.god,
-                originalFaithPath: currentProfile.originalFaithPath || selectedFaithInfo.path,
-                profession: selectedProfession,
-                ascensionScore,
-                audienceScore,
-                scoresLockedAt: nextScoresLockedAt,
-                items: String(document.getElementById('profileItems')?.value || '').trim().slice(0, 800),
-                talents: String(currentProfile.talents || '').trim().slice(0, 800),
-                activeTitle: currentProfile.activeTitle || null,
-                activeTitles: normalizeProfileTitleList(currentProfile.activeTitles, currentProfile.activeTitle),
-                activeCurse: currentProfile.activeCurse || null,
-                activeCurses: normalizeProfileCurseList(currentProfile.activeCurses, currentProfile.activeCurse)
-            };
+            const restoreSaveButtons = setActionButtonsBusy('[data-profile-save-button]', '保存中...');
+            showToast('个人档案保存中，请勿重复点击');
             try {
+                const name = canEditDisplayName()
+                    ? cleanDisplayNameInput(document.getElementById('profileDisplayName')?.value)
+                    : cleanDisplayNameInput(inviteSession.name || ROLE_LABELS[getInviteRole()] || '');
+                if (!name) { showToast('请输入个人昵称'); return; }
+                const currentProfile = getCurrentProfile();
+                const lockedFaithGod = isFaithLocked(currentProfile) ? getProfileFaithGod(currentProfile) : '';
+                const originalFaithGod = getProfileFaithGod(currentProfile);
+                const selectedFaithGod = lockedFaithGod || cleanGodName(document.getElementById('profileFaithGod')?.value);
+                if (!selectedFaithGod || !getGodInfo(selectedFaithGod).known) {
+                    showToast('请选择你的信仰神明');
+                    return;
+                }
+                const selectedFaithInfo = getGodInfo(selectedFaithGod);
+                const lockedProfession = isProfessionLocked(currentProfile) ? currentProfile.profession : '';
+                const selectedProfession = lockedProfession || normalizeProfession(document.getElementById('profileProfession')?.value);
+                if (!selectedProfession) {
+                    showToast('请选择游戏里的 96 职业之一');
+                    return;
+                }
+                const selectedProfessionInfo = getProfessionInfo(selectedProfession);
+                if (!selectedProfessionInfo.known || selectedProfessionInfo.god !== selectedFaithInfo.god) {
+                    showToast('职业必须选择当前信仰神明下的职业');
+                    return;
+                }
+                const scoresLocked = areProfileScoresLocked(currentProfile);
+                const ascensionScore = scoresLocked
+                    ? (currentProfile.ascensionScore ?? DEFAULT_ASCENSION_SCORE)
+                    : normalizeProfileScore(document.getElementById('profileAscensionScore')?.value, DEFAULT_ASCENSION_SCORE);
+                const audienceScore = scoresLocked
+                    ? (currentProfile.audienceScore ?? DEFAULT_AUDIENCE_SCORE)
+                    : normalizeProfileScore(document.getElementById('profileAudienceScore')?.value, DEFAULT_AUDIENCE_SCORE);
+                const nextScoresLockedAt = canEditProfileScores()
+                    ? (currentProfile.scoresLockedAt || '')
+                    : (currentProfile.scoresLockedAt || new Date().toISOString());
+                const profile = {
+                    displayName: name,
+                    role: getInviteRole() || '',
+                    faithGod: selectedFaithInfo.god,
+                    faithPath: selectedFaithInfo.path,
+                    originalFaithGod: currentProfile.originalFaithGod || selectedFaithInfo.god,
+                    originalFaithPath: currentProfile.originalFaithPath || selectedFaithInfo.path,
+                    profession: selectedProfession,
+                    ascensionScore,
+                    audienceScore,
+                    scoresLockedAt: nextScoresLockedAt,
+                    items: String(document.getElementById('profileItems')?.value || '').trim().slice(0, 800),
+                    talents: String(currentProfile.talents || '').trim().slice(0, 800),
+                    activeTitle: currentProfile.activeTitle || null,
+                    activeTitles: normalizeProfileTitleList(currentProfile.activeTitles, currentProfile.activeTitle),
+                    activeCurse: currentProfile.activeCurse || null,
+                    activeCurses: normalizeProfileCurseList(currentProfile.activeCurses, currentProfile.activeCurse)
+                };
                 if (canEditDisplayName() && name !== inviteSession.name) {
                     const { error } = await updateDisplayName(name);
-                    if (error) { showToast(`❌ ${error.message || '昵称保存失败'}`); return; }
+                    if (error) { showToast(`❌ ${getFriendlyActionError(error, '昵称保存失败')}`); return; }
                 }
                 saveCurrentProfile(profile);
                 const cloudSync = await syncProfileToCloud(profile);
@@ -10589,7 +11665,11 @@
                 await renderProfilePage();
                 if (document.getElementById('leaderboardPage')?.style.display !== 'none') await renderLeaderboardPage();
                 await renderDungeonList();
+            } catch (error) {
+                console.error('保存个人档案失败', error);
+                showToast(`❌ ${getFriendlyActionError(error, '个人档案保存失败')}`);
             } finally {
+                restoreSaveButtons();
                 releaseUiActionLock('saveProfilePage');
             }
         }
@@ -10627,11 +11707,11 @@
                     'Authorization': `Bearer ${SUPABASE_ANON_KEY}`
                 },
                 body: JSON.stringify({ action, inviteCode, payload })
-            });
+            }).catch(error => ({ ok: false, status: 0, json: async () => ({ error: getFriendlyActionError(error, '网络请求失败') }) }));
             const result = await response.json().catch(() => ({}));
             if (!response.ok) {
                 const errorData = result.data ?? null;
-                return { data: errorData, error: { message: result.error || '请求失败', data: errorData } };
+                return { data: errorData, error: { message: getFriendlyActionError(result.error, '请求失败'), data: errorData } };
             }
             const role = normalizeRole(result.role);
             const canRefreshSession = !!codeOverride || isInviteSnapshotCurrent(inviteSnapshot);
@@ -11234,6 +12314,7 @@
                 chronicle.outerHTML = renderProfileChronicle(info.god, 0);
                 startProfileChronicleRotation(info.god);
             }
+            updateProfileBattlePanel();
         }
 
         function renderArchiveEmptyState(filtered) {
@@ -11554,6 +12635,7 @@
                 panel.setAttribute('hidden', '');
                 button.setAttribute('aria-expanded', 'false');
             }
+            document.body.classList.toggle('mobile-filter-open', shouldOpen);
         }
 
         function toggleForumFeed(force) {
@@ -12548,20 +13630,28 @@
             const btn = document.getElementById('inviteSubmitButton');
             const code = input?.value.trim();
             if (!code) { showToast('请输入入局谕令'); return; }
+            if (!acquireUiActionLock('submitInviteCode', '入局谕令正在验证，请勿重复点击')) return;
             btn.disabled = true;
             btn.textContent = '掷骰中...';
-            const { error, role, name } = USE_LOCAL_FALLBACK ? { error: null, role: 'author', name: '本地构筑者' } : await invokeDungeonAction('verifyInvite', {}, code);
-            btn.disabled = false;
-            btn.textContent = '掷骰入局';
-            if (error || !role) { showToast(`❌ ${error?.message || '入局谕令无效'}`); return; }
-            resetTalentViewState();
-            saveInviteSession({ role, code, name: name || ROLE_LABELS[role] });
-            input.value = '';
-            closeInviteModal();
-            showToast(`✅ ${name || ROLE_LABELS[role]}已入局：${ROLE_LABELS[role]}`);
-            if (currentDetailId) await openDetail(currentDetailId);
-            if (document.getElementById('matchPage')?.style.display !== 'none') await renderMatchPage();
-            await updateProfileNoticeBadge();
+            try {
+                const { error, role, name } = USE_LOCAL_FALLBACK ? { error: null, role: 'author', name: '本地构筑者' } : await invokeDungeonAction('verifyInvite', {}, code);
+                if (error || !role) { showToast(`❌ ${getFriendlyActionError(error, '入局谕令无效')}`); return; }
+                resetTalentViewState();
+                saveInviteSession({ role, code, name: name || ROLE_LABELS[role] });
+                input.value = '';
+                closeInviteModal();
+                showToast(`✅ ${name || ROLE_LABELS[role]}已入局：${ROLE_LABELS[role]}`);
+                if (currentDetailId) await openDetail(currentDetailId);
+                if (document.getElementById('matchPage')?.style.display !== 'none') await renderMatchPage();
+                await updateProfileNoticeBadge();
+            } catch (error) {
+                console.error('验证入局谕令失败', error);
+                showToast(`❌ ${getFriendlyActionError(error, '入局谕令无效')}`);
+            } finally {
+                btn.disabled = false;
+                btn.textContent = '掷骰入局';
+                releaseUiActionLock('submitInviteCode');
+            }
         }
 
         async function saveDisplayName() {
@@ -12571,18 +13661,26 @@
             const btn = document.getElementById('displayNameButton');
             const name = cleanDisplayNameInput(input?.value);
             if (!name) { showToast('请输入昵称'); return; }
+            if (!acquireUiActionLock('saveDisplayName', '昵称正在保存，请勿重复点击')) return;
             btn.disabled = true;
             btn.textContent = '保存中...';
-            const { error } = await updateDisplayName(name);
-            btn.disabled = false;
-            btn.textContent = '保存昵称';
-            if (error) { showToast(`❌ ${error.message || '昵称保存失败'}`); return; }
-            showToast(`✅ 昵称已绑定为 ${name}`);
-            updateInviteUI();
-            if (currentDetailId) await openDetail(currentDetailId);
-            await renderDungeonList();
-            if (document.getElementById('profilePage')?.style.display !== 'none') await renderProfilePage();
-            if (document.getElementById('matchPage')?.style.display !== 'none') await renderMatchPage();
+            try {
+                const { error } = await updateDisplayName(name);
+                if (error) { showToast(`❌ ${getFriendlyActionError(error, '昵称保存失败')}`); return; }
+                showToast(`✅ 昵称已绑定为 ${name}`);
+                updateInviteUI();
+                if (currentDetailId) await openDetail(currentDetailId);
+                await renderDungeonList();
+                if (document.getElementById('profilePage')?.style.display !== 'none') await renderProfilePage();
+                if (document.getElementById('matchPage')?.style.display !== 'none') await renderMatchPage();
+            } catch (error) {
+                console.error('保存昵称失败', error);
+                showToast(`❌ ${getFriendlyActionError(error, '昵称保存失败')}`);
+            } finally {
+                btn.disabled = false;
+                btn.textContent = '保存昵称';
+                releaseUiActionLock('saveDisplayName');
+            }
         }
 
         function clearInviteSession() {
@@ -13082,6 +14180,27 @@
         function setSort(sort,btn){ currentSort=sort; archivePage=1; document.querySelectorAll('.sort-btn[data-sort]').forEach(b=>b.classList.remove('active')); btn.classList.add('active'); updateReviewFilterButton(); renderDungeonList(); }
         function debounceSearch(){ clearTimeout(searchTimeout); searchTimeout=setTimeout(()=>{ searchQuery=document.getElementById('searchInput').value; archivePage=1; renderDungeonList(); },350); }
         function showToast(msg){ const c=document.getElementById('toastContainer'); const t=document.createElement('div'); t.className='toast'; t.textContent=msg; c.appendChild(t); setTimeout(()=>{if(t.parentNode)t.remove();},3200); }
+        function shouldGuardActionButton(button) {
+            const action = `${button.getAttribute('onclick') || ''} ${button.getAttribute('type') || ''}`;
+            return /(save|submit|delete|remove|mark|draw|exchange|equip|resolve|discard|grant|revoke|joinMatchQueue|cancelMatchQueue|advanceRun|reviewDungeon|addComment|Rating|Clear|保存|提交|删除|撤销|授予|回收|分解|兑换|结算)/i.test(action);
+        }
+        document.addEventListener('click', event => {
+            const target = event.target instanceof Element ? event.target : null;
+            const button = target?.closest('button');
+            if (!button || button.disabled || !shouldGuardActionButton(button)) return;
+            const now = Date.now();
+            const lockedUntil = Number(button.dataset.clickGuardUntil || 0);
+            if (lockedUntil > now) {
+                event.preventDefault();
+                event.stopImmediatePropagation();
+                showToast('操作正在处理中，请勿重复点击');
+                return;
+            }
+            button.dataset.clickGuardUntil = String(now + 900);
+            window.setTimeout(() => {
+                if (Number(button.dataset.clickGuardUntil || 0) <= Date.now()) delete button.dataset.clickGuardUntil;
+            }, 950);
+        }, true);
         document.addEventListener('click', event => {
             const target = event.target instanceof Element ? event.target : null;
             if (!target) return;
@@ -13109,6 +14228,22 @@
                 deleteCommentUI(deleteCommentButton.dataset.deleteCommentId || '');
             }
         });
+        document.addEventListener('focusin', event => {
+            const target = event.target instanceof Element ? event.target : null;
+            if (target?.matches('input, textarea, select')) document.body.classList.add('mobile-keyboard-active');
+        });
+        document.addEventListener('focusout', event => {
+            const target = event.target instanceof Element ? event.target : null;
+            if (target?.matches('input, textarea, select')) {
+                window.setTimeout(() => document.body.classList.remove('mobile-keyboard-active'), 120);
+            }
+        });
+        document.addEventListener('touchstart', handleMobileTouchStart, { passive: true });
+        document.addEventListener('touchend', handleMobileTouchEnd, { passive: true });
+        window.addEventListener('resize', () => {
+            window.clearTimeout(window.__fogMobileResizeTimer);
+            window.__fogMobileResizeTimer = window.setTimeout(() => setMobileScreenClass(mobileActiveDestination || 'dungeons'), 120);
+        });
         document.addEventListener('keydown', e => {
             if (e.key === 'Escape') {
                 const detailOverlay = document.getElementById('detailOverlay');
@@ -13134,6 +14269,8 @@
 
         (async function init(){
             resetDiscoveryFiltersToEmpty();
+            setMobileScreenClass('dungeons');
+            maybeShowMobileOnboarding();
             applyVisualEffectsPreference();
             populateGodSelect();
             renderPathNav();
