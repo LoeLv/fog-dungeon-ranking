@@ -6043,10 +6043,12 @@
                 position: sticky;
                 top: 0;
                 z-index: 70;
-                margin: 0 -10px;
+                display: grid;
+                grid-template-columns: repeat(3, minmax(0, 1fr));
+                gap: 7px;
+                margin: 0;
                 padding: 8px 10px;
-                flex-wrap: nowrap;
-                overflow-x: auto;
+                overflow: visible;
                 background:
                     linear-gradient(180deg, rgba(12,14,20,0.98), rgba(12,14,20,0.88)),
                     rgba(12,14,20,0.94);
@@ -6055,6 +6057,8 @@
             }
             .path-nav::-webkit-scrollbar { display: none; }
             .path-nav-btn {
+                justify-content: center;
+                min-width: 0;
                 min-height: 36px;
                 padding: 7px 10px;
                 font-size: 0.74rem;
@@ -6116,6 +6120,9 @@
                 gap: 8px;
                 margin: 0 0 10px;
             }
+            .mobile-action-strip.has-score-action {
+                grid-template-columns: repeat(3, minmax(0, 1fr));
+            }
             .mobile-action-strip .btn {
                 width: 100%;
                 min-height: 44px;
@@ -6125,12 +6132,8 @@
                 font-size: 0.82rem;
                 font-weight: 900;
             }
-            .mobile-action-strip .btn small {
-                display: block;
-                color: var(--text-muted);
-                font-size: 0.62rem;
-                font-weight: 700;
-                line-height: 1.2;
+            .mobile-action-strip .btn[hidden] {
+                display: none;
             }
             .mobile-onboarding {
                 position: fixed;
@@ -7032,9 +7035,10 @@
             </div>
         </section>
 
-        <div class="mobile-action-strip" aria-label="手机端常用操作">
-            <button type="button" class="btn btn-outline btn-sm" onclick="openInviteModal()">◇ 入局谕令<small>登录 / 绑定身份</small></button>
-            <button type="button" class="btn btn-primary btn-sm" onclick="openSubmitModal()">🎭 上传副本<small>构筑祈愿试炼</small></button>
+        <div class="mobile-action-strip" id="mobileActionStrip" aria-label="手机端常用操作">
+            <button type="button" class="btn btn-outline btn-sm" onclick="openInviteModal()">入局谕令</button>
+            <button type="button" class="btn btn-primary btn-sm" onclick="openSubmitModal()">构筑试炼</button>
+            <button type="button" class="btn btn-outline btn-sm" id="mobileScoreButton" onclick="openScorePage()" hidden>分数结算</button>
         </div>
 
         <div class="controls">
@@ -7351,11 +7355,7 @@
     <div class="mobile-fab" id="mobileFab">
         <div class="mobile-fab-actions">
             <button type="button" class="mobile-fab-action" onclick="mobileQuickAction('top')">回顶部</button>
-            <button type="button" class="mobile-fab-action" onclick="mobileQuickAction('invite')">入局</button>
-            <button type="button" class="mobile-fab-action" onclick="mobileQuickAction('build')">构筑</button>
-            <button type="button" class="mobile-fab-action" onclick="mobileQuickAction('save')">保存档案</button>
             <button type="button" class="mobile-fab-action" onclick="mobileQuickAction('refresh')">刷新</button>
-            <button type="button" class="mobile-fab-action" onclick="mobileQuickAction('profile')">回档案</button>
         </div>
         <button type="button" class="mobile-fab-toggle" onclick="toggleMobileFab()" aria-label="展开快捷操作">✦</button>
     </div>
@@ -8418,6 +8418,8 @@
             const inviteButton = document.getElementById('inviteButton');
             const submitButton = document.getElementById('submitEntryButton');
             const scoreButton = document.getElementById('scoreDeskButton');
+            const mobileScoreButton = document.getElementById('mobileScoreButton');
+            const mobileActionStrip = document.getElementById('mobileActionStrip');
             const identityCard = document.getElementById('identityCard');
             const identityRoleText = document.getElementById('identityRoleText');
             const displayNameInput = document.getElementById('displayNameInput');
@@ -8439,6 +8441,13 @@
                 scoreButton.style.display = (canSettleScores() || isGodRole()) ? '' : 'none';
                 scoreButton.textContent = isGodRole() ? '✦ 称号敕令' : '⚖ 分数结算';
                 scoreButton.title = isGodRole() ? '神明称号敕令台' : (canSettleScores() ? '审核员分数结算工作台' : '仅审核员可见');
+            }
+            if (mobileScoreButton) {
+                const showMobileScore = canSettleScores() || isGodRole();
+                mobileScoreButton.hidden = !showMobileScore;
+                mobileScoreButton.textContent = isGodRole() ? '称号敕令' : '分数结算';
+                mobileScoreButton.title = isGodRole() ? '神明称号敕令台' : '审核员分数结算工作台';
+                mobileActionStrip?.classList.toggle('has-score-action', showMobileScore);
             }
             if (submitButton) {
                 submitButton.textContent = isGodRole() ? '✦ 祈愿创本' : '🎭 构筑愚戏';
