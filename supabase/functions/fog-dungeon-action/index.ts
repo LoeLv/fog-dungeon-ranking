@@ -726,6 +726,7 @@ function parseScoreSettlementText(textContent: unknown) {
     const normalized = raw.replace(/^\s*\d+\s*[.．、)]\s*/u, "");
     const match = normalized.match(/^(.+?)\s*([+-]?\d+(?:\.\d+)?)\s*\+\s*([+-]?\d+(?:\.\d+)?)\s*$/u);
     if (!match) {
+      if (!entries.length) return;
       invalidLines.push({ line: index + 1, raw, msg: "格式应为 昵称+登神+觐见，可带编号，如 2. 祂+2+2" });
       return;
     }

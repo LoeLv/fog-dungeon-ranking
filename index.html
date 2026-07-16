@@ -10497,6 +10497,7 @@
 
         async function checkScorePreviewUI() {
             const textContent = document.getElementById('scoreBatchText')?.value || '';
+            autoSelectScoreDungeonFromText('scoreDungeonId', textContent);
             const { data, error } = await invokeDungeonAction('checkScorePreview', { textContent });
             if (error) { showToast(`❌ ${error.message || '预览失败'}`); return; }
             scorePreviewState = data;
@@ -10533,9 +10534,10 @@
             setScoreActionBusy(lockKey, true, '结算中...');
             showToast('结算提交中，请勿重复点击');
             const dungeonSelect = document.getElementById('scoreDungeonId');
+            const textContent = document.getElementById('scoreBatchText')?.value || '';
+            autoSelectScoreDungeonFromText('scoreDungeonId', textContent);
             const dungeonId = dungeonSelect?.value || '';
             const dungeonName = dungeonSelect?.selectedOptions?.[0]?.dataset?.name || '';
-            const textContent = document.getElementById('scoreBatchText')?.value || '';
             const remark = document.getElementById('scoreBatchRemark')?.value || '';
             const { statuses: clearStatuses } = getBatchClearStatusesFromPreview();
             if (!scorePreviewState?.valid) {
@@ -10601,8 +10603,76 @@
             return '<option value="">选择要结算的副本</option>' + dungeons.map(dungeon => {
                 const name = dungeon.name || '未命名试炼';
                 const meta = `${formatDifficulty(dungeon.difficulty)} · ${formatGodName(dungeon.type)} · ${formatCreatorLine(dungeon)}`;
-                return `<option value="${escapeHtml(dungeon.id)}" data-name="${escapeHtml(name)}">${escapeHtml(name)}｜${escapeHtml(meta)}</option>`;
+                return `<option value="${escapeHtml(dungeon.id)}" data-name="${escapeHtml(name)}" data-search="${escapeHtml(`${name} ${meta}`)}">${escapeHtml(name)}｜${escapeHtml(meta)}</option>`;
             }).join('');
+        }
+
+        function normalizeScoreDungeonText(value) {
+            return String(value || '').toLowerCase().replace(/[《》「」『』【】\[\]（）()·\s|｜:：,，.。;；、\-_/\\]/g, '');
+        }
+
+        function filterScoreDungeonOptions(inputId, selectId) {
+            const input = document.getElementById(inputId);
+            const select = document.getElementById(selectId);
+            if (!input || !select) return;
+            const keyword = normalizeScoreDungeonText(input.value);
+            let visibleCount = 0;
+            Array.from(select.options).forEach(option => {
+                if (!option.value) {
+                    option.hidden = false;
+                    return;
+                }
+                const haystack = normalizeScoreDungeonText(`${option.dataset.name || ''} ${option.dataset.search || ''} ${option.textContent || ''}`);
+                const visible = !keyword || haystack.includes(keyword);
+                option.hidden = !visible;
+                if (visible) visibleCount += 1;
+            });
+            if (select.selectedOptions[0]?.hidden) select.value = '';
+            if (!select.value && visibleCount === 1) {
+                const only = Array.from(select.options).find(option => option.value && !option.hidden);
+                if (only) select.value = only.value;
+            }
+            const status = document.getElementById(`${inputId}Status`);
+            if (status) status.textContent = keyword ? `匹配 ${visibleCount} 个副本` : '输入副本名可快速过滤';
+        }
+
+        function extractScoreDungeonHint(textContent) {
+            const lines = String(textContent || '').split(/\r?\n/u).map(line => line.trim()).filter(Boolean).slice(0, 6);
+            for (const line of lines) {
+                const bookMatch = line.match(/《([^》]{2,80})》/u);
+                if (bookMatch) return bookMatch[1];
+                const labelMatch = line.match(/^(?:副本|试炼|本名|副本名|试炼名)\s*[：:\s]\s*(.{2,80})$/u);
+                if (labelMatch) return labelMatch[1].replace(/[|｜].*$/u, '').trim();
+                const firstLineHint = line
+                    .replace(/^\s*\d+\s*[.．、)]\s*/u, '')
+                    .split(/[，,。；;：:\s]/u)[0]
+                    .replace(/[《》「」『』【】\[\]（）()]/g, '')
+                    .trim();
+                if (firstLineHint && !/[+-]?\d+(?:\.\d+)?\s*\+\s*[+-]?\d/u.test(line)) return firstLineHint;
+            }
+            return '';
+        }
+
+        function autoSelectScoreDungeonFromText(selectId, textContent) {
+            const select = document.getElementById(selectId);
+            if (!select || select.value) return false;
+            const hint = extractScoreDungeonHint(textContent);
+            if (!hint) return false;
+            const key = normalizeScoreDungeonText(hint);
+            if (!key) return false;
+            const options = Array.from(select.options).filter(option => option.value);
+            const matches = options
+                .map(option => ({
+                    option,
+                    nameKey: normalizeScoreDungeonText(option.dataset.name || ''),
+                    textKey: normalizeScoreDungeonText(option.textContent || '')
+                }))
+                .filter(item => item.nameKey === key || item.nameKey.includes(key) || key.includes(item.nameKey) || item.textKey.includes(key))
+                .sort((a, b) => a.nameKey.length - b.nameKey.length);
+            if (!matches.length) return false;
+            select.value = matches[0].option.value;
+            showToast(`已自动匹配副本：${matches[0].option.dataset.name || matches[0].option.textContent || ''}`);
+            return true;
         }
 
         async function fetchScoreSettlements(limit = 30) {
@@ -10896,8 +10966,9 @@
                     <div>
                         <section class="profile-panel" data-god="真理" style="${getGodSkinStyle('真理')}">
                             <div class="profile-panel-title"><span>批量结算</span><small>格式：昵称+登神+觐见，可带编号</small></div>
+                            <div class="form-group"><label>搜索副本</label><input id="scoreDungeonSearch" maxlength="80" placeholder="输入副本名过滤，或在结算文本第一行写副本名" oninput="filterScoreDungeonOptions('scoreDungeonSearch', 'scoreDungeonId')"><div class="identity-help" id="scoreDungeonSearchStatus">输入副本名可快速过滤</div></div>
                             <div class="form-group"><label>副本圣名</label><select id="scoreDungeonId">${dungeonOptions}</select></div>
-                            <div class="form-group"><label>结算文本</label><textarea id="scoreBatchText" maxlength="20000" placeholder="2. 祂+2+2&#10;3. 江枫渔火+2+2&#10;无我:+12+2"></textarea></div>
+                            <div class="form-group"><label>结算文本</label><textarea id="scoreBatchText" maxlength="20000" placeholder="修弥斯的钟，一人（棺材板）胜利，其余人失败&#10;1. 羔羊:+8+0&#10;2. 棺材板:+9+2"></textarea></div>
                             <div class="form-group"><label>备注</label><input id="scoreBatchRemark" maxlength="500" placeholder="可选，写结算来源或说明"></div>
                             <div class="profile-tools">
                                 <button class="btn btn-outline btn-sm" onclick="checkScorePreviewUI()">预览校验</button>
@@ -10908,6 +10979,7 @@
                         <section class="profile-panel" data-god="真理" style="${getGodSkinStyle('真理')}">
                             <div class="profile-panel-title"><span>单人补分</span><small>漏分补发</small></div>
                             <div class="profile-form-grid">
+                                <div class="form-group full"><label>搜索副本</label><input id="singleDungeonSearch" maxlength="80" placeholder="输入副本名过滤" oninput="filterScoreDungeonOptions('singleDungeonSearch', 'singleDungeonId')"><div class="identity-help" id="singleDungeonSearchStatus">输入副本名可快速过滤</div></div>
                                 <div class="form-group full"><label>副本圣名</label><select id="singleDungeonId">${dungeonOptions}</select></div>
                                 <div class="form-group"><label>玩家昵称</label><input id="singlePlayerName" maxlength="40"></div>
                                 <div class="form-group"><label>登神之路</label><input id="singleDengScore" type="number" min="${scoreDengMin}" max="${scoreDengMax}" step="0.1" value="0"></div>
