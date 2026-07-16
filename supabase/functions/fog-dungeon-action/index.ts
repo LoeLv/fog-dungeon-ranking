@@ -710,6 +710,12 @@ function getClearStatusLabel(status: string) {
   return "未标注";
 }
 
+function normalizeProfileMatchKey(value: unknown) {
+  return cleanText(value, 80)
+    .toLowerCase()
+    .replace(/[^\p{L}\p{N}]/gu, "");
+}
+
 function parseScoreSettlementText(textContent: unknown) {
   const text = cleanText(textContent, 20000);
   const entries: { nick: string; deng: number; jin: number; total: number; line: number; raw: string }[] = [];
@@ -718,12 +724,12 @@ function parseScoreSettlementText(textContent: unknown) {
     const raw = lineText.trim();
     if (!raw) return;
     const normalized = raw.replace(/^\s*\d+\s*[.．、)]\s*/u, "");
-    const match = normalized.match(/^(.+?)[：:]?\s*([+-]?\d+(?:\.\d+)?)\s*\+\s*([+-]?\d+(?:\.\d+)?)\s*$/u);
+    const match = normalized.match(/^(.+?)\s*([+-]?\d+(?:\.\d+)?)\s*\+\s*([+-]?\d+(?:\.\d+)?)\s*$/u);
     if (!match) {
       invalidLines.push({ line: index + 1, raw, msg: "格式应为 昵称+登神+觐见，可带编号，如 2. 祂+2+2" });
       return;
     }
-    const nick = cleanText(match[1], 40);
+    const nick = cleanText(String(match[1] || "").replace(/[：:：；;,，、\s]+$/u, ""), 40);
     const deng = cleanSettlementScore(match[2]);
     const jin = cleanSettlementScore(match[3]);
     if (!nick) {
@@ -748,6 +754,39 @@ async function getProfilesByNames(
   if (error) return { error };
   const profiles = new Map<string, Record<string, unknown>>();
   (data || []).forEach((profile) => profiles.set(String(profile.display_name), profile));
+  const missingNames = uniqueNames.filter((name) => !profiles.has(name));
+  if (!missingNames.length) return { profiles };
+
+  const { data: allProfiles, error: allError } = await supabase
+    .from("player_profiles")
+    .select("invite_code_hash, display_name, role, ascension_score, audience_score")
+    .limit(1000);
+  if (allError) return { error: allError };
+  const candidates = (allProfiles || [])
+    .map((profile) => ({
+      profile,
+      displayName: String(profile.display_name || ""),
+      key: normalizeProfileMatchKey(profile.display_name),
+    }))
+    .filter((item) => item.displayName && item.key);
+
+  for (const name of missingNames) {
+    const key = normalizeProfileMatchKey(name);
+    if (!key) continue;
+    const exact = candidates.find((item) => item.key === key);
+    if (exact) {
+      profiles.set(name, exact.profile);
+      profiles.set(exact.displayName, exact.profile);
+      continue;
+    }
+    const partialMatches = candidates
+      .filter((item) => item.key.length >= 2 && key.includes(item.key))
+      .sort((a, b) => b.key.length - a.key.length);
+    if (partialMatches.length && partialMatches.filter((item) => item.key.length === partialMatches[0].key.length).length === 1) {
+      profiles.set(name, partialMatches[0].profile);
+      profiles.set(partialMatches[0].displayName, partialMatches[0].profile);
+    }
+  }
   return { profiles };
 }
 
@@ -759,20 +798,25 @@ async function buildScorePreview(
   const scoreErrList = entries
     .map((entry) => ({ ...entry, msg: checkSettlementScoreRange(entry.deng, entry.jin) }))
     .filter((entry) => entry.msg);
-  const nickCounts = new Map<string, number>();
-  entries.forEach((entry) => nickCounts.set(entry.nick, (nickCounts.get(entry.nick) || 0) + 1));
-  const duplicateNick = [...nickCounts.entries()]
-    .filter(([, count]) => count > 1)
-    .map(([nick]) => nick);
   const profileResult = await getProfilesByNames(supabase, entries.map((entry) => entry.nick));
   if (profileResult.error) return { error: profileResult.error };
   const profiles = profileResult.profiles || new Map<string, Record<string, unknown>>();
+  const resolvedEntries = entries.map((entry) => {
+    const profile = profiles.get(entry.nick);
+    const displayName = cleanText(profile?.display_name, 40);
+    return displayName && displayName !== entry.nick ? { ...entry, nick: displayName } : entry;
+  });
+  const nickCounts = new Map<string, number>();
+  resolvedEntries.forEach((entry) => nickCounts.set(entry.nick, (nickCounts.get(entry.nick) || 0) + 1));
+  const duplicateNick = [...nickCounts.entries()]
+    .filter(([, count]) => count > 1)
+    .map(([nick]) => nick);
   const missingNick = [...new Set(entries.map((entry) => entry.nick).filter((nick) => !profiles.has(nick)))];
   const totalDeng = entries.reduce((sum, entry) => sum + (Number.isFinite(entry.deng) ? entry.deng : 0), 0);
   const totalJin = entries.reduce((sum, entry) => sum + (Number.isFinite(entry.jin) ? entry.jin : 0), 0);
   return {
     data: {
-      allList: entries,
+      allList: resolvedEntries,
       invalidLines,
       scoreErrList,
       missingNick,
@@ -1601,11 +1645,6 @@ async function commitScoreSettlement(
   const rawText = cleanText(options.rawText ?? "", 20000);
   const remark = cleanText(options.remark ?? "", 500);
   const hasClearStatusPayload = !!options.clearStatuses && typeof options.clearStatuses === "object" && !Array.isArray(options.clearStatuses);
-  const confirmClear = !!options.confirmClear || hasClearStatusPayload;
-  const clearStatuses = buildSettlementClearStatusMap(entries, options.clearStatuses, !!options.confirmClear);
-  if (hasClearStatusPayload && entries.some((entry) => clearStatuses.get(entry.nick) === "unknown")) {
-    return { error: { message: "请为每位参与者标注逢生或迷失" } };
-  }
   const clientRequestId = cleanRequestKey(options.settlementRequestId);
   const dungeonResult = await resolveSettlementDungeon(supabase, options.dungeonId, dungeonNameInput);
   if (dungeonResult.error) return { error: dungeonResult.error };
@@ -1615,12 +1654,17 @@ async function commitScoreSettlement(
   const preview = await buildScorePreview(supabase, entries, []);
   if (preview.error) return { error: preview.error };
   if (!preview.data?.valid) return { error: { message: "预校验未通过", preview: preview.data } };
+  const settlementEntries = Array.isArray(preview.data?.allList)
+    ? preview.data.allList as { nick: string; deng: number; jin: number; total: number; line: number; raw: string }[]
+    : entries;
+  const confirmClear = !!options.confirmClear || hasClearStatusPayload;
+  const clearStatuses = buildSettlementClearStatusMap(settlementEntries, options.clearStatuses, !!options.confirmClear);
 
-  const profileResult = await getProfilesByNames(supabase, entries.map((entry) => entry.nick));
+  const profileResult = await getProfilesByNames(supabase, settlementEntries.map((entry) => entry.nick));
   if (profileResult.error) return { error: profileResult.error };
   const profiles = profileResult.profiles || new Map<string, Record<string, unknown>>();
-  const totalDeng = entries.reduce((sum, entry) => sum + entry.deng, 0);
-  const totalJin = entries.reduce((sum, entry) => sum + entry.jin, 0);
+  const totalDeng = settlementEntries.reduce((sum, entry) => sum + entry.deng, 0);
+  const totalJin = settlementEntries.reduce((sum, entry) => sum + entry.jin, 0);
 
   const { data: settlement, error: settlementError } = await supabase
     .from("score_settlements")
@@ -1631,7 +1675,7 @@ async function commitScoreSettlement(
       operator_name: identity.displayName,
       raw_text: rawText,
       remark,
-      total_players: entries.length,
+      total_players: settlementEntries.length,
       total_ascension: Math.round(totalDeng * 10) / 10,
       total_audience: Math.round(totalJin * 10) / 10,
       total_score: Math.round((totalDeng + totalJin) * 10) / 10,
@@ -1646,7 +1690,7 @@ async function commitScoreSettlement(
   }
   if (settlementError) return { error: settlementError };
 
-  const entryRows = entries.map((entry) => {
+  const entryRows = settlementEntries.map((entry) => {
     const profile = profiles.get(entry.nick) || {};
     return {
       settlement_id: settlement.id,
@@ -1659,7 +1703,7 @@ async function commitScoreSettlement(
   const { error: entryError } = await supabase.from("score_settlement_entries").insert(entryRows);
   if (entryError) return { error: entryError };
 
-  for (const entry of entries) {
+  for (const entry of settlementEntries) {
     const profile = profiles.get(entry.nick) || {};
     const codeHash = String(profile.invite_code_hash || "");
     const currentAscension = cleanScore(profile.ascension_score);
@@ -1677,7 +1721,7 @@ async function commitScoreSettlement(
     if (updateError) return { error: updateError };
   }
 
-  const logRows = entries.map((entry) => {
+  const logRows = settlementEntries.map((entry) => {
     const profile = profiles.get(entry.nick) || {};
     return {
       player_code_hash: String(profile.invite_code_hash || ""),
@@ -1694,11 +1738,11 @@ async function commitScoreSettlement(
   if (logError) return { error: logError };
 
   const clearResult = confirmClear
-    ? await confirmClearRecordsFromSettlement(supabase, dungeon, entries, profiles, identity.displayName, clearStatuses)
+    ? await confirmClearRecordsFromSettlement(supabase, dungeon, settlementEntries, profiles, identity.displayName, clearStatuses)
     : { confirmed: 0 };
   if (clearResult.error) return { error: clearResult.error };
 
-  const messageRows = entries.map((entry) => {
+  const messageRows = settlementEntries.map((entry) => {
     const profile = profiles.get(entry.nick) || {};
     const typeName = sourceType === "single" ? "漏分补发" : "批量结算";
     const clearStatus = clearStatuses.get(entry.nick) || "unknown";

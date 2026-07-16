@@ -10490,7 +10490,7 @@
                 </div>
                 ${errors.length ? `<div class="score-error-list">${errors.map(error => `<div class="score-error-item">${escapeHtml(error)}</div>`).join('')}</div>` : ''}
                 <table class="score-preview-table">
-                    <thead><tr><th>玩家</th><th>登神</th><th>觐见</th><th>合计</th><th>通关</th></tr></thead>
+                    <thead><tr><th>玩家</th><th>登神</th><th>觐见</th><th>合计</th><th>通关（可空）</th></tr></thead>
                     <tbody>${rows || '<tr><td colspan="5">暂无有效条目</td></tr>'}</tbody>
                 </table>`;
         }
@@ -10537,15 +10537,9 @@
             const dungeonName = dungeonSelect?.selectedOptions?.[0]?.dataset?.name || '';
             const textContent = document.getElementById('scoreBatchText')?.value || '';
             const remark = document.getElementById('scoreBatchRemark')?.value || '';
-            const { statuses: clearStatuses, missing: missingClearStatuses } = getBatchClearStatusesFromPreview();
-            if (!scorePreviewState?.valid || !Object.keys(clearStatuses).length) {
-                showToast('请先预览校验，并为每位参与者选择逢生或迷失');
-                scoreActionLocks.delete(lockKey);
-                setScoreActionBusy(lockKey, false);
-                return;
-            }
-            if (missingClearStatuses.length) {
-                showToast(`请标注通关结果：${missingClearStatuses.slice(0, 6).join('、')}${missingClearStatuses.length > 6 ? ' 等' : ''}`);
+            const { statuses: clearStatuses } = getBatchClearStatusesFromPreview();
+            if (!scorePreviewState?.valid) {
+                showToast('请先预览校验，确认名单和分数无误');
                 scoreActionLocks.delete(lockKey);
                 setScoreActionBusy(lockKey, false);
                 return;
@@ -10581,12 +10575,6 @@
             const dungeonSelect = document.getElementById('singleDungeonId');
             const playerName = document.getElementById('singlePlayerName')?.value || '';
             const singleClearStatus = document.querySelector('input[name="singleClearStatus"]:checked')?.value || '';
-            if (!singleClearStatus) {
-                showToast('请选择本次补分玩家是逢生还是迷失');
-                scoreActionLocks.delete(lockKey);
-                setScoreActionBusy(lockKey, false);
-                return;
-            }
             const payload = {
                 dungeonId: dungeonSelect?.value || '',
                 dungeonName: dungeonSelect?.selectedOptions?.[0]?.dataset?.name || '',
@@ -10594,7 +10582,7 @@
                 dengScore: document.getElementById('singleDengScore')?.value || 0,
                 jinScore: document.getElementById('singleJinScore')?.value || 0,
                 remark: document.getElementById('singleRemark')?.value || '',
-                clearStatuses: { [playerName]: singleClearStatus },
+                clearStatuses: singleClearStatus ? { [playerName]: singleClearStatus } : {},
                 settlementRequestId: createSettlementRequestId('single')
             };
             try {
@@ -10905,7 +10893,7 @@
                                 <div class="form-group"><label>登神之路</label><input id="singleDengScore" type="number" min="${scoreDengMin}" max="${scoreDengMax}" step="0.1" value="0"></div>
                                 <div class="form-group"><label>觐见之梯</label><input id="singleJinScore" type="number" min="${scoreJinMin}" max="${scoreJinMax}" step="0.1" value="0"></div>
                                 <div class="form-group full"><label>备注</label><input id="singleRemark" maxlength="500" placeholder="补发原因"></div>
-                                <div class="form-group full"><label>通关结果</label><div class="score-clear-choice"><label><input type="radio" name="singleClearStatus" value="passed"> 逢生</label><label><input type="radio" name="singleClearStatus" value="lost"> 迷失</label></div></div>
+                                <div class="form-group full"><label>通关结果（可不选）</label><div class="score-clear-choice"><label><input type="radio" name="singleClearStatus" value="passed"> 逢生</label><label><input type="radio" name="singleClearStatus" value="lost"> 迷失</label></div><div class="identity-help">作者、主持人等不计入通关数据时可留空。</div></div>
                             </div>
                             <div class="profile-tools"><button class="btn btn-primary btn-sm" data-score-action="submit-score-single" onclick="submitScoreSingleUI()">提交补分</button></div>
                         </section>
