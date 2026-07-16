@@ -10558,8 +10558,8 @@
                     return;
                 }
                 scorePreviewState = null;
-                showToast(`结算完成：${data?.entries?.length || 0} 人${data?.clearConfirmed ? `，通关确认 ${data.clearConfirmed} 人` : ''}`);
-                await renderScorePage();
+                showToast(`结算完成：${data?.entries?.length || 0} 人${data?.clearConfirmed ? `，通关确认 ${data.clearConfirmed} 人` : ''}，正在刷新最近结算`);
+                await refreshScoreSettlementsPanel(data?.settlement?.id || '');
             } finally {
                 scoreActionLocks.delete(lockKey);
                 setScoreActionBusy(lockKey, false);
@@ -10588,8 +10588,8 @@
             try {
                 const { data, error } = await invokeDungeonAction('submitScoreSingle', payload);
                 if (error) { showToast(`❌ ${error.message || '补分失败'}`); return; }
-                showToast(`补分完成：${data?.entries?.[0]?.player_name || payload.playerName}${data?.clearConfirmed ? '，通关已确认' : ''}`);
-                await renderScorePage();
+                showToast(`补分完成：${data?.entries?.[0]?.player_name || payload.playerName}${data?.clearConfirmed ? '，通关已确认' : ''}，正在刷新最近结算`);
+                await refreshScoreSettlementsPanel(data?.settlement?.id || '');
             } finally {
                 scoreActionLocks.delete(lockKey);
                 setScoreActionBusy(lockKey, false);
@@ -10611,6 +10611,26 @@
             const { data, error } = await invokeDungeonAction('listScoreSettlements', { limit });
             if (error) return { settlements: [], error };
             return { settlements: Array.isArray(data) ? data : [], error: null };
+        }
+
+        async function refreshScoreSettlementsPanel(expectedSettlementId = '') {
+            const panel = document.getElementById('scoreSettlementsPanel');
+            if (!panel) {
+                await renderScorePage();
+                return;
+            }
+            panel.innerHTML = '<div class="profile-empty">最近结算刷新中...</div>';
+            let result = await fetchScoreSettlements(30);
+            const expectedId = String(expectedSettlementId || '');
+            if (expectedId && !result.error && !result.settlements.some(item => String(item.id) === expectedId)) {
+                await new Promise(resolve => setTimeout(resolve, 700));
+                result = await fetchScoreSettlements(30);
+            }
+            panel.innerHTML = renderScoreSettlements(result.settlements, result.error);
+            const count = document.getElementById('scoreRecentCount');
+            if (count && !result.error) count.textContent = String(result.settlements?.length || 0);
+            if (result.error) showToast(`❌ 最近结算刷新失败：${result.error.message || '请手动刷新'}`);
+            else showToast('最近结算已刷新');
         }
 
         function renderScoreSettlements(settlements, error) {
@@ -10863,7 +10883,7 @@
                         <div class="profile-faith-prayer">洞窥本质，行迹真理。此页只对结算审核员与神谕馆主开放。</div>
                     </div>
                     <div class="profile-hero-stats">
-                        <div class="profile-hero-score"><span>最近结算</span><strong>${settlements?.length || 0}</strong></div>
+                        <div class="profile-hero-score"><span>最近结算</span><strong id="scoreRecentCount">${settlements?.length || 0}</strong></div>
                         <div class="profile-hero-score"><span>权限席位</span><strong>${getInviteRole() === 'admin' ? '馆主' : '审核'}</strong></div>
                     </div>
                 </section>
@@ -10901,7 +10921,7 @@
                     <div>
                         <section class="profile-panel" data-god="真理" style="${getGodSkinStyle('真理')}">
                             <div class="profile-panel-title"><span>最近结算</span><small>可撤销回滚</small></div>
-                            ${renderScoreSettlements(settlements, error)}
+                            <div id="scoreSettlementsPanel">${renderScoreSettlements(settlements, error)}</div>
                         </section>
                         ${renderTitleAdminPanel(titleEntries)}
                     </div>
