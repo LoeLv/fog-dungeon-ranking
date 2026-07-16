@@ -41,7 +41,7 @@ create table if not exists public.score_settlement_entries (
   settlement_id uuid not null references public.score_settlements(id) on delete cascade,
   player_code_hash text not null,
   player_name text not null check (char_length(trim(player_name)) between 1 and 40),
-  score_deng numeric(8, 1) not null check (score_deng >= -20 and score_deng <= 20),
+  score_deng numeric(8, 1) not null check (score_deng >= -30 and score_deng <= 30),
   score_jin numeric(8, 1) not null check (score_jin >= 0 and score_jin <= 3),
   total_add numeric(8, 1) generated always as (score_deng + score_jin) stored,
   created_at timestamptz not null default now()

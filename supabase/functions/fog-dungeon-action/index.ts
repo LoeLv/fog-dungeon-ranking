@@ -90,8 +90,8 @@ const talentSlotScoreRules = [
 ];
 const talentSlotKinds = ["faith", "profession", "any", "any"];
 const talentRankOrder: Record<string, number> = { C: 1, B: 2, A: 3, S: 4 };
-const scoreDengMin = -20;
-const scoreDengMax = 20;
+const scoreDengMin = -30;
+const scoreDengMax = 30;
 const scoreJinMin = 0;
 const scoreJinMax = 3;
 const knownTalentPools = [
@@ -679,6 +679,35 @@ function checkSettlementScoreRange(deng: number, jin: number) {
   if (deng < scoreDengMin || deng > scoreDengMax) return `登神之路分数必须在 ${scoreDengMin}~${scoreDengMax} 之间`;
   if (jin < scoreJinMin || jin > scoreJinMax) return `觐见之梯分数必须在 ${scoreJinMin}~${scoreJinMax} 之间`;
   return "";
+}
+
+function cleanClearStatus(value: unknown) {
+  const status = cleanText(value, 20).toLowerCase();
+  if (["passed", "clear", "success", "逢生"].includes(status)) return "passed";
+  if (["lost", "failed", "fail", "迷失"].includes(status)) return "lost";
+  return "unknown";
+}
+
+function buildSettlementClearStatusMap(
+  entries: { nick: string }[],
+  rawStatuses: unknown,
+  confirmClear: boolean,
+) {
+  const input = rawStatuses && typeof rawStatuses === "object" && !Array.isArray(rawStatuses)
+    ? rawStatuses as Record<string, unknown>
+    : {};
+  const statuses = new Map<string, string>();
+  for (const entry of entries) {
+    const status = cleanClearStatus(input[entry.nick]);
+    statuses.set(entry.nick, status === "unknown" && confirmClear ? "passed" : status);
+  }
+  return statuses;
+}
+
+function getClearStatusLabel(status: string) {
+  if (status === "passed") return "逢生";
+  if (status === "lost") return "迷失";
+  return "未标注";
 }
 
 function parseScoreSettlementText(textContent: unknown) {
@@ -1346,10 +1375,12 @@ async function confirmClearRecordsFromSettlement(
   entries: { nick: string; deng: number; jin: number; total: number; line: number; raw: string }[],
   profiles: Map<string, Record<string, unknown>>,
   operatorName: string,
+  clearStatuses: Map<string, string> = new Map(),
 ) {
   let confirmed = 0;
   const runNumber = Number(dungeon.run_count) || 1;
   for (const entry of entries) {
+    if (clearStatuses.get(entry.nick) !== "passed") continue;
     const profile = profiles.get(entry.nick) || {};
     const codeHash = String(profile.invite_code_hash || "");
     if (!codeHash) continue;
@@ -1564,11 +1595,16 @@ async function commitScoreSettlement(
   sourceType: "batch" | "single",
   dungeonNameInput: unknown,
   entries: { nick: string; deng: number; jin: number; total: number; line: number; raw: string }[],
-  options: { rawText?: string; remark?: string; confirmClear?: boolean; dungeonId?: unknown; settlementRequestId?: unknown } = {},
+  options: { rawText?: string; remark?: string; confirmClear?: boolean; clearStatuses?: unknown; dungeonId?: unknown; settlementRequestId?: unknown } = {},
 ) {
   const rawText = cleanText(options.rawText ?? "", 20000);
   const remark = cleanText(options.remark ?? "", 500);
-  const confirmClear = !!options.confirmClear;
+  const hasClearStatusPayload = !!options.clearStatuses && typeof options.clearStatuses === "object" && !Array.isArray(options.clearStatuses);
+  const confirmClear = !!options.confirmClear || hasClearStatusPayload;
+  const clearStatuses = buildSettlementClearStatusMap(entries, options.clearStatuses, !!options.confirmClear);
+  if (hasClearStatusPayload && entries.some((entry) => clearStatuses.get(entry.nick) === "unknown")) {
+    return { error: { message: "请为每位参与者标注逢生或迷失" } };
+  }
   const clientRequestId = cleanRequestKey(options.settlementRequestId);
   const dungeonResult = await resolveSettlementDungeon(supabase, options.dungeonId, dungeonNameInput);
   if (dungeonResult.error) return { error: dungeonResult.error };
@@ -1657,14 +1693,15 @@ async function commitScoreSettlement(
   if (logError) return { error: logError };
 
   const clearResult = confirmClear
-    ? await confirmClearRecordsFromSettlement(supabase, dungeon, entries, profiles, identity.displayName)
+    ? await confirmClearRecordsFromSettlement(supabase, dungeon, entries, profiles, identity.displayName, clearStatuses)
     : { confirmed: 0 };
   if (clearResult.error) return { error: clearResult.error };
 
   const messageRows = entries.map((entry) => {
     const profile = profiles.get(entry.nick) || {};
     const typeName = sourceType === "single" ? "漏分补发" : "批量结算";
-    const clearText = confirmClear ? "\n通关确认：已由审核员登记通过" : "";
+    const clearStatus = clearStatuses.get(entry.nick) || "unknown";
+    const clearText = confirmClear ? `\n本车结果：${getClearStatusLabel(clearStatus)}${clearStatus === "passed" ? "（已登记通关）" : ""}` : "";
     const content = `【${typeName}｜副本：${dungeonName}】\n审核员：${identity.displayName}\n登神之路：${entry.deng >= 0 ? "+" : ""}${entry.deng}\n觐见之梯：+${entry.jin}\n本次总变化：${entry.total >= 0 ? "+" : ""}${entry.total}${clearText}${remark ? `\n备注：${remark}` : ""}`;
     return {
       player_code_hash: String(profile.invite_code_hash || ""),
@@ -2383,6 +2420,7 @@ Deno.serve(async (req) => {
           rawText: cleanText(payload.textContent, 20000),
           remark: cleanText(payload.remark, 500),
           confirmClear: payload.confirmClear === true,
+          clearStatuses: payload.clearStatuses,
           dungeonId: payload.dungeonId,
           settlementRequestId: payload.settlementRequestId,
         },
@@ -2408,6 +2446,7 @@ Deno.serve(async (req) => {
         {
           remark: cleanText(payload.remark, 500),
           confirmClear: payload.confirmClear === true,
+          clearStatuses: payload.clearStatuses,
           dungeonId: payload.dungeonId,
           settlementRequestId: payload.settlementRequestId,
         },

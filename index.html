@@ -4980,6 +4980,29 @@
         .score-preview-table tr:last-child td {
             border-bottom: none;
         }
+        .score-clear-choice {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+        }
+        .score-clear-choice label {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            min-height: 28px;
+            padding: 4px 8px;
+            border: 1px solid rgba(255,255,255,0.10);
+            border-radius: 8px;
+            background: rgba(255,255,255,0.035);
+            color: var(--text-secondary);
+            font-size: 0.74rem;
+            white-space: nowrap;
+        }
+        .score-clear-choice input {
+            width: auto;
+            margin: 0;
+            accent-color: var(--gold);
+        }
         .score-error-list {
             display: grid;
             gap: 8px;
@@ -7500,8 +7523,8 @@
                 ]
             }
         };
-        const scoreDengMin = -20;
-        const scoreDengMax = 20;
+        const scoreDengMin = -30;
+        const scoreDengMax = 30;
         const scoreJinMin = 0;
         const scoreJinMax = 3;
         const GOD_GROUPS = [
@@ -10413,6 +10436,27 @@
             }
         }
 
+        function rememberScoreClearChoice(nick, status) {
+            if (!scorePreviewState) return;
+            scorePreviewState.clearStatuses = {
+                ...(scorePreviewState.clearStatuses || {}),
+                [String(nick || '')]: status
+            };
+        }
+
+        function getBatchClearStatusesFromPreview() {
+            const statuses = {};
+            const missing = [];
+            document.querySelectorAll('[data-score-clear-row]').forEach(row => {
+                const nick = row.getAttribute('data-score-clear-nick') || '';
+                const checked = row.querySelector('input[type="radio"]:checked');
+                if (!nick) return;
+                if (!checked) missing.push(nick);
+                else statuses[nick] = checked.value;
+            });
+            return { statuses, missing };
+        }
+
         function renderScorePreview(preview) {
             if (!preview) return '<div class="profile-empty">粘贴结算文本后先预览校验。</div>';
             const errors = [
@@ -10421,13 +10465,22 @@
                 ...(preview.missingNick || []).map(nick => `${nick}：未找到已保存个人档案`),
                 ...(preview.duplicateNick || []).map(nick => `${nick}：本次结算中重复出现`)
             ];
-            const rows = (preview.allList || []).slice(0, 80).map(item => `
-                <tr>
+            const rows = (preview.allList || []).slice(0, 80).map((item, index) => {
+                const status = preview.clearStatuses?.[item.nick] || '';
+                return `
+                <tr data-score-clear-row data-score-clear-nick="${escapeHtml(item.nick)}">
                     <td>${escapeHtml(item.nick)}</td>
                     <td>${escapeHtml(formatScoreNumber(item.deng, true))}</td>
                     <td>${escapeHtml(formatScoreNumber(item.jin, true))}</td>
                     <td>${escapeHtml(formatScoreNumber(item.total, true))}</td>
-                </tr>`).join('');
+                    <td>
+                        <div class="score-clear-choice">
+                            <label><input type="radio" name="scoreClearStatus${index}" value="passed" ${status === 'passed' ? 'checked' : ''} onchange="rememberScoreClearChoice(${jsString(item.nick)}, this.value)"> 逢生</label>
+                            <label><input type="radio" name="scoreClearStatus${index}" value="lost" ${status === 'lost' ? 'checked' : ''} onchange="rememberScoreClearChoice(${jsString(item.nick)}, this.value)"> 迷失</label>
+                        </div>
+                    </td>
+                </tr>`;
+            }).join('');
             return `
                 <div class="metric-strip">
                     <span class="metric-pill">人数 <strong>${Number(preview.totalPlayers || 0)}</strong></span>
@@ -10437,8 +10490,8 @@
                 </div>
                 ${errors.length ? `<div class="score-error-list">${errors.map(error => `<div class="score-error-item">${escapeHtml(error)}</div>`).join('')}</div>` : ''}
                 <table class="score-preview-table">
-                    <thead><tr><th>玩家</th><th>登神</th><th>觐见</th><th>合计</th></tr></thead>
-                    <tbody>${rows || '<tr><td colspan="4">暂无有效条目</td></tr>'}</tbody>
+                    <thead><tr><th>玩家</th><th>登神</th><th>觐见</th><th>合计</th><th>通关</th></tr></thead>
+                    <tbody>${rows || '<tr><td colspan="5">暂无有效条目</td></tr>'}</tbody>
                 </table>`;
         }
 
@@ -10484,10 +10537,23 @@
             const dungeonName = dungeonSelect?.selectedOptions?.[0]?.dataset?.name || '';
             const textContent = document.getElementById('scoreBatchText')?.value || '';
             const remark = document.getElementById('scoreBatchRemark')?.value || '';
-            const confirmClear = !!document.getElementById('scoreBatchConfirmClear')?.checked;
+            const { statuses: clearStatuses, missing: missingClearStatuses } = getBatchClearStatusesFromPreview();
+            if (!scorePreviewState?.valid || !Object.keys(clearStatuses).length) {
+                showToast('请先预览校验，并为每位参与者选择逢生或迷失');
+                scoreActionLocks.delete(lockKey);
+                setScoreActionBusy(lockKey, false);
+                return;
+            }
+            if (missingClearStatuses.length) {
+                showToast(`请标注通关结果：${missingClearStatuses.slice(0, 6).join('、')}${missingClearStatuses.length > 6 ? ' 等' : ''}`);
+                scoreActionLocks.delete(lockKey);
+                setScoreActionBusy(lockKey, false);
+                return;
+            }
+            scorePreviewState.clearStatuses = clearStatuses;
             const settlementRequestId = createSettlementRequestId('batch');
             try {
-                const { data, error } = await invokeDungeonAction('submitScoreBatch', { dungeonId, dungeonName, textContent, remark, confirmClear, settlementRequestId });
+                const { data, error } = await invokeDungeonAction('submitScoreBatch', { dungeonId, dungeonName, textContent, remark, clearStatuses, settlementRequestId });
                 if (error) {
                     if (error.data) {
                         scorePreviewState = error.data;
@@ -10513,14 +10579,22 @@
             setScoreActionBusy(lockKey, true, '补分中...');
             showToast('补分提交中，请勿重复点击');
             const dungeonSelect = document.getElementById('singleDungeonId');
+            const playerName = document.getElementById('singlePlayerName')?.value || '';
+            const singleClearStatus = document.querySelector('input[name="singleClearStatus"]:checked')?.value || '';
+            if (!singleClearStatus) {
+                showToast('请选择本次补分玩家是逢生还是迷失');
+                scoreActionLocks.delete(lockKey);
+                setScoreActionBusy(lockKey, false);
+                return;
+            }
             const payload = {
                 dungeonId: dungeonSelect?.value || '',
                 dungeonName: dungeonSelect?.selectedOptions?.[0]?.dataset?.name || '',
-                playerName: document.getElementById('singlePlayerName')?.value || '',
+                playerName,
                 dengScore: document.getElementById('singleDengScore')?.value || 0,
                 jinScore: document.getElementById('singleJinScore')?.value || 0,
                 remark: document.getElementById('singleRemark')?.value || '',
-                confirmClear: !!document.getElementById('singleConfirmClear')?.checked,
+                clearStatuses: { [playerName]: singleClearStatus },
                 settlementRequestId: createSettlementRequestId('single')
             };
             try {
@@ -10817,7 +10891,6 @@
                             <div class="form-group"><label>副本圣名</label><select id="scoreDungeonId">${dungeonOptions}</select></div>
                             <div class="form-group"><label>结算文本</label><textarea id="scoreBatchText" maxlength="20000" placeholder="无我:+12+2&#10;某玩家:-3+1"></textarea></div>
                             <div class="form-group"><label>备注</label><input id="scoreBatchRemark" maxlength="500" placeholder="可选，写结算来源或说明"></div>
-                            <label class="identity-help" style="display:flex;align-items:center;gap:8px;margin-bottom:12px;"><input id="scoreBatchConfirmClear" type="checkbox" style="width:auto;"> 本次结算同时确认这些玩家通过该副本</label>
                             <div class="profile-tools">
                                 <button class="btn btn-outline btn-sm" onclick="checkScorePreviewUI()">预览校验</button>
                                 <button class="btn btn-primary btn-sm" data-score-action="submit-score-batch" onclick="submitScoreBatchUI()">确认结算</button>
@@ -10832,7 +10905,7 @@
                                 <div class="form-group"><label>登神之路</label><input id="singleDengScore" type="number" min="${scoreDengMin}" max="${scoreDengMax}" step="0.1" value="0"></div>
                                 <div class="form-group"><label>觐见之梯</label><input id="singleJinScore" type="number" min="${scoreJinMin}" max="${scoreJinMax}" step="0.1" value="0"></div>
                                 <div class="form-group full"><label>备注</label><input id="singleRemark" maxlength="500" placeholder="补发原因"></div>
-                                <label class="identity-help full" style="display:flex;align-items:center;gap:8px;margin-bottom:0;"><input id="singleConfirmClear" type="checkbox" style="width:auto;"> 同时确认该玩家通过该副本</label>
+                                <div class="form-group full"><label>通关结果</label><div class="score-clear-choice"><label><input type="radio" name="singleClearStatus" value="passed"> 逢生</label><label><input type="radio" name="singleClearStatus" value="lost"> 迷失</label></div></div>
                             </div>
                             <div class="profile-tools"><button class="btn btn-primary btn-sm" data-score-action="submit-score-single" onclick="submitScoreSingleUI()">提交补分</button></div>
                         </section>
