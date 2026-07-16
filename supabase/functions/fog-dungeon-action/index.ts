@@ -717,9 +717,10 @@ function parseScoreSettlementText(textContent: unknown) {
   text.split(/\r?\n/u).forEach((lineText, index) => {
     const raw = lineText.trim();
     if (!raw) return;
-    const match = raw.match(/^(.+?)[：:]\s*([+-]?\d+(?:\.\d+)?)\s*\+\s*([+-]?\d+(?:\.\d+)?)\s*$/u);
+    const normalized = raw.replace(/^\s*\d+\s*[.．、)]\s*/u, "");
+    const match = normalized.match(/^(.+?)[：:]?\s*([+-]?\d+(?:\.\d+)?)\s*\+\s*([+-]?\d+(?:\.\d+)?)\s*$/u);
     if (!match) {
-      invalidLines.push({ line: index + 1, raw, msg: "格式应为 昵称:+登神+觐见" });
+      invalidLines.push({ line: index + 1, raw, msg: "格式应为 昵称+登神+觐见，可带编号，如 2. 祂+2+2" });
       return;
     }
     const nick = cleanText(match[1], 40);
