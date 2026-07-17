@@ -13546,9 +13546,17 @@
         }
 
         function canEditPinned(d) {
+            const sessionName = String(inviteSession?.name || '').trim();
+            const sessionNameKey = normalizeNameKey(sessionName);
+            const sessionCode = String(inviteSession?.code || '').trim();
+            const creator = String(d?.creator || '').trim();
+            const inviteName = String(d?.invite_name || d?.inviteName || '').trim();
+            const inviteHash = String(d?.invite_code_hash || d?.inviteCodeHash || '').trim();
             return isAdmin() ||
-                (!!inviteSession?.name && !!d.invite_name && inviteSession.name === d.invite_name) ||
-                isCoCreatorName(d);
+                d?.can_manage === true ||
+                (!!sessionCode && !!inviteHash && sessionCode === inviteHash) ||
+                (!!sessionNameKey && (sessionNameKey === normalizeNameKey(creator) || sessionNameKey === normalizeNameKey(inviteName))) ||
+                isCoCreatorName(d, sessionName);
         }
 
         function canManageDungeon(d) {
