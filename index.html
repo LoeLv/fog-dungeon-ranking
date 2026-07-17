@@ -8544,6 +8544,9 @@
                 originalFaithGod: '',
                 originalFaithPath: '',
                 profession: '',
+                trickeryDisplayFaithGod: '',
+                trickeryDisplayFaithPath: '',
+                trickeryDisplayProfession: '',
                 ascensionScore: DEFAULT_ASCENSION_SCORE,
                 audienceScore: DEFAULT_AUDIENCE_SCORE,
                 scoresLockedAt: '',
@@ -8570,6 +8573,9 @@
             stored.originalFaithGod = cleanGodName(stored.originalFaithGod || stored.original_faith_god || '');
             stored.originalFaithPath = stored.originalFaithGod ? getGodInfo(stored.originalFaithGod).path : (stored.originalFaithPath || stored.original_faith_path || '');
             stored.profession = normalizeProfession(stored.profession || '');
+            stored.trickeryDisplayFaithGod = cleanGodName(stored.trickeryDisplayFaithGod || '');
+            stored.trickeryDisplayFaithPath = stored.trickeryDisplayFaithGod ? getGodInfo(stored.trickeryDisplayFaithGod).path : (stored.trickeryDisplayFaithPath || '');
+            stored.trickeryDisplayProfession = normalizeProfession(stored.trickeryDisplayProfession || '');
             stored.ascensionScore = normalizeProfileScore(stored.ascensionScore);
             stored.audienceScore = normalizeProfileScore(stored.audienceScore);
             stored.scoresLockedAt = stored.scoresLockedAt || '';
@@ -8643,6 +8649,21 @@
             return cleanGodName(profile?.faithGod || '');
         }
 
+        function getProfileVisualFaithGod(profile) {
+            const displayGod = cleanGodName(profile?.trickeryDisplayFaithGod || '');
+            return hasTrickeryFaithPrivilege(profile) && displayGod ? displayGod : getProfileFaithGod(profile);
+        }
+
+        function getProfileVisualFaithPath(profile) {
+            const visualGod = getProfileVisualFaithGod(profile);
+            return getGodInfo(visualGod).path || profile?.trickeryDisplayFaithPath || profile?.faithPath || '存在';
+        }
+
+        function getProfileVisualProfession(profile) {
+            const displayProfession = normalizeProfession(profile?.trickeryDisplayProfession || '');
+            return hasTrickeryFaithPrivilege(profile) && displayProfession ? displayProfession : normalizeProfession(profile?.profession || '');
+        }
+
         function isFaithLocked(profile) {
             if (canOverrideProfileLocks()) return false;
             const god = getProfileFaithGod(profile);
@@ -8667,19 +8688,19 @@
         }
 
         function getProfileDisplayFaith(profile) {
-            const god = getProfileFaithGod(profile);
+            const god = getProfileVisualFaithGod(profile);
             if (!god) return {
                 god: '',
                 label: '未立信仰',
-                path: profile?.faithPath || '存在',
-                className: getPathClassByPath(profile?.faithPath || '存在')
+                path: getProfileVisualFaithPath(profile),
+                className: getPathClassByPath(getProfileVisualFaithPath(profile))
             };
             const info = getGodInfo(god);
             return {
                 god: info.god,
                 label: `${info.god}之神`,
-                path: info.path,
-                className: info.className
+                path: info.path || getProfileVisualFaithPath(profile),
+                className: info.className || getPathClassByPath(getProfileVisualFaithPath(profile))
             };
         }
 
@@ -8736,8 +8757,8 @@
         }
 
         function renderProfileBattlePanel(profile) {
-            const faithGod = getProfileFaithGod(profile) || '命运';
             const summary = getProfileHealthSummary(profile);
+            const faithGod = summary.faithGod || '命运';
             const hasProfession = summary.rule.known;
             const hasFaith = !!summary.trait;
             return `
@@ -8776,11 +8797,12 @@
             const selectedFaithGod = faithSelect ? cleanGodName(faithSelect.value) : getProfileFaithGod(current);
             const selectedProfession = professionSelect ? normalizeProfession(professionSelect.value) : (current.profession || '');
             const ascensionScore = scoreInput ? normalizeProfileScore(scoreInput.value, current.ascensionScore ?? DEFAULT_ASCENSION_SCORE) : normalizeProfileScore(current.ascensionScore, DEFAULT_ASCENSION_SCORE);
+            const isTrickery = hasTrickeryFaithPrivilege(current);
             return {
                 ...current,
-                faithGod: selectedFaithGod,
-                faithPath: getGodInfo(selectedFaithGod).path || current.faithPath || '',
-                profession: selectedProfession,
+                faithGod: isTrickery ? getProfileFaithGod(current) : selectedFaithGod,
+                faithPath: isTrickery ? current.faithPath : (getGodInfo(selectedFaithGod).path || current.faithPath || ''),
+                profession: isTrickery ? current.profession : selectedProfession,
                 ascensionScore
             };
         }
@@ -9126,7 +9148,7 @@
         function getSelectedTalentPool(profile, state) {
             const poolKeys = state.pools.map(pool => pool.poolKey).filter(Boolean);
             if (selectedTalentPool && poolKeys.includes(selectedTalentPool)) return selectedTalentPool;
-            const preferred = `Pool${getProfileFaithGod(profile) || '欺诈'}`;
+            const preferred = state.faithTalentPoolKey || `Pool${getProfileFaithGod(profile) || '欺诈'}`;
             selectedTalentPool = poolKeys.includes(preferred) ? preferred : (poolKeys[0] || preferred);
             return selectedTalentPool;
         }
@@ -11553,7 +11575,8 @@
             const professionLocked = isProfessionLocked(profile);
             const bindingMismatched = isProfileBindingMismatched(profile);
             const scoresLocked = areProfileScoresLocked(profile);
-            const profession = getProfessionInfo(profile.profession);
+            const visualProfession = getProfileVisualProfession(profile);
+            const profession = getProfessionInfo(visualProfession);
             const roleLabel = ROLE_LABELS[getInviteRole()] || '入局信徒';
             const faithProgress = Math.min(100, Math.max(6, Math.round(uniqueCleared * 12 + authored.length * 8 + Number(profile.audienceScore || 0))));
             const faithRank = getProfileFaithRank(faithGod, faithProgress);
@@ -11600,7 +11623,7 @@
                             <span class="mini-tag ${faithClass}">${escapeHtml(faith.label)}</span>
                             <span class="mini-tag ${faithClass}">${escapeHtml(faith.path)}命途</span>
                             <span class="mini-tag ${faithClass}">${escapeHtml(roleLabel)}</span>
-                            <span class="metric-pill">职业 <strong>${escapeHtml(profile.profession || '未填写')}</strong></span>
+                            <span class="metric-pill">职业 <strong>${escapeHtml(visualProfession || '未填写')}</strong></span>
                             ${profession.known ? `<span class="metric-pill">${escapeHtml(profession.god)}之神 <strong>${escapeHtml(profession.className)}</strong></span>` : ''}
                             <span class="metric-pill" id="profileScoreMessagePill" style="${unreadScoreMessages.length ? '' : 'display:none;'}">结算信封 <strong>${unreadScoreMessages.length}</strong></span>
                             ${unread.length ? `<span class="metric-pill">楼主提醒 <strong>${unread.length}</strong></span>` : ''}
@@ -11633,12 +11656,12 @@
                                 </div>
                                 <div class="form-group">
                                     <label for="profileFaithGod">信仰神明</label>
-                                    <select id="profileFaithGod" onchange="previewProfileFaithSkin(this.value)" ${faithLocked ? 'disabled' : ''}>${renderProfileGodOptions(profile.faithGod)}</select>
+                                    <select id="profileFaithGod" onchange="previewProfileFaithSkin(this.value)" ${faithLocked ? 'disabled' : ''}>${renderProfileGodOptions(getProfileVisualFaithGod(profile))}</select>
                                     <div class="identity-help">${faithLocked ? `信仰已封存为 ${escapeHtml(faith.label)}，不可再改。` : (bindingMismatched ? '当前信仰与职业不匹配，请重新选择信仰与对应职业完成修复。' : (hasTrickeryFaithPrivilege(profile) ? '欺诈信徒可改写信仰档纹。' : '首次封存后信仰将刻入档案；欺诈信徒除外。'))}</div>
                                 </div>
                                 <div class="form-group full">
                                     <label for="profileProfession">个人职业</label>
-                                <select id="profileProfession" onchange="updateProfileBattlePanel()" ${professionLocked ? 'disabled' : ''}>${renderProfileProfessionOptions(profile.profession, profile.faithGod)}</select>
+                                <select id="profileProfession" onchange="updateProfileBattlePanel()" ${professionLocked ? 'disabled' : ''}>${renderProfileProfessionOptions(visualProfession, getProfileVisualFaithGod(profile))}</select>
                                     <div class="identity-help">${professionLocked ? `职业已封存为 ${escapeHtml(profile.profession)}，不可再改。` : (bindingMismatched ? '职业只能从当前信仰神明下选择，修复后会重新封存。' : (hasTrickeryFaithPrivilege(profile) ? '欺诈信徒可改写职业档纹。' : '请先选择信仰，再选择该信仰下的职业；首次封存后会刻入档案，欺诈信徒除外。'))}</div>
                                 </div>
                                 <div class="form-group">
@@ -11837,12 +11860,49 @@
                     activeCurse: currentProfile.activeCurse || null,
                     activeCurses: normalizeProfileCurseList(currentProfile.activeCurses, currentProfile.activeCurse)
                 };
+                const isTrickerySave = hasTrickeryFaithPrivilege(currentProfile);
+                const trickeryDisplayPatch = isTrickerySave ? {
+                    trickeryDisplayFaithGod: selectedFaithInfo.god,
+                    trickeryDisplayFaithPath: selectedFaithInfo.path,
+                    trickeryDisplayProfession: selectedProfession
+                } : {};
                 if (canEditDisplayName() && name !== inviteSession.name) {
                     const { error } = await updateDisplayName(name);
                     if (error) { showToast(`❌ ${getFriendlyActionError(error, '昵称保存失败')}`); return; }
                 }
-                saveCurrentProfile(profile);
+                const localProfile = isTrickerySave ? {
+                    ...currentProfile,
+                    displayName: name,
+                    role: getInviteRole() || '',
+                    ascensionScore,
+                    audienceScore,
+                    scoresLockedAt: nextScoresLockedAt,
+                    items: profile.items,
+                    talents: profile.talents,
+                    activeTitle: profile.activeTitle,
+                    activeTitles: profile.activeTitles,
+                    activeCurse: profile.activeCurse,
+                    activeCurses: profile.activeCurses,
+                    ...trickeryDisplayPatch
+                } : profile;
+                saveCurrentProfile(localProfile);
                 const cloudSync = await syncProfileToCloud(profile);
+                if (!cloudSync.error && isTrickerySave) {
+                    saveCurrentProfile({
+                        ...(cloudSync.data || localProfile),
+                        ...trickeryDisplayPatch,
+                        activeTitle: currentProfile.activeTitle || cloudSync.data?.activeTitle || null,
+                        activeTitles: normalizeProfileTitleList(currentProfile.activeTitles, currentProfile.activeTitle || cloudSync.data?.activeTitle),
+                        activeCurse: currentProfile.activeCurse || cloudSync.data?.activeCurse || null,
+                        activeCurses: normalizeProfileCurseList(currentProfile.activeCurses, currentProfile.activeCurse || cloudSync.data?.activeCurse),
+                        originalFaithGod: cloudSync.data?.originalFaithGod || currentProfile.originalFaithGod || profile.originalFaithGod,
+                        originalFaithPath: cloudSync.data?.originalFaithPath || currentProfile.originalFaithPath || profile.originalFaithPath,
+                        ascensionScore: cloudSync.data?.ascensionScore ?? profile.ascensionScore,
+                        audienceScore: cloudSync.data?.audienceScore ?? profile.audienceScore,
+                        scoresLockedAt: cloudSync.data?.scoresLockedAt || profile.scoresLockedAt,
+                        talents: cloudSync.data?.talents || profile.talents
+                    });
+                }
                 const shouldUseTrickeryFaithAction = !!cloudSync.error && hasTrickeryFaithPrivilege(currentProfile) && selectedFaithInfo.god !== originalFaithGod;
                 const trickeryFaithSync = shouldUseTrickeryFaithAction
                     ? await syncTrickeryFaithToCloud(selectedFaithInfo.god)

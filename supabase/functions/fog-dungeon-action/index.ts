@@ -605,13 +605,16 @@ function canEquipTalentRanks(ranks: unknown[], allowance: string[]) {
 }
 
 function getFaithTalentPoolKey(profile: Record<string, unknown>) {
-  const faithGod = cleanText(profile.faith_god, 20);
+  const faithGod = cleanText(profile.original_faith_god, 20) === "欺诈"
+    ? "欺诈"
+    : cleanText(profile.faith_god, 20);
   const poolKey = faithGod ? `Pool${faithGod}` : "";
   return knownTalentPools.includes(poolKey) ? poolKey : "";
 }
 
 function getProfessionTalentPoolKey(profile: Record<string, unknown>) {
   const profession = cleanText(profile.profession, 40);
+  if (cleanText(profile.original_faith_god, 20) === "欺诈" && getProfessionGod(profession) !== "欺诈") return "";
   const professionClass = professionClassByName.get(profession);
   const poolKey = professionClass ? `Pool${professionClass}` : "";
   return knownTalentPools.includes(poolKey) ? poolKey : "";
@@ -1902,9 +1905,16 @@ Deno.serve(async (req) => {
 
       const canOverride = role === "admin";
       const locked = !canOverride && existing?.faith_god && !hasTrickeryFaithPrivilege(existing) && !isProfileBindingMismatched(existing);
-      const nextFaithGod = locked ? existing.faith_god : faithGod;
-      const nextFaithPath = locked ? existing.faith_path : faithPath;
-      const nextProfession = locked ? existing.profession : profession;
+      const existingIsTrickery = !!existing && hasTrickeryFaithPrivilege(existing);
+      const nextFaithGod = existingIsTrickery
+        ? (existing.original_faith_god || existing.faith_god || "欺诈")
+        : (locked ? existing.faith_god : faithGod);
+      const nextFaithPath = existingIsTrickery
+        ? (existing.original_faith_path || getFaithPathByGod(String(nextFaithGod)) || existing.faith_path || "虚无")
+        : (locked ? existing.faith_path : faithPath);
+      const nextProfession = existingIsTrickery
+        ? existing.profession
+        : (locked ? existing.profession : profession);
       const nextOriginalFaithGod = existing?.original_faith_god || faithGod;
       const nextOriginalFaithPath = existing?.original_faith_path || faithPath;
       const nextAscension = canOverride
@@ -1978,15 +1988,11 @@ Deno.serve(async (req) => {
 
       const { data, error } = await supabase
         .from("player_profiles")
-        .update({
-          faith_god: faithGod,
-          faith_path: faithPath,
-          updated_at: new Date().toISOString(),
-        })
-        .eq("invite_code_hash", identity.codeHash)
         .select("display_name, role, faith_god, faith_path, original_faith_god, original_faith_path, profession, ascension_score, audience_score, items, talents, scores_locked_at, updated_at")
-        .single();
+        .eq("invite_code_hash", identity.codeHash)
+        .maybeSingle();
       if (error) return json({ error: error.message }, 400);
+      if (!data) return json({ error: "请先保存个人档案" }, 400);
 
       const titleResult = await getActiveTitleForHash(supabase, identity.codeHash);
       if (titleResult.error) return json({ error: titleResult.error.message }, 400);
