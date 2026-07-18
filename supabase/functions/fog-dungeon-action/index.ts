@@ -1786,6 +1786,184 @@ async function getScoreSettlementResultByRequestId(
   return { data: { settlement, entries: entries || [], clearConfirmed: 0 } };
 }
 
+type AdminTalentRow = {
+  id: number;
+  pool_key: string;
+  talent_id: number;
+  talent_name: string;
+  rank: string;
+  acquired_from: string;
+  storage_slot: number | null;
+  equipped_slot: number | null;
+  acquired_at: string;
+};
+
+function findTalentOpenStorageSlots(talents: AdminTalentRow[]) {
+  const used = new Set(talents.map((item) => Number(item.storage_slot)).filter((slot) => slot >= 1 && slot <= inventorySlotLimit));
+  const slots: number[] = [];
+  for (let slot = 1; slot <= inventorySlotLimit; slot += 1) {
+    if (!used.has(slot)) slots.push(slot);
+  }
+  return slots;
+}
+
+function summarizeAdminTalentAnomalies(
+  profile: Record<string, unknown>,
+  talents: AdminTalentRow[],
+  overflowChoices: Record<string, unknown>[],
+) {
+  const invalidStorage = talents.filter((item) => item.storage_slot !== null && !cleanSlot(item.storage_slot, inventorySlotLimit));
+  const invalidEquipped = talents.filter((item) => item.equipped_slot !== null && !cleanSlot(item.equipped_slot, equippedSlotLimit));
+  const dualPlaced = talents.filter((item) => item.storage_slot !== null && item.equipped_slot !== null);
+  const unplaced = talents.filter((item) => item.storage_slot === null && item.equipped_slot === null);
+  const storageSlots = new Map<number, number>();
+  const equippedSlots = new Map<number, number>();
+  const ownedKeys = new Set<string>();
+  const duplicateOwnedIds: number[] = [];
+  for (const talent of talents) {
+    const storageSlot = Number(talent.storage_slot || 0);
+    const equippedSlot = Number(talent.equipped_slot || 0);
+    if (storageSlot) storageSlots.set(storageSlot, (storageSlots.get(storageSlot) || 0) + 1);
+    if (equippedSlot) equippedSlots.set(equippedSlot, (equippedSlots.get(equippedSlot) || 0) + 1);
+    const key = getTalentKey(talent.pool_key, talent.talent_id);
+    if (ownedKeys.has(key)) duplicateOwnedIds.push(talent.id);
+    ownedKeys.add(key);
+  }
+  const duplicateOverflowIds = overflowChoices
+    .filter((choice) => ownedKeys.has(getTalentKey(choice.pool_key, choice.talent_id)))
+    .map((choice) => Number(choice.id))
+    .filter(Boolean);
+  const activeEquippedLimit = getTalentSlotLimit(profile.ascension_score);
+  const equippedTalents = talents.filter((item) => item.equipped_slot !== null);
+  const equippedRanksValid = canEquipTalentRanks(equippedTalents.map((item) => item.rank), getTalentRankAllowance(profile.ascension_score));
+  const messages: string[] = [];
+  if (unplaced.length) messages.push(`${unplaced.length} 个孤立天赋未分配仓库或携带槽`);
+  if (dualPlaced.length) messages.push(`${dualPlaced.length} 个天赋同时占用仓库和携带槽`);
+  if (invalidStorage.length || invalidEquipped.length) messages.push(`${invalidStorage.length + invalidEquipped.length} 个天赋槽位超出规则范围`);
+  if ([...storageSlots.values()].some((count) => count > 1) || [...equippedSlots.values()].some((count) => count > 1)) messages.push("存在重复占用的槽位");
+  if (duplicateOwnedIds.length) messages.push(`${duplicateOwnedIds.length} 个重复拥有天赋，需人工确认`);
+  if (duplicateOverflowIds.length) messages.push(`${duplicateOverflowIds.length} 个溢出项已在仓库中拥有，可自动清理`);
+  if (overflowChoices.length && findTalentOpenStorageSlots(talents).length) messages.push(`${overflowChoices.length} 个溢出项可尝试回填仓库`);
+  if (equippedTalents.some((item) => Number(item.equipped_slot) > activeEquippedLimit)) messages.push("存在尚未开启的携带槽");
+  if (!equippedRanksValid) messages.push("当前携带品阶超过分数允许范围");
+  return {
+    hasIssues: messages.length > 0,
+    messages,
+    autoFixable: {
+      unplacedTalentIds: unplaced.map((item) => item.id),
+      dualPlacedTalentIds: dualPlaced.map((item) => item.id),
+      duplicateOverflowIds,
+      overflowChoiceIds: overflowChoices.map((item) => Number(item.id)).filter(Boolean),
+    },
+  };
+}
+
+async function buildAdminPlayerSnapshot(
+  supabase: ReturnType<typeof createClient>,
+  targetNameInput: unknown,
+) {
+  const targetName = cleanText(targetNameInput, 40);
+  if (!targetName) return { error: { message: "请填写玩家昵称" } };
+  const { data: profile, error: profileError } = await supabase
+    .from("player_profiles")
+    .select("invite_code_hash, display_name, role, faith_god, faith_path, original_faith_god, original_faith_path, profession, ascension_score, audience_score, items, talents, updated_at")
+    .eq("display_name", targetName)
+    .maybeSingle();
+  if (profileError) return { error: profileError };
+  if (!profile) return { error: { message: "没有找到这个玩家档案，请确认昵称已保存" } };
+
+  const codeHash = cleanText(profile.invite_code_hash, 64);
+  const [titlesResult, cursesResult, talentsResult, overflowResult, fragmentsResult, scoreLogsResult, messagesResult] = await Promise.all([
+    supabase.from("profile_titles").select("id, title_text, title_god, title_note, granted_by_type, granted_by_name, granted_at, is_active, revoked_at, revoked_by_name").eq("invite_code_hash", codeHash).order("granted_at", { ascending: false }),
+    supabase.from("profile_curses").select("id, curse_text, curse_god, curse_note, granted_by_type, granted_by_name, granted_at, is_active, revoked_at, revoked_by_name").eq("invite_code_hash", codeHash).order("granted_at", { ascending: false }),
+    supabase.from("owned_talents").select("id, pool_key, talent_id, talent_name, rank, acquired_from, storage_slot, equipped_slot, acquired_at").eq("invite_code_hash", codeHash).order("acquired_at", { ascending: true }),
+    supabase.from("talent_overflow_choices").select("id, pool_key, talent_id, talent_name, rank, source, created_at").eq("invite_code_hash", codeHash).order("created_at", { ascending: true }),
+    supabase.from("user_fragments").select("fragment_total, updated_at").eq("invite_code_hash", codeHash).maybeSingle(),
+    supabase.from("score_change_logs").select("id, player_name, change_deng, change_jin, source_type, settlement_id, operator_name, revoke_remark, created_at").eq("player_code_hash", codeHash).order("created_at", { ascending: false }).limit(20),
+    supabase.from("score_messages").select("id, settlement_id, msg_type, content, is_read, created_at").eq("player_code_hash", codeHash).order("created_at", { ascending: false }).limit(10),
+  ]);
+  const firstError = [titlesResult.error, cursesResult.error, talentsResult.error, overflowResult.error, fragmentsResult.error, scoreLogsResult.error, messagesResult.error].find(Boolean) as LooseError;
+  if (firstError) return { error: firstError };
+  const talents = (talentsResult.data || []) as AdminTalentRow[];
+  const overflowChoices = (overflowResult.data || []) as Record<string, unknown>[];
+  const anomalies = summarizeAdminTalentAnomalies(profile as Record<string, unknown>, talents, overflowChoices);
+  return {
+    data: {
+      profile: {
+        displayName: cleanText(profile.display_name, 40), role: cleanText(profile.role, 20), faithGod: cleanText(profile.faith_god, 20), faithPath: cleanText(profile.faith_path, 20),
+        originalFaithGod: cleanText(profile.original_faith_god, 20), originalFaithPath: cleanText(profile.original_faith_path, 20), profession: cleanText(profile.profession, 40),
+        ascensionScore: cleanScore(profile.ascension_score), audienceScore: cleanScore(profile.audience_score), items: cleanText(profile.items, 800), talentsText: cleanText(profile.talents, 800), updatedAt: cleanText(profile.updated_at, 80),
+      },
+      titles: titlesResult.data || [], curses: cursesResult.data || [], talents, overflowChoices,
+      fragments: Number(fragmentsResult.data?.fragment_total || 0), scoreLogs: scoreLogsResult.data || [], recentMessages: messagesResult.data || [],
+      inventorySlotLimit, equippedSlotLimit: getTalentSlotLimit(profile.ascension_score), anomalies,
+    },
+  };
+}
+
+async function repairAdminTalentState(
+  supabase: ReturnType<typeof createClient>,
+  targetNameInput: unknown,
+) {
+  const snapshot = await buildAdminPlayerSnapshot(supabase, targetNameInput);
+  if (snapshot.error || !snapshot.data) return snapshot;
+  const targetName = snapshot.data.profile.displayName;
+  const { data: profile, error: profileError } = await supabase.from("player_profiles").select("invite_code_hash").eq("display_name", targetName).maybeSingle();
+  if (profileError || !profile) return { error: profileError || { message: "玩家档案已不存在" } };
+  const codeHash = cleanText(profile.invite_code_hash, 64);
+  let talents = [...(snapshot.data.talents as AdminTalentRow[])];
+  let overflowChoices = [...(snapshot.data.overflowChoices as Record<string, unknown>[])];
+  const repaired: string[] = [];
+  const unresolved: string[] = [];
+
+  for (const talent of talents.filter((item) => item.storage_slot !== null && item.equipped_slot !== null)) {
+    const { error } = await supabase.from("owned_talents").update({ storage_slot: null }).eq("id", talent.id).eq("invite_code_hash", codeHash);
+    if (error) return { error };
+    talent.storage_slot = null;
+    repaired.push(`已修正「${talent.talent_name}」的双重槽位占用`);
+  }
+
+  const duplicateOverflowIds = snapshot.data.anomalies.autoFixable.duplicateOverflowIds;
+  if (duplicateOverflowIds.length) {
+    const { error } = await supabase.from("talent_overflow_choices").delete().eq("invite_code_hash", codeHash).in("id", duplicateOverflowIds);
+    if (error) return { error };
+    overflowChoices = overflowChoices.filter((choice) => !duplicateOverflowIds.includes(Number(choice.id)));
+    repaired.push(`已清理 ${duplicateOverflowIds.length} 个重复溢出项`);
+  }
+
+  for (const talent of talents.filter((item) => item.storage_slot === null && item.equipped_slot === null)) {
+    const slot = findTalentOpenStorageSlots(talents)[0];
+    if (!slot) { unresolved.push(`「${talent.talent_name}」无可用仓库槽位，未自动移动`); continue; }
+    const { error } = await supabase.from("owned_talents").update({ storage_slot: slot, equipped_slot: null }).eq("id", talent.id).eq("invite_code_hash", codeHash);
+    if (error) return { error };
+    talent.storage_slot = slot;
+    repaired.push(`已将孤立天赋「${talent.talent_name}」放入仓库 ${slot} 号位`);
+  }
+
+  const ownedKeys = new Set(talents.map((item) => getTalentKey(item.pool_key, item.talent_id)));
+  for (const choice of [...overflowChoices]) {
+    const slot = findTalentOpenStorageSlots(talents)[0];
+    if (!slot) break;
+    const choiceId = Number(choice.id);
+    const choiceKey = getTalentKey(choice.pool_key, choice.talent_id);
+    const { data: deletedChoice, error: deleteError } = await supabase.from("talent_overflow_choices").delete().eq("id", choiceId).eq("invite_code_hash", codeHash).select("id").maybeSingle();
+    if (deleteError) return { error: deleteError };
+    if (!deletedChoice) continue;
+    if (ownedKeys.has(choiceKey)) continue;
+    const { data: inserted, error: insertError } = await supabase.from("owned_talents").insert({ invite_code_hash: codeHash, pool_key: choice.pool_key, talent_id: choice.talent_id, talent_name: choice.talent_name, rank: choice.rank, acquired_from: choice.source === "exchange" ? "exchange" : "draw", storage_slot: slot, equipped_slot: null }).select("id, pool_key, talent_id, talent_name, rank, acquired_from, storage_slot, equipped_slot, acquired_at").single();
+    if (insertError) return { error: insertError };
+    talents.push(inserted as AdminTalentRow);
+    ownedKeys.add(choiceKey);
+    repaired.push(`已将溢出天赋「${cleanText(choice.talent_name, 80)}」回填至仓库 ${slot} 号位`);
+  }
+
+  const textResult = await updateProfileTalentText(supabase, codeHash);
+  if (textResult.error) return { error: textResult.error };
+  const refreshed = await buildAdminPlayerSnapshot(supabase, targetName);
+  if (refreshed.error) return refreshed;
+  return { data: { repaired, unresolved, snapshot: refreshed.data } };
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
   if (req.method !== "POST") return json({ error: "只接受 POST 请求" }, 405);
@@ -1854,6 +2032,27 @@ Deno.serve(async (req) => {
   try {
     if (action === "verifyInvite") {
       return json({ role, label: roleLabels[role], name: identity.displayName });
+    }
+
+    if (action === "adminLookupPlayer") {
+      if (role !== "admin") return json({ error: "只有神谕馆主可以查询后台档案" }, 403);
+      const result = await buildAdminPlayerSnapshot(supabase, payload.targetName);
+      if (result.error) return json({ error: result.error.message || "玩家后台档案读取失败" }, 400);
+      return json({ role, name: identity.displayName, data: result.data });
+    }
+
+    if (action === "adminScanTalentState") {
+      if (role !== "admin") return json({ error: "只有神谕馆主可以扫描天赋状态" }, 403);
+      const result = await buildAdminPlayerSnapshot(supabase, payload.targetName);
+      if (result.error) return json({ error: result.error.message || "天赋状态扫描失败" }, 400);
+      return json({ role, name: identity.displayName, data: { profile: result.data?.profile, anomalies: result.data?.anomalies } });
+    }
+
+    if (action === "adminRepairTalentState") {
+      if (role !== "admin") return json({ error: "只有神谕馆主可以修复天赋状态" }, 403);
+      const result = await repairAdminTalentState(supabase, payload.targetName);
+      if (result.error) return json({ error: result.error.message || "天赋状态修复失败" }, 400);
+      return json({ role, name: identity.displayName, data: result.data });
     }
 
     if (action === "updateDisplayName") {
@@ -2347,6 +2546,7 @@ Deno.serve(async (req) => {
       const target = targetResult.data as Record<string, unknown>;
       const targetHash = cleanText(target.invite_code_hash, 64);
       const titleText = cleanText(payload.titleText, 32);
+      const titleId = cleanBigIntId(payload.titleId);
       let activeTitleQuery = supabase
         .from("profile_titles")
         .select("id, title_text, title_god, granted_by_hash")
@@ -2355,6 +2555,7 @@ Deno.serve(async (req) => {
         .order("granted_at", { ascending: false })
         .limit(1);
       if (titleText) activeTitleQuery = activeTitleQuery.eq("title_text", titleText);
+      if (titleId) activeTitleQuery = activeTitleQuery.eq("id", titleId);
       const { data: activeTitles, error: activeTitleError } = await activeTitleQuery;
       if (activeTitleError?.code === "42P01") return json({ error: "请先运行 profile_titles_migration.sql" }, 400);
       if (activeTitleError) return json({ error: activeTitleError.message }, 400);
@@ -2404,6 +2605,7 @@ Deno.serve(async (req) => {
       const target = targetResult.data as Record<string, unknown>;
       const targetHash = cleanText(target.invite_code_hash, 64);
       const curseText = cleanText(payload.curseText, 32);
+      const curseId = cleanBigIntId(payload.curseId);
       let activeCurseQuery = supabase
         .from("profile_curses")
         .select("id, curse_text, curse_god, granted_by_hash")
@@ -2412,6 +2614,7 @@ Deno.serve(async (req) => {
         .order("granted_at", { ascending: false })
         .limit(1);
       if (curseText) activeCurseQuery = activeCurseQuery.eq("curse_text", curseText);
+      if (curseId) activeCurseQuery = activeCurseQuery.eq("id", curseId);
       const { data: activeCurses, error: activeCurseError } = await activeCurseQuery;
       if (activeCurseError?.code === "42P01") return json({ error: "请先运行 profile_curses_migration.sql" }, 400);
       if (activeCurseError) return json({ error: activeCurseError.message }, 400);

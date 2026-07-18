@@ -7061,6 +7061,7 @@
             <button type="button" class="role-badge" id="roleBadge" onclick="openProfilePage()">旁观者只读</button>
             <button class="btn btn-outline header-action header-action-ledger" onclick="openLeaderboardPage()">◈ 觐见榜单</button>
             <button class="btn btn-outline header-action header-action-score" id="scoreDeskButton" onclick="openScorePage()" style="display:none;">⚖ 分数结算</button>
+            <button class="btn btn-outline header-action" id="adminDeskButton" onclick="openAdminPage()" style="display:none;">▣ 馆主后台</button>
             <button class="btn btn-outline header-action header-action-invite" id="inviteButton" onclick="openInviteModal()">◇ 同契召引</button>
             <button class="btn btn-primary btn-folly header-action header-action-build" id="submitEntryButton" onclick="openSubmitModal()">🎭 构筑愚戏</button>
         </div>
@@ -7092,6 +7093,7 @@
             <button type="button" class="btn btn-outline btn-sm" onclick="openInviteModal()">入局谕令</button>
             <button type="button" class="btn btn-primary btn-sm" onclick="openSubmitModal()">构筑试炼</button>
             <button type="button" class="btn btn-outline btn-sm" id="mobileScoreButton" onclick="openScorePage()" hidden>分数结算</button>
+            <button type="button" class="btn btn-outline btn-sm" id="mobileAdminButton" onclick="openAdminPage()" hidden>馆主后台</button>
         </div>
 
         <div class="controls">
@@ -7278,6 +7280,20 @@
             </div>
             <div id="scoreContent" class="profile-content">
                 <div class="loading"><div class="spinner"></div><br>正在读取结算神谕...</div>
+            </div>
+        </div>
+    </main>
+
+    <!-- 馆主后台独立页 -->
+    <main class="profile-page" id="adminPage" style="display:none;">
+        <div class="profile-shell">
+            <div class="profile-toolbar">
+                <button class="detail-back" onclick="closeAdminPage()">← 返回试炼列表</button>
+                <div class="detail-window-title">CURATOR CONSOLE · 神谕馆主后台</div>
+                <button class="detail-close-icon" onclick="closeAdminPage()" title="返回试炼列表" aria-label="返回试炼列表">✕</button>
+            </div>
+            <div id="adminContent" class="profile-content">
+                <div class="loading"><div class="spinner"></div><br>正在校验馆主权限...</div>
             </div>
         </div>
     </main>
@@ -8171,6 +8187,8 @@
         let leaderboardScrollY = 0;
         let matchScrollY = 0;
         let scoreScrollY = 0;
+        let adminScrollY = 0;
+        let adminLookupState = { targetName: '', snapshot: null };
         let editingDungeonId = '';
         let profileChronicleTimer = null;
         let profileChronicleIndex = 0;
@@ -8303,6 +8321,7 @@
                 closeLeaderboardPage(false);
                 closeMatchPage(false);
                 closeScorePage(false);
+                closeAdminPage(false);
                 const detailOverlay = document.getElementById('detailOverlay');
                 if (detailOverlay) detailOverlay.style.display = 'none';
                 document.body.classList.remove('detail-view-open');
@@ -8479,6 +8498,8 @@
             const submitButton = document.getElementById('submitEntryButton');
             const scoreButton = document.getElementById('scoreDeskButton');
             const mobileScoreButton = document.getElementById('mobileScoreButton');
+            const adminButton = document.getElementById('adminDeskButton');
+            const mobileAdminButton = document.getElementById('mobileAdminButton');
             const mobileActionStrip = document.getElementById('mobileActionStrip');
             const identityCard = document.getElementById('identityCard');
             const identityRoleText = document.getElementById('identityRoleText');
@@ -8508,6 +8529,14 @@
                 mobileScoreButton.textContent = isGodRole() ? '称号敕令' : '分数结算';
                 mobileScoreButton.title = isGodRole() ? '神明称号敕令台' : '审核员分数结算工作台';
                 mobileActionStrip?.classList.toggle('has-score-action', showMobileScore);
+            }
+            if (adminButton) {
+                adminButton.style.display = isAdmin() ? '' : 'none';
+                adminButton.title = '馆主玩家档案与天赋维护后台';
+            }
+            if (mobileAdminButton) {
+                mobileAdminButton.hidden = !isAdmin();
+                mobileAdminButton.title = '馆主玩家档案与天赋维护后台';
             }
             if (submitButton) {
                 submitButton.textContent = isGodRole() ? '✦ 祈愿创本' : '🎭 构筑愚戏';
@@ -10207,6 +10236,8 @@
             if (scorePage) scorePage.style.display = 'none';
             const matchPage = document.getElementById('matchPage');
             if (matchPage) matchPage.style.display = 'none';
+            const adminPage = document.getElementById('adminPage');
+            if (adminPage) adminPage.style.display = 'none';
             document.body.classList.remove('detail-view-open', 'profile-view-open', 'score-view-open', 'match-view-open');
             document.body.classList.add('leaderboard-view-open');
             document.getElementById('leaderboardPage').style.display = 'block';
@@ -11092,6 +11123,8 @@
             if (leaderboardPage) leaderboardPage.style.display = 'none';
             const matchPage = document.getElementById('matchPage');
             if (matchPage) matchPage.style.display = 'none';
+            const adminPage = document.getElementById('adminPage');
+            if (adminPage) adminPage.style.display = 'none';
             document.body.classList.remove('detail-view-open', 'profile-view-open', 'leaderboard-view-open', 'match-view-open');
             document.body.classList.add('score-view-open');
             document.getElementById('scorePage').style.display = 'block';
@@ -11104,6 +11137,148 @@
             if (page) page.style.display = 'none';
             document.body.classList.remove('score-view-open');
             if (restoreScroll !== false) requestAnimationFrame(() => window.scrollTo(0, scoreScrollY || 0));
+        }
+
+        function formatAdminTime(value) {
+            const date = new Date(value || '');
+            return Number.isNaN(date.getTime()) ? '时间未记录' : date.toLocaleString('zh-CN', { hour12: false });
+        }
+
+        function renderAdminHonorRows(items, type, targetName) {
+            if (!items?.length) return renderRitualEmpty(`该玩家尚无${type === 'title' ? '称号' : '诅咒'}记录。`, '真理', '暂无记录');
+            return items.map(item => {
+                const active = !!item.is_active;
+                const label = type === 'title' ? item.title_text : item.curse_text;
+                const source = type === 'title' ? item.title_god : item.curse_god;
+                const action = active
+                    ? `<button class="btn btn-outline btn-sm" onclick="adminRevokeHonor('${type}', ${Number(item.id)}, ${escapeHtml(jsString(targetName))}, ${escapeHtml(jsString(label))})">回收</button>`
+                    : '<span class="identity-help">已回收</span>';
+                return `<div class="profile-title-status ${type === 'curse' ? 'profile-curse-status' : ''}">
+                    <div class="profile-title-status-head"><strong>${escapeHtml(label || '未命名')}</strong><small>${active ? '生效中' : '已回收'}</small></div>
+                    <div class="profile-title-status-note">${escapeHtml(source || '馆主亲授')} · ${escapeHtml(item.granted_by_name || '未记录')} · ${escapeHtml(formatAdminTime(item.granted_at))}</div>
+                    ${item.title_note || item.curse_note ? `<div class="profile-title-status-note">${escapeHtml(item.title_note || item.curse_note)}</div>` : ''}
+                    <div class="profile-tools">${action}</div>
+                </div>`;
+            }).join('');
+        }
+
+        function renderAdminTalentRows(snapshot) {
+            const talents = snapshot.talents || [];
+            if (!talents.length) return renderRitualEmpty('该玩家尚未拥有任何天赋。', '真理', '仓库为空');
+            return talents.map(item => {
+                const placement = item.equipped_slot ? `携带槽 ${item.equipped_slot}` : (item.storage_slot ? `仓库 ${item.storage_slot} 号位` : '未分配');
+                return `<div class="profile-title-status"><div class="profile-title-status-head"><strong>${escapeHtml(item.talent_name)} · ${escapeHtml(item.rank)}</strong><small>${escapeHtml(placement)}</small></div><div class="profile-title-status-note">${escapeHtml(item.pool_key)} · ${escapeHtml(item.acquired_from || '未知来源')} · ${escapeHtml(formatAdminTime(item.acquired_at))}</div></div>`;
+            }).join('');
+        }
+
+        function renderAdminSnapshot(snapshot) {
+            const profile = snapshot.profile || {};
+            const anomaly = snapshot.anomalies || { hasIssues: false, messages: [] };
+            const scoreLogs = snapshot.scoreLogs || [];
+            const overflow = snapshot.overflowChoices || [];
+            return `
+                <section class="profile-hero" data-god="真理" data-motif="CURATOR CONSOLE" style="${getGodSkinStyle('真理')}">
+                    <div class="profile-avatar ${getGodClass('真理')}" style="${getGodSkinStyle('真理')}">${renderGodSigil('真理', 'lg')}</div>
+                    <div class="profile-hero-copy"><div class="profile-kicker">PLAYER BACKSTAGE DOSSIER</div><h1 class="profile-name">${escapeHtml(profile.displayName || '未命名档案')}</h1><div class="profile-subline"><span class="metric-pill">${escapeHtml(ROLE_LABELS[profile.role] || profile.role || '未知身份')}</span><span class="metric-pill">${escapeHtml(profile.faithPath || '未定命途')} · ${escapeHtml(profile.faithGod || '未定信仰')}</span><span class="metric-pill">${escapeHtml(profile.profession || '未定职业')}</span></div><div class="profile-faith-prayer">档案最后更新：${escapeHtml(formatAdminTime(profile.updatedAt))}</div></div>
+                    <div class="profile-hero-stats"><div class="profile-hero-score"><span>登神之路</span><strong>${formatProfileScore(profile.ascensionScore)}</strong></div><div class="profile-hero-score"><span>觐见之梯</span><strong>${formatProfileScore(profile.audienceScore)}</strong></div></div>
+                </section>
+                <div class="profile-grid">
+                    <div>
+                        <section class="profile-panel" data-god="真理" style="${getGodSkinStyle('真理')}"><div class="profile-panel-title"><span>称号册</span><small>${(snapshot.titles || []).length} 条记录</small></div>${renderAdminHonorRows(snapshot.titles || [], 'title', profile.displayName)}</section>
+                        <section class="profile-panel" data-god="真理" style="${getGodSkinStyle('真理')}"><div class="profile-panel-title"><span>诅咒册</span><small>${(snapshot.curses || []).length} 条记录</small></div>${renderAdminHonorRows(snapshot.curses || [], 'curse', profile.displayName)}</section>
+                        <section class="profile-panel" data-god="真理" style="${getGodSkinStyle('真理')}"><div class="profile-panel-title"><span>分数记录</span><small>最近 ${scoreLogs.length} 条</small></div>${scoreLogs.length ? scoreLogs.map(log => `<div class="profile-title-status"><div class="profile-title-status-head"><strong>${escapeHtml(log.source_type || '结算')} · 登神 ${Number(log.change_deng || 0) >= 0 ? '+' : ''}${Number(log.change_deng || 0)} / 觐见 +${Number(log.change_jin || 0)}</strong><small>${escapeHtml(formatAdminTime(log.created_at))}</small></div><div class="profile-title-status-note">审核：${escapeHtml(log.operator_name || '未记录')}</div></div>`).join('') : renderRitualEmpty('暂无分数变动记录。', '真理', '记录为空')}</section>
+                    </div>
+                    <div>
+                        <section class="profile-panel" data-god="真理" style="${getGodSkinStyle('真理')}"><div class="profile-panel-title"><span>天赋状态</span><small>碎片 ${Number(snapshot.fragments || 0)}</small></div><div class="profile-score-row"><div class="profile-stat-card"><span>仓库</span><strong>${(snapshot.talents || []).filter(item => item.storage_slot).length}/${Number(snapshot.inventorySlotLimit || 8)}</strong></div><div class="profile-stat-card"><span>待取舍</span><strong>${overflow.length}</strong></div></div><div class="profile-tools"><button class="btn btn-outline btn-sm" data-admin-scan onclick="adminScanTalentState()">扫描异常</button><button class="btn btn-primary btn-sm" data-admin-repair onclick="adminRepairTalentState()">修复可处理项</button></div><div class="identity-help">${anomaly.hasIssues ? escapeHtml(anomaly.messages.join('；')) : '未发现天赋仓库异常。'}</div></section>
+                        <section class="profile-panel" data-god="真理" style="${getGodSkinStyle('真理')}"><div class="profile-panel-title"><span>天赋仓库</span><small>仓库 / 携带槽</small></div>${renderAdminTalentRows(snapshot)}</section>
+                        <section class="profile-panel" data-god="真理" style="${getGodSkinStyle('真理')}"><div class="profile-panel-title"><span>溢出待取舍</span><small>${overflow.length} 项</small></div>${overflow.length ? overflow.map(item => `<div class="profile-title-status"><div class="profile-title-status-head"><strong>${escapeHtml(item.talent_name)} · ${escapeHtml(item.rank)}</strong><small>${escapeHtml(item.source || 'draw')}</small></div><div class="profile-title-status-note">${escapeHtml(item.pool_key)} · ${escapeHtml(formatAdminTime(item.created_at))}</div></div>`).join('') : renderRitualEmpty('没有待取舍溢出项。', '真理', '队列为空')}</section>
+                    </div>
+                </div>`;
+        }
+
+        async function renderAdminPage() {
+            const container = document.getElementById('adminContent');
+            if (!container) return;
+            if (!isAdmin()) { container.innerHTML = renderRitualEmpty('此处只对神谕馆主开放。', '真理', '权限不足'); return; }
+            const lookup = adminLookupState.snapshot ? `<div class="admin-snapshot">${renderAdminSnapshot(adminLookupState.snapshot)}</div>` : renderRitualEmpty('输入已绑定的玩家昵称，读取其后台档案、称号诅咒与天赋状态。', '真理', '等待查询');
+            container.innerHTML = `<section class="profile-panel" data-god="真理" style="${getGodSkinStyle('真理')}"><div class="profile-panel-title"><span>玩家查询</span><small>仅馆主可见</small></div><div class="profile-form-grid"><div class="form-group full"><label>玩家昵称</label><input id="adminTargetName" maxlength="40" value="${escapeHtml(adminLookupState.targetName || '')}" placeholder="输入已保存个人档案的昵称" onkeydown="if(event.key==='Enter') adminLookupPlayer()"></div></div><div class="profile-tools"><button class="btn btn-primary btn-sm" data-admin-lookup onclick="adminLookupPlayer()">查询档案</button></div></section>${lookup}`;
+        }
+
+        async function adminLookupPlayer(targetName = '') {
+            if (!isAdmin()) { showToast('只有神谕馆主可以查询后台档案'); return; }
+            const name = cleanDisplayNameInput(targetName || document.getElementById('adminTargetName')?.value || '');
+            if (!name) { showToast('请输入玩家昵称'); return; }
+            if (!acquireUiActionLock(`adminLookup:${name}`, '该玩家档案正在读取，请勿重复点击')) return;
+            const restore = setActionButtonsBusy('[data-admin-lookup]', '读取中...');
+            try {
+                const { data, error } = await invokeDungeonAction('adminLookupPlayer', { targetName: name });
+                if (error) { showToast(`❌ ${error.message || '玩家档案读取失败'}`); return; }
+                adminLookupState = { targetName: name, snapshot: data };
+                await renderAdminPage();
+                showToast(`已读取 ${name} 的馆主后台档案`);
+            } finally { restore(); releaseUiActionLock(`adminLookup:${name}`); }
+        }
+
+        async function adminScanTalentState() {
+            const name = adminLookupState.targetName;
+            if (!name) { showToast('请先查询玩家档案'); return; }
+            if (!acquireUiActionLock(`adminScan:${name}`, '天赋状态正在扫描，请勿重复点击')) return;
+            const restore = setActionButtonsBusy('[data-admin-scan]', '扫描中...');
+            try {
+                const { data, error } = await invokeDungeonAction('adminScanTalentState', { targetName: name });
+                if (error) { showToast(`❌ ${error.message || '天赋扫描失败'}`); return; }
+                if (adminLookupState.snapshot) adminLookupState.snapshot.anomalies = data?.anomalies || { hasIssues: false, messages: [] };
+                await renderAdminPage();
+                showToast(data?.anomalies?.hasIssues ? '扫描完成，发现需要处理的天赋状态' : '扫描完成，未发现天赋异常');
+            } finally { restore(); releaseUiActionLock(`adminScan:${name}`); }
+        }
+
+        async function adminRepairTalentState() {
+            const name = adminLookupState.targetName;
+            if (!name) { showToast('请先查询玩家档案'); return; }
+            if (!window.confirm(`确认修复 ${name} 的可自动处理天赋状态？不会删除已拥有天赋。`)) return;
+            if (!acquireUiActionLock(`adminRepair:${name}`, '天赋状态正在修复，请勿重复点击')) return;
+            const restore = setActionButtonsBusy('[data-admin-repair]', '修复中...');
+            try {
+                const { data, error } = await invokeDungeonAction('adminRepairTalentState', { targetName: name });
+                if (error) { showToast(`❌ ${error.message || '天赋修复失败'}`); return; }
+                adminLookupState.snapshot = data?.snapshot || adminLookupState.snapshot;
+                await renderAdminPage();
+                const count = Array.isArray(data?.repaired) ? data.repaired.length : 0;
+                showToast(count ? `已完成 ${count} 项天赋状态修复` : '没有可自动修复的天赋项');
+            } finally { restore(); releaseUiActionLock(`adminRepair:${name}`); }
+        }
+
+        async function adminRevokeHonor(type, id, targetName, label) {
+            const action = type === 'title' ? 'revokeProfileTitle' : 'revokeProfileCurse';
+            const key = `adminRevoke:${type}:${id}`;
+            if (!window.confirm(`确认回收 ${targetName} 的${type === 'title' ? '称号' : '诅咒'}「${label}」？`)) return;
+            if (!acquireUiActionLock(key, '回收正在处理，请勿重复点击')) return;
+            try {
+                const payload = type === 'title' ? { targetName, titleId: id } : { targetName, curseId: id };
+                const { error } = await invokeDungeonAction(action, payload);
+                if (error) { showToast(`❌ ${error.message || '回收失败'}`); return; }
+                showToast(`已回收「${label}」`);
+                await adminLookupPlayer(targetName);
+            } finally { releaseUiActionLock(key); }
+        }
+
+        async function openAdminPage() {
+            if (!isAdmin()) { showToast('只有神谕馆主可以进入后台'); return; }
+            adminScrollY = window.scrollY || document.documentElement.scrollTop || 0;
+            ['profilePage', 'leaderboardPage', 'scorePage', 'matchPage'].forEach(id => { const page = document.getElementById(id); if (page) page.style.display = 'none'; });
+            document.body.classList.remove('profile-view-open', 'leaderboard-view-open', 'score-view-open', 'match-view-open');
+            document.body.classList.add('profile-view-open');
+            document.getElementById('adminPage').style.display = 'block';
+            window.scrollTo(0, 0);
+            await renderAdminPage();
+        }
+
+        function closeAdminPage(restoreScroll = true) {
+            const page = document.getElementById('adminPage');
+            if (page) page.style.display = 'none';
+            document.body.classList.remove('profile-view-open');
+            if (restoreScroll !== false) requestAnimationFrame(() => window.scrollTo(0, adminScrollY || 0));
         }
 
         function getMatchTargetCount(dungeon) {
@@ -11327,6 +11502,8 @@
             if (leaderboardPage) leaderboardPage.style.display = 'none';
             const scorePage = document.getElementById('scorePage');
             if (scorePage) scorePage.style.display = 'none';
+            const adminPage = document.getElementById('adminPage');
+            if (adminPage) adminPage.style.display = 'none';
             document.body.classList.remove('detail-view-open', 'profile-view-open', 'leaderboard-view-open', 'score-view-open');
             document.body.classList.add('match-view-open');
             document.getElementById('matchPage').style.display = 'block';
@@ -11833,6 +12010,8 @@
             if (scorePage) scorePage.style.display = 'none';
             const matchPage = document.getElementById('matchPage');
             if (matchPage) matchPage.style.display = 'none';
+            const adminPage = document.getElementById('adminPage');
+            if (adminPage) adminPage.style.display = 'none';
             document.body.classList.remove('detail-view-open', 'leaderboard-view-open', 'score-view-open', 'match-view-open');
             document.body.classList.add('profile-view-open');
             document.getElementById('profilePage').style.display = 'block';
@@ -14024,6 +14203,7 @@
             closeLeaderboardPage(false);
             closeScorePage(false);
             closeMatchPage(false);
+            closeAdminPage(false);
             closeInviteModal();
             showToast('已退出邀请身份');
             if (currentDetailId) openDetail(currentDetailId);
