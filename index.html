@@ -798,6 +798,24 @@
             transform: none;
             box-shadow: none;
         }
+        .btn.is-action-ack,
+        button.is-action-ack {
+            transform: translateY(1px) scale(0.985);
+            filter: brightness(1.12);
+        }
+        .btn.is-action-ack::before {
+            content: "";
+            position: absolute;
+            inset: 0;
+            border-radius: inherit;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.18), transparent);
+            transform: translateX(-100%);
+            animation: actionAckSweep 0.55s ease;
+            pointer-events: none;
+        }
+        @keyframes actionAckSweep {
+            to { transform: translateX(100%); }
+        }
         .btn-sm {
             padding: 6px 16px;
             font-size: 0.8rem;
@@ -6028,8 +6046,12 @@
             }
         }
         @media (max-width: 720px) {
+            :root {
+                --mobile-nav-space: calc(104px + env(safe-area-inset-bottom, 0px));
+                --mobile-nav-lift: calc(112px + env(safe-area-inset-bottom, 0px));
+            }
             body {
-                padding-bottom: calc(82px + env(safe-area-inset-bottom, 0px));
+                padding-bottom: var(--mobile-nav-space);
                 backdrop-filter: none;
             }
             .container {
@@ -6467,10 +6489,10 @@
                 line-height: 1.55;
             }
             .profile-page {
-                padding-bottom: calc(86px + env(safe-area-inset-bottom, 0px));
+                padding-bottom: var(--mobile-nav-space);
             }
             .profile-content {
-                padding-bottom: 22px;
+                padding-bottom: var(--mobile-nav-space);
             }
             .profile-hero[data-god],
             .leaderboard-hero {
@@ -6753,6 +6775,14 @@
             .god-pick-row {
                 grid-template-columns: 1fr;
                 gap: 5px;
+            }
+            .toast {
+                bottom: var(--mobile-nav-lift);
+                width: min(calc(100vw - 32px), 420px);
+                padding: 12px 18px;
+                border-radius: 18px;
+                text-align: center;
+                z-index: 9100;
             }
             .god-pick-path {
                 font-size: 0.68rem;
@@ -8390,11 +8420,13 @@
             buttons.forEach(button => {
                 if (!button.dataset.idleText) button.dataset.idleText = button.textContent || '';
                 button.disabled = true;
+                button.setAttribute('aria-busy', 'true');
                 button.textContent = busyText;
             });
             return () => {
                 buttons.forEach(button => {
                     button.disabled = false;
+                    button.removeAttribute('aria-busy');
                     button.textContent = button.dataset.idleText || button.textContent || '';
                     delete button.dataset.idleText;
                 });
@@ -11861,6 +11893,19 @@
                     activeCurses: normalizeProfileCurseList(currentProfile.activeCurses, currentProfile.activeCurse)
                 };
                 const isTrickerySave = hasTrickeryFaithPrivilege(currentProfile);
+                const realFaithGod = isTrickerySave ? '欺诈' : (currentProfile.originalFaithGod || getProfileFaithGod(currentProfile) || '欺诈');
+                const realFaithInfo = getGodInfo(realFaithGod);
+                const realProfession = getProfessionInfo(currentProfile.profession).god === '欺诈'
+                    ? currentProfile.profession
+                    : '杂技演员';
+                const cloudProfile = isTrickerySave ? {
+                    ...profile,
+                    faithGod: realFaithInfo.known ? realFaithInfo.god : '欺诈',
+                    faithPath: realFaithInfo.known ? realFaithInfo.path : '虚无',
+                    originalFaithGod: '欺诈',
+                    originalFaithPath: '虚无',
+                    profession: realProfession
+                } : profile;
                 const trickeryDisplayPatch = isTrickerySave ? {
                     trickeryDisplayFaithGod: selectedFaithInfo.god,
                     trickeryDisplayFaithPath: selectedFaithInfo.path,
@@ -11886,7 +11931,7 @@
                     ...trickeryDisplayPatch
                 } : profile;
                 saveCurrentProfile(localProfile);
-                const cloudSync = await syncProfileToCloud(profile);
+                const cloudSync = await syncProfileToCloud(cloudProfile);
                 if (!cloudSync.error && isTrickerySave) {
                     saveCurrentProfile({
                         ...(cloudSync.data || localProfile),
@@ -11895,15 +11940,15 @@
                         activeTitles: normalizeProfileTitleList(currentProfile.activeTitles, currentProfile.activeTitle || cloudSync.data?.activeTitle),
                         activeCurse: currentProfile.activeCurse || cloudSync.data?.activeCurse || null,
                         activeCurses: normalizeProfileCurseList(currentProfile.activeCurses, currentProfile.activeCurse || cloudSync.data?.activeCurse),
-                        originalFaithGod: cloudSync.data?.originalFaithGod || currentProfile.originalFaithGod || profile.originalFaithGod,
-                        originalFaithPath: cloudSync.data?.originalFaithPath || currentProfile.originalFaithPath || profile.originalFaithPath,
+                        originalFaithGod: cloudSync.data?.originalFaithGod || currentProfile.originalFaithGod || cloudProfile.originalFaithGod,
+                        originalFaithPath: cloudSync.data?.originalFaithPath || currentProfile.originalFaithPath || cloudProfile.originalFaithPath,
                         ascensionScore: cloudSync.data?.ascensionScore ?? profile.ascensionScore,
                         audienceScore: cloudSync.data?.audienceScore ?? profile.audienceScore,
                         scoresLockedAt: cloudSync.data?.scoresLockedAt || profile.scoresLockedAt,
                         talents: cloudSync.data?.talents || profile.talents
                     });
                 }
-                const shouldUseTrickeryFaithAction = !!cloudSync.error && hasTrickeryFaithPrivilege(currentProfile) && selectedFaithInfo.god !== originalFaithGod;
+                const shouldUseTrickeryFaithAction = !isTrickerySave && !!cloudSync.error && hasTrickeryFaithPrivilege(currentProfile) && selectedFaithInfo.god !== originalFaithGod;
                 const trickeryFaithSync = shouldUseTrickeryFaithAction
                     ? await syncTrickeryFaithToCloud(selectedFaithInfo.god)
                     : { data: null, error: null };
@@ -14458,6 +14503,12 @@
                 showToast('操作正在处理中，请勿重复点击');
                 return;
             }
+            button.classList.add('is-action-ack');
+            button.setAttribute('aria-busy', 'true');
+            window.setTimeout(() => {
+                button.classList.remove('is-action-ack');
+                if (!button.disabled) button.removeAttribute('aria-busy');
+            }, 650);
             button.dataset.clickGuardUntil = String(now + 900);
             window.setTimeout(() => {
                 if (Number(button.dataset.clickGuardUntil || 0) <= Date.now()) delete button.dataset.clickGuardUntil;
