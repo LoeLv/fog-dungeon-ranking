@@ -9609,7 +9609,7 @@
         function drawProfileCardImage(payload) {
             const canvas = document.createElement('canvas');
             const width = 1200;
-            const height = 1800;
+            const height = 1960;
             const scale = Math.max(1, Math.floor(window.devicePixelRatio || 1));
             canvas.width = width * scale;
             canvas.height = height * scale;
@@ -9708,7 +9708,7 @@
             ctx.fillStyle = main;
             ctx.font = '900 30px "Microsoft YaHei", sans-serif';
             ctx.fillText('战斗面板', 108, 596);
-            drawRoundRect(ctx, 108, 630, 310, 170, 20);
+            drawRoundRect(ctx, 108, 630, 310, 220, 20);
             ctx.fillStyle = 'rgba(213,167,66,0.12)';
             ctx.fill();
             ctx.strokeStyle = main;
@@ -9724,11 +9724,15 @@
             ctx.fillStyle = 'rgba(234,234,242,0.62)';
             ctx.font = '600 21px "Microsoft YaHei", sans-serif';
             const healthParts = payload.health.maxHp
-                ? [`基础 ${payload.health.baseHp}`, `成长 +${payload.health.growthHp}`, `信仰 +${payload.health.faithBonus}`]
+                ? [`基础 ${payload.health.baseHp}`, `成长 +${payload.health.growthHp}`]
                 : ['请选择职业后查看血量成长'];
-            ctx.fillText(healthParts.join(' / '), 136, 778);
+            ctx.fillText(healthParts.join(' / '), 136, 786);
+            const healthRuleText = payload.health.maxHp
+                ? `信仰 +${payload.health.faithBonus} / 每 100 分 +${payload.health.growthPer100} 血`
+                : '';
+            if (healthRuleText) ctx.fillText(healthRuleText, 136, 818);
 
-            drawRoundRect(ctx, 444, 630, 648, 170, 20);
+            drawRoundRect(ctx, 444, 630, 648, 220, 20);
             ctx.fillStyle = 'rgba(255,255,255,0.045)';
             ctx.fill();
             ctx.strokeStyle = accent;
@@ -9740,26 +9744,26 @@
             ctx.fillText(`${payload.faithGod}之神 · 信仰特性`, 474, 674);
             ctx.fillStyle = 'rgba(244,240,223,0.84)';
             ctx.font = '600 23px "Microsoft YaHei", sans-serif';
-            wrapCanvasText(ctx, payload.health.trait || '请选择信仰后查看信仰特性。', 570, 3).forEach((line, index) => {
+            wrapCanvasText(ctx, payload.health.trait || '请选择信仰后查看信仰特性。', 570, 5).forEach((line, index) => {
                 ctx.fillText(line, 474, 718 + index * 31);
             });
 
             ctx.fillStyle = main;
             ctx.font = '900 30px "Microsoft YaHei", sans-serif';
-            ctx.fillText('神诞称号', 108, 874);
+            ctx.fillText('神诞称号', 108, 934);
             const titleText = payload.titles.length ? payload.titles.slice(0, 5).join(' / ') : '暂无称号';
             wrapCanvasText(ctx, titleText, 960, 2).forEach((line, index) => {
                 ctx.fillStyle = index ? 'rgba(244,240,223,0.72)' : '#f4f0df';
                 ctx.font = '800 34px "Microsoft YaHei", sans-serif';
-                ctx.fillText(line, 108, 926 + index * 44);
+                ctx.fillText(line, 108, 986 + index * 44);
             });
 
             ctx.fillStyle = main;
             ctx.font = '900 30px "Microsoft YaHei", sans-serif';
-            ctx.fillText('携带天赋', 108, 1066);
+            ctx.fillText('携带天赋', 108, 1126);
             const talents = payload.equippedTalents.length ? payload.equippedTalents : [{ slot: 0, name: '尚未携带天赋', rank: '', pool: '', effect: '打开个人面板后可在天赋仓库配置携带槽。' }];
             talents.slice(0, 4).forEach((talent, index) => {
-                const y = 1104 + index * 150;
+                const y = 1164 + index * 150;
                 drawRoundRect(ctx, 108, y, 984, 128, 18);
                 ctx.fillStyle = 'rgba(255,255,255,0.045)';
                 ctx.fill();
