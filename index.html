@@ -8415,6 +8415,11 @@
             uiActionLocks.delete(key);
         }
 
+        function cssEscape(value) {
+            if (window.CSS?.escape) return window.CSS.escape(String(value));
+            return String(value).replace(/["\\]/g, '\\$&');
+        }
+
         function setActionButtonsBusy(selector, busyText = '处理中...') {
             const buttons = [...document.querySelectorAll(selector)].filter(button => button instanceof HTMLButtonElement);
             buttons.forEach(button => {
@@ -10057,9 +10062,11 @@
             const isPathOverview = leaderboardMode === 'path' && leaderboardPath === 'all';
             const mobileLimit = isPathOverview ? MOBILE_LEADERBOARD_PATH_OVERVIEW_LIMIT : MOBILE_LEADERBOARD_BOARD_LIMIT;
             const shouldCollapseOnMobile = isMobileViewport() && entries.length > mobileLimit && !leaderboardMobileExpandedBoards.has(boardKey);
-            const renderLimit = shouldCollapseOnMobile ? Math.min(requestedLimit, mobileLimit) : requestedLimit;
+            const renderLimit = shouldCollapseOnMobile
+                ? Math.min(requestedLimit, mobileLimit)
+                : Math.min(Math.max(requestedLimit, entries.length), LEADERBOARD_DISPLAY_LIMIT);
             const moreButton = shouldCollapseOnMobile
-                ? `<button type="button" class="leaderboard-mobile-more" onclick="expandLeaderboardMobileBoard(${jsString(boardKey)})">展开全部 ${entries.length} 位</button>`
+                ? `<button type="button" class="leaderboard-mobile-more" data-leaderboard-more="${escapeHtml(boardKey)}" onclick="expandLeaderboardMobileBoard(${jsString(boardKey)})">显示更多 · 共 ${entries.length} 位</button>`
                 : '';
             return `
                 <section class="${boardClass} ${options.path ? getPathClassByPath(options.path) : ''}">
@@ -10073,8 +10080,21 @@
         }
 
         async function expandLeaderboardMobileBoard(boardKey) {
-            leaderboardMobileExpandedBoards.add(String(boardKey || ''));
-            await renderLeaderboardPage();
+            const normalizedKey = String(boardKey || '');
+            const lockKey = `leaderboard-more:${normalizedKey}`;
+            if (!acquireUiActionLock(lockKey, '榜单正在展开，请勿重复点击')) return;
+            const restoreButtons = setActionButtonsBusy(`[data-leaderboard-more="${cssEscape(normalizedKey)}"]`, '展开中...');
+            try {
+                leaderboardMobileExpandedBoards.add(normalizedKey);
+                await renderLeaderboardPage();
+                showToast('已显示更多榜单记录');
+            } catch (error) {
+                console.error('展开榜单失败', error);
+                showToast(`❌ ${getFriendlyActionError(error, '榜单展开失败')}`);
+            } finally {
+                restoreButtons();
+                releaseUiActionLock(lockKey);
+            }
         }
 
         function renderLeaderboardTabs() {
@@ -14489,7 +14509,7 @@
         function showToast(msg){ const c=document.getElementById('toastContainer'); const t=document.createElement('div'); t.className='toast'; t.textContent=msg; c.appendChild(t); setTimeout(()=>{if(t.parentNode)t.remove();},3200); }
         function shouldGuardActionButton(button) {
             const action = `${button.getAttribute('onclick') || ''} ${button.getAttribute('type') || ''}`;
-            return /(save|submit|delete|remove|mark|draw|exchange|equip|resolve|discard|grant|revoke|joinMatchQueue|cancelMatchQueue|advanceRun|reviewDungeon|addComment|Rating|Clear|保存|提交|删除|撤销|授予|回收|分解|兑换|结算)/i.test(action);
+            return /(save|submit|delete|remove|mark|draw|exchange|equip|resolve|discard|grant|revoke|expand|showMore|loadMore|joinMatchQueue|cancelMatchQueue|advanceRun|reviewDungeon|addComment|Rating|Clear|保存|提交|删除|撤销|授予|回收|分解|兑换|结算|显示更多|展开)/i.test(action);
         }
         document.addEventListener('click', event => {
             const target = event.target instanceof Element ? event.target : null;
