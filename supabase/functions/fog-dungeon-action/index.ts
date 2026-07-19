@@ -429,6 +429,9 @@ function toPublicProfile(profile: Record<string, unknown>, profileKey: string, i
     role: cleanText(profile.role, 20),
     faith_god: cleanText(profile.faith_god, 20),
     faith_path: cleanText(profile.faith_path, 20),
+    trickery_display_faith_god: cleanText(profile.trickery_display_faith_god, 20),
+    trickery_display_faith_path: cleanText(profile.trickery_display_faith_path, 20),
+    trickery_display_profession: cleanText(profile.trickery_display_profession, 40),
     profession: cleanText(profile.profession, 40),
     ascension_score: cleanScore(profile.ascension_score),
     audience_score: cleanScore(profile.audience_score),
@@ -965,7 +968,7 @@ async function getTalentProfile(
 ) {
   const { data, error } = await supabase
     .from("player_profiles")
-    .select("display_name, role, faith_god, faith_path, original_faith_god, original_faith_path, profession, ascension_score, audience_score, items, talents, updated_at")
+    .select("display_name, role, faith_god, faith_path, original_faith_god, original_faith_path, trickery_display_faith_god, trickery_display_faith_path, trickery_display_profession, profession, ascension_score, audience_score, items, talents, updated_at")
     .eq("invite_code_hash", identity.codeHash)
     .maybeSingle();
   if (error) return { error };
@@ -2247,7 +2250,9 @@ Deno.serve(async (req) => {
 
       const faithGod = cleanText(payload.faithGod, 20);
       const faithPath = getFaithPathByGod(faithGod);
+      const profession = cleanText(payload.profession, 40);
       if (!faithGod || !faithPath) return json({ error: "请选择有效信仰神明" }, 400);
+      if (!profession || getProfessionGod(profession) !== faithGod) return json({ error: "展示职业必须属于当前展示信仰" }, 400);
 
       const { data: existing, error: readError } = await supabase
         .from("player_profiles")
@@ -2263,9 +2268,16 @@ Deno.serve(async (req) => {
 
       const { data, error } = await supabase
         .from("player_profiles")
-        .select("display_name, role, faith_god, faith_path, original_faith_god, original_faith_path, profession, ascension_score, audience_score, items, talents, scores_locked_at, updated_at")
+        .update({
+          trickery_display_faith_god: faithGod,
+          trickery_display_faith_path: faithPath,
+          trickery_display_profession: profession,
+          updated_at: new Date().toISOString(),
+        })
         .eq("invite_code_hash", identity.codeHash)
-        .maybeSingle();
+        .select("display_name, role, faith_god, faith_path, original_faith_god, original_faith_path, trickery_display_faith_god, trickery_display_faith_path, trickery_display_profession, profession, ascension_score, audience_score, items, talents, scores_locked_at, updated_at")
+        .single();
+      if (error?.code === "42703") return json({ error: "请先运行 trickery_display_profile_migration_20260719.sql" }, 400);
       if (error) return json({ error: error.message }, 400);
       if (!data) return json({ error: "请先保存个人档案" }, 400);
 
@@ -2291,7 +2303,7 @@ Deno.serve(async (req) => {
 
       const { data, error } = await supabase
         .from("player_profiles")
-        .select("invite_code_hash, display_name, role, faith_god, faith_path, original_faith_god, original_faith_path, profession, ascension_score, audience_score, updated_at")
+        .select("invite_code_hash, display_name, role, faith_god, faith_path, original_faith_god, original_faith_path, trickery_display_faith_god, trickery_display_faith_path, trickery_display_profession, profession, ascension_score, audience_score, updated_at")
         .order("ascension_score", { ascending: false })
         .limit(300);
       if (error?.code === "42P01") return json({ error: "请先运行 player_profiles_migration.sql" }, 400);
@@ -2337,7 +2349,7 @@ Deno.serve(async (req) => {
 
       const { data: profiles, error: profileError } = await supabase
         .from("player_profiles")
-        .select("invite_code_hash, display_name, role, faith_god, faith_path, original_faith_god, original_faith_path, profession, ascension_score, audience_score, items, talents, updated_at")
+        .select("invite_code_hash, display_name, role, faith_god, faith_path, original_faith_god, original_faith_path, trickery_display_faith_god, trickery_display_faith_path, trickery_display_profession, profession, ascension_score, audience_score, items, talents, updated_at")
         .order("ascension_score", { ascending: false })
         .limit(1000);
       if (profileError?.code === "42P01") return json({ error: "请先运行 player_profiles_migration.sql" }, 400);

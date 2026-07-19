@@ -9081,6 +9081,9 @@
                 originalFaithGod: cleanGodName(profile.original_faith_god || profile.originalFaithGod || ''),
                 originalFaithPath: profile.original_faith_path || profile.originalFaithPath || '',
                 profession: normalizeProfession(profile.profession || ''),
+                trickeryDisplayFaithGod: cleanGodName(profile.trickery_display_faith_god || profile.trickeryDisplayFaithGod || ''),
+                trickeryDisplayFaithPath: profile.trickery_display_faith_path || profile.trickeryDisplayFaithPath || '',
+                trickeryDisplayProfession: normalizeProfession(profile.trickery_display_profession || profile.trickeryDisplayProfession || ''),
                 ascensionScore: normalizeProfileScore(profile.ascension_score ?? profile.ascensionScore, DEFAULT_ASCENSION_SCORE),
                 audienceScore: normalizeProfileScore(profile.audience_score ?? profile.audienceScore, DEFAULT_AUDIENCE_SCORE),
                 items: String(profile.items || '').trim().slice(0, 800),
@@ -9137,9 +9140,9 @@
             return { data: cloudProfile, error: null };
         }
 
-        async function syncTrickeryFaithToCloud(faithGod) {
+        async function syncTrickeryFaithToCloud(faithGod, profession) {
             if (USE_LOCAL_FALLBACK || !inviteSession?.code) return { data: null, error: null };
-            const { data, error } = await invokeDungeonAction('updateTrickeryFaith', { faithGod });
+            const { data, error } = await invokeDungeonAction('updateTrickeryFaith', { faithGod, profession });
             if (error) return { data: null, error };
             const cloudProfile = mapCloudProfileToLocal(data);
             if (cloudProfile) saveCurrentProfile(cloudProfile);
@@ -12202,9 +12205,9 @@
                         talents: cloudSync.data?.talents || profile.talents
                     });
                 }
-                const shouldUseTrickeryFaithAction = !isTrickerySave && !!cloudSync.error && hasTrickeryFaithPrivilege(currentProfile) && selectedFaithInfo.god !== originalFaithGod;
+                const shouldUseTrickeryFaithAction = isTrickerySave && !cloudSync.error;
                 const trickeryFaithSync = shouldUseTrickeryFaithAction
-                    ? await syncTrickeryFaithToCloud(selectedFaithInfo.god)
+                    ? await syncTrickeryFaithToCloud(selectedFaithInfo.god, selectedProfession)
                     : { data: null, error: null };
                 const syncError = cloudSync.error || trickeryFaithSync.error;
                 if (trickeryFaithSync.error) {
