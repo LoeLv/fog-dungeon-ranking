@@ -555,6 +555,60 @@ function isMissingTitleTable(error: LooseError) {
   return error?.code === "42P01";
 }
 
+function isMissingAdminOperationLogTable(error: LooseError) {
+  return error?.code === "42P01" && !!error.message?.includes("admin_operation_logs");
+}
+
+async function writeAdminOperationLog(
+  supabase: ReturnType<typeof createClient>,
+  identity: InviteIdentity,
+  input: {
+    action: string;
+    targetCodeHash?: unknown;
+    targetName?: unknown;
+    objectType?: unknown;
+    objectId?: unknown;
+    summary?: unknown;
+    beforeState?: Record<string, unknown>;
+    afterState?: Record<string, unknown>;
+  },
+) {
+  if (!hasRole(identity.role, ["admin", "god", "reviewer"])) return { skipped: true };
+  const { error } = await supabase.from("admin_operation_logs").insert({
+    actor_code_hash: identity.codeHash,
+    actor_name: identity.displayName,
+    actor_role: identity.role,
+    action: cleanText(input.action, 80),
+    target_code_hash: cleanText(input.targetCodeHash, 64) || null,
+    target_name: cleanText(input.targetName, 40),
+    object_type: cleanText(input.objectType, 40),
+    object_id: cleanText(input.objectId, 120),
+    summary: cleanText(input.summary, 500),
+    before_state: input.beforeState || {},
+    after_state: input.afterState || {},
+  });
+  if (isMissingAdminOperationLogTable(error)) return { unavailable: true };
+  if (error) console.error("admin operation log write failed", error);
+  return { error: error || null };
+}
+
+async function listAdminOperationLogs(
+  supabase: ReturnType<typeof createClient>,
+  targetCodeHash: string | null = null,
+  limit = 50,
+) {
+  let query = supabase
+    .from("admin_operation_logs")
+    .select("id, actor_name, actor_role, action, target_name, object_type, object_id, summary, before_state, after_state, created_at")
+    .order("created_at", { ascending: false })
+    .limit(Math.max(1, Math.min(50, limit)));
+  if (targetCodeHash) query = query.eq("target_code_hash", targetCodeHash);
+  const { data, error } = await query;
+  if (isMissingAdminOperationLogTable(error)) return { data: [], unavailable: true };
+  if (error) return { data: [], error };
+  return { data: data || [], unavailable: false };
+}
+
 function isMissingTalentEffectColumn(error: LooseError) {
   return error?.code === "42703" && !!error.message?.includes("effect");
 }
@@ -1887,6 +1941,8 @@ async function buildAdminPlayerSnapshot(
   const talents = (talentsResult.data || []) as AdminTalentRow[];
   const overflowChoices = (overflowResult.data || []) as Record<string, unknown>[];
   const anomalies = summarizeAdminTalentAnomalies(profile as Record<string, unknown>, talents, overflowChoices);
+  const operationLogResult = await listAdminOperationLogs(supabase, codeHash, 30);
+  if (operationLogResult.error) return { error: operationLogResult.error };
   return {
     data: {
       profile: {
@@ -1896,6 +1952,7 @@ async function buildAdminPlayerSnapshot(
       },
       titles: titlesResult.data || [], curses: cursesResult.data || [], talents, overflowChoices,
       fragments: Number(fragmentsResult.data?.fragment_total || 0), scoreLogs: scoreLogsResult.data || [], recentMessages: messagesResult.data || [],
+      operationLogs: operationLogResult.data || [], operationLogsUnavailable: !!operationLogResult.unavailable,
       inventorySlotLimit, equippedSlotLimit: getTalentSlotLimit(profile.ascension_score), anomalies,
     },
   };
@@ -2041,10 +2098,23 @@ Deno.serve(async (req) => {
       return json({ role, name: identity.displayName, data: result.data });
     }
 
+    if (action === "adminListOperationLogs") {
+      if (role !== "admin") return json({ error: "只有神谕馆主可以查看管理操作日志" }, 403);
+      const result = await listAdminOperationLogs(supabase, null, 50);
+      if (result.error) return json({ error: result.error.message || "管理操作日志读取失败" }, 400);
+      return json({ role, name: identity.displayName, data: { logs: result.data || [], unavailable: !!result.unavailable } });
+    }
+
     if (action === "adminScanTalentState") {
       if (role !== "admin") return json({ error: "只有神谕馆主可以扫描天赋状态" }, 403);
       const result = await buildAdminPlayerSnapshot(supabase, payload.targetName);
       if (result.error) return json({ error: result.error.message || "天赋状态扫描失败" }, 400);
+      const targetResult = await getProfileByDisplayName(supabase, payload.targetName);
+      await writeAdminOperationLog(supabase, identity, {
+        action: "talent.scan", targetCodeHash: targetResult.data?.invite_code_hash, targetName: result.data?.profile.displayName, objectType: "talent_state",
+        summary: result.data?.anomalies?.hasIssues ? "扫描发现天赋状态异常" : "扫描完成，未发现天赋异常",
+        afterState: { hasIssues: !!result.data?.anomalies?.hasIssues, messages: result.data?.anomalies?.messages || [] },
+      });
       return json({ role, name: identity.displayName, data: { profile: result.data?.profile, anomalies: result.data?.anomalies } });
     }
 
@@ -2052,6 +2122,12 @@ Deno.serve(async (req) => {
       if (role !== "admin") return json({ error: "只有神谕馆主可以修复天赋状态" }, 403);
       const result = await repairAdminTalentState(supabase, payload.targetName);
       if (result.error) return json({ error: result.error.message || "天赋状态修复失败" }, 400);
+      const targetResult = await getProfileByDisplayName(supabase, payload.targetName);
+      await writeAdminOperationLog(supabase, identity, {
+        action: "talent.repair", targetCodeHash: targetResult.data?.invite_code_hash, targetName: result.data?.snapshot?.profile?.displayName, objectType: "talent_state",
+        summary: `完成 ${Array.isArray(result.data?.repaired) ? result.data.repaired.length : 0} 项天赋状态修复`,
+        afterState: { repaired: result.data?.repaired || [], unresolved: result.data?.unresolved || [] },
+      });
       return json({ role, name: identity.displayName, data: result.data });
     }
 
@@ -2451,6 +2527,10 @@ Deno.serve(async (req) => {
         .single();
       if (error?.code === "42P01") return json({ error: "请先运行 profile_titles_migration.sql" }, 400);
       if (error) return json({ error: error.message }, 400);
+      await writeAdminOperationLog(supabase, identity, {
+        action: "title.grant", targetCodeHash: targetHash, targetName: target.display_name, objectType: "profile_title", objectId: data.id,
+        summary: `授予称号「${titleText}」`, afterState: { title: titleText, god: titleGod, note: titleNote },
+      });
 
       return json({
         role,
@@ -2520,6 +2600,10 @@ Deno.serve(async (req) => {
         .single();
       if (titleError?.code === "42P01") return json({ error: "请先运行 profile_titles_migration.sql" }, 400);
       if (titleError) return json({ error: titleError.message }, 400);
+      await writeAdminOperationLog(supabase, identity, {
+        action: "curse.grant", targetCodeHash: targetHash, targetName: target.display_name, objectType: "profile_curse", objectId: curseData.id,
+        summary: `下放诅咒「${curseText}」，并授予「${apostateTitle}」`, afterState: { curse: curseText, title: apostateTitle, god: curseGod, note: curseNote },
+      });
 
       return json({
         role,
@@ -2582,6 +2666,10 @@ Deno.serve(async (req) => {
         .maybeSingle();
       if (error) return json({ error: error.message }, 400);
       if (!data) return json({ error: "这个玩家当前没有生效称号" }, 404);
+      await writeAdminOperationLog(supabase, identity, {
+        action: "title.revoke", targetCodeHash: targetHash, targetName: target.display_name, objectType: "profile_title", objectId: data.id,
+        summary: `回收称号「${cleanText((data as Record<string, unknown>).title_text, 32)}」`, beforeState: { isActive: true }, afterState: { isActive: false },
+      });
 
       return json({
         role,
@@ -2591,6 +2679,58 @@ Deno.serve(async (req) => {
           revokedTitle: cleanText((data as Record<string, unknown>).title_text, 32),
         },
       });
+    }
+
+    if (action === "restoreProfileTitle") {
+      if (role !== "admin") return json({ error: "只有神谕馆主可以恢复称号" }, 403);
+      const targetResult = await getProfileByDisplayName(supabase, payload.targetName);
+      if (targetResult.error) return json({ error: targetResult.error.message || "玩家档案读取失败" }, 400);
+      const target = targetResult.data as Record<string, unknown>;
+      const targetHash = cleanText(target.invite_code_hash, 64);
+      const titleId = cleanBigIntId(payload.titleId);
+      if (!titleId) return json({ error: "称号记录不正确" }, 400);
+      const { data, error } = await supabase
+        .from("profile_titles")
+        .update({ is_active: true, revoked_at: null, revoked_by_hash: null, revoked_by_name: null })
+        .eq("id", titleId)
+        .eq("invite_code_hash", targetHash)
+        .eq("is_active", false)
+        .select("id, title_text")
+        .maybeSingle();
+      if (error?.code === "42P01") return json({ error: "请先运行 profile_titles_migration.sql" }, 400);
+      if (error) return json({ error: error.message }, 400);
+      if (!data) return json({ error: "未找到可恢复的已回收称号" }, 404);
+      await writeAdminOperationLog(supabase, identity, {
+        action: "title.restore", targetCodeHash: targetHash, targetName: target.display_name, objectType: "profile_title", objectId: data.id,
+        summary: `恢复称号「${cleanText((data as Record<string, unknown>).title_text, 32)}」`, beforeState: { isActive: false }, afterState: { isActive: true },
+      });
+      return json({ role, name: identity.displayName, data: { targetName: cleanText(target.display_name, 40), restoredTitle: cleanText((data as Record<string, unknown>).title_text, 32) } });
+    }
+
+    if (action === "restoreProfileCurse") {
+      if (role !== "admin") return json({ error: "只有神谕馆主可以恢复诅咒" }, 403);
+      const targetResult = await getProfileByDisplayName(supabase, payload.targetName);
+      if (targetResult.error) return json({ error: targetResult.error.message || "玩家档案读取失败" }, 400);
+      const target = targetResult.data as Record<string, unknown>;
+      const targetHash = cleanText(target.invite_code_hash, 64);
+      const curseId = cleanBigIntId(payload.curseId);
+      if (!curseId) return json({ error: "诅咒记录不正确" }, 400);
+      const { data, error } = await supabase
+        .from("profile_curses")
+        .update({ is_active: true, revoked_at: null, revoked_by_hash: null, revoked_by_name: null })
+        .eq("id", curseId)
+        .eq("invite_code_hash", targetHash)
+        .eq("is_active", false)
+        .select("id, curse_text")
+        .maybeSingle();
+      if (error?.code === "42P01") return json({ error: "请先运行 profile_curses_migration.sql" }, 400);
+      if (error) return json({ error: error.message }, 400);
+      if (!data) return json({ error: "未找到可恢复的已回收诅咒" }, 404);
+      await writeAdminOperationLog(supabase, identity, {
+        action: "curse.restore", targetCodeHash: targetHash, targetName: target.display_name, objectType: "profile_curse", objectId: data.id,
+        summary: `恢复诅咒「${cleanText((data as Record<string, unknown>).curse_text, 32)}」`, beforeState: { isActive: false }, afterState: { isActive: true },
+      });
+      return json({ role, name: identity.displayName, data: { targetName: cleanText(target.display_name, 40), restoredCurse: cleanText((data as Record<string, unknown>).curse_text, 32) } });
     }
 
     if (action === "revokeProfileCurse") {
@@ -2641,6 +2781,10 @@ Deno.serve(async (req) => {
         .maybeSingle();
       if (error) return json({ error: error.message }, 400);
       if (!data) return json({ error: "这个玩家当前没有生效诅咒" }, 404);
+      await writeAdminOperationLog(supabase, identity, {
+        action: "curse.revoke", targetCodeHash: targetHash, targetName: target.display_name, objectType: "profile_curse", objectId: data.id,
+        summary: `回收诅咒「${cleanText((data as Record<string, unknown>).curse_text, 32)}」`, beforeState: { isActive: true }, afterState: { isActive: false },
+      });
 
       return json({
         role,
@@ -2823,6 +2967,11 @@ Deno.serve(async (req) => {
         const { error: messageError } = await supabase.from("score_messages").insert(revokeMessages);
         if (messageError) return json({ error: messageError.message }, 400);
       }
+      await writeAdminOperationLog(supabase, identity, {
+        action: "score_settlement.revoke", objectType: "score_settlement", objectId: settlementId,
+        summary: `撤销副本「${cleanText(settlement.dungeon_name, 80)}」的结算，影响 ${revokeLogs.length} 位玩家`,
+        beforeState: { isRevoked: false, playerCount: revokeLogs.length }, afterState: { isRevoked: true, revokeRemark },
+      });
 
       return json({ role, name: identity.displayName, data: { id: settlementId } });
     }

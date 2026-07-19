@@ -8196,6 +8196,8 @@
         let scoreScrollY = 0;
         let adminScrollY = 0;
         let adminLookupState = { targetName: '', snapshot: null };
+        let adminRecentOperations = [];
+        let adminOperationsUnavailable = false;
         let editingDungeonId = '';
         let profileChronicleTimer = null;
         let profileChronicleIndex = 0;
@@ -11163,7 +11165,7 @@
                 const source = type === 'title' ? item.title_god : item.curse_god;
                 const action = active
                     ? `<button class="btn btn-outline btn-sm" onclick="adminRevokeHonor('${type}', ${Number(item.id)}, ${escapeHtml(jsString(targetName))}, ${escapeHtml(jsString(label))})">回收</button>`
-                    : '<span class="identity-help">已回收</span>';
+                    : `<button class="btn btn-primary btn-sm" onclick="adminRestoreHonor('${type}', ${Number(item.id)}, ${escapeHtml(jsString(targetName))}, ${escapeHtml(jsString(label))})">恢复</button>`;
                 return `<div class="profile-title-status ${type === 'curse' ? 'profile-curse-status' : ''}">
                     <div class="profile-title-status-head"><strong>${escapeHtml(label || '未命名')}</strong><small>${active ? '生效中' : '已回收'}</small></div>
                     <div class="profile-title-status-note">${escapeHtml(source || '馆主亲授')} · ${escapeHtml(item.granted_by_name || '未记录')} · ${escapeHtml(formatAdminTime(item.granted_at))}</div>
@@ -11180,6 +11182,12 @@
                 const placement = item.equipped_slot ? `携带槽 ${item.equipped_slot}` : (item.storage_slot ? `仓库 ${item.storage_slot} 号位` : '未分配');
                 return `<div class="profile-title-status"><div class="profile-title-status-head"><strong>${escapeHtml(item.talent_name)} · ${escapeHtml(item.rank)}</strong><small>${escapeHtml(placement)}</small></div><div class="profile-title-status-note">${escapeHtml(item.pool_key)} · ${escapeHtml(item.acquired_from || '未知来源')} · ${escapeHtml(formatAdminTime(item.acquired_at))}</div></div>`;
             }).join('');
+        }
+
+        function renderAdminOperationRows(logs, unavailable = false) {
+            if (unavailable) return renderRitualEmpty('请先运行 admin_operation_logs_migration_20260719.sql，启用统一操作审计。', '真理', '日志未启用');
+            if (!logs?.length) return renderRitualEmpty('尚未记录馆主后台操作。', '真理', '暂无操作');
+            return logs.map(log => `<div class="profile-title-status"><div class="profile-title-status-head"><strong>${escapeHtml(log.action || '后台操作')}</strong><small>${escapeHtml(formatAdminTime(log.created_at))}</small></div><div class="profile-title-status-note">操作者：${escapeHtml(log.actor_name || '未记录')} · 对象：${escapeHtml(log.target_name || log.object_type || '全站')}</div>${log.summary ? `<div class="profile-title-status-note">${escapeHtml(log.summary)}</div>` : ''}</div>`).join('');
         }
 
         function renderAdminSnapshot(snapshot) {
@@ -11203,6 +11211,7 @@
                         <section class="profile-panel" data-god="真理" style="${getGodSkinStyle('真理')}"><div class="profile-panel-title"><span>天赋状态</span><small>碎片 ${Number(snapshot.fragments || 0)}</small></div><div class="profile-score-row"><div class="profile-stat-card"><span>仓库</span><strong>${(snapshot.talents || []).filter(item => item.storage_slot).length}/${Number(snapshot.inventorySlotLimit || 8)}</strong></div><div class="profile-stat-card"><span>待取舍</span><strong>${overflow.length}</strong></div></div><div class="profile-tools"><button class="btn btn-outline btn-sm" data-admin-scan onclick="adminScanTalentState()">扫描异常</button><button class="btn btn-primary btn-sm" data-admin-repair onclick="adminRepairTalentState()">修复可处理项</button></div><div class="identity-help">${anomaly.hasIssues ? escapeHtml(anomaly.messages.join('；')) : '未发现天赋仓库异常。'}</div></section>
                         <section class="profile-panel" data-god="真理" style="${getGodSkinStyle('真理')}"><div class="profile-panel-title"><span>天赋仓库</span><small>仓库 / 携带槽</small></div>${renderAdminTalentRows(snapshot)}</section>
                         <section class="profile-panel" data-god="真理" style="${getGodSkinStyle('真理')}"><div class="profile-panel-title"><span>溢出待取舍</span><small>${overflow.length} 项</small></div>${overflow.length ? overflow.map(item => `<div class="profile-title-status"><div class="profile-title-status-head"><strong>${escapeHtml(item.talent_name)} · ${escapeHtml(item.rank)}</strong><small>${escapeHtml(item.source || 'draw')}</small></div><div class="profile-title-status-note">${escapeHtml(item.pool_key)} · ${escapeHtml(formatAdminTime(item.created_at))}</div></div>`).join('') : renderRitualEmpty('没有待取舍溢出项。', '真理', '队列为空')}</section>
+                        <section class="profile-panel" data-god="真理" style="${getGodSkinStyle('真理')}"><div class="profile-panel-title"><span>该玩家最近操作</span><small>${(snapshot.operationLogs || []).length} 条</small></div>${renderAdminOperationRows(snapshot.operationLogs || [], snapshot.operationLogsUnavailable)}</section>
                     </div>
                 </div>`;
         }
@@ -11212,7 +11221,20 @@
             if (!container) return;
             if (!isAdmin()) { container.innerHTML = renderRitualEmpty('此处只对神谕馆主开放。', '真理', '权限不足'); return; }
             const lookup = adminLookupState.snapshot ? `<div class="admin-snapshot">${renderAdminSnapshot(adminLookupState.snapshot)}</div>` : renderRitualEmpty('输入已绑定的玩家昵称，读取其后台档案、称号诅咒与天赋状态。', '真理', '等待查询');
-            container.innerHTML = `<section class="profile-panel" data-god="真理" style="${getGodSkinStyle('真理')}"><div class="profile-panel-title"><span>玩家查询</span><small>仅馆主可见</small></div><div class="profile-form-grid"><div class="form-group full"><label>玩家昵称</label><input id="adminTargetName" maxlength="40" value="${escapeHtml(adminLookupState.targetName || '')}" placeholder="输入已保存个人档案的昵称" onkeydown="if(event.key==='Enter') adminLookupPlayer()"></div></div><div class="profile-tools"><button class="btn btn-primary btn-sm" data-admin-lookup onclick="adminLookupPlayer()">查询档案</button></div></section>${lookup}`;
+            const globalOperations = `<section class="profile-panel" data-god="真理" style="${getGodSkinStyle('真理')}"><div class="profile-panel-title"><span>全站最近操作</span><small>最近 50 条</small></div>${renderAdminOperationRows(adminRecentOperations, adminOperationsUnavailable)}</section>`;
+            container.innerHTML = `<section class="profile-panel" data-god="真理" style="${getGodSkinStyle('真理')}"><div class="profile-panel-title"><span>玩家查询</span><small>仅馆主可见</small></div><div class="profile-form-grid"><div class="form-group full"><label>玩家昵称</label><input id="adminTargetName" maxlength="40" value="${escapeHtml(adminLookupState.targetName || '')}" placeholder="输入已保存个人档案的昵称" onkeydown="if(event.key==='Enter') adminLookupPlayer()"></div></div><div class="profile-tools"><button class="btn btn-primary btn-sm" data-admin-lookup onclick="adminLookupPlayer()">查询档案</button></div></section>${globalOperations}${lookup}`;
+        }
+
+        async function refreshAdminOperationLogs() {
+            if (!isAdmin()) return;
+            const { data, error } = await invokeDungeonAction('adminListOperationLogs');
+            if (error) {
+                adminRecentOperations = [];
+                adminOperationsUnavailable = true;
+                return;
+            }
+            adminRecentOperations = Array.isArray(data?.logs) ? data.logs : [];
+            adminOperationsUnavailable = !!data?.unavailable;
         }
 
         async function adminLookupPlayer(targetName = '') {
@@ -11225,6 +11247,7 @@
                 const { data, error } = await invokeDungeonAction('adminLookupPlayer', { targetName: name });
                 if (error) { showToast(`❌ ${error.message || '玩家档案读取失败'}`); return; }
                 adminLookupState = { targetName: name, snapshot: data };
+                await refreshAdminOperationLogs();
                 await renderAdminPage();
                 showToast(`已读取 ${name} 的馆主后台档案`);
             } finally { restore(); releaseUiActionLock(`adminLookup:${name}`); }
@@ -11239,6 +11262,7 @@
                 const { data, error } = await invokeDungeonAction('adminScanTalentState', { targetName: name });
                 if (error) { showToast(`❌ ${error.message || '天赋扫描失败'}`); return; }
                 if (adminLookupState.snapshot) adminLookupState.snapshot.anomalies = data?.anomalies || { hasIssues: false, messages: [] };
+                await refreshAdminOperationLogs();
                 await renderAdminPage();
                 showToast(data?.anomalies?.hasIssues ? '扫描完成，发现需要处理的天赋状态' : '扫描完成，未发现天赋异常');
             } finally { restore(); releaseUiActionLock(`adminScan:${name}`); }
@@ -11254,6 +11278,7 @@
                 const { data, error } = await invokeDungeonAction('adminRepairTalentState', { targetName: name });
                 if (error) { showToast(`❌ ${error.message || '天赋修复失败'}`); return; }
                 adminLookupState.snapshot = data?.snapshot || adminLookupState.snapshot;
+                await refreshAdminOperationLogs();
                 await renderAdminPage();
                 const count = Array.isArray(data?.repaired) ? data.repaired.length : 0;
                 showToast(count ? `已完成 ${count} 项天赋状态修复` : '没有可自动修复的天赋项');
@@ -11274,6 +11299,20 @@
             } finally { releaseUiActionLock(key); }
         }
 
+        async function adminRestoreHonor(type, id, targetName, label) {
+            const action = type === 'title' ? 'restoreProfileTitle' : 'restoreProfileCurse';
+            const key = `adminRestore:${type}:${id}`;
+            if (!window.confirm(`确认恢复 ${targetName} 的${type === 'title' ? '称号' : '诅咒'}「${label}」？`)) return;
+            if (!acquireUiActionLock(key, '恢复正在处理，请勿重复点击')) return;
+            try {
+                const payload = type === 'title' ? { targetName, titleId: id } : { targetName, curseId: id };
+                const { error } = await invokeDungeonAction(action, payload);
+                if (error) { showToast(`❌ ${error.message || '恢复失败'}`); return; }
+                showToast(`已恢复「${label}」`);
+                await adminLookupPlayer(targetName);
+            } finally { releaseUiActionLock(key); }
+        }
+
         async function openAdminPage() {
             if (!isAdmin()) { showToast('只有神谕馆主可以进入后台'); return; }
             adminScrollY = window.scrollY || document.documentElement.scrollTop || 0;
@@ -11282,6 +11321,7 @@
             document.body.classList.add('profile-view-open');
             document.getElementById('adminPage').style.display = 'block';
             window.scrollTo(0, 0);
+            await refreshAdminOperationLogs();
             await renderAdminPage();
         }
 
