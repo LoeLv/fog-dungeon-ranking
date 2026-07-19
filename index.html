@@ -6165,8 +6165,15 @@
                 gap: 8px;
                 margin: 0 0 10px;
             }
-            .mobile-action-strip.has-score-action {
+            .mobile-action-strip.action-count-3 {
                 grid-template-columns: repeat(3, minmax(0, 1fr));
+            }
+            .mobile-action-strip.action-count-4 {
+                grid-template-columns: repeat(2, minmax(0, 1fr));
+                gap: 9px;
+            }
+            .mobile-action-strip.action-count-4 .btn {
+                min-height: 46px;
             }
             .mobile-action-strip .btn {
                 width: 100%;
@@ -8528,7 +8535,6 @@
                 mobileScoreButton.hidden = !showMobileScore;
                 mobileScoreButton.textContent = isGodRole() ? '称号敕令' : '分数结算';
                 mobileScoreButton.title = isGodRole() ? '神明称号敕令台' : '审核员分数结算工作台';
-                mobileActionStrip?.classList.toggle('has-score-action', showMobileScore);
             }
             if (adminButton) {
                 adminButton.style.display = isAdmin() ? '' : 'none';
@@ -8537,6 +8543,11 @@
             if (mobileAdminButton) {
                 mobileAdminButton.hidden = !isAdmin();
                 mobileAdminButton.title = '馆主玩家档案与天赋维护后台';
+            }
+            if (mobileActionStrip) {
+                const actionCount = [...mobileActionStrip.querySelectorAll('button:not([hidden])')].length;
+                mobileActionStrip.classList.remove('action-count-2', 'action-count-3', 'action-count-4');
+                mobileActionStrip.classList.add(`action-count-${Math.max(2, Math.min(4, actionCount))}`);
             }
             if (submitButton) {
                 submitButton.textContent = isGodRole() ? '✦ 祈愿创本' : '🎭 构筑愚戏';
