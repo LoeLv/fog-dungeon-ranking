@@ -8203,6 +8203,9 @@
         let profileChronicleIndex = 0;
         let leaderboardMode = 'overall';
         let leaderboardPath = 'all';
+        let leaderboardEntriesCache = null;
+        let leaderboardEntriesSource = 'local';
+        let leaderboardEntriesError = null;
         let chronicleRotationTimer = null;
         let chronicleRotationDungeons = [];
         let chronicleRotationIndex = 0;
@@ -10115,7 +10118,7 @@
                 ? Math.min(requestedLimit, mobileLimit)
                 : Math.min(Math.max(requestedLimit, entries.length), LEADERBOARD_DISPLAY_LIMIT);
             const moreButton = shouldCollapseOnMobile
-                ? `<button type="button" class="leaderboard-mobile-more" data-leaderboard-more="${escapeHtml(boardKey)}" onclick="expandLeaderboardMobileBoard(${jsString(boardKey)})">显示更多 · 共 ${entries.length} 位</button>`
+                ? `<button type="button" class="leaderboard-mobile-more" data-leaderboard-more="${escapeHtml(boardKey)}" onclick="expandLeaderboardMobileBoard(${jsString(boardKey)}, this)">显示更多 · 共 ${entries.length} 位</button>`
                 : '';
             return `
                 <section class="${boardClass} ${options.path ? getPathClassByPath(options.path) : ''}">
@@ -10128,14 +10131,26 @@
                 </section>`;
         }
 
-        async function expandLeaderboardMobileBoard(boardKey) {
+        async function expandLeaderboardMobileBoard(boardKey, button) {
             const normalizedKey = String(boardKey || '');
             const lockKey = `leaderboard-more:${normalizedKey}`;
             if (!acquireUiActionLock(lockKey, '榜单正在展开，请勿重复点击')) return;
-            const restoreButtons = setActionButtonsBusy(`[data-leaderboard-more="${cssEscape(normalizedKey)}"]`, '展开中...');
+            const restoreButtons = button instanceof HTMLButtonElement
+                ? (() => {
+                    const idleText = button.textContent || '';
+                    button.disabled = true;
+                    button.setAttribute('aria-busy', 'true');
+                    button.textContent = '展开中...';
+                    return () => {
+                        button.disabled = false;
+                        button.removeAttribute('aria-busy');
+                        button.textContent = idleText;
+                    };
+                })()
+                : setActionButtonsBusy(`[data-leaderboard-more="${cssEscape(normalizedKey)}"]`, '展开中...');
             try {
                 leaderboardMobileExpandedBoards.add(normalizedKey);
-                await renderLeaderboardPage();
+                await renderLeaderboardPage({ useCachedEntries: true });
                 showToast('已显示更多榜单记录');
             } catch (error) {
                 console.error('展开榜单失败', error);
@@ -10188,11 +10203,17 @@
                 </div>`;
         }
 
-        async function renderLeaderboardPage() {
+        async function renderLeaderboardPage(options = {}) {
             const container = document.getElementById('leaderboardContent');
             if (!container) return;
             container.innerHTML = '<div class="loading"><div class="spinner"></div><br>正在整理登神与觐见名录...</div>';
-            const { entries, source, error } = await fetchLeaderboardEntries();
+            const leaderboardResult = options.useCachedEntries && Array.isArray(leaderboardEntriesCache)
+                ? { entries: leaderboardEntriesCache, source: leaderboardEntriesSource, error: leaderboardEntriesError }
+                : await fetchLeaderboardEntries();
+            const { entries, source, error } = leaderboardResult;
+            leaderboardEntriesCache = entries;
+            leaderboardEntriesSource = source;
+            leaderboardEntriesError = error || null;
             const currentEntry = entries.find(entry => entry.isCurrent);
             const heroGod = currentEntry?.faithGod || '命运';
             const heroSkin = getGodSkin(heroGod);
