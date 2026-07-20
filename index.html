@@ -9147,8 +9147,10 @@
             if (USE_LOCAL_FALLBACK || !inviteSession?.code) return { data: null, error: null };
             const { data, error } = await invokeDungeonAction('updateTrickeryFaith', { faithGod, profession });
             if (error) return { data: null, error };
-            const cloudProfile = mapCloudProfileToLocal(data);
-            if (cloudProfile) saveCurrentProfile(cloudProfile);
+            // The dedicated action returns identity metadata plus its profile in `data`.
+            const profilePayload = data?.data && typeof data.data === 'object' ? data.data : data;
+            const cloudProfile = mapCloudProfileToLocal(profilePayload);
+            if (cloudProfile) saveCurrentProfile({ ...getCurrentProfile(), ...cloudProfile });
             return { data: cloudProfile, error: null };
         }
 
