@@ -5204,6 +5204,42 @@
             display: grid;
             gap: 10px;
         }
+        .leaderboard-pagination {
+            display: grid;
+            grid-template-columns: auto minmax(0, 1fr) auto;
+            align-items: center;
+            gap: 10px;
+            margin-top: 14px;
+            padding-top: 12px;
+            border-top: 1px solid rgba(255,255,255,0.06);
+        }
+        .leaderboard-page-button {
+            min-width: 74px;
+            min-height: 38px;
+            border: 1px solid rgba(231,207,138,0.22);
+            border-radius: 9px;
+            background: rgba(231,207,138,0.06);
+            color: var(--gold-light);
+            font: inherit;
+            font-size: 0.78rem;
+            font-weight: 800;
+            cursor: pointer;
+        }
+        .leaderboard-page-button:hover:not(:disabled) {
+            border-color: rgba(231,207,138,0.5);
+            background: rgba(231,207,138,0.13);
+        }
+        .leaderboard-page-button:disabled {
+            cursor: not-allowed;
+            opacity: 0.38;
+        }
+        .leaderboard-page-status {
+            min-width: 0;
+            color: var(--text-muted);
+            font-size: 0.78rem;
+            font-weight: 700;
+            text-align: center;
+        }
         .leaderboard-row {
             display: grid;
             grid-template-columns: auto minmax(0, 1fr) auto;
@@ -6567,17 +6603,18 @@
             .leaderboard-score strong {
                 font-size: 1rem;
             }
-            .leaderboard-mobile-more {
-                width: 100%;
+            .leaderboard-pagination {
+                gap: 8px;
+                margin-top: 12px;
+                padding-top: 10px;
+            }
+            .leaderboard-page-button {
+                min-width: 68px;
                 min-height: 40px;
-                margin-top: 4px;
-                border: 1px solid rgba(231,207,138,0.18);
-                border-radius: 10px;
-                background: rgba(231,207,138,0.08);
-                color: var(--gold-light);
-                font: inherit;
-                font-size: 0.78rem;
-                font-weight: 800;
+                font-size: 0.76rem;
+            }
+            .leaderboard-page-status {
+                font-size: 0.72rem;
             }
             .profile-form-grid .full {
                 grid-column: auto;
@@ -8178,9 +8215,7 @@
         const LEGACY_DIFFICULTY_MAP = { 凡尘: '新手', 觉醒: '低', 超凡: '中', 神话: '高', 愚者: '高' };
         const DEFAULT_ASCENSION_SCORE = 1000;
         const DEFAULT_AUDIENCE_SCORE = 0;
-        const LEADERBOARD_DISPLAY_LIMIT = 300;
-        const MOBILE_LEADERBOARD_BOARD_LIMIT = 24;
-        const MOBILE_LEADERBOARD_PATH_OVERVIEW_LIMIT = 8;
+        const LEADERBOARD_PAGE_SIZE = 12;
         const ARCHIVE_PAGE_SIZE = 5;
         const VISUAL_EFFECTS_STORAGE_KEY = 'visual_effects_enabled_v1';
         let inviteSession = getLocalData(INVITE_STORAGE_KEY, null);
@@ -8226,7 +8261,7 @@
         let mobileProfileTab = 'base';
         let mobileActiveDestination = 'dungeons';
         let mobileTouchStart = null;
-        const leaderboardMobileExpandedBoards = new Set();
+        let leaderboardPages = {};
         let replyTarget = null;
         let testimonyTargetId = null;
         let pendingRating = { dungeonId: null, value: 5 };
@@ -10051,7 +10086,7 @@
             }));
         }
 
-        function renderLeaderboardRows(entries, scoreType, limit = LEADERBOARD_DISPLAY_LIMIT, options = {}) {
+        function renderLeaderboardRows(entries, scoreType, limit = LEADERBOARD_PAGE_SIZE, options = {}) {
             const godRows = options.includeGodSeats ? getLeaderboardGodSeats(scoreType, options).slice(0, options.godLimit || 16) : [];
             const ranked = sortLeaderboardEntries(entries, scoreType).slice(0, limit);
             if (!ranked.length && !godRows.length) return renderRitualEmpty('此途暂无留存信徒档案，静待众生踏入新的愚戏。', '命运', '信徒名录暂空');
@@ -10075,8 +10110,9 @@
                 const progress = entry.isGodSeat ? 100 : Math.max(4, Math.round((Math.max(0, score) / Math.max(1, topScore)) * 100));
                 const skinStyle = entry.faithGod ? getGodSkinStyle(entry.faithGod) : getGodSkinStyle('命运');
                 const skin = getGodSkin(entry.faithGod || '命运');
-                const rankClass = entry.isGodSeat ? 'rank-0' : index === 0 ? 'rank-1' : index === 1 ? 'rank-2' : index === 2 ? 'rank-3' : '';
-                const rankLabel = entry.isGodSeat ? '0' : String(index + 1);
+                const rankIndex = Number(options.rankOffset || 0) + index;
+                const rankClass = entry.isGodSeat ? 'rank-0' : rankIndex === 0 ? 'rank-1' : rankIndex === 1 ? 'rank-2' : rankIndex === 2 ? 'rank-3' : '';
+                const rankLabel = entry.isGodSeat ? '0' : String(rankIndex + 1);
                 const clickAction = entry.isGodSeat ? '' : ` onclick='openProfileFromLeaderboard(${jsString(entry.key)})'`;
                 return `
                     <article class="leaderboard-row ${entry.isCurrent ? 'is-current' : ''} ${entry.isGodSeat ? 'god-seat' : ''}" data-god="${escapeHtml(entry.faithGod || '命运')}" data-motif="${escapeHtml(skin.motif)}" style="${skinStyle};--rank-progress:${progress}%"${clickAction}>
@@ -10105,7 +10141,6 @@
         function renderLeaderboardBoard(title, entries, scoreType, options = {}) {
             const boardClass = options.full ? 'leaderboard-board full' : 'leaderboard-board';
             const subtitle = options.subtitle || `${entries.length} 位信徒`;
-            const requestedLimit = options.limit || LEADERBOARD_DISPLAY_LIMIT;
             const boardKey = [
                 leaderboardMode,
                 leaderboardPath,
@@ -10113,14 +10148,21 @@
                 options.path || 'all',
                 title
             ].join('|');
-            const isPathOverview = leaderboardMode === 'path' && leaderboardPath === 'all';
-            const mobileLimit = isPathOverview ? MOBILE_LEADERBOARD_PATH_OVERVIEW_LIMIT : MOBILE_LEADERBOARD_BOARD_LIMIT;
-            const shouldCollapseOnMobile = isMobileViewport() && entries.length > mobileLimit && !leaderboardMobileExpandedBoards.has(boardKey);
-            const renderLimit = shouldCollapseOnMobile
-                ? Math.min(requestedLimit, mobileLimit)
-                : Math.min(Math.max(requestedLimit, entries.length), LEADERBOARD_DISPLAY_LIMIT);
-            const moreButton = shouldCollapseOnMobile
-                ? `<button type="button" class="leaderboard-mobile-more" data-leaderboard-more="${escapeHtml(boardKey)}" onclick="expandLeaderboardMobileBoard(${jsString(boardKey)}, this)">显示更多 · 共 ${entries.length} 位</button>`
+            const pageCount = Math.max(1, Math.ceil(entries.length / LEADERBOARD_PAGE_SIZE));
+            const currentPage = Math.min(Math.max(1, Number(leaderboardPages[boardKey] || 1)), pageCount);
+            const pageStart = (currentPage - 1) * LEADERBOARD_PAGE_SIZE;
+            const pageEntries = entries.slice(pageStart, pageStart + LEADERBOARD_PAGE_SIZE);
+            const boardOptions = {
+                ...options,
+                includeGodSeats: !!options.includeGodSeats && currentPage === 1,
+                rankOffset: pageStart
+            };
+            const pagination = pageCount > 1
+                ? `<nav class="leaderboard-pagination" aria-label="${escapeHtml(title)} 分页">
+                    <button type="button" class="leaderboard-page-button" onclick="setLeaderboardPage(${jsString(boardKey)}, ${currentPage - 1})" ${currentPage === 1 ? 'disabled' : ''}>上一页</button>
+                    <span class="leaderboard-page-status">第 ${currentPage} / ${pageCount} 页 · 共 ${entries.length} 位</span>
+                    <button type="button" class="leaderboard-page-button" onclick="setLeaderboardPage(${jsString(boardKey)}, ${currentPage + 1})" ${currentPage === pageCount ? 'disabled' : ''}>下一页</button>
+                </nav>`
                 : '';
             return `
                 <section class="${boardClass} ${options.path ? getPathClassByPath(options.path) : ''}">
@@ -10128,37 +10170,23 @@
                         <span>${escapeHtml(title)}</span>
                         <small>${escapeHtml(subtitle)}</small>
                     </div>
-                    <div class="leaderboard-list">${renderLeaderboardRows(entries, scoreType, renderLimit, options)}</div>
-                    ${moreButton}
+                    <div class="leaderboard-list">${renderLeaderboardRows(pageEntries, scoreType, LEADERBOARD_PAGE_SIZE, boardOptions)}</div>
+                    ${pagination}
                 </section>`;
         }
 
-        async function expandLeaderboardMobileBoard(boardKey, button) {
+        async function setLeaderboardPage(boardKey, page) {
             const normalizedKey = String(boardKey || '');
-            const lockKey = `leaderboard-more:${normalizedKey}`;
-            if (!acquireUiActionLock(lockKey, '榜单正在展开，请勿重复点击')) return;
-            const restoreButtons = button instanceof HTMLButtonElement
-                ? (() => {
-                    const idleText = button.textContent || '';
-                    button.disabled = true;
-                    button.setAttribute('aria-busy', 'true');
-                    button.textContent = '展开中...';
-                    return () => {
-                        button.disabled = false;
-                        button.removeAttribute('aria-busy');
-                        button.textContent = idleText;
-                    };
-                })()
-                : setActionButtonsBusy(`[data-leaderboard-more="${cssEscape(normalizedKey)}"]`, '展开中...');
+            const normalizedPage = Math.max(1, Number(page) || 1);
+            const lockKey = `leaderboard-page:${normalizedKey}`;
+            if (!acquireUiActionLock(lockKey, '榜单正在翻页，请勿重复点击')) return;
             try {
-                leaderboardMobileExpandedBoards.add(normalizedKey);
+                leaderboardPages[normalizedKey] = normalizedPage;
                 await renderLeaderboardPage({ useCachedEntries: true });
-                showToast('已显示更多榜单记录');
             } catch (error) {
-                console.error('展开榜单失败', error);
-                showToast(`❌ ${getFriendlyActionError(error, '榜单展开失败')}`);
+                console.error('榜单翻页失败', error);
+                showToast(`❌ ${getFriendlyActionError(error, '榜单翻页失败')}`);
             } finally {
-                restoreButtons();
                 releaseUiActionLock(lockKey);
             }
         }
@@ -10194,14 +10222,14 @@
                 const boards = GOD_GROUPS.map(group => {
                     const pathEntries = entries.filter(entry => entry.faithPath === group.path);
                     const gods = group.gods.map(god => `${god}`).join('、');
-                    return renderLeaderboardBoard(`${group.path}命途 · ${gods}信徒录`, pathEntries, 'audience', { limit: LEADERBOARD_DISPLAY_LIMIT, subtitle: `${pathEntries.length} 位信徒 · 第 0 位为神席`, path: group.path, showAscensionInParentheses: true, includeGodSeats: true });
+                    return renderLeaderboardBoard(`${group.path}命途 · ${gods}信徒录`, pathEntries, 'audience', { subtitle: `${pathEntries.length} 位信徒 · 第 0 位为神席`, path: group.path, showAscensionInParentheses: true, includeGodSeats: true });
                 }).join('');
                 return `${pathTabs}<div class="leaderboard-layout">${boards}</div>`;
             }
             return `
                 <div class="leaderboard-layout">
-                    ${renderLeaderboardBoard('命运骰录 · 登神阶途总榜', entries, 'ascension', { limit: LEADERBOARD_DISPLAY_LIMIT, includeGodSeats: true, mergeGodSeats: true })}
-                    ${renderLeaderboardBoard('星轨观览 · 觐见之梯总榜', entries, 'audience', { limit: LEADERBOARD_DISPLAY_LIMIT, includeGodSeats: true, mergeGodSeats: true })}
+                    ${renderLeaderboardBoard('命运骰录 · 登神阶途总榜', entries, 'ascension', { includeGodSeats: true, mergeGodSeats: true })}
+                    ${renderLeaderboardBoard('星轨观览 · 觐见之梯总榜', entries, 'audience', { includeGodSeats: true, mergeGodSeats: true })}
                 </div>`;
         }
 
@@ -10255,12 +10283,14 @@
         async function setLeaderboardMode(mode) {
             leaderboardMode = ['overall', 'path', 'ascension', 'audience'].includes(mode) ? mode : 'overall';
             if (leaderboardMode !== 'path') leaderboardPath = 'all';
+            leaderboardPages = {};
             await renderLeaderboardPage();
         }
 
         async function setLeaderboardPath(path) {
             const allowed = ['all', ...GOD_GROUPS.map(group => group.path)];
             leaderboardPath = allowed.includes(path) ? path : 'all';
+            leaderboardPages = {};
             await renderLeaderboardPage();
         }
 
