@@ -10148,6 +10148,7 @@
                 options.path || 'all',
                 title
             ].join('|');
+            const boardKeyToken = encodeURIComponent(boardKey);
             const pageCount = Math.max(1, Math.ceil(entries.length / LEADERBOARD_PAGE_SIZE));
             const currentPage = Math.min(Math.max(1, Number(leaderboardPages[boardKey] || 1)), pageCount);
             const pageStart = (currentPage - 1) * LEADERBOARD_PAGE_SIZE;
@@ -10159,9 +10160,9 @@
             };
             const pagination = pageCount > 1
                 ? `<nav class="leaderboard-pagination" aria-label="${escapeHtml(title)} 分页">
-                    <button type="button" class="leaderboard-page-button" onclick="setLeaderboardPage(${jsString(boardKey)}, ${currentPage - 1})" ${currentPage === 1 ? 'disabled' : ''}>上一页</button>
+                    <button type="button" class="leaderboard-page-button" data-leaderboard-page-key="${boardKeyToken}" data-leaderboard-page="${currentPage - 1}" ${currentPage === 1 ? 'disabled' : ''}>上一页</button>
                     <span class="leaderboard-page-status">第 ${currentPage} / ${pageCount} 页 · 共 ${entries.length} 位</span>
-                    <button type="button" class="leaderboard-page-button" onclick="setLeaderboardPage(${jsString(boardKey)}, ${currentPage + 1})" ${currentPage === pageCount ? 'disabled' : ''}>下一页</button>
+                    <button type="button" class="leaderboard-page-button" data-leaderboard-page-key="${boardKeyToken}" data-leaderboard-page="${currentPage + 1}" ${currentPage === pageCount ? 'disabled' : ''}>下一页</button>
                 </nav>`
                 : '';
             return `
@@ -10178,6 +10179,10 @@
         async function setLeaderboardPage(boardKey, page) {
             const normalizedKey = String(boardKey || '');
             const normalizedPage = Math.max(1, Number(page) || 1);
+            if (!normalizedKey || !Array.isArray(leaderboardEntriesCache)) {
+                showToast('榜单数据尚未准备，请刷新榜单后重试');
+                return;
+            }
             const lockKey = `leaderboard-page:${normalizedKey}`;
             if (!acquireUiActionLock(lockKey, '榜单正在翻页，请勿重复点击')) return;
             try {
@@ -14828,6 +14833,20 @@
         document.addEventListener('click', event => {
             const target = event.target instanceof Element ? event.target : null;
             if (!target) return;
+            const leaderboardPageButton = target.closest('[data-leaderboard-page-key][data-leaderboard-page]');
+            if (leaderboardPageButton instanceof HTMLButtonElement) {
+                event.preventDefault();
+                let boardKey = '';
+                try {
+                    boardKey = decodeURIComponent(leaderboardPageButton.dataset.leaderboardPageKey || '');
+                } catch (error) {
+                    console.error('榜单分页参数解析失败', error);
+                    showToast('❌ 榜单分页参数无效，请刷新后重试');
+                    return;
+                }
+                setLeaderboardPage(boardKey, leaderboardPageButton.dataset.leaderboardPage || '1');
+                return;
+            }
             const leaderboardModeButton = target.closest('[data-leaderboard-mode]');
             if (leaderboardModeButton) {
                 event.preventDefault();
