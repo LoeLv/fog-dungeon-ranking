@@ -92,7 +92,7 @@ const talentSlotKinds = ["faith", "profession", "any", "any"];
 const talentRankOrder: Record<string, number> = { C: 1, B: 2, A: 3, S: 4 };
 const scoreDengMin = -30;
 const scoreDengMax = 30;
-const scoreJinMin = 0;
+const scoreJinMin = -3;
 const scoreJinMax = 3;
 const knownTalentPools = [
   "Pool战士",
