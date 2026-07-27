@@ -72,7 +72,7 @@ const cTalentFragmentGain = 5;
 const bTalentFragmentGain = 10;
 const targetTalentExchangeCost = 80;
 const aTalentExchangeCost = 260;
-const inventorySlotLimit = 8;
+const inventorySlotLimit = 10;
 const equippedSlotLimit = 4;
 const talentSlotScoreRules = [
   { minScore: 1000, ranks: ["C", "C"], summary: "CC" },

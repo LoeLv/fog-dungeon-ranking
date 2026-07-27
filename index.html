@@ -9325,7 +9325,7 @@
             const state = rawState || {};
             return {
                 profile: state.profile || null,
-                inventorySlotLimit: Number(state.inventorySlotLimit || 8),
+                inventorySlotLimit: Number(state.inventorySlotLimit || 10),
                 equippedSlotLimit: Number(state.equippedSlotLimit || 3),
                 maxEquippedSlotLimit: Number(state.maxEquippedSlotLimit || state.equippedSlotLimit || 3),
                 talentSlotRule: state.talentSlotRule || null,
@@ -9577,7 +9577,7 @@
         function renderTalentWarehouse(state, god = getProfileFaithGod(getCurrentProfile()) || '命运') {
             const talents = state.ownedTalents || [];
             const byStorageSlot = new Map(talents.filter(t => t.storage_slot).map(t => [Number(t.storage_slot), t]));
-            const limit = Number(state.inventorySlotLimit || 8);
+            const limit = Number(state.inventorySlotLimit || 10);
             return `<div class="talent-inventory-grid">${Array.from({ length: limit }, (_, index) => {
                 const slot = index + 1;
                 const talent = byStorageSlot.get(slot);
@@ -9649,7 +9649,7 @@
             const latestResults = lastTalentDrawResult.length ? renderTalentCards(lastTalentDrawResult, '') : '';
             const allowedPoolText = (state.pools || []).map(pool => formatTalentPoolLabel(pool.poolKey)).join(' / ') || '未绑定';
             const inventoryCount = (state.ownedTalents || []).filter(talent => talent.storage_slot).length;
-            const inventoryLimit = Number(state.inventorySlotLimit || 8);
+            const inventoryLimit = Number(state.inventorySlotLimit || 10);
             const equippedCount = (state.ownedTalents || []).filter(talent => talent.equipped_slot).length;
             const exchangeCost = Number(state.targetTalentExchangeCost || 180);
             const aExchangeCost = Number(state.aTalentExchangeCost || 260);
@@ -11525,7 +11525,7 @@
                         <section class="profile-panel" data-god="真理" style="${getGodSkinStyle('真理')}"><div class="profile-panel-title"><span>分数记录</span><small>最近 ${scoreLogs.length} 条</small></div>${scoreLogs.length ? scoreLogs.map(log => `<div class="profile-title-status"><div class="profile-title-status-head"><strong>${escapeHtml(log.source_type || '结算')} · 登神 ${Number(log.change_deng || 0) >= 0 ? '+' : ''}${Number(log.change_deng || 0)} / 觐见 +${Number(log.change_jin || 0)}</strong><small>${escapeHtml(formatAdminTime(log.created_at))}</small></div><div class="profile-title-status-note">审核：${escapeHtml(log.operator_name || '未记录')}</div></div>`).join('') : renderRitualEmpty('暂无分数变动记录。', '真理', '记录为空')}</section>
                     </div>
                     <div>
-                        <section class="profile-panel" data-god="真理" style="${getGodSkinStyle('真理')}"><div class="profile-panel-title"><span>天赋状态</span><small>碎片 ${Number(snapshot.fragments || 0)}</small></div><div class="profile-score-row"><div class="profile-stat-card"><span>仓库</span><strong>${(snapshot.talents || []).filter(item => item.storage_slot).length}/${Number(snapshot.inventorySlotLimit || 8)}</strong></div><div class="profile-stat-card"><span>待取舍</span><strong>${overflow.length}</strong></div></div><div class="profile-tools"><button class="btn btn-outline btn-sm" data-admin-scan onclick="adminScanTalentState()">扫描异常</button><button class="btn btn-primary btn-sm" data-admin-repair onclick="adminRepairTalentState()">修复可处理项</button></div><div class="identity-help">${anomaly.hasIssues ? escapeHtml(anomaly.messages.join('；')) : '未发现天赋仓库异常。'}</div></section>
+                        <section class="profile-panel" data-god="真理" style="${getGodSkinStyle('真理')}"><div class="profile-panel-title"><span>天赋状态</span><small>碎片 ${Number(snapshot.fragments || 0)}</small></div><div class="profile-score-row"><div class="profile-stat-card"><span>仓库</span><strong>${(snapshot.talents || []).filter(item => item.storage_slot).length}/${Number(snapshot.inventorySlotLimit || 10)}</strong></div><div class="profile-stat-card"><span>待取舍</span><strong>${overflow.length}</strong></div></div><div class="profile-tools"><button class="btn btn-outline btn-sm" data-admin-scan onclick="adminScanTalentState()">扫描异常</button><button class="btn btn-primary btn-sm" data-admin-repair onclick="adminRepairTalentState()">修复可处理项</button></div><div class="identity-help">${anomaly.hasIssues ? escapeHtml(anomaly.messages.join('；')) : '未发现天赋仓库异常。'}</div></section>
                         <section class="profile-panel" data-god="真理" style="${getGodSkinStyle('真理')}"><div class="profile-panel-title"><span>天赋仓库</span><small>仓库 / 携带槽</small></div>${renderAdminTalentRows(snapshot)}</section>
                         <section class="profile-panel" data-god="真理" style="${getGodSkinStyle('真理')}"><div class="profile-panel-title"><span>溢出待取舍</span><small>${overflow.length} 项</small></div>${overflow.length ? overflow.map(item => `<div class="profile-title-status"><div class="profile-title-status-head"><strong>${escapeHtml(item.talent_name)} · ${escapeHtml(item.rank)}</strong><small>${escapeHtml(item.source || 'draw')}</small></div><div class="profile-title-status-note">${escapeHtml(item.pool_key)} · ${escapeHtml(formatAdminTime(item.created_at))}</div></div>`).join('') : renderRitualEmpty('没有待取舍溢出项。', '真理', '队列为空')}</section>
                         <section class="profile-panel" data-god="真理" style="${getGodSkinStyle('真理')}"><div class="profile-panel-title"><span>该玩家最近操作</span><small>${(snapshot.operationLogs || []).length} 条</small></div>${renderAdminOperationRows(snapshot.operationLogs || [], snapshot.operationLogsUnavailable)}</section>
