@@ -8797,6 +8797,7 @@
                 scoresLockedAt: '',
                 items: '',
                 talents: '',
+                showTitles: true,
                 activeTitle: null,
                 activeTitles: [],
                 activeCurse: null,
@@ -8824,6 +8825,7 @@
             stored.ascensionScore = normalizeProfileScore(stored.ascensionScore);
             stored.audienceScore = normalizeProfileScore(stored.audienceScore);
             stored.scoresLockedAt = stored.scoresLockedAt || '';
+            stored.showTitles = stored.showTitles !== false;
             stored.activeTitle = normalizeProfileTitle(stored.activeTitle);
             stored.activeTitles = normalizeProfileTitleList(stored.activeTitles, stored.activeTitle);
             stored.activeCurse = normalizeProfileCurse(stored.activeCurse);
@@ -9121,7 +9123,7 @@
         }
 
         function renderProfileNameWithTitle(displayName, title, options = {}) {
-            const titles = normalizeProfileTitleList(options.titles, title);
+            const titles = options.showTitles === false ? [] : normalizeProfileTitleList(options.titles, title);
             return `
                 <div class="profile-name-row">
                     <h1 class="profile-name">${escapeHtml(displayName)}</h1>
@@ -9160,7 +9162,7 @@
                 </div>`;
         }
 
-        function renderProfileTitleStatus(title, curse = null, fallbackGod = '命运', titles = null, curses = null) {
+        function renderProfileTitleStatus(title, curse = null, fallbackGod = '命运', titles = null, curses = null, showTitles = true) {
             const normalizedTitles = normalizeProfileTitleList(titles, title);
             if (!normalizedTitles.length) {
                 return `
@@ -9181,9 +9183,9 @@
                 <div class="profile-title-status" style="${getGodSkinStyle(primary.titleGod || fallbackGod)}">
                     <div class="profile-title-status-head">
                         <strong>当前称号</strong>
-                        <div class="comment-honor-stack">${normalizedTitles.slice(0, 5).map(item => renderProfileTitleBadge(item, { fallbackGod })).join('')}</div>
+                        ${showTitles === false ? '<span class="metric-pill">未佩戴</span>' : `<div class="comment-honor-stack">${normalizedTitles.slice(0, 5).map(item => renderProfileTitleBadge(item, { fallbackGod })).join('')}</div>`}
                     </div>
-                    <div class="profile-title-status-note">${escapeHtml(issuer)}${primary.titleNote ? `｜${escapeHtml(primary.titleNote)}` : ''}</div>
+                    <div class="profile-title-status-note">${showTitles === false ? '已获得称号，但当前选择不佩戴；诅咒仍会始终显示。' : `${escapeHtml(issuer)}${primary.titleNote ? `｜${escapeHtml(primary.titleNote)}` : ''}`}</div>
                 </div>
                 ${renderProfileCurseStatus(curse, primary.titleGod || fallbackGod, curses)}`;
         }
@@ -9222,6 +9224,7 @@
                 professionClass: professionInfo.known ? professionInfo.className : '',
                 ascensionScore: normalizeProfileScore(profile.ascensionScore),
                 audienceScore: normalizeProfileScore(profile.audienceScore),
+                showTitles: profile.showTitles !== false && profile.show_titles !== false,
                 activeTitle: normalizeProfileTitle(profile.activeTitle || profile.active_title),
                 activeTitles: normalizeProfileTitleList(profile.activeTitles || profile.active_titles, profile.activeTitle || profile.active_title),
                 activeCurse: normalizeProfileCurse(profile.activeCurse || profile.active_curse),
@@ -9254,6 +9257,7 @@
                 audienceScore: normalizeProfileScore(profile.audience_score ?? profile.audienceScore, DEFAULT_AUDIENCE_SCORE),
                 items: String(profile.items || '').trim().slice(0, 800),
                 talents: String(profile.talents || '').trim().slice(0, 800),
+                showTitles: profile.show_titles !== false && profile.showTitles !== false,
                 activeTitle: normalizeProfileTitle(profile.active_title || profile.activeTitle),
                 activeTitles: normalizeProfileTitleList(profile.active_titles || profile.activeTitles, profile.active_title || profile.activeTitle),
                 activeCurse: normalizeProfileCurse(profile.active_curse || profile.activeCurse),
@@ -9298,6 +9302,7 @@
                 profession: profile.profession,
                 ascensionScore: profile.ascensionScore,
                 audienceScore: profile.audienceScore,
+                showTitles: profile.showTitles !== false,
                 items: profile.items
             });
             if (error) return { data: null, error };
@@ -9315,6 +9320,35 @@
             const cloudProfile = mapCloudProfileToLocal(profilePayload);
             if (cloudProfile) saveCurrentProfile({ ...getCurrentProfile(), ...cloudProfile });
             return { data: cloudProfile, error: null };
+        }
+
+        let profileTitleVisibilityInFlight = false;
+        async function setProfileTitleVisibility(showTitles) {
+            if (profileTitleVisibilityInFlight) return;
+            const nextValue = showTitles === true;
+            const toggle = document.getElementById('profileTitleVisibilityToggle');
+            const currentProfile = getCurrentProfile();
+            if (currentProfile.showTitles === nextValue) return;
+            profileTitleVisibilityInFlight = true;
+            if (toggle) toggle.disabled = true;
+            try {
+                if (USE_LOCAL_FALLBACK || !inviteSession?.code) {
+                    saveCurrentProfile({ ...currentProfile, showTitles: nextValue });
+                } else {
+                    const { data, error } = await invokeDungeonAction('setProfileTitleVisibility', { showTitles: nextValue });
+                    if (error) throw error;
+                    saveCurrentProfile({ ...currentProfile, showTitles: data?.show_titles !== false, updatedAt: data?.updated_at || currentProfile.updatedAt });
+                }
+                showToast(nextValue ? '称号已佩戴' : '称号已收起，诅咒仍会显示');
+                await renderProfilePage();
+                if (document.getElementById('leaderboardPage')?.style.display !== 'none') await renderLeaderboardPage();
+            } catch (error) {
+                showToast(`称号状态保存失败：${getFriendlyActionError(error, '请稍后重试')}`);
+                if (toggle) toggle.checked = currentProfile.showTitles !== false;
+            } finally {
+                profileTitleVisibilityInFlight = false;
+                if (toggle) toggle.disabled = false;
+            }
         }
 
         function formatTalentPoolLabel(poolKey) {
@@ -9800,7 +9834,9 @@
             const displayName = cleanDisplayNameInput(inviteSession?.name || profile.displayName || '') || '未命名信徒';
             const faithGod = getProfileFaithGod(profile) || '命运';
             const profession = profile.profession || '未填写职业';
-            const titles = normalizeProfileTitleList(profile.activeTitles, profile.activeTitle).map(title => title.titleText).filter(Boolean);
+            const titles = profile.showTitles === false
+                ? []
+                : normalizeProfileTitleList(profile.activeTitles, profile.activeTitle).map(title => title.titleText).filter(Boolean);
             const healthSummary = getProfileHealthSummary(profile);
             const equippedTalents = (state.ownedTalents || [])
                 .filter(talent => Number(talent.equipped_slot || 0) > 0)
@@ -10319,7 +10355,7 @@
                             <div class="leaderboard-name-line">
                                 ${renderGodSigil(entry.faithGod || '命运', 'sm', 'leaderboard-god-mark')}
                                 <div class="leaderboard-name">${escapeHtml(entry.displayName)}${entry.isCurrent ? ' · 你' : ''}</div>
-                                ${renderProfileTitleBadge(entry.activeTitle, { fallbackGod: entry.faithGod || '命运', compact: true })}
+                                ${entry.showTitles === false ? '' : renderProfileTitleBadge(entry.activeTitle, { fallbackGod: entry.faithGod || '命运', compact: true })}
                             </div>
                             <div class="leaderboard-meta">
                                 ${metaHtml}
@@ -10564,6 +10600,7 @@
                         talents: profile.talents,
                         active_title: normalizeProfileTitle(profile.activeTitle),
                         active_titles: normalizeProfileTitleList(profile.activeTitles, profile.activeTitle),
+                        show_titles: profile.showTitles !== false,
                         active_curse: normalizeProfileCurse(profile.activeCurse),
                         active_curses: normalizeProfileCurseList(profile.activeCurses, profile.activeCurse),
                         updated_at: profile.updatedAt,
@@ -10666,7 +10703,7 @@
                     <div class="profile-avatar ${faithClass}" style="${faithStyle}">${renderGodSigil(faithGod, 'lg')}</div>
                     <div class="profile-hero-copy">
                         <div class="profile-kicker">PUBLIC PILGRIM DOSSIER</div>
-                        ${renderProfileNameWithTitle(displayName, profile.activeTitle, { fallbackGod: faithGod, titles: profile.activeTitles })}
+                        ${renderProfileNameWithTitle(displayName, profile.activeTitle, { fallbackGod: faithGod, titles: profile.activeTitles, showTitles: profile.showTitles })}
                         <div class="profile-subline">
                             <span class="mini-tag ${faithClass}">${escapeHtml(faith.label)}</span>
                             <span class="mini-tag ${faithClass}">${escapeHtml(faith.path)}命途</span>
@@ -12233,7 +12270,7 @@
                     <div class="profile-avatar ${faithClass}" style="${faithStyle}">${renderGodSigil(faithGod, 'lg')}</div>
                     <div class="profile-hero-copy">
                         <div class="profile-kicker">PERSONAL PILGRIM ARCHIVE</div>
-                        ${renderProfileNameWithTitle(inviteSession.name || roleLabel, profile.activeTitle, { fallbackGod: faithGod, titles: profile.activeTitles })}
+                        ${renderProfileNameWithTitle(inviteSession.name || roleLabel, profile.activeTitle, { fallbackGod: faithGod, titles: profile.activeTitles, showTitles: profile.showTitles })}
                         <div class="profile-subline">
                             <span class="mini-tag ${faithClass}">${escapeHtml(faith.label)}</span>
                             <span class="mini-tag ${faithClass}">${escapeHtml(faith.path)}命途</span>
@@ -12290,7 +12327,11 @@
                                 </div>
                                 <div class="form-group full">
                                     <label>当前称号</label>
-                                    ${renderProfileTitleStatus(profile.activeTitle, profile.activeCurse, faithGod, profile.activeTitles, profile.activeCurses)}
+                                    ${renderProfileTitleStatus(profile.activeTitle, profile.activeCurse, faithGod, profile.activeTitles, profile.activeCurses, profile.showTitles)}
+                                    <label class="identity-help" for="profileTitleVisibilityToggle">
+                                        <input id="profileTitleVisibilityToggle" type="checkbox" ${profile.showTitles !== false ? 'checked' : ''} onchange="setProfileTitleVisibility(this.checked)">
+                                        佩戴称号
+                                    </label>
                                 </div>
                                 <div class="form-group full">
                                     <label for="profileItems">个人道具</label>
@@ -12368,7 +12409,7 @@
                                 <span>当前称号</span>
                                 <small>称号 / 诅咒状态</small>
                             </div>
-                            ${renderProfileTitleStatus(profile.activeTitle, profile.activeCurse, faithGod, profile.activeTitles, profile.activeCurses)}
+                            ${renderProfileTitleStatus(profile.activeTitle, profile.activeCurse, faithGod, profile.activeTitles, profile.activeCurses, profile.showTitles)}
                         </section>
                     </div>
                 </div>
@@ -12472,6 +12513,7 @@
                     scoresLockedAt: nextScoresLockedAt,
                     items: String(document.getElementById('profileItems')?.value || '').trim().slice(0, 800),
                     talents: String(currentProfile.talents || '').trim().slice(0, 800),
+                    showTitles: currentProfile.showTitles !== false,
                     activeTitle: currentProfile.activeTitle || null,
                     activeTitles: normalizeProfileTitleList(currentProfile.activeTitles, currentProfile.activeTitle),
                     activeCurse: currentProfile.activeCurse || null,

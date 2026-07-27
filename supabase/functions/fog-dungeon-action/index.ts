@@ -370,6 +370,15 @@ async function getCommentHonorBuckets(
     if (commentId && hash) commentHashById.set(commentId, hash);
   }
   const uniqueHashes = [...new Set([...commentHashById.values()])];
+  const { data: profileRows, error: profileError } = uniqueHashes.length
+    ? await supabase.from("player_profiles").select("invite_code_hash, show_titles").in("invite_code_hash", uniqueHashes)
+    : { data: [], error: null };
+  if (profileError) return { byCommentId, error: profileError };
+  const titleVisibilityByHash = new Map<string, boolean>();
+  for (const profile of profileRows || []) {
+    const hash = cleanText((profile as Record<string, unknown>).invite_code_hash, 64);
+    if (hash) titleVisibilityByHash.set(hash, (profile as Record<string, unknown>).show_titles !== false);
+  }
   const titleResult = await getActiveTitlesByHashes(supabase, uniqueHashes);
   if (titleResult.error) return { byCommentId, error: titleResult.error };
   const curseResult = await getActiveCursesByHashes(supabase, uniqueHashes);
@@ -378,7 +387,7 @@ async function getCommentHonorBuckets(
   for (const commentId of uniqueCommentIds) {
     const hash = commentHashById.get(commentId) || "";
     byCommentId[commentId] = {
-      active_titles: titleResult.titles.get(hash) || [],
+      active_titles: titleVisibilityByHash.get(hash) === false ? [] : (titleResult.titles.get(hash) || []),
       active_curses: curseResult.curses.get(hash) || [],
     };
   }
@@ -438,6 +447,7 @@ function toPublicProfile(profile: Record<string, unknown>, profileKey: string, i
     audience_score: cleanScore(profile.audience_score),
     items: cleanText(profile.items, 800),
     talents: cleanText(profile.talents, 800),
+    show_titles: profile.show_titles !== false,
     active_title: profile.active_title || null,
     active_titles: Array.isArray(profile.active_titles) ? profile.active_titles : [],
     active_curse: profile.active_curse || null,
@@ -969,7 +979,7 @@ async function getTalentProfile(
 ) {
   const { data, error } = await supabase
     .from("player_profiles")
-    .select("display_name, role, faith_god, faith_path, original_faith_god, original_faith_path, trickery_display_faith_god, trickery_display_faith_path, trickery_display_profession, profession, ascension_score, audience_score, items, talents, updated_at")
+    .select("display_name, role, faith_god, faith_path, original_faith_god, original_faith_path, trickery_display_faith_god, trickery_display_faith_path, trickery_display_profession, profession, ascension_score, audience_score, items, talents, show_titles, updated_at")
     .eq("invite_code_hash", identity.codeHash)
     .maybeSingle();
   if (error) return { error };
@@ -2225,7 +2235,7 @@ Deno.serve(async (req) => {
           scores_locked_at: nextScoresLockedAt,
           updated_at: new Date().toISOString(),
         })
-        .select("display_name, role, faith_god, faith_path, original_faith_god, original_faith_path, profession, ascension_score, audience_score, items, talents, scores_locked_at, updated_at")
+        .select("display_name, role, faith_god, faith_path, original_faith_god, original_faith_path, profession, ascension_score, audience_score, items, talents, show_titles, scores_locked_at, updated_at")
         .single();
       if (error?.code === "42P01") return json({ error: "请先运行 player_profiles_migration.sql" }, 400);
       if (error) return json({ error: error.message }, 400);
@@ -2243,6 +2253,23 @@ Deno.serve(async (req) => {
       };
 
       return json({ role, name: identity.displayName, data: dataWithTitle });
+    }
+
+    if (action === "setProfileTitleVisibility") {
+      if (role === "god") return json({ error: "神明账号不建立信徒个人档案" }, 403);
+      if (!hasRole(role, ["player", "author", "reviewer", "admin"])) return json({ error: "需要入局谕令" }, 403);
+      if (typeof payload.showTitles !== "boolean") return json({ error: "称号佩戴状态不正确" }, 400);
+
+      const { data, error } = await supabase
+        .from("player_profiles")
+        .update({ show_titles: payload.showTitles, updated_at: new Date().toISOString() })
+        .eq("invite_code_hash", identity.codeHash)
+        .select("show_titles, updated_at")
+        .maybeSingle();
+      if (error?.code === "42703") return json({ error: "请先运行 profile_title_visibility_migration_20260727.sql" }, 400);
+      if (error) return json({ error: error.message }, 400);
+      if (!data) return json({ error: "请先保存个人档案，再设置称号佩戴状态" }, 400);
+      return json({ role, name: identity.displayName, data });
     }
 
     if (action === "updateTrickeryFaith") {
@@ -2276,7 +2303,7 @@ Deno.serve(async (req) => {
           updated_at: new Date().toISOString(),
         })
         .eq("invite_code_hash", identity.codeHash)
-        .select("display_name, role, faith_god, faith_path, original_faith_god, original_faith_path, trickery_display_faith_god, trickery_display_faith_path, trickery_display_profession, profession, ascension_score, audience_score, items, talents, scores_locked_at, updated_at")
+        .select("display_name, role, faith_god, faith_path, original_faith_god, original_faith_path, trickery_display_faith_god, trickery_display_faith_path, trickery_display_profession, profession, ascension_score, audience_score, items, talents, show_titles, scores_locked_at, updated_at")
         .single();
       if (error?.code === "42703") return json({ error: "请先运行 trickery_display_profile_migration_20260719.sql" }, 400);
       if (error) return json({ error: error.message }, 400);
@@ -2304,7 +2331,7 @@ Deno.serve(async (req) => {
 
       const { data, error } = await supabase
         .from("player_profiles")
-        .select("invite_code_hash, display_name, role, faith_god, faith_path, original_faith_god, original_faith_path, trickery_display_faith_god, trickery_display_faith_path, trickery_display_profession, profession, ascension_score, audience_score, updated_at")
+        .select("invite_code_hash, display_name, role, faith_god, faith_path, original_faith_god, original_faith_path, trickery_display_faith_god, trickery_display_faith_path, trickery_display_profession, profession, ascension_score, audience_score, show_titles, updated_at")
         .order("ascension_score", { ascending: false })
         .limit(300);
       if (error?.code === "42P01") return json({ error: "请先运行 player_profiles_migration.sql" }, 400);
@@ -2326,8 +2353,8 @@ Deno.serve(async (req) => {
         const { invite_code_hash: _hiddenInviteHash, ...rest } = profile;
         return {
           ...rest,
-          active_title: (titleResult.titles.get(inviteCodeHash) || [])[0] || null,
-          active_titles: titleResult.titles.get(inviteCodeHash) || [],
+          active_title: profile.show_titles === false ? null : ((titleResult.titles.get(inviteCodeHash) || [])[0] || null),
+          active_titles: profile.show_titles === false ? [] : (titleResult.titles.get(inviteCodeHash) || []),
           active_curse: (curseResult.curses.get(inviteCodeHash) || [])[0] || null,
           active_curses: curseResult.curses.get(inviteCodeHash) || [],
           profile_key: await getPublicProfileKey(inviteCodeHash),
@@ -2350,7 +2377,7 @@ Deno.serve(async (req) => {
 
       const { data: profiles, error: profileError } = await supabase
         .from("player_profiles")
-        .select("invite_code_hash, display_name, role, faith_god, faith_path, original_faith_god, original_faith_path, trickery_display_faith_god, trickery_display_faith_path, trickery_display_profession, profession, ascension_score, audience_score, items, talents, updated_at")
+        .select("invite_code_hash, display_name, role, faith_god, faith_path, original_faith_god, original_faith_path, trickery_display_faith_god, trickery_display_faith_path, trickery_display_profession, profession, ascension_score, audience_score, items, talents, show_titles, updated_at")
         .order("ascension_score", { ascending: false })
         .limit(1000);
       if (profileError?.code === "42P01") return json({ error: "请先运行 player_profiles_migration.sql" }, 400);
@@ -2374,7 +2401,8 @@ Deno.serve(async (req) => {
       if (titleResult.error) return json({ error: titleResult.error.message }, 400);
       const curseResult = await getActiveCurseForHash(supabase, targetInviteHash);
       if (curseResult.error) return json({ error: curseResult.error.message }, 400);
-      targetProfile.active_title = titleResult.title;
+      targetProfile.active_title = targetProfile.show_titles === false ? null : titleResult.title;
+      targetProfile.active_titles = targetProfile.show_titles === false ? [] : (titleResult.titles || []);
       targetProfile.active_curse = curseResult.curse;
       let clearRecords: Record<string, unknown>[] = [];
       const clearResult = await supabase
