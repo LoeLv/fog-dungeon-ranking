@@ -5346,6 +5346,71 @@
             font-size: 0.82rem;
             line-height: 1.6;
         }
+        .leaderboard-lookup {
+            display: grid;
+            gap: 10px;
+            margin: 0 0 14px;
+            padding: 13px;
+            border: 1px solid rgba(122,174,194,0.16);
+            border-radius: 8px;
+            background: rgba(122,174,194,0.035);
+        }
+        .leaderboard-lookup-head {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 10px;
+            color: var(--text-bright);
+            font-size: 0.84rem;
+            font-weight: 800;
+        }
+        .leaderboard-lookup-head small {
+            color: var(--text-muted);
+            font-size: 0.72rem;
+            font-weight: 600;
+        }
+        .leaderboard-lookup-controls {
+            display: grid;
+            grid-template-columns: minmax(0, 1fr) auto auto;
+            gap: 8px;
+        }
+        .leaderboard-lookup-controls input {
+            min-width: 0;
+        }
+        .leaderboard-lookup-results {
+            display: grid;
+            gap: 8px;
+        }
+        .leaderboard-lookup-result {
+            display: grid;
+            grid-template-columns: minmax(0, 1fr) auto;
+            align-items: center;
+            gap: 12px;
+            padding: 10px;
+            border: 1px solid rgba(255,255,255,0.07);
+            border-radius: 7px;
+            background: rgba(0,0,0,0.16);
+            cursor: pointer;
+        }
+        .leaderboard-lookup-result:hover {
+            border-color: rgba(231,207,138,0.32);
+            background: rgba(231,207,138,0.045);
+        }
+        .leaderboard-lookup-result strong {
+            color: var(--text-bright);
+        }
+        .leaderboard-lookup-result small {
+            display: block;
+            margin-top: 4px;
+            color: var(--text-muted);
+            font-size: 0.72rem;
+        }
+        .leaderboard-lookup-metrics {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: flex-end;
+            gap: 6px;
+        }
         .leaderboard-hero {
             align-items: stretch;
         }
@@ -6660,6 +6725,19 @@
             }
             .leaderboard-page-status {
                 font-size: 0.72rem;
+            }
+            .leaderboard-lookup-controls {
+                grid-template-columns: minmax(0, 1fr) auto;
+            }
+            .leaderboard-lookup-controls .leaderboard-lookup-clear {
+                grid-column: 1 / -1;
+            }
+            .leaderboard-lookup-result {
+                grid-template-columns: 1fr;
+                gap: 8px;
+            }
+            .leaderboard-lookup-metrics {
+                justify-content: flex-start;
             }
             .profile-form-grid .full {
                 grid-column: auto;
@@ -8283,6 +8361,7 @@
         let profileChronicleIndex = 0;
         let leaderboardMode = 'overall';
         let leaderboardPath = 'all';
+        let leaderboardSearchQuery = '';
         let leaderboardEntriesCache = null;
         let leaderboardEntriesSource = 'local';
         let leaderboardEntriesError = null;
@@ -10083,6 +10162,62 @@
                 </section>`;
         }
 
+        function getLeaderboardRank(entries, entry, scoreType) {
+            return sortLeaderboardEntries(entries, scoreType).findIndex(item => item.key === entry.key) + 1;
+        }
+
+        function renderLeaderboardLookup(entries) {
+            const query = String(leaderboardSearchQuery || '').trim();
+            const queryKey = normalizeNameKey(query);
+            const matches = queryKey
+                ? entries.filter(entry => normalizeNameKey(entry.displayName).includes(queryKey)).slice(0, 12)
+                : [];
+            const results = !queryKey
+                ? ''
+                : !matches.length
+                ? '<div class="profile-empty">没有找到匹配昵称，请检查输入。</div>'
+                : `<div class="leaderboard-lookup-results">${matches.map(entry => {
+                    const faith = entry.faithGod ? `${entry.faithGod}之神 · ${entry.faithPath}命途` : '未立信仰';
+                    const ascensionRank = getLeaderboardRank(entries, entry, 'ascension');
+                    const audienceRank = getLeaderboardRank(entries, entry, 'audience');
+                    return `<article class="leaderboard-lookup-result" onclick='openProfileFromLeaderboard(${jsString(entry.key)})'>
+                        <div>
+                            <strong>${escapeHtml(entry.displayName)}</strong>
+                            <small>${escapeHtml(faith)} · ${escapeHtml(ROLE_LABELS[entry.role] || '入局信徒')}</small>
+                        </div>
+                        <div class="leaderboard-lookup-metrics">
+                            <span class="metric-pill">登神 #${ascensionRank} · ${escapeHtml(formatProfileScore(entry.ascensionScore))}</span>
+                            <span class="metric-pill">觐见 #${audienceRank} · ${escapeHtml(formatProfileScore(entry.audienceScore))}</span>
+                        </div>
+                    </article>`;
+                }).join('')}</div>`;
+            return `<section class="leaderboard-lookup">
+                <div class="leaderboard-lookup-head"><span>昵称查询</span><small>跨全部分页定位玩家</small></div>
+                <div class="leaderboard-lookup-controls">
+                    <input id="leaderboardSearchInput" maxlength="40" value="${escapeHtml(query).replace(/"/g, '&quot;')}" placeholder="输入完整或部分昵称" onkeydown="if(event.key === 'Enter'){ event.preventDefault(); applyLeaderboardSearch(); }">
+                    <button type="button" class="btn btn-primary btn-sm" onclick="applyLeaderboardSearch()">查询</button>
+                    <button type="button" class="btn btn-outline btn-sm leaderboard-lookup-clear" onclick="clearLeaderboardSearch()" ${query ? '' : 'disabled'}>清除</button>
+                </div>
+                ${results}
+            </section>`;
+        }
+
+        async function applyLeaderboardSearch() {
+            const input = document.getElementById('leaderboardSearchInput');
+            leaderboardSearchQuery = cleanDisplayNameInput(input?.value || '');
+            if (!Array.isArray(leaderboardEntriesCache)) {
+                showToast('榜单数据尚未准备，请刷新榜单后查询');
+                return;
+            }
+            await renderLeaderboardPage({ useCachedEntries: true });
+        }
+
+        async function clearLeaderboardSearch() {
+            if (!leaderboardSearchQuery) return;
+            leaderboardSearchQuery = '';
+            if (Array.isArray(leaderboardEntriesCache)) await renderLeaderboardPage({ useCachedEntries: true });
+        }
+
         function getLeaderboardGodSeats(scoreType, options = {}) {
             const gods = getAllGods();
             const filtered = options.path ? gods.filter(item => item.path === options.path) : gods;
@@ -10261,26 +10396,28 @@
         }
 
         function renderLeaderboardContent(entries) {
+            const lookup = renderLeaderboardLookup(entries);
             if (leaderboardMode === 'ascension') {
-                return `<div class="leaderboard-layout">${renderLeaderboardBoard('命运骰录 · 登神阶途总榜', entries, 'ascension', { full: true, includeGodSeats: true, mergeGodSeats: true })}</div><div class="leaderboard-observer-note">第 0 位为寰宇至尊；登神之路分数越高，代表信徒踏遍试炼切片越多。</div>`;
+                return `${lookup}<div class="leaderboard-layout">${renderLeaderboardBoard('命运骰录 · 登神阶途总榜', entries, 'ascension', { full: true, includeGodSeats: true, mergeGodSeats: true })}</div><div class="leaderboard-observer-note">第 0 位为寰宇至尊；登神之路分数越高，代表信徒踏遍试炼切片越多。</div>`;
             }
             if (leaderboardMode === 'audience') {
-                return `<div class="leaderboard-layout">${renderLeaderboardBoard('星轨观览 · 觐见之梯总榜', entries, 'audience', { full: true, includeGodSeats: true, mergeGodSeats: true })}</div><div class="leaderboard-observer-note">第 0 位为寰宇至尊；觐见之梯源自信徒对试炼的评判证言。</div>`;
+                return `${lookup}<div class="leaderboard-layout">${renderLeaderboardBoard('星轨观览 · 觐见之梯总榜', entries, 'audience', { full: true, includeGodSeats: true, mergeGodSeats: true })}</div><div class="leaderboard-observer-note">第 0 位为寰宇至尊；觐见之梯源自信徒对试炼的评判证言。</div>`;
             }
             if (leaderboardMode === 'path') {
                 const pathTabs = renderLeaderboardPathTabs();
                 if (leaderboardPath !== 'all') {
                     const pathEntries = entries.filter(entry => entry.faithPath === leaderboardPath);
-                    return `${pathTabs}<div class="leaderboard-layout">${renderLeaderboardBoard(`${leaderboardPath}命途 · 信徒独立录`, pathEntries, 'audience', { full: true, subtitle: `${pathEntries.length} 位信徒 · 第 0 位为神席`, path: leaderboardPath, showAscensionInParentheses: true, includeGodSeats: true })}</div>`;
+                    return `${lookup}${pathTabs}<div class="leaderboard-layout">${renderLeaderboardBoard(`${leaderboardPath}命途 · 信徒独立录`, pathEntries, 'audience', { full: true, subtitle: `${pathEntries.length} 位信徒 · 第 0 位为神席`, path: leaderboardPath, showAscensionInParentheses: true, includeGodSeats: true })}</div>`;
                 }
                 const boards = GOD_GROUPS.map(group => {
                     const pathEntries = entries.filter(entry => entry.faithPath === group.path);
                     const gods = group.gods.map(god => `${god}`).join('、');
                     return renderLeaderboardBoard(`${group.path}命途 · ${gods}信徒录`, pathEntries, 'audience', { subtitle: `${pathEntries.length} 位信徒 · 第 0 位为神席`, path: group.path, showAscensionInParentheses: true, includeGodSeats: true });
                 }).join('');
-                return `${pathTabs}<div class="leaderboard-layout">${boards}</div>`;
+                return `${lookup}${pathTabs}<div class="leaderboard-layout">${boards}</div>`;
             }
             return `
+                ${lookup}
                 <div class="leaderboard-layout">
                     ${renderLeaderboardBoard('命运骰录 · 登神阶途总榜', entries, 'ascension', { includeGodSeats: true, mergeGodSeats: true })}
                     ${renderLeaderboardBoard('星轨观览 · 觐见之梯总榜', entries, 'audience', { includeGodSeats: true, mergeGodSeats: true })}
