@@ -9381,6 +9381,13 @@
                 totalDrawsEarned: Number(state.totalDrawsEarned || 0),
                 spentDraws: Number(state.spentDraws || 0),
                 availableDraws: Number(state.availableDraws || 0),
+                basicDrawsEarned: Number(state.basicDrawsEarned || 0),
+                basicSpentDraws: Number(state.basicSpentDraws || 0),
+                basicAvailableDraws: Number(state.basicAvailableDraws || 0),
+                advancedDrawsEarned: Number(state.advancedDrawsEarned || 0),
+                advancedSpentDraws: Number(state.advancedSpentDraws || 0),
+                advancedAvailableDraws: Number(state.advancedAvailableDraws || 0),
+                advancedTalentDrawScore: Number(state.advancedTalentDrawScore || 1500),
                 fragmentTotal: Number(state.fragmentTotal || 0),
                 pools: Array.isArray(state.pools) ? state.pools : [],
                 allowedPoolKeys: Array.isArray(state.allowedPoolKeys) ? state.allowedPoolKeys : [],
@@ -9488,7 +9495,7 @@
 
         function renderTalentExchangeOptions(state, poolKey) {
             const ownedKeys = new Set((state.ownedTalents || []).map(t => `${t.pool_key}:${t.talent_id}`));
-            const advancedDraw = Number(state.profile?.ascension_score || 0) >= 1500;
+            const advancedDraw = Number(state.profile?.ascension_score || 0) >= Number(state.advancedTalentDrawScore || 1500);
             const allowedRanks = advancedDraw ? ['A', 'B'] : ['B'];
             const options = (state.poolItems || [])
                 .filter(item => item.pool_key === poolKey && allowedRanks.includes(item.rank))
@@ -9702,7 +9709,9 @@
             const exchangeCost = Number(state.targetTalentExchangeCost || 180);
             const aExchangeCost = Number(state.aTalentExchangeCost || 260);
             const ascensionScore = Number(state.profile?.ascension_score || profile?.ascensionScore || 0);
-            const advancedDraw = ascensionScore >= 1500;
+            const advancedDraw = ascensionScore >= Number(state.advancedTalentDrawScore || 1500);
+            const basicAvailableDraws = Number(state.basicAvailableDraws || 0);
+            const advancedAvailableDraws = Number(state.advancedAvailableDraws || 0);
             const bRateText = `${Math.round(Number(advancedDraw ? state.advancedBTalentDrawRate : state.bTalentDrawRate || 0.2) * 100)}%`;
             const aRateText = `${Math.round(Number(state.aTalentDrawRate || 0.02) * 10000) / 100}%`;
             const sRateText = `${Math.round(Number(state.sTalentDrawRate || 0.001) * 10000) / 100}%`;
@@ -9727,6 +9736,8 @@
                         <div class="metric-strip">
                             <span class="metric-pill">累计获得抽数 <strong>${Number(state.totalDrawsEarned || 0)}</strong></span>
                             <span class="metric-pill">已用抽数 <strong>${Number(state.spentDraws || 0)}</strong></span>
+                            <span class="metric-pill">基础 B/C 抽 <strong>${basicAvailableDraws}</strong></span>
+                            <span class="metric-pill">进阶 S/A/B/C 抽 <strong>${advancedAvailableDraws}</strong></span>
                             <span class="metric-pill">B级概率 <strong>${escapeHtml(bRateText)}</strong></span>
                             <span class="metric-pill">保底进度 <strong>${currentMisses}/${guaranteeDraws - 1}</strong></span>
                             ${advancedDraw ? `<span class="metric-pill">S保底 <strong>${Math.min(sGuaranteeDraws - 1, sCounter)}/${sGuaranteeDraws - 1}</strong></span>` : ''}
@@ -9737,6 +9748,7 @@
                         <div class="talent-rule-strip">
                             <span>新手赠送 <strong>${Number(state.starterTalentDrawGrant || 15)}</strong> 抽，不计保底</span>
                             <span>${escapeHtml(drawRuleText)}</span>
+                            <span>基础抽数优先消耗，1500 前获得的抽数不会转化为进阶抽数</span>
                             <span>重复 C/B：<strong>+${Number(state.cTalentFragmentGain || 5)} / +${Number(state.bTalentFragmentGain || 10)}</strong> 碎片</span>
                             <span>分解 C/B：<strong>+${Number(state.cTalentFragmentGain || 5)} / +${Number(state.bTalentFragmentGain || 10)}</strong> 碎片</span>
                             <span>携带上限：<strong>${escapeHtml(renderTalentSlotRuleText(state))}</strong></span>
@@ -10090,7 +10102,12 @@
                 selectedTalentPool = poolKey;
                 lastTalentDrawResult = Array.isArray(data?.results) ? data.results : [];
                 applyTalentActionState(data);
-                showToast(drawType === 'ten' ? '十连完成' : '单抽完成');
+                const basicUsed = Number(data?.basicDrawsUsed || 0);
+                const advancedUsed = Number(data?.advancedDrawsUsed || 0);
+                const tierSummary = advancedUsed
+                    ? `基础 B/C ${basicUsed} 抽，进阶 S/A/B/C ${advancedUsed} 抽`
+                    : `基础 B/C ${basicUsed} 抽`;
+                showToast(`${drawType === 'ten' ? '十连完成' : '单抽完成'}：${tierSummary}`);
                 if (document.getElementById('leaderboardPage')?.style.display !== 'none') await renderLeaderboardPage();
             } finally {
                 if (isInviteSnapshotCurrent(inviteSnapshot)) {

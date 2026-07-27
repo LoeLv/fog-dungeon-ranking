@@ -62,6 +62,7 @@ const godNames = new Set([
 const defaultAscensionScore = 1000;
 const defaultAudienceScore = 0;
 const drawScoreStep = 10;
+const advancedTalentDrawScore = 1500;
 const starterTalentDrawGrant = 15;
 const bTalentDrawRate = 0.2;
 const advancedBTalentDrawRate = 0.25;
@@ -645,8 +646,17 @@ function isMissingMatchMusterSystem(error: LooseError) {
 }
 
 function getEarnedDraws(ascensionScore: unknown) {
-  const score = cleanScore(ascensionScore);
+  return getBasicDrawsEarned(ascensionScore) + getAdvancedDrawsEarned(ascensionScore);
+}
+
+function getBasicDrawsEarned(ascensionScore: unknown) {
+  const score = Math.min(cleanScore(ascensionScore), advancedTalentDrawScore - drawScoreStep);
   return starterTalentDrawGrant + Math.max(0, Math.floor((score - defaultAscensionScore) / drawScoreStep));
+}
+
+function getAdvancedDrawsEarned(ascensionScore: unknown) {
+  const score = cleanScore(ascensionScore);
+  return Math.max(0, Math.floor((score - (advancedTalentDrawScore - drawScoreStep)) / drawScoreStep));
 }
 
 function getTalentSlotRule(ascensionScore: unknown) {
@@ -915,7 +925,7 @@ function pickRandomTalent<T>(items: T[]): T {
 }
 
 function isAdvancedTalentDrawUnlocked(ascensionScore: unknown) {
-  return cleanScore(ascensionScore) >= 1500;
+  return cleanScore(ascensionScore) >= advancedTalentDrawScore;
 }
 
 function pickTalentFromRank(items: TalentPoolItem[], rank: string) {
@@ -1005,11 +1015,18 @@ async function getTalentDrawState(
 ) {
   const { data, error } = await supabase
     .from("talent_draw_state")
-    .select("spent_draws")
+    .select("spent_draws, basic_spent_draws, advanced_spent_draws")
     .eq("invite_code_hash", codeHash)
     .maybeSingle();
-  if (error) return { error, spentDraws: 0 };
-  return { spentDraws: Number(data?.spent_draws || 0) };
+  if (error?.code === "42703") {
+    return { error: { ...error, message: "请先运行 talent_draw_tier_1500_20260727.sql" }, spentDraws: 0, basicSpentDraws: 0, advancedSpentDraws: 0 };
+  }
+  if (error) return { error, spentDraws: 0, basicSpentDraws: 0, advancedSpentDraws: 0 };
+  return {
+    spentDraws: Number(data?.spent_draws || 0),
+    basicSpentDraws: Number(data?.basic_spent_draws || 0),
+    advancedSpentDraws: Number(data?.advanced_spent_draws || 0),
+  };
 }
 
 async function getFragmentTotal(
@@ -1267,9 +1284,15 @@ async function buildTalentState(
   const fragmentState = await getFragmentTotal(supabase, identity.codeHash);
   if (fragmentState.error) return { error: fragmentState.error };
 
-  const totalDrawsEarned = getEarnedDraws(profile.ascension_score);
-  const spentDraws = drawState.spentDraws;
-  const availableDraws = Math.max(0, totalDrawsEarned - spentDraws);
+  const basicDrawsEarned = getBasicDrawsEarned(profile.ascension_score);
+  const advancedDrawsEarned = getAdvancedDrawsEarned(profile.ascension_score);
+  const totalDrawsEarned = basicDrawsEarned + advancedDrawsEarned;
+  const basicSpentDraws = drawState.basicSpentDraws;
+  const advancedSpentDraws = drawState.advancedSpentDraws;
+  const spentDraws = basicSpentDraws + advancedSpentDraws;
+  const basicAvailableDraws = Math.max(0, basicDrawsEarned - basicSpentDraws);
+  const advancedAvailableDraws = Math.max(0, advancedDrawsEarned - advancedSpentDraws);
+  const availableDraws = basicAvailableDraws + advancedAvailableDraws;
   const allowedPoolKeys = getAllowedTalentPools(profile);
   const talentSlotRule = getTalentSlotRule(profile.ascension_score);
   const activeEquippedSlotLimit = getTalentSlotLimit(profile.ascension_score);
@@ -1439,6 +1462,13 @@ async function buildTalentState(
       totalDrawsEarned,
       spentDraws,
       availableDraws,
+      basicDrawsEarned,
+      basicSpentDraws,
+      basicAvailableDraws,
+      advancedDrawsEarned,
+      advancedSpentDraws,
+      advancedAvailableDraws,
+      advancedTalentDrawScore,
       fragmentTotal: settledFragmentTotal,
       pools: [...poolMap.values()],
       allowedPoolKeys,
@@ -3081,9 +3111,13 @@ Deno.serve(async (req) => {
       if (isMissingTalentTable(drawState.error ?? null)) return json({ error: "请先运行 talent_pool_migration.sql" }, 400);
       if (drawState.error) return json({ error: drawState.error.message }, 400);
 
-      const totalDrawsEarned = getEarnedDraws(profile.ascension_score);
-      const spentDraws = drawState.spentDraws;
-      const availableDraws = Math.max(0, totalDrawsEarned - spentDraws);
+      const basicDrawsEarned = getBasicDrawsEarned(profile.ascension_score);
+      const advancedDrawsEarned = getAdvancedDrawsEarned(profile.ascension_score);
+      const basicSpentDraws = drawState.basicSpentDraws;
+      const advancedSpentDraws = drawState.advancedSpentDraws;
+      const basicAvailableDraws = Math.max(0, basicDrawsEarned - basicSpentDraws);
+      const advancedAvailableDraws = Math.max(0, advancedDrawsEarned - advancedSpentDraws);
+      const availableDraws = basicAvailableDraws + advancedAvailableDraws;
       if (availableDraws < drawCount) {
         return json({
           error: `抽数不足：当前可用 ${availableDraws} 抽。登神之路每获得 ${drawScoreStep} 分增加 1 抽，抽数可攒。`,
@@ -3118,16 +3152,21 @@ Deno.serve(async (req) => {
       if (counterError) return json({ error: counterError.message }, 400);
       let continueDraw = Number(counterRow?.continue_draw || 0);
       let sContinueDraw = Number(counterRow?.s_continue_draw || 0);
-      const advancedDraw = isAdvancedTalentDrawUnlocked(profile.ascension_score);
+      const basicDrawsToUse = Math.min(drawCount, basicAvailableDraws);
+      const advancedDrawsToUse = drawCount - basicDrawsToUse;
       const results: Record<string, unknown>[] = [];
       let fragmentGainTotal = 0;
-      const nextSpentDraws = spentDraws + drawCount;
+      const nextBasicSpentDraws = basicSpentDraws + basicDrawsToUse;
+      const nextAdvancedSpentDraws = advancedSpentDraws + advancedDrawsToUse;
+      const nextSpentDraws = nextBasicSpentDraws + nextAdvancedSpentDraws;
 
       const { error: initialStateError } = await supabase
         .from("talent_draw_state")
         .insert({
           invite_code_hash: identity.codeHash,
-          spent_draws: spentDraws,
+          spent_draws: 0,
+          basic_spent_draws: 0,
+          advanced_spent_draws: 0,
           updated_at: new Date().toISOString(),
         });
       if (initialStateError && initialStateError.code !== "23505") {
@@ -3138,11 +3177,15 @@ Deno.serve(async (req) => {
         .from("talent_draw_state")
         .update({
           spent_draws: nextSpentDraws,
+          basic_spent_draws: nextBasicSpentDraws,
+          advanced_spent_draws: nextAdvancedSpentDraws,
           updated_at: new Date().toISOString(),
         })
         .eq("invite_code_hash", identity.codeHash)
-        .eq("spent_draws", spentDraws)
-        .select("spent_draws")
+        .eq("spent_draws", drawState.spentDraws)
+        .eq("basic_spent_draws", basicSpentDraws)
+        .eq("advanced_spent_draws", advancedSpentDraws)
+        .select("spent_draws, basic_spent_draws, advanced_spent_draws")
         .maybeSingle();
       if (reserveError) return json({ error: reserveError.message }, 400);
       if (!reservedState) {
@@ -3150,15 +3193,16 @@ Deno.serve(async (req) => {
       }
 
       for (let i = 0; i < drawCount; i += 1) {
-        const isStarterDraw = spentDraws + i < starterTalentDrawGrant;
-        const drawResult = pickDrawTalentWithGuarantee(talentItems, continueDraw, sContinueDraw, !isStarterDraw, advancedDraw);
+        const isBasicDraw = i < basicDrawsToUse;
+        const isStarterDraw = isBasicDraw && basicSpentDraws + i < starterTalentDrawGrant;
+        const drawResult = pickDrawTalentWithGuarantee(talentItems, continueDraw, sContinueDraw, !isStarterDraw, !isBasicDraw);
         const target = drawResult.talent;
         const isB = target.rank === "B";
         const isS = target.rank === "S";
         const isGuarantee = drawResult.isGuarantee && (isB || isS);
         if (!isStarterDraw) {
           continueDraw = isB ? 0 : continueDraw + 1;
-          if (advancedDraw) sContinueDraw = isS ? 0 : sContinueDraw + 1;
+          if (!isBasicDraw) sContinueDraw = isS ? 0 : sContinueDraw + 1;
         }
 
         const { data: existingOwned, error: ownedReadError } = await supabase
@@ -3210,6 +3254,7 @@ Deno.serve(async (req) => {
           effect: target.effect || "",
           actionCost: Number(target.action_cost || 0),
           rank: target.rank,
+          drawTier: isBasicDraw ? "basic" : "advanced",
           isGuarantee,
           isRepeat,
           fragmentGain,
@@ -3245,6 +3290,8 @@ Deno.serve(async (req) => {
         name: identity.displayName,
         data: {
           drawType,
+          basicDrawsUsed: basicDrawsToUse,
+          advancedDrawsUsed: advancedDrawsToUse,
           results,
           fragmentGain: fragmentGainTotal,
           state: state.data,
