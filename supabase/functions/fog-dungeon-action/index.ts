@@ -1808,7 +1808,7 @@ async function commitScoreSettlement(
     const typeName = sourceType === "single" ? "漏分补发" : "批量结算";
     const clearStatus = clearStatuses.get(entry.nick) || "unknown";
     const clearText = confirmClear ? `\n本车结果：${getClearStatusLabel(clearStatus)}${clearStatus === "passed" ? "（已登记通关）" : ""}` : "";
-    const content = `【${typeName}｜副本：${dungeonName}】\n审核员：${identity.displayName}\n登神之路：${entry.deng >= 0 ? "+" : ""}${entry.deng}\n觐见之梯：+${entry.jin}\n本次总变化：${entry.total >= 0 ? "+" : ""}${entry.total}${clearText}${remark ? `\n备注：${remark}` : ""}`;
+    const content = `【${typeName}｜副本：${dungeonName}】\n审核员：${identity.displayName}\n登神之路：${entry.deng >= 0 ? "+" : ""}${entry.deng}\n觐见之梯：${entry.jin >= 0 ? "+" : ""}${entry.jin}\n本次总变化：${entry.total >= 0 ? "+" : ""}${entry.total}${clearText}${remark ? `\n备注：${remark}` : ""}`;
     return {
       player_code_hash: String(profile.invite_code_hash || ""),
       player_name: entry.nick,
@@ -2870,11 +2870,16 @@ Deno.serve(async (req) => {
     if (action === "listScoreSettlements") {
       if (!canSettleScores(role)) return json({ error: "需要审核员权限" }, 403);
       const limit = Math.max(1, Math.min(100, Number(payload.limit || 30)));
-      const { data, error } = await supabase
+      const dungeonQuery = cleanText(payload.dungeonQuery, 80);
+      const recentCutoff = new Date(Date.now() - 48 * 60 * 60 * 1000).toISOString();
+      let query = supabase
         .from("score_settlements")
         .select("id, dungeon_name, source_type, operator_name, total_players, total_ascension, total_audience, total_score, is_revoked, revoke_remark, created_at")
+        .gte("created_at", recentCutoff)
         .order("created_at", { ascending: false })
         .limit(limit);
+      if (dungeonQuery) query = query.ilike("dungeon_name", `%${dungeonQuery}%`);
+      const { data, error } = await query;
       if (error?.code === "42P01") return json({ error: "请先运行 score_system_migration.sql" }, 400);
       if (error) return json({ error: error.message }, 400);
       return json({ role, name: identity.displayName, data: data || [] });

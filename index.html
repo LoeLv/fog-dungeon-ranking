@@ -5026,6 +5026,44 @@
             gap: 8px;
             margin-top: 12px;
         }
+        .score-settlement-detail {
+            margin-top: 12px;
+            padding: 12px;
+            border: 1px solid rgba(122,174,194,0.16);
+            border-radius: 8px;
+            background: rgba(122,174,194,0.045);
+        }
+        .score-settlement-detail-title {
+            margin-bottom: 8px;
+            color: var(--text-bright);
+            font-size: 0.82rem;
+            font-weight: 800;
+        }
+        .score-settlement-entry-list {
+            display: grid;
+            gap: 7px;
+        }
+        .score-settlement-entry-row {
+            display: grid;
+            grid-template-columns: minmax(88px, 1fr) repeat(3, auto);
+            align-items: center;
+            gap: 10px;
+            padding: 8px 0;
+            border-top: 1px solid rgba(255,255,255,0.06);
+            color: var(--text-muted);
+            font-size: 0.76rem;
+        }
+        .score-settlement-entry-row:first-child {
+            border-top: 0;
+            padding-top: 0;
+        }
+        .score-settlement-entry-row strong {
+            min-width: 0;
+            overflow: hidden;
+            color: var(--text-bright);
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
         .score-error-item {
             border: 1px solid rgba(215,107,74,0.32);
             border-radius: 10px;
@@ -6546,6 +6584,13 @@
             .profile-observatory-grid,
             .score-rule-grid {
                 grid-template-columns: 1fr;
+            }
+            .score-settlement-entry-row {
+                grid-template-columns: minmax(0, 1fr) 1fr;
+                gap: 6px 10px;
+            }
+            .score-settlement-entry-row span {
+                font-size: 0.7rem;
             }
             .profile-avatar {
                 width: 62px;
@@ -8252,6 +8297,10 @@
         let matchStateCache = null;
         let matchStateError = null;
         let scorePreviewState = null;
+        let scoreSettlementState = { settlements: [], error: null };
+        let scoreSettlementSearchTimer = null;
+        const scoreSettlementDetails = new Map();
+        const scoreSettlementExpanded = new Set();
         let selectedTalentPool = '';
         let lastTalentDrawResult = [];
         let talentDrawInFlight = false;
@@ -10858,12 +10907,26 @@
             return true;
         }
 
-        async function fetchScoreSettlements(limit = 30) {
+        function getScoreSettlementSearchQuery() {
+            return String(document.getElementById('scoreSettlementSearch')?.value || '').trim().slice(0, 80);
+        }
+
+        async function fetchScoreSettlements(limit = 50, dungeonQuery = '') {
             if (!canSettleScores()) return { settlements: [], error: { message: '需要审核员权限' } };
             if (USE_LOCAL_FALLBACK) return { settlements: [], error: null };
-            const { data, error } = await invokeDungeonAction('listScoreSettlements', { limit });
+            const { data, error } = await invokeDungeonAction('listScoreSettlements', { limit, dungeonQuery });
             if (error) return { settlements: [], error };
             return { settlements: Array.isArray(data) ? data : [], error: null };
+        }
+
+        function renderScoreSettlementsPanel() {
+            const panel = document.getElementById('scoreSettlementsPanel');
+            if (panel) panel.innerHTML = renderScoreSettlements(scoreSettlementState.settlements, scoreSettlementState.error);
+        }
+
+        function queueScoreSettlementSearch() {
+            window.clearTimeout(scoreSettlementSearchTimer);
+            scoreSettlementSearchTimer = window.setTimeout(() => refreshScoreSettlementsPanel(), 260);
         }
 
         async function refreshScoreSettlementsPanel(expectedSettlementId = '') {
@@ -10873,22 +10936,42 @@
                 return;
             }
             panel.innerHTML = '<div class="profile-empty">最近结算刷新中...</div>';
-            let result = await fetchScoreSettlements(30);
+            const dungeonQuery = getScoreSettlementSearchQuery();
+            let result = await fetchScoreSettlements(50, dungeonQuery);
             const expectedId = String(expectedSettlementId || '');
             if (expectedId && !result.error && !result.settlements.some(item => String(item.id) === expectedId)) {
                 await new Promise(resolve => setTimeout(resolve, 700));
-                result = await fetchScoreSettlements(30);
+                result = await fetchScoreSettlements(50, dungeonQuery);
             }
-            panel.innerHTML = renderScoreSettlements(result.settlements, result.error);
+            scoreSettlementState = result;
+            renderScoreSettlementsPanel();
             const count = document.getElementById('scoreRecentCount');
             if (count && !result.error) count.textContent = String(result.settlements?.length || 0);
             if (result.error) showToast(`❌ 最近结算刷新失败：${result.error.message || '请手动刷新'}`);
             else showToast('最近结算已刷新');
         }
 
+        function renderScoreSettlementDetail(settlementId) {
+            if (!scoreSettlementExpanded.has(settlementId)) return '';
+            const detail = scoreSettlementDetails.get(settlementId);
+            if (!detail) return '<div class="score-settlement-detail">正在读取本场加分明细...</div>';
+            const entries = Array.isArray(detail.entries) ? detail.entries : [];
+            if (!entries.length) return '<div class="score-settlement-detail">本场没有可展示的玩家加分明细。</div>';
+            return `<div class="score-settlement-detail">
+                <div class="score-settlement-detail-title">本场玩家加分</div>
+                <div class="score-settlement-entry-list">${entries.map(entry => `
+                    <div class="score-settlement-entry-row">
+                        <strong>${escapeHtml(entry.player_name || '未命名玩家')}</strong>
+                        <span>登神 ${escapeHtml(formatScoreNumber(entry.score_deng, true))}</span>
+                        <span>觐见 ${escapeHtml(formatScoreNumber(entry.score_jin, true))}</span>
+                        <span>合计 ${escapeHtml(formatScoreNumber(entry.total_add, true))}</span>
+                    </div>`).join('')}</div>
+            </div>`;
+        }
+
         function renderScoreSettlements(settlements, error) {
             if (error) return `<div class="profile-empty">${escapeHtml(error.message || '结算记录暂不可用。')}</div>`;
-            if (!settlements.length) return '<div class="profile-empty">暂无结算记录。</div>';
+            if (!settlements.length) return '<div class="profile-empty">最近 48 小时内没有匹配的加分记录。</div>';
             return `<div class="profile-list">${settlements.map(item => `
                 <article class="profile-list-item">
                     <div class="profile-list-title">
@@ -10901,8 +10984,40 @@
                         <span class="metric-pill">觐见 <strong>${escapeHtml(formatScoreNumber(item.total_audience, true))}</strong></span>
                         <span class="metric-pill">总变化 <strong>${escapeHtml(formatScoreNumber(item.total_score, true))}</strong></span>
                     </div>
-                    ${item.is_revoked ? `<div class="profile-list-meta">撤销备注：${escapeHtml(item.revoke_remark || '')}</div>` : `<div class="profile-tools" style="margin-top:10px;"><button class="btn btn-outline btn-sm" data-score-action="revoke-${escapeHtml(item.id)}" onclick='revokeScoreSettlementUI(${jsString(item.id)})'>撤销本场结算</button></div>`}
+                    <div class="profile-tools" style="margin-top:10px;">
+                        <button class="btn btn-outline btn-sm" onclick='toggleScoreSettlementDetail(${jsString(item.id)})'>${scoreSettlementExpanded.has(item.id) ? '收起明细' : '查看明细'}</button>
+                        ${item.is_revoked ? '' : `<button class="btn btn-outline btn-sm" data-score-action="revoke-${escapeHtml(item.id)}" onclick='revokeScoreSettlementUI(${jsString(item.id)})'>撤销本场结算</button>`}
+                    </div>
+                    ${item.is_revoked ? `<div class="profile-list-meta">撤销备注：${escapeHtml(item.revoke_remark || '')}</div>` : ''}
+                    ${renderScoreSettlementDetail(item.id)}
                 </article>`).join('')}</div>`;
+        }
+
+        async function toggleScoreSettlementDetail(settlementId) {
+            const id = String(settlementId || '');
+            if (!id) return;
+            if (scoreSettlementExpanded.has(id)) {
+                scoreSettlementExpanded.delete(id);
+                renderScoreSettlementsPanel();
+                return;
+            }
+            scoreSettlementExpanded.add(id);
+            renderScoreSettlementsPanel();
+            if (scoreSettlementDetails.has(id)) return;
+            const lockKey = `score-settlement-detail:${id}`;
+            if (!acquireUiActionLock(lockKey, '本场明细正在读取，请勿重复点击')) return;
+            try {
+                const { data, error } = await invokeDungeonAction('getScoreSettlementDetail', { settlementId: id });
+                if (error) {
+                    scoreSettlementExpanded.delete(id);
+                    showToast(`❌ ${error.message || '读取加分明细失败'}`);
+                    return;
+                }
+                scoreSettlementDetails.set(id, data || { entries: [] });
+            } finally {
+                releaseUiActionLock(lockKey);
+                renderScoreSettlementsPanel();
+            }
         }
 
         function renderTitlePlayerOptions(entries, mode = 'title') {
@@ -11122,7 +11237,10 @@
             const { entries: titleEntries } = canGrantTitlesUI()
                 ? await fetchLeaderboardEntries()
                 : { entries: [] };
-            const { settlements, error } = await fetchScoreSettlements(30);
+            const { settlements, error } = await fetchScoreSettlements(50);
+            scoreSettlementState = { settlements, error };
+            scoreSettlementDetails.clear();
+            scoreSettlementExpanded.clear();
             container.innerHTML = `
                 <section class="profile-hero" data-god="真理" data-motif="${escapeHtml(getGodSkin('真理').motif)}" style="${getGodSkinStyle('真理')}">
                     <div class="profile-avatar path-exist" style="${getGodSkinStyle('真理')}">${renderGodSigil('真理', 'lg')}</div>
@@ -11136,7 +11254,7 @@
                         <div class="profile-faith-prayer">洞窥本质，行迹真理。此页只对结算审核员与神谕馆主开放。</div>
                     </div>
                     <div class="profile-hero-stats">
-                        <div class="profile-hero-score"><span>最近结算</span><strong id="scoreRecentCount">${settlements?.length || 0}</strong></div>
+                        <div class="profile-hero-score"><span>两日加分记录</span><strong id="scoreRecentCount">${settlements?.length || 0}</strong></div>
                         <div class="profile-hero-score"><span>权限席位</span><strong>${getInviteRole() === 'admin' ? '馆主' : '审核'}</strong></div>
                     </div>
                 </section>
@@ -11175,7 +11293,8 @@
                     </div>
                     <div>
                         <section class="profile-panel" data-god="真理" style="${getGodSkinStyle('真理')}">
-                            <div class="profile-panel-title"><span>最近结算</span><small>可撤销回滚</small></div>
+                            <div class="profile-panel-title"><span>加分记录</span><small>仅保留最近 48 小时</small></div>
+                            <div class="form-group"><label for="scoreSettlementSearch">搜索副本</label><input id="scoreSettlementSearch" maxlength="80" placeholder="输入副本名，查看该副本给谁加了分" oninput="queueScoreSettlementSearch()"><div class="identity-help">输入后自动筛选；超过两天的记录不在此处显示。</div></div>
                             <div id="scoreSettlementsPanel">${renderScoreSettlements(settlements, error)}</div>
                         </section>
                         ${renderTitleAdminPanel(titleEntries)}
