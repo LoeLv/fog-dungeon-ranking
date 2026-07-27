@@ -28,6 +28,7 @@ type TalentPoolItem = {
   talent_name: string;
   rank: string;
   effect?: string | null;
+  action_cost?: number | null;
 };
 
 const roleLabels: Record<InviteRole, string> = {
@@ -1263,11 +1264,11 @@ async function buildTalentState(
   const talentSlotRule = getTalentSlotRule(profile.ascension_score);
   const activeEquippedSlotLimit = getTalentSlotLimit(profile.ascension_score);
 
-  let poolItems: { pool_key: string; talent_id: number; talent_name: string; rank: string }[] = [];
+  let poolItems: TalentPoolItem[] = [];
   if (allowedPoolKeys.length > 0) {
     const poolResult = await supabase
       .from("talent_pool_items")
-      .select("pool_key, talent_id, talent_name, rank, effect")
+      .select("pool_key, talent_id, talent_name, rank, effect, action_cost")
       .in("pool_key", allowedPoolKeys)
       .order("pool_key", { ascending: true })
       .order("rank", { ascending: true })
@@ -3063,7 +3064,7 @@ Deno.serve(async (req) => {
 
       const { data: poolItems, error: poolError } = await supabase
         .from("talent_pool_items")
-        .select("pool_key, talent_id, talent_name, rank, effect")
+        .select("pool_key, talent_id, talent_name, rank, effect, action_cost")
         .eq("pool_key", poolKey);
       let poolRows = poolItems;
       if (isMissingTalentEffectColumn(poolError ?? null)) {
@@ -3179,6 +3180,7 @@ Deno.serve(async (req) => {
           talentId: target.talent_id,
           talentName: target.talent_name,
           effect: target.effect || "",
+          actionCost: Number(target.action_cost || 0),
           rank: target.rank,
           isGuarantee,
           isRepeat,
@@ -3242,7 +3244,7 @@ Deno.serve(async (req) => {
 
       const { data: targetTalent, error: targetError } = await supabase
         .from("talent_pool_items")
-        .select("pool_key, talent_id, talent_name, rank, effect")
+        .select("pool_key, talent_id, talent_name, rank, effect, action_cost")
         .eq("pool_key", poolKey)
         .eq("talent_id", targetTalentId)
         .maybeSingle();
@@ -3328,10 +3330,11 @@ Deno.serve(async (req) => {
         data: {
           talent: {
             poolKey,
-            talentId: targetTalentRow.talent_id,
-            talentName: targetTalentRow.talent_name,
-            effect: targetTalentRow.effect || "",
-            rank: targetTalentRow.rank,
+             talentId: targetTalentRow.talent_id,
+             talentName: targetTalentRow.talent_name,
+             effect: targetTalentRow.effect || "",
+             actionCost: Number(targetTalentRow.action_cost || 0),
+             rank: targetTalentRow.rank,
             storageSlot: Number(addResult.ownedTalent?.storage_slot || 0),
             isOverflow: !!addResult.overflowChoice,
             overflowChoiceId: addResult.overflowChoice?.id || null,

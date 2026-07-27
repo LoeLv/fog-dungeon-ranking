@@ -9423,6 +9423,7 @@
                 const name = talent.talentName || talent.talent_name || '未知天赋';
                 const rank = talent.rank || 'C';
                 const effect = talent.effect || talent.talent_effect || '';
+                const actionCost = Number(talent.actionCost ?? talent.action_cost ?? 0);
                 const pool = formatTalentPoolLabel(talent.poolKey || talent.pool_key);
                 const repeat = talent.isRepeat || talent.is_repeat;
                 const guarantee = talent.isGuarantee || talent.is_guarantee;
@@ -9434,7 +9435,7 @@
                 return `
                     <div class="talent-card rank-${escapeHtml(rank)} ${repeat ? 'repeat' : ''} ${overflow ? 'pending' : ''}">
                         <strong>${escapeHtml(name)}</strong>
-                        <small>${escapeHtml(rank)}级 · ${escapeHtml(pool || source)}${guarantee ? ' · 保底' : ''}${repeat ? ` · 重复转化 +${fragment} 碎片` : ''}${escapeHtml(place)}</small>
+                        <small>${escapeHtml(rank)}级 · ${escapeHtml(pool || source)} · 行动点 ${actionCost}${guarantee ? ' · 保底' : ''}${repeat ? ` · 重复转化 +${fragment} 碎片` : ''}${escapeHtml(place)}</small>
                         ${effect ? `<span class="talent-effect-text">${escapeHtml(effect)}</span>` : ''}
                     </div>`;
             }).join('')}</div>`;
@@ -9460,7 +9461,8 @@
                 .map(item => {
                     const owned = ownedKeys.has(`${item.pool_key}:${item.talent_id}`);
                     const cost = item.rank === 'A' ? Number(state.aTalentExchangeCost || 260) : Number(state.targetTalentExchangeCost || 80);
-                    return `<option value="${Number(item.talent_id)}" ${owned ? 'disabled' : ''}>${escapeHtml(item.rank)} · ${escapeHtml(item.talent_name)}（${cost}碎片）${owned ? '（已拥有）' : ''}</option>`;
+                    const actionCost = Number(item.action_cost ?? item.actionCost ?? 0);
+                    return `<option value="${Number(item.talent_id)}" ${owned ? 'disabled' : ''}>${escapeHtml(item.rank)} · ${escapeHtml(item.talent_name)} · 行动点 ${actionCost}（${cost}碎片）${owned ? '（已拥有）' : ''}</option>`;
                 });
             return options.length ? options.join('') : '<option value="">该池暂无可兑换 B/A 天赋</option>';
         }
@@ -9479,6 +9481,16 @@
                 )?.effect ||
                 ''
             ).trim();
+        }
+
+        function getTalentActionCost(state, talent) {
+            if (!talent) return 0;
+            const direct = talent.actionCost ?? talent.action_cost;
+            if (direct !== undefined && direct !== null && direct !== '') return Number(direct) || 0;
+            const poolItem = (state.poolItems || []).find(item =>
+                item.pool_key === talent.pool_key && Number(item.talent_id) === Number(talent.talent_id)
+            );
+            return Number(poolItem?.action_cost ?? poolItem?.actionCost ?? 0) || 0;
         }
 
         function getTalentDismantleGain(state, rank) {
@@ -9589,12 +9601,13 @@
                         </div>`;
                 }
                 const effect = getTalentEffectText(state, talent);
+                const actionCost = getTalentActionCost(state, talent);
                 const fragmentGain = getTalentDismantleGain(state, talent.rank);
                 return `
                     <div class="talent-slot-card">
                         <div class="talent-slot-head"><span>仓库位 ${slot}</span><span>未佩戴</span></div>
                         <div class="talent-slot-name">${escapeHtml(talent.talent_name)}</div>
-                        <div class="talent-slot-meta">${escapeHtml(talent.rank)}级 · ${escapeHtml(formatTalentPoolLabel(talent.pool_key))}池</div>
+                        <div class="talent-slot-meta">${escapeHtml(talent.rank)}级 · ${escapeHtml(formatTalentPoolLabel(talent.pool_key))}池 · 行动点 ${actionCost}</div>
                         ${effect ? `<div class="talent-effect-text">${escapeHtml(effect)}</div>` : ''}
                         <div class="talent-slot-actions">
                             <button type="button" class="btn btn-outline btn-sm" onclick="discardOwnedTalentUI(${Number(talent.id)})" ${talentManageInFlight ? 'disabled' : ''}>${talentManageInFlight ? '处理中' : `分解 +${fragmentGain}`}</button>
@@ -9614,11 +9627,12 @@
                 <div class="profile-panel-title" style="margin-top:16px;"><span>待取舍天赋</span><small>${choices.length} 个溢出</small></div>
                 <div class="talent-overflow-list">${choices.map(choice => {
                     const id = Number(choice.id);
+                    const actionCost = getTalentActionCost(state, choice);
                     return `
                         <div class="talent-overflow-card">
                             <div class="talent-slot-head"><span>新天赋溢出</span><span>${escapeHtml(choice.source || 'draw')}</span></div>
                             <div class="talent-slot-name">${escapeHtml(choice.talent_name)}</div>
-                            <div class="talent-slot-meta">${escapeHtml(choice.rank)}级 · ${escapeHtml(formatTalentPoolLabel(choice.pool_key))}池。仓库已满，请选择保留新天赋并替换旧天赋，或分解新天赋。</div>
+                            <div class="talent-slot-meta">${escapeHtml(choice.rank)}级 · ${escapeHtml(formatTalentPoolLabel(choice.pool_key))}池 · 行动点 ${actionCost}。仓库已满，请选择保留新天赋并替换旧天赋，或分解新天赋。</div>
                             ${getTalentEffectText(state, choice) ? `<div class="talent-effect-text">${escapeHtml(getTalentEffectText(state, choice))}</div>` : ''}
                             <div class="talent-exchange-row">
                                 <select id="overflowReplaceSelect-${id}">${replacementOptions || '<option value="">仓库暂无可替换天赋</option>'}</select>
