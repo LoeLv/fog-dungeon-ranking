@@ -55,6 +55,7 @@ const publicReadActions = new Set([
   "listDungeons",
   "listDungeonArchivePage",
   "getDungeonDetail",
+  "listProfiles",
   "listDungeonComments",
   "getDungeonCommentCount",
 ]);
@@ -2585,8 +2586,6 @@ Deno.serve(async (req) => {
     }
 
     if (action === "listProfiles") {
-      if (!hasRole(role, ["player", "author", "reviewer", "admin", "god"])) return json({ error: "需要入局谕令" }, 403);
-
       const { data, error } = await supabase
         .from("player_profiles")
         .select("invite_code_hash, display_name, role, faith_god, faith_path, original_faith_god, original_faith_path, trickery_display_faith_god, trickery_display_faith_path, trickery_display_profession, profession, ascension_score, audience_score, show_titles, updated_at")
@@ -2616,13 +2615,13 @@ Deno.serve(async (req) => {
           active_curse: (curseResult.curses.get(inviteCodeHash) || [])[0] || null,
           active_curses: curseResult.curses.get(inviteCodeHash) || [],
           profile_key: await getPublicProfileKey(inviteCodeHash),
-          is_current: inviteCodeHash === identity.codeHash,
+          is_current: inviteCodeHash === identity?.codeHash,
         };
       }));
 
       return json({
         role,
-        name: identity.displayName,
+        name: identity?.displayName || "",
         data: publicProfiles,
       });
     }

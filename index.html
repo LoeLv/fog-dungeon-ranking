@@ -9294,7 +9294,7 @@
 
         async function fetchLeaderboardEntries() {
             const localEntries = getLeaderboardEntries();
-            if (USE_LOCAL_FALLBACK || !inviteSession?.code) return { entries: localEntries, source: 'local' };
+            if (USE_LOCAL_FALLBACK) return { entries: localEntries, source: 'local' };
             return getShortCachedRead('leaderboard', async () => {
                 try {
                     const { data, error } = await invokeDungeonAction('listProfiles', {});
@@ -10478,7 +10478,7 @@
             const pagination = pageCount > 1
                 ? `<nav class="leaderboard-pagination" aria-label="${escapeHtml(title)} 分页">
                     <button type="button" class="leaderboard-page-button" data-leaderboard-page-key="${boardKeyToken}" data-leaderboard-page="${currentPage - 1}" ${currentPage === 1 ? 'disabled' : ''}>上一页</button>
-                    <span class="leaderboard-page-status">第 ${currentPage} / ${pageCount} 页 · 共 ${entries.length} 位</span>
+                    <span class="leaderboard-page-status">第 ${currentPage} / ${pageCount} 页 · 本页 ${pageEntries.length} 位 / 共 ${entries.length} 位</span>
                     <button type="button" class="leaderboard-page-button" data-leaderboard-page-key="${boardKeyToken}" data-leaderboard-page="${currentPage + 1}" ${currentPage === pageCount ? 'disabled' : ''}>下一页</button>
                 </nav>`
                 : '';
@@ -12715,7 +12715,7 @@
 
         function getDungeonListCacheKey() {
             const identity = inviteSession?.code || 'guest';
-            return `fog-dungeon-list-v1:${identity}`;
+            return `fog-dungeon-list-v2:${identity}`;
         }
 
         function readDungeonListCache() {
@@ -12745,14 +12745,14 @@
         }
 
         function getShortReadCacheKey(name) {
-            return `fog-read-cache-v1:${name}:${inviteSession?.code || 'guest'}`;
+            return `fog-read-cache-v2:${name}:${inviteSession?.code || 'guest'}`;
         }
 
         function invalidateShortReadCache(name = '') {
             try {
                 for (let index = sessionStorage.length - 1; index >= 0; index -= 1) {
                     const key = sessionStorage.key(index);
-                    if (key?.startsWith(`fog-read-cache-v1:${name}`)) sessionStorage.removeItem(key);
+                    if (key?.startsWith(`fog-read-cache-v2:${name}`)) sessionStorage.removeItem(key);
                 }
             } catch (_) {}
             [...shortReadRequests.keys()]
@@ -12793,7 +12793,7 @@
         async function invokeDungeonAction(action, payload = {}, codeOverride = null) {
             const inviteCode = codeOverride ?? inviteSession?.code;
             const inviteSnapshot = codeOverride ? '' : getInviteSnapshot();
-            const publicReadActions = new Set(['listDungeons', 'listDungeonArchivePage', 'getDungeonDetail']);
+            const publicReadActions = new Set(['listDungeons', 'listDungeonArchivePage', 'getDungeonDetail', 'listProfiles']);
             if (!USE_LOCAL_FALLBACK && !inviteCode && !publicReadActions.has(action)) {
                 return { data: null, error: { message: '请先验入局谕令' } };
             }
@@ -13489,7 +13489,7 @@
                 : '静待筑戏人献祭新试炼；作者或馆主入局后，可从顶部构筑愚戏入口创建。';
             const action = filtered
                 ? '<button type="button" class="btn btn-outline btn-sm" onclick="clearDiscoveryFilters()">显示全部试炼</button>'
-                : '<button type="button" class="btn btn-outline btn-sm" onclick="openLeaderboardPage()">先看登神觐见录</button>';
+                : '<button type="button" class="btn btn-outline btn-sm" onclick="retryArchiveRead()">重新观测试炼</button><button type="button" class="btn btn-outline btn-sm" onclick="openLeaderboardPage()">先看登神觐见录</button>';
             return `
                 <div class="empty-state ritual-empty-state" data-motif="FOLLY ARCHIVE">
                     <div class="empty-state-sigil">🎭</div>
@@ -13497,6 +13497,12 @@
                     <p class="empty-state-note">${escapeHtml(note)}</p>
                     <div class="empty-state-actions">${action}</div>
                 </div>`;
+        }
+
+        async function retryArchiveRead() {
+            invalidateDungeonListCache();
+            archivePage = 1;
+            await renderDungeonList();
         }
 
         function renderDetailDossier(d, context = {}) {
@@ -14240,13 +14246,27 @@
                     totalDungeons = Math.max(0, Number(pageData?.total || 0));
                     pageCount = Math.max(1, Number(pageData?.total_pages || Math.ceil(totalDungeons / ARCHIVE_PAGE_SIZE) || 1));
                     archivePage = Math.min(Math.max(1, Number(pageData?.page || archivePage)), pageCount);
-                    if (totalDungeons > 0 && !dungeons.length) {
-                        archivePage = pageCount;
-                        archivePageMeta = null;
-                        return renderDungeonList();
+                    // A stale or partially failed page response must not make a populated archive look empty.
+                    // Fall back once to the compact full-list endpoint, then continue with normal client paging.
+                    if (totalDungeons === 0 && !dungeons.length) {
+                        const fallbackDungeons = await fetchDungeons({ force: true });
+                        if (fallbackDungeons.length) {
+                            console.warn('分页归档返回空结果，已使用完整归档兜底。');
+                            usingPagedArchive = false;
+                            dungeons = fallbackDungeons;
+                            archiveSidebar = null;
+                            archivePageMeta = null;
+                        }
                     }
-                    pageStart = (archivePage - 1) * ARCHIVE_PAGE_SIZE;
-                    archivePageMeta = { total: totalDungeons, pageCount, pageSize: ARCHIVE_PAGE_SIZE, sidebar: archiveSidebar };
+                    if (usingPagedArchive) {
+                        if (totalDungeons > 0 && !dungeons.length) {
+                            archivePage = pageCount;
+                            archivePageMeta = null;
+                            return renderDungeonList();
+                        }
+                        pageStart = (archivePage - 1) * ARCHIVE_PAGE_SIZE;
+                        archivePageMeta = { total: totalDungeons, pageCount, pageSize: ARCHIVE_PAGE_SIZE, sidebar: archiveSidebar };
+                    }
                 } else {
                     dungeons = await fetchDungeons();
                     archivePageMeta = null;
