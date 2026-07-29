@@ -31,6 +31,11 @@ type TalentPoolItem = {
   action_cost?: number | null;
 };
 
+// Keep malformed or oversized browser requests from consuming function memory.
+// The frontend only sends compact JSON action payloads, so 48 KB leaves ample room
+// for legitimate submissions while rejecting accidental/bulk request floods.
+const MAX_REQUEST_BODY_BYTES = 48 * 1024;
+
 const roleLabels: Record<InviteRole, string> = {
   player: "玩家",
   author: "作者",
@@ -171,6 +176,51 @@ function json(body: Record<string, unknown>, status = 200) {
 
 function cleanText(value: unknown, maxLength: number) {
   return String(value ?? "").trim().slice(0, maxLength);
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return !!value && typeof value === "object" && !Array.isArray(value);
+}
+
+async function readRequestBody(req: Request): Promise<{ body?: RequestBody; error?: string }> {
+  const contentLength = Number(req.headers.get("content-length") || 0);
+  if (Number.isFinite(contentLength) && contentLength > MAX_REQUEST_BODY_BYTES) {
+    return { error: "请求内容过大" };
+  }
+  if (!req.body) return { error: "请求内容不能为空" };
+
+  const reader = req.body.getReader();
+  const chunks: Uint8Array[] = [];
+  let totalBytes = 0;
+  try {
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      if (!value) continue;
+      totalBytes += value.byteLength;
+      if (totalBytes > MAX_REQUEST_BODY_BYTES) {
+        await reader.cancel();
+        return { error: "请求内容过大" };
+      }
+      chunks.push(value);
+    }
+  } catch {
+    return { error: "请求读取失败" };
+  }
+
+  const bytes = new Uint8Array(totalBytes);
+  let offset = 0;
+  for (const chunk of chunks) {
+    bytes.set(chunk, offset);
+    offset += chunk.byteLength;
+  }
+  try {
+    const parsed = JSON.parse(new TextDecoder().decode(bytes));
+    if (!isRecord(parsed)) return { error: "请求格式不正确" };
+    return { body: parsed as RequestBody };
+  } catch {
+    return { error: "请求格式不正确" };
+  }
 }
 
 function cleanRequestKey(value: unknown, maxLength = 96) {
@@ -2073,14 +2123,13 @@ Deno.serve(async (req) => {
   const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
   if (!supabaseUrl || !serviceRoleKey) return json({ error: "后端环境变量缺失" }, 500);
 
-  let body: RequestBody;
-  try {
-    body = await req.json();
-  } catch {
-    return json({ error: "请求格式不正确" }, 400);
-  }
+  const requestResult = await readRequestBody(req);
+  if (!requestResult.body) return json({ error: requestResult.error || "请求格式不正确" }, 400);
+  const body = requestResult.body;
 
   const action = cleanText(body.action, 40);
+  if (!action) return json({ error: "缺少操作类型" }, 400);
+  if (body.payload !== undefined && !isRecord(body.payload)) return json({ error: "请求参数格式不正确" }, 400);
   const payload = body.payload ?? {};
   const supabase = createClient(supabaseUrl, serviceRoleKey, {
     auth: { persistSession: false },
@@ -2088,7 +2137,7 @@ Deno.serve(async (req) => {
 
   if (action === "listDungeons") {
     const identity = body.inviteCode ? await getInviteIdentity(supabase, body.inviteCode) : null;
-    const limit = Math.max(1, Math.min(300, Number(payload.limit || 300)));
+    const limit = Math.max(1, Math.min(120, Number(payload.limit || 120)));
     const selectFields = "id, name, creator, co_creators, difficulty, type, description, pinned_note, participant_count, run_count, clear_count, clear_rate, invite_code_hash, invite_name, avg_rating, rating_count, comment_count, created_at, is_one_shot, review_status, reviewed_at, reviewed_by_name, review_note";
     const { data, error } = await supabase
       .from("dungeons")
