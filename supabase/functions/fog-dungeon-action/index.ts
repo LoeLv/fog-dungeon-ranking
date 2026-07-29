@@ -2228,11 +2228,14 @@ async function repairAdminTalentState(
 }
 
 Deno.serve(async (req) => {
+  // CORS preflight must be answered before origin authorization. Browsers send
+  // OPTIONS without the final request body, and rejecting it blocks every call.
+  if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
+
   const requestOrigin = cleanText(req.headers.get("origin"), 240);
   if (requestOrigin && !allowedBrowserOrigins.has(requestOrigin)) {
     return json({ error: "未授权的网站来源" }, 403);
   }
-  if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
   if (req.method !== "POST") return json({ error: "只接受 POST 请求" }, 405);
 
   const supabaseUrl = Deno.env.get("SUPABASE_URL");
