@@ -36,6 +36,54 @@ type TalentPoolItem = {
 // for legitimate submissions while rejecting accidental/bulk request floods.
 const MAX_REQUEST_BODY_BYTES = 48 * 1024;
 
+// The production site is served from GitHub Pages. Reject browser calls from
+// unrelated origins before they reach the database. Requests without an Origin
+// header are kept for direct diagnostics and local file-based testing.
+const allowedBrowserOrigins = new Set([
+  "https://loevl.github.io",
+  "http://localhost:3000",
+  "http://localhost:5173",
+]);
+
+// This is deliberately a soft, per-isolate burst guard. It cannot replace an
+// authenticated gateway, but it catches accidental refresh loops without adding
+// a database write to every normal public read.
+const PUBLIC_READ_WINDOW_MS = 60_000;
+const PUBLIC_READ_MAX_PER_WINDOW = 240;
+const publicReadBuckets = new Map<string, { startedAt: number; count: number }>();
+const publicReadActions = new Set([
+  "listDungeons",
+  "listDungeonArchivePage",
+  "getDungeonDetail",
+  "listDungeonComments",
+  "getDungeonCommentCount",
+]);
+
+function isPublicReadRateLimited(req: Request, action: string) {
+  if (!publicReadActions.has(action)) return false;
+
+  const forwardedFor = cleanText(req.headers.get("x-forwarded-for"), 160).split(",")[0].trim();
+  const clientKey = forwardedFor || cleanText(req.headers.get("cf-connecting-ip"), 80) || "unknown";
+  const now = Date.now();
+  const key = `${action}:${clientKey}`;
+  const previous = publicReadBuckets.get(key);
+
+  if (!previous || now - previous.startedAt >= PUBLIC_READ_WINDOW_MS) {
+    publicReadBuckets.set(key, { startedAt: now, count: 1 });
+  } else {
+    previous.count += 1;
+    if (previous.count > PUBLIC_READ_MAX_PER_WINDOW) return true;
+  }
+
+  // Keep a long-lived warm isolate from retaining stale client keys forever.
+  if (publicReadBuckets.size > 2000) {
+    for (const [bucketKey, bucket] of publicReadBuckets) {
+      if (now - bucket.startedAt >= PUBLIC_READ_WINDOW_MS) publicReadBuckets.delete(bucketKey);
+    }
+  }
+  return false;
+}
+
 const roleLabels: Record<InviteRole, string> = {
   player: "玩家",
   author: "作者",
@@ -480,6 +528,69 @@ function toPublicDungeonSummary(dungeon: Record<string, unknown> | null | undefi
     comment_count: Number(dungeon.comment_count || 0),
     created_at: cleanText(dungeon.created_at, 80),
     is_one_shot: dungeon.is_one_shot === true,
+  };
+}
+
+const dungeonArchiveSelectFields = "id, name, creator, co_creators, difficulty, type, description, pinned_note, participant_count, run_count, clear_count, clear_rate, invite_code_hash, invite_name, avg_rating, rating_count, comment_count, created_at, is_one_shot, review_status, reviewed_at, reviewed_by_name, review_note";
+const dungeonArchivePageSelectFields = "id, name, creator, co_creators, difficulty, type, participant_count, run_count, clear_count, clear_rate, avg_rating, rating_count, comment_count, created_at, is_one_shot, review_status";
+const dungeonArchiveAggregateLimit = 500;
+
+function toDungeonArchiveCard(dungeon: Record<string, unknown>, identity: InviteIdentity | null = null) {
+  const reviewStatus = getDungeonReviewStatus(dungeon);
+  const creatorOwned = !!identity && canManageDungeonRecord(dungeon, identity);
+  return {
+    ...toPublicDungeonSummary(dungeon),
+    // The index only needs enough text to identify a dungeon. Details stay on demand.
+    description: cleanText(dungeon.description, 280),
+    pinned_note: cleanText(dungeon.pinned_note, 180),
+    review_status: reviewStatus,
+    reviewed_at: cleanText(dungeon.reviewed_at, 80),
+    reviewed_by_name: cleanText(dungeon.reviewed_by_name, 40),
+    review_note: cleanText(dungeon.review_note, 240),
+    can_manage: !!identity && (canReviewDungeons(identity) || creatorOwned),
+    is_pending_review: reviewStatus === "pending",
+    is_rejected: reviewStatus === "rejected",
+  };
+}
+
+function getDungeonGodNames(type: unknown) {
+  const source = cleanText(type, 160);
+  const matches = [...godNames].filter((god) => source.includes(god));
+  return matches.length ? matches : ["未归档"];
+}
+
+function buildDungeonArchiveSidebar(dungeons: Record<string, unknown>[]) {
+  const pathCounts: Record<string, number> = {};
+  const godCounts: Record<string, number> = {};
+  for (const dungeon of dungeons) {
+    for (const god of getDungeonGodNames(dungeon.type)) {
+      godCounts[god] = (godCounts[god] || 0) + 1;
+      const path = godPathByName.get(god) || "旧档案";
+      pathCounts[path] = (pathCounts[path] || 0) + 1;
+    }
+  }
+  const ranked = [...dungeons].sort((a, b) =>
+    Number(b.avg_rating || 0) - Number(a.avg_rating || 0) ||
+    Number(b.rating_count || 0) - Number(a.rating_count || 0) ||
+    Number(b.comment_count || 0) - Number(a.comment_count || 0) ||
+    String(b.created_at || "").localeCompare(String(a.created_at || "")),
+  );
+  const architectNames = new Set<string>();
+  const architects = [...dungeons]
+    .sort((a, b) => String(b.created_at || "").localeCompare(String(a.created_at || "")))
+    .filter((dungeon) => {
+      const creator = cleanText(dungeon.creator, 40) || "匿名";
+      if (architectNames.has(creator)) return false;
+      architectNames.add(creator);
+      return true;
+    })
+    .slice(0, 6);
+  return {
+    path_counts: pathCounts,
+    god_counts: godCounts,
+    top_trials: ranked.slice(0, 6).map((dungeon) => toDungeonArchiveCard(dungeon)),
+    architects: architects.map((dungeon) => toDungeonArchiveCard(dungeon)),
+    aggregate_truncated: dungeons.length >= dungeonArchiveAggregateLimit,
   };
 }
 
@@ -2116,6 +2227,10 @@ async function repairAdminTalentState(
 }
 
 Deno.serve(async (req) => {
+  const requestOrigin = cleanText(req.headers.get("origin"), 240);
+  if (requestOrigin && !allowedBrowserOrigins.has(requestOrigin)) {
+    return json({ error: "未授权的网站来源" }, 403);
+  }
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
   if (req.method !== "POST") return json({ error: "只接受 POST 请求" }, 405);
 
@@ -2130,6 +2245,9 @@ Deno.serve(async (req) => {
   const action = cleanText(body.action, 40);
   if (!action) return json({ error: "缺少操作类型" }, 400);
   if (body.payload !== undefined && !isRecord(body.payload)) return json({ error: "请求参数格式不正确" }, 400);
+  if (isPublicReadRateLimited(req, action)) {
+    return json({ error: "请求过于频繁，请稍后再试" }, 429);
+  }
   const payload = body.payload ?? {};
   const supabase = createClient(supabaseUrl, serviceRoleKey, {
     auth: { persistSession: false },
@@ -2138,10 +2256,9 @@ Deno.serve(async (req) => {
   if (action === "listDungeons") {
     const identity = body.inviteCode ? await getInviteIdentity(supabase, body.inviteCode) : null;
     const limit = Math.max(1, Math.min(120, Number(payload.limit || 120)));
-    const selectFields = "id, name, creator, co_creators, difficulty, type, description, pinned_note, participant_count, run_count, clear_count, clear_rate, invite_code_hash, invite_name, avg_rating, rating_count, comment_count, created_at, is_one_shot, review_status, reviewed_at, reviewed_by_name, review_note";
     const { data, error } = await supabase
       .from("dungeons")
-      .select(selectFields)
+      .select(dungeonArchiveSelectFields)
       .order("avg_rating", { ascending: false })
       .order("created_at", { ascending: false })
       .limit(limit);
@@ -2149,26 +2266,58 @@ Deno.serve(async (req) => {
     if (error) return json({ error: error.message }, 400);
     const rows = (data || [])
       .filter((dungeon) => canViewDungeonRecord(dungeon as Record<string, unknown>, identity))
-      .map((dungeon) => {
-        const record = dungeon as Record<string, unknown>;
-        const reviewStatus = getDungeonReviewStatus(record);
-        const creatorOwned = !!identity && canManageDungeonRecord(record, identity);
-        return {
-          ...toPublicDungeonSummary(record),
-          // The archive index only needs enough text to identify a dungeon.
-          // Full content is fetched when a player actually opens that dungeon.
-          description: cleanText(record.description, 280),
-          pinned_note: cleanText(record.pinned_note, 180),
-          review_status: reviewStatus,
-          reviewed_at: cleanText(record.reviewed_at, 80),
-          reviewed_by_name: cleanText(record.reviewed_by_name, 40),
-          review_note: cleanText(record.review_note, 240),
-          can_manage: !!identity && (canReviewDungeons(identity) || creatorOwned),
-          is_pending_review: reviewStatus === "pending",
-          is_rejected: reviewStatus === "rejected",
-        };
-      });
+      .map((dungeon) => toDungeonArchiveCard(dungeon as Record<string, unknown>, identity));
     return json({ data: rows });
+  }
+
+  if (action === "listDungeonArchivePage") {
+    const requestedPage = Math.floor(Number(payload.page || 1));
+    const page = Math.max(1, Math.min(1000, Number.isFinite(requestedPage) ? requestedPage : 1));
+    const requestedSize = Math.floor(Number(payload.pageSize || 5));
+    const pageSize = Math.max(1, Math.min(24, Number.isFinite(requestedSize) ? requestedSize : 5));
+    const sort = cleanText(payload.sort, 20);
+    const start = (page - 1) * pageSize;
+    const visibleRecordsQuery = supabase
+      .from("dungeons")
+      .select(dungeonArchivePageSelectFields, { count: "exact" })
+      .or("review_status.eq.approved,review_status.is.null");
+    if (sort === "newest") {
+      visibleRecordsQuery.order("created_at", { ascending: false });
+    } else if (sort === "comments") {
+      visibleRecordsQuery.order("comment_count", { ascending: false }).order("created_at", { ascending: false });
+    } else if (sort === "rating") {
+      visibleRecordsQuery.order("avg_rating", { ascending: false }).order("rating_count", { ascending: false }).order("created_at", { ascending: false });
+    } else {
+      visibleRecordsQuery
+        .order("rating_count", { ascending: false })
+        .order("avg_rating", { ascending: false })
+        .order("comment_count", { ascending: false })
+        .order("created_at", { ascending: false });
+    }
+    const [visibleResult, aggregateResult] = await Promise.all([
+      visibleRecordsQuery.range(start, start + pageSize - 1),
+      supabase
+        .from("dungeons")
+        .select(dungeonArchivePageSelectFields)
+        .or("review_status.eq.approved,review_status.is.null")
+        .order("created_at", { ascending: false })
+        .limit(dungeonArchiveAggregateLimit),
+    ]);
+    if (visibleResult.error?.code === "42703" || aggregateResult.error?.code === "42703") return json({ error: "请先运行 dungeon review migration" }, 400);
+    if (visibleResult.error) return json({ error: visibleResult.error.message }, 400);
+    if (aggregateResult.error) return json({ error: aggregateResult.error.message }, 400);
+    const total = Number(visibleResult.count || 0);
+    const totalPages = Math.max(1, Math.ceil(total / pageSize));
+    return json({
+      data: {
+        dungeons: (visibleResult.data || []).map((dungeon) => toDungeonArchiveCard(dungeon as Record<string, unknown>)),
+        page: Math.min(page, totalPages),
+        page_size: pageSize,
+        total,
+        total_pages: totalPages,
+        sidebar: buildDungeonArchiveSidebar((aggregateResult.data || []) as Record<string, unknown>[]),
+      },
+    });
   }
 
   if (action === "getDungeonDetail") {

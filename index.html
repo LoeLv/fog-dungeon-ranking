@@ -8353,6 +8353,7 @@
         let currentSort = 'popular', searchQuery = '', selectedGod = 'all', selectedPath = 'all', selectedDifficulty = 'all', reviewFilter = 'all', searchTimeout = null, currentDetailId = null;
         let archivePage = 1;
         let archiveFilteredDungeons = [];
+        let archivePageMeta = null;
         let archiveFocusId = null;
         let visualEffectsEnabled = getLocalData(VISUAL_EFFECTS_STORAGE_KEY, true) !== false;
         let archiveScrollY = 0;
@@ -12739,6 +12740,8 @@
             try { sessionStorage.removeItem(getDungeonListCacheKey()); } catch (_) {}
             dungeonListRequest = null;
             dungeonListCacheVersion += 1;
+            archivePageMeta = null;
+            invalidateShortReadCache('archive-page:');
         }
 
         function getShortReadCacheKey(name) {
@@ -12790,7 +12793,7 @@
         async function invokeDungeonAction(action, payload = {}, codeOverride = null) {
             const inviteCode = codeOverride ?? inviteSession?.code;
             const inviteSnapshot = codeOverride ? '' : getInviteSnapshot();
-            const publicReadActions = new Set(['listDungeons', 'getDungeonDetail']);
+            const publicReadActions = new Set(['listDungeons', 'listDungeonArchivePage', 'getDungeonDetail']);
             if (!USE_LOCAL_FALLBACK && !inviteCode && !publicReadActions.has(action)) {
                 return { data: null, error: { message: '请先验入局谕令' } };
             }
@@ -12864,6 +12867,28 @@
             } finally {
                 dungeonListRequest = null;
             }
+        }
+
+        function hasActiveArchiveFilters() {
+            return !!searchQuery.trim() || selectedGod !== 'all' || selectedPath !== 'all' || selectedDifficulty !== 'all' || reviewFilter !== 'all';
+        }
+
+        function canUsePagedArchive() {
+            return !USE_LOCAL_FALLBACK && !hasActiveArchiveFilters() && !canReviewDungeonsUI();
+        }
+
+        async function fetchDungeonArchivePage(page = 1) {
+            const safePage = Math.max(1, Math.floor(Number(page) || 1));
+            const cacheName = `archive-page:${currentSort}:${safePage}:${ARCHIVE_PAGE_SIZE}`;
+            return getShortCachedRead(cacheName, async () => {
+                const { data, error } = await invokeDungeonAction('listDungeonArchivePage', {
+                    page: safePage,
+                    pageSize: ARCHIVE_PAGE_SIZE,
+                    sort: currentSort
+                });
+                if (error) throw new Error(error.message || '分页档案读取失败');
+                return data || { dungeons: [], page: safePage, page_size: ARCHIVE_PAGE_SIZE, total: 0, total_pages: 1, sidebar: null };
+            }, DUNGEON_LIST_CACHE_TTL_MS);
         }
 
         async function fetchDungeonDetail(dungeonId) {
@@ -14050,7 +14075,7 @@
         }
 
         function goArchivePage(page) {
-            const pageCount = Math.max(1, Math.ceil(archiveFilteredDungeons.length / ARCHIVE_PAGE_SIZE));
+            const pageCount = Math.max(1, Number(archivePageMeta?.pageCount) || Math.ceil(archiveFilteredDungeons.length / ARCHIVE_PAGE_SIZE));
             const nextPage = Math.min(Math.max(1, Number(page) || 1), pageCount);
             if (nextPage === archivePage) return;
             archivePage = nextPage;
@@ -14081,7 +14106,7 @@
             archiveFocusId = String(id);
             const index = archiveFilteredDungeons.findIndex(item => String(item.id) === String(id));
             if (index >= 0) {
-                const targetPage = Math.floor(index / ARCHIVE_PAGE_SIZE) + 1;
+                const targetPage = archivePageMeta ? archivePage : Math.floor(index / ARCHIVE_PAGE_SIZE) + 1;
                 if (targetPage !== archivePage) {
                     archivePage = targetPage;
                     await renderDungeonList();
@@ -14150,17 +14175,21 @@
             }, 15000);
         }
 
-        function renderEraSidebar(dungeons = []) {
+        function renderEraSidebar(dungeons = [], sidebar = null) {
             const eraPanel = document.getElementById('eraScrollPanel');
             const faithPanel = document.getElementById('faithFlowPanel');
-            const pathCounts = countDungeonsByPath(dungeons, dungeon => dungeon.type);
-            const godCounts = {};
-            (dungeons || []).forEach(dungeon => {
-                getDungeonGodInfos(dungeon.type).forEach(info => {
-                    const god = info.god;
-                    godCounts[god] = (godCounts[god] || 0) + 1;
+            const hasServerSummary = !!sidebar && typeof sidebar === 'object';
+            const pathCounts = hasServerSummary ? (sidebar.path_counts || {}) : countDungeonsByPath(dungeons, dungeon => dungeon.type);
+            const godCounts = hasServerSummary ? (sidebar.god_counts || {}) : (() => {
+                const counts = {};
+                (dungeons || []).forEach(dungeon => {
+                    getDungeonGodInfos(dungeon.type).forEach(info => {
+                        const god = info.god;
+                        counts[god] = (counts[god] || 0) + 1;
+                    });
                 });
-            });
+                return counts;
+            })();
             if (eraPanel) {
                 const blocks = ERA_TIMELINE.map(era => {
                     const group = GOD_GROUPS.find(item => item.path === era.path) || { gods: [], className: getPathClassByPath(era.path) };
@@ -14187,7 +14216,7 @@
             }
             if (faithPanel) {
                 const pathTotal = Object.values(pathCounts).reduce((sum, value) => sum + Number(value || 0), 0);
-                faithPanel.innerHTML = renderFaithFlowBars(pathCounts, pathTotal, { note: '当前视野内的试炼命途分布；共创试炼会同时计入多个命途。' });
+                faithPanel.innerHTML = renderFaithFlowBars(pathCounts, pathTotal, { note: hasServerSummary ? '当前归档的试炼命途分布；共创试炼会同时计入多个命途。' : '当前视野内的试炼命途分布；共创试炼会同时计入多个命途。' });
             }
             renderGodQuickIndex(godCounts);
             startVoidChronicleRotation(dungeons);
@@ -14197,8 +14226,31 @@
             const listEl = document.getElementById('dungeonList');
             listEl.innerHTML = `<div class="loading"><div class="spinner"></div><br>正在从切片宇宙中加载祈愿试炼...<br><span>${escapeHtml(getLoadingOracle())}</span></div>`;
             let dungeons = [];
+            let archiveSidebar = null;
+            let usingPagedArchive = false;
+            let totalDungeons = 0;
+            let pageCount = 1;
+            let pageStart = 0;
             try {
-                dungeons = await fetchDungeons();
+                usingPagedArchive = canUsePagedArchive();
+                if (usingPagedArchive) {
+                    const pageData = await fetchDungeonArchivePage(archivePage);
+                    dungeons = Array.isArray(pageData?.dungeons) ? pageData.dungeons : [];
+                    archiveSidebar = pageData?.sidebar || null;
+                    totalDungeons = Math.max(0, Number(pageData?.total || 0));
+                    pageCount = Math.max(1, Number(pageData?.total_pages || Math.ceil(totalDungeons / ARCHIVE_PAGE_SIZE) || 1));
+                    archivePage = Math.min(Math.max(1, Number(pageData?.page || archivePage)), pageCount);
+                    if (totalDungeons > 0 && !dungeons.length) {
+                        archivePage = pageCount;
+                        archivePageMeta = null;
+                        return renderDungeonList();
+                    }
+                    pageStart = (archivePage - 1) * ARCHIVE_PAGE_SIZE;
+                    archivePageMeta = { total: totalDungeons, pageCount, pageSize: ARCHIVE_PAGE_SIZE, sidebar: archiveSidebar };
+                } else {
+                    dungeons = await fetchDungeons();
+                    archivePageMeta = null;
+                }
             } catch (error) {
                 console.error('加载试炼失败:', error);
                 updateDiscoveryFilterStatus(0, 0);
@@ -14210,8 +14262,8 @@
                     </div>`;
                 return;
             }
-            const totalDungeons = dungeons.length;
-            if (searchQuery.trim()) {
+            if (!usingPagedArchive) totalDungeons = dungeons.length;
+            if (!usingPagedArchive && searchQuery.trim()) {
                 const q = searchQuery.trim().toLowerCase();
                 dungeons = dungeons.filter(d => [
                     d.name,
@@ -14224,32 +14276,34 @@
                     formatDifficulty(d.difficulty)
                 ].some(value => String(value || '').toLowerCase().includes(q)));
             }
-            if (selectedPath !== 'all') dungeons = dungeons.filter(d => dungeonHasPath(d.type, selectedPath));
-            if (selectedGod !== 'all') dungeons = dungeons.filter(d => dungeonHasGod(d.type, selectedGod));
-            if (selectedDifficulty !== 'all') dungeons = dungeons.filter(d => normalizeDifficulty(d.difficulty) === selectedDifficulty);
-            if (reviewFilter === 'pending') dungeons = dungeons.filter(d => getDungeonReviewStatus(d) === 'pending');
-            if (currentSort === 'popular') dungeons.sort((a,b) =>
+            if (!usingPagedArchive && selectedPath !== 'all') dungeons = dungeons.filter(d => dungeonHasPath(d.type, selectedPath));
+            if (!usingPagedArchive && selectedGod !== 'all') dungeons = dungeons.filter(d => dungeonHasGod(d.type, selectedGod));
+            if (!usingPagedArchive && selectedDifficulty !== 'all') dungeons = dungeons.filter(d => normalizeDifficulty(d.difficulty) === selectedDifficulty);
+            if (!usingPagedArchive && reviewFilter === 'pending') dungeons = dungeons.filter(d => getDungeonReviewStatus(d) === 'pending');
+            if (!usingPagedArchive && currentSort === 'popular') dungeons.sort((a,b) =>
                 (b.rating_count||0) - (a.rating_count||0) ||
                 (b.avg_rating||0) - (a.avg_rating||0) ||
                 (b.comment_count||0) - (a.comment_count||0) ||
                 new Date(b.created_at) - new Date(a.created_at)
             );
-            else if (currentSort === 'rating') dungeons.sort((a,b) => (b.avg_rating||0)-(a.avg_rating||0));
-            else if (currentSort === 'newest') dungeons.sort((a,b) => new Date(b.created_at) - new Date(a.created_at));
-            else if (currentSort === 'comments') dungeons.sort((a,b) => (b.comment_count||0)-(a.comment_count||0));
+            else if (!usingPagedArchive && currentSort === 'rating') dungeons.sort((a,b) => (b.avg_rating||0)-(a.avg_rating||0));
+            else if (!usingPagedArchive && currentSort === 'newest') dungeons.sort((a,b) => new Date(b.created_at) - new Date(a.created_at));
+            else if (!usingPagedArchive && currentSort === 'comments') dungeons.sort((a,b) => (b.comment_count||0)-(a.comment_count||0));
             updateDiscoveryFilterStatus(totalDungeons, dungeons.length);
             archiveFilteredDungeons = [...dungeons];
             if (!dungeons.length) {
                 archivePage = 1;
                 const filtered = searchQuery || selectedGod !== 'all' || selectedPath !== 'all' || selectedDifficulty !== 'all' || reviewFilter !== 'all';
                 listEl.innerHTML = renderArchiveEmptyState(!!filtered);
-                await renderOracleSidebar([]);
+                await renderOracleSidebar([], archiveSidebar);
                 return;
             }
-            const pageCount = Math.max(1, Math.ceil(dungeons.length / ARCHIVE_PAGE_SIZE));
-            archivePage = Math.min(Math.max(1, archivePage), pageCount);
-            const pageStart = (archivePage - 1) * ARCHIVE_PAGE_SIZE;
-            const visibleDungeons = dungeons.slice(pageStart, pageStart + ARCHIVE_PAGE_SIZE);
+            if (!usingPagedArchive) {
+                pageCount = Math.max(1, Math.ceil(dungeons.length / ARCHIVE_PAGE_SIZE));
+                archivePage = Math.min(Math.max(1, archivePage), pageCount);
+                pageStart = (archivePage - 1) * ARCHIVE_PAGE_SIZE;
+            }
+            const visibleDungeons = usingPagedArchive ? dungeons : dungeons.slice(pageStart, pageStart + ARCHIVE_PAGE_SIZE);
             listEl.innerHTML = visibleDungeons.map((d,i) => {
                 const godLabel = formatGodName(d.type);
                 const godPath = formatGodPath(d.type);
@@ -14302,8 +14356,8 @@
                     </div>
                     ${renderTrialOracle(d, godClass)}
                 </div>`;
-            }).join('') + renderArchivePagination(dungeons.length, archivePage, pageCount);
-            await renderOracleSidebar(dungeons);
+            }).join('') + renderArchivePagination(usingPagedArchive ? totalDungeons : dungeons.length, archivePage, pageCount);
+            await renderOracleSidebar(dungeons, archiveSidebar);
             if (archiveFocusId) {
                 const pendingFocusId = archiveFocusId;
                 archiveFocusId = null;
@@ -14319,8 +14373,8 @@
             return Number(d.avg_rating || 0) >= 4.8 && Number(d.rating_count || 0) >= 1;
         }
 
-        async function renderOracleSidebar(dungeons = []) {
-            renderEraSidebar(dungeons);
+        async function renderOracleSidebar(dungeons = [], sidebar = null) {
+            renderEraSidebar(dungeons, sidebar);
             const supreme = document.getElementById('supremeTrialList');
             const testimony = document.getElementById('testimonyLedger');
             const architects = document.getElementById('architectLedger');
@@ -14328,7 +14382,7 @@
             const testimonyMeta = document.getElementById('testimonyPanelMeta');
             const architectMeta = document.getElementById('architectPanelMeta');
             if (supreme) {
-                const top = [...dungeons]
+                const top = Array.isArray(sidebar?.top_trials) ? sidebar.top_trials : [...dungeons]
                     .sort((a,b) => (Number(b.avg_rating || 0) - Number(a.avg_rating || 0)) || (Number(b.rating_count || 0) - Number(a.rating_count || 0)))
                     .slice(0, 6);
                 if (supremeMeta) supremeMeta.textContent = top.length ? `${top.length} 条` : '待降';
@@ -14358,7 +14412,7 @@
             }
             if (architects) {
                 const seen = new Set();
-                const newest = [...dungeons]
+                const newest = Array.isArray(sidebar?.architects) ? sidebar.architects : [...dungeons]
                     .sort((a,b) => new Date(b.created_at) - new Date(a.created_at))
                     .filter(d => {
                         const name = d.creator || '匿名';
