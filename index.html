@@ -7820,6 +7820,14 @@
             牧师: { baseHp: 105, growthPer100: 5 },
             歌者: { baseHp: 100, growthPer100: 5 }
         };
+        const CLASS_TRAITS = {
+            战士: '高血量前排。适合承伤、贴身压制和保护队友；每 100 登神分获得更高血量成长。',
+            刺客: '高爆发游击。适合绕后、收割和制造单点威胁；身板较脆，需要依靠先手与位移。',
+            法师: '远程术式输出。适合范围压制、控制与规则型技能；血量较低，怕被近身集火。',
+            猎人: '追踪与远程压制。适合标记目标、陷阱、风筝和稳定补刀；血量较低，但战术距离更灵活。',
+            牧师: '治疗与守护核心。适合续航、净化、救援和团队保护；基础血量较高，输出通常不作为主职能。',
+            歌者: '节奏与群体支援。适合增益、削弱、士气操控和回合节奏干预；血量中等，依赖站位与时机。'
+        };
         const PROSPERITY_HEALTH_BONUS = {
             战士: 24,
             牧师: 20,
@@ -8999,7 +9007,8 @@
                 faithGod,
                 faithBonus,
                 maxHp: rule.known ? rule.baseHp + growthHp + faithBonus : 0,
-                trait: FAITH_TRAITS[faithGod] || ''
+                trait: FAITH_TRAITS[faithGod] || '',
+                classTrait: CLASS_TRAITS[rule.className] || ''
             };
         }
 
@@ -9032,6 +9041,10 @@
                     <div class="profile-battle-trait">
                         <strong>${hasFaith ? `${escapeHtml(faithGod)}之神 · 信仰特性` : '信仰特性'}</strong>
                         ${hasFaith ? escapeHtml(summary.trait) : '请选择信仰后查看信仰特性。'}
+                    </div>
+                    <div class="profile-battle-trait">
+                        <strong>${hasProfession ? `${escapeHtml(summary.profession.className)} · 职业特性` : '职业特性'}</strong>
+                        ${hasProfession ? escapeHtml(summary.classTrait || '该职业暂未记录职业特性。') : '请选择职业后查看职业特性。'}
                     </div>
                 </section>`;
         }
@@ -9808,6 +9821,7 @@
 
         function wrapCanvasText(ctx, text, maxWidth, maxLines = 2) {
             const chars = String(text || '').split('');
+            const lineLimit = Number.isFinite(maxLines) ? Math.max(1, maxLines) : Infinity;
             const lines = [];
             let line = '';
             for (const char of chars) {
@@ -9815,14 +9829,14 @@
                 if (ctx.measureText(nextLine).width > maxWidth && line) {
                     lines.push(line);
                     line = char;
-                    if (lines.length >= maxLines) break;
+                    if (lines.length >= lineLimit) break;
                 } else {
                     line = nextLine;
                 }
             }
-            if (line && lines.length < maxLines) lines.push(line);
-            if (lines.length === maxLines && chars.join('').length > lines.join('').length) {
-                lines[maxLines - 1] = `${lines[maxLines - 1].slice(0, Math.max(0, lines[maxLines - 1].length - 1))}…`;
+            if (line && lines.length < lineLimit) lines.push(line);
+            if (Number.isFinite(lineLimit) && lines.length === lineLimit && chars.join('').length > lines.join('').length) {
+                lines[lineLimit - 1] = `${lines[lineLimit - 1].slice(0, Math.max(0, lines[lineLimit - 1].length - 1))}…`;
             }
             return lines.length ? lines : ['未记录'];
         }
@@ -9847,11 +9861,13 @@
             const state = normalizeTalentState(currentTalentState);
             const displayName = cleanDisplayNameInput(inviteSession?.name || profile.displayName || '') || '未命名信徒';
             const faithGod = getProfileFaithGod(profile) || '命运';
-            const profession = profile.profession || '未填写职业';
+            const visualProfession = getProfileVisualProfession(profile) || profile.profession || '';
+            const profession = visualProfession || '未填写职业';
+            const professionInfo = getProfessionInfo(visualProfession);
             const titles = profile.showTitles === false
                 ? []
                 : normalizeProfileTitleList(profile.activeTitles, profile.activeTitle).map(title => title.titleText).filter(Boolean);
-            const healthSummary = getProfileHealthSummary(profile);
+            const healthSummary = getProfileHealthSummary({ ...profile, profession: visualProfession || profile.profession });
             const equippedTalents = (state.ownedTalents || [])
                 .filter(talent => Number(talent.equipped_slot || 0) > 0)
                 .sort((a, b) => Number(a.equipped_slot || 0) - Number(b.equipped_slot || 0))
@@ -9866,6 +9882,8 @@
                 displayName,
                 faithGod,
                 profession,
+                professionClass: professionInfo.className || healthSummary.profession.className || '',
+                professionTrait: healthSummary.classTrait || CLASS_TRAITS[professionInfo.className] || '',
                 ascensionScore: Number(profile.ascensionScore || 0),
                 audienceScore: Number(profile.audienceScore || 0),
                 health: {
@@ -9884,10 +9902,37 @@
         }
 
         function drawProfileCardImage(payload) {
-            const canvas = document.createElement('canvas');
             const width = 1200;
-            const height = 1960;
             const scale = Math.max(1, Math.floor(window.devicePixelRatio || 1));
+            const measureCanvas = document.createElement('canvas');
+            const measureCtx = measureCanvas.getContext('2d');
+            measureCtx.font = '600 23px "Microsoft YaHei", sans-serif';
+            const faithTraitLines = wrapCanvasText(measureCtx, payload.health.trait || '请选择信仰后查看信仰特性。', 570, Infinity);
+            const professionTraitLines = wrapCanvasText(measureCtx, payload.professionTrait || '请选择职业后查看职业特性。', 570, Infinity);
+            measureCtx.font = '800 34px "Microsoft YaHei", sans-serif';
+            const titleText = payload.titles.length ? payload.titles.slice(0, 5).join(' / ') : '暂无称号';
+            const titleLines = wrapCanvasText(measureCtx, titleText, 960, Infinity);
+            const talents = payload.equippedTalents.length ? payload.equippedTalents : [{ slot: 0, name: '尚未携带天赋', rank: '', pool: '', effect: '打开个人面板后可在天赋仓库配置携带槽。' }];
+            const talentLayouts = talents.slice(0, 4).map(talent => {
+                measureCtx.font = '900 34px "Microsoft YaHei", sans-serif';
+                const name = `${talent.name}${talent.rank ? `（${talent.rank}）` : ''}`;
+                const nameLines = wrapCanvasText(measureCtx, name, 880, Infinity);
+                measureCtx.font = '600 22px "Microsoft YaHei", sans-serif';
+                const meta = [talent.pool ? `${talent.pool}池` : '', talent.effect || ''].filter(Boolean).join(' · ');
+                const metaLines = wrapCanvasText(measureCtx, meta, 880, Infinity);
+                const cardHeight = Math.max(138, 104 + nameLines.length * 38 + metaLines.length * 29);
+                return { talent, nameLines, metaLines, cardHeight };
+            });
+            const battleTop = 630;
+            const battleHeight = Math.max(240, 104 + faithTraitLines.length * 31 + 58 + professionTraitLines.length * 31);
+            const titlesHeadingY = battleTop + battleHeight + 84;
+            const titleStartY = titlesHeadingY + 52;
+            const talentsHeadingY = titleStartY + titleLines.length * 44 + 96;
+            const firstTalentY = talentsHeadingY + 38;
+            const talentTotalHeight = talentLayouts.reduce((sum, item, index) => sum + item.cardHeight + (index ? 22 : 0), 0);
+            const footerY = firstTalentY + talentTotalHeight + 90;
+            const height = Math.max(1960, footerY + 170);
+            const canvas = document.createElement('canvas');
             canvas.width = width * scale;
             canvas.height = height * scale;
             canvas.style.width = `${width}px`;
@@ -9959,7 +10004,10 @@
             ctx.fillText(payload.displayName, 108, 292);
             ctx.fillStyle = 'rgba(234,234,242,0.78)';
             ctx.font = '700 30px "Microsoft YaHei", sans-serif';
-            ctx.fillText(`职业：${payload.profession}`, 112, 342);
+            const professionLine = payload.professionClass
+                ? `职业：${payload.professionClass} · ${payload.profession}`
+                : `职业：${payload.profession}`;
+            ctx.fillText(professionLine, 112, 342);
 
             const scoreCards = [
                 ['登神之路', String(payload.ascensionScore)],
@@ -9985,7 +10033,7 @@
             ctx.fillStyle = main;
             ctx.font = '900 30px "Microsoft YaHei", sans-serif';
             ctx.fillText('战斗面板', 108, 596);
-            drawRoundRect(ctx, 108, 630, 310, 220, 20);
+            drawRoundRect(ctx, 108, battleTop, 310, battleHeight, 20);
             ctx.fillStyle = 'rgba(213,167,66,0.12)';
             ctx.fill();
             ctx.strokeStyle = main;
@@ -9994,22 +10042,22 @@
             ctx.globalAlpha = 1;
             ctx.fillStyle = 'rgba(234,234,242,0.62)';
             ctx.font = '800 24px "Microsoft YaHei", sans-serif';
-            ctx.fillText('血量上限', 136, 674);
+            ctx.fillText('血量上限', 136, battleTop + 44);
             ctx.fillStyle = '#f4f0df';
             ctx.font = '900 70px "Microsoft YaHei", sans-serif';
-            ctx.fillText(payload.health.maxHp ? String(payload.health.maxHp) : '未定', 136, 748);
+            ctx.fillText(payload.health.maxHp ? String(payload.health.maxHp) : '未定', 136, battleTop + 118);
             ctx.fillStyle = 'rgba(234,234,242,0.62)';
             ctx.font = '600 21px "Microsoft YaHei", sans-serif';
             const healthParts = payload.health.maxHp
                 ? [`基础 ${payload.health.baseHp}`, `成长 +${payload.health.growthHp}`]
                 : ['请选择职业后查看血量成长'];
-            ctx.fillText(healthParts.join(' / '), 136, 786);
+            ctx.fillText(healthParts.join(' / '), 136, battleTop + 156);
             const healthRuleText = payload.health.maxHp
                 ? `信仰 +${payload.health.faithBonus} / 每 100 分 +${payload.health.growthPer100} 血`
                 : '';
-            if (healthRuleText) ctx.fillText(healthRuleText, 136, 818);
+            if (healthRuleText) ctx.fillText(healthRuleText, 136, battleTop + 188);
 
-            drawRoundRect(ctx, 444, 630, 648, 220, 20);
+            drawRoundRect(ctx, 444, battleTop, 648, battleHeight, 20);
             ctx.fillStyle = 'rgba(255,255,255,0.045)';
             ctx.fill();
             ctx.strokeStyle = accent;
@@ -10018,30 +10066,40 @@
             ctx.globalAlpha = 1;
             ctx.fillStyle = 'rgba(231,207,138,0.86)';
             ctx.font = '800 24px "Microsoft YaHei", sans-serif';
-            ctx.fillText(`${payload.faithGod}之神 · 信仰特性`, 474, 674);
+            ctx.fillText(`${payload.faithGod}之神 · 信仰特性`, 474, battleTop + 44);
             ctx.fillStyle = 'rgba(244,240,223,0.84)';
             ctx.font = '600 23px "Microsoft YaHei", sans-serif';
-            wrapCanvasText(ctx, payload.health.trait || '请选择信仰后查看信仰特性。', 570, 5).forEach((line, index) => {
-                ctx.fillText(line, 474, 718 + index * 31);
+            faithTraitLines.forEach((line, index) => {
+                ctx.fillText(line, 474, battleTop + 88 + index * 31);
+            });
+            const professionTraitTitleY = battleTop + 104 + faithTraitLines.length * 31;
+            ctx.fillStyle = 'rgba(231,207,138,0.86)';
+            ctx.font = '800 24px "Microsoft YaHei", sans-serif';
+            const classLabel = payload.professionClass || '职业';
+            ctx.fillText(`${classLabel} · 职业特性`, 474, professionTraitTitleY);
+            ctx.fillStyle = 'rgba(244,240,223,0.84)';
+            ctx.font = '600 23px "Microsoft YaHei", sans-serif';
+            professionTraitLines.forEach((line, index) => {
+                ctx.fillText(line, 474, professionTraitTitleY + 44 + index * 31);
             });
 
             ctx.fillStyle = main;
             ctx.font = '900 30px "Microsoft YaHei", sans-serif';
-            ctx.fillText('神诞称号', 108, 934);
-            const titleText = payload.titles.length ? payload.titles.slice(0, 5).join(' / ') : '暂无称号';
-            wrapCanvasText(ctx, titleText, 960, 2).forEach((line, index) => {
+            ctx.fillText('神诞称号', 108, titlesHeadingY);
+            titleLines.forEach((line, index) => {
                 ctx.fillStyle = index ? 'rgba(244,240,223,0.72)' : '#f4f0df';
                 ctx.font = '800 34px "Microsoft YaHei", sans-serif';
-                ctx.fillText(line, 108, 986 + index * 44);
+                ctx.fillText(line, 108, titleStartY + index * 44);
             });
 
             ctx.fillStyle = main;
             ctx.font = '900 30px "Microsoft YaHei", sans-serif';
-            ctx.fillText('携带天赋', 108, 1126);
-            const talents = payload.equippedTalents.length ? payload.equippedTalents : [{ slot: 0, name: '尚未携带天赋', rank: '', pool: '', effect: '打开个人面板后可在天赋仓库配置携带槽。' }];
-            talents.slice(0, 4).forEach((talent, index) => {
-                const y = 1164 + index * 150;
-                drawRoundRect(ctx, 108, y, 984, 128, 18);
+            ctx.fillText('携带天赋', 108, talentsHeadingY);
+            let talentY = firstTalentY;
+            talentLayouts.forEach((layout, index) => {
+                const { talent, nameLines, metaLines, cardHeight } = layout;
+                const y = talentY;
+                drawRoundRect(ctx, 108, y, 984, cardHeight, 18);
                 ctx.fillStyle = 'rgba(255,255,255,0.045)';
                 ctx.fill();
                 ctx.strokeStyle = index % 2 ? accent : main;
@@ -10053,11 +10111,16 @@
                 ctx.fillText(talent.slot ? `携带槽 ${talent.slot}` : '携带槽', 136, y + 38);
                 ctx.fillStyle = '#f4f0df';
                 ctx.font = '900 34px "Microsoft YaHei", sans-serif';
-                ctx.fillText(`${talent.name}${talent.rank ? `（${talent.rank}）` : ''}`, 136, y + 78);
+                nameLines.forEach((line, lineIndex) => {
+                    ctx.fillText(line, 136, y + 78 + lineIndex * 38);
+                });
                 ctx.fillStyle = 'rgba(234,234,242,0.64)';
                 ctx.font = '600 22px "Microsoft YaHei", sans-serif';
-                const meta = [talent.pool ? `${talent.pool}池` : '', talent.effect || ''].filter(Boolean).join(' · ');
-                wrapCanvasText(ctx, meta, 880, 1).forEach(line => ctx.fillText(line, 136, y + 108));
+                const metaStartY = y + 104 + nameLines.length * 38;
+                metaLines.forEach((line, lineIndex) => {
+                    ctx.fillText(line, 136, metaStartY + lineIndex * 29);
+                });
+                talentY += cardHeight + 22;
             });
 
             ctx.fillStyle = 'rgba(234,234,242,0.48)';
@@ -12068,22 +12131,24 @@
         async function fetchMyClearRecords(dungeons) {
             const localRecords = buildLocalClearRecords(dungeons);
             if (USE_LOCAL_FALLBACK || !supabaseClient || !inviteSession?.code || !globalThis.crypto?.subtle) return localRecords;
-            try {
-                const codeHash = await sha256Hex(inviteSession.code);
-                const { data, error } = await supabaseClient
-                    .from('clear_records')
-                    .select('id,dungeon_id,run_number,invite_name,feedback_tags,feedback_note,created_at')
-                    .eq('invite_code_hash', codeHash)
-                    .order('created_at', { ascending: false });
-                if (error) return localRecords;
-                const dungeonMap = new Map((dungeons || []).map(d => [String(d.id), d]));
-                return (data || []).map(record => ({
-                    ...record,
-                    dungeon: dungeonMap.get(String(record.dungeon_id)) || null
-                }));
-            } catch {
-                return localRecords;
-            }
+            return getShortCachedRead('my-clear-records', async () => {
+                try {
+                    const codeHash = await sha256Hex(inviteSession.code);
+                    const { data, error } = await supabaseClient
+                        .from('clear_records')
+                        .select('id,dungeon_id,run_number,invite_name,feedback_tags,feedback_note,created_at')
+                        .eq('invite_code_hash', codeHash)
+                        .order('created_at', { ascending: false });
+                    if (error) return localRecords;
+                    const dungeonMap = new Map((dungeons || []).map(d => [String(d.id), d]));
+                    return (data || []).map(record => ({
+                        ...record,
+                        dungeon: dungeonMap.get(String(record.dungeon_id)) || null
+                    }));
+                } catch {
+                    return localRecords;
+                }
+            });
         }
 
         async function getAuthorCommentNotices(dungeons = null) {
@@ -12748,6 +12813,9 @@
             if (isDungeonListMutation(action)) {
                 invalidateDungeonListCache();
                 invalidateShortReadCache('latest-comments');
+                invalidateShortReadCache('comments:');
+                invalidateShortReadCache('feedback:');
+                invalidateShortReadCache('my-clear-records');
             }
             if (new Set(['saveProfile', 'updateDisplayName', 'updateTrickeryFaith', 'grantProfileTitle', 'revokeProfileTitle', 'grantBetrayalCurse', 'revokeProfileCurse']).has(action)) {
                 invalidateShortReadCache('leaderboard');
@@ -12831,29 +12899,31 @@
                 const all = getLocalData('comments', []);
                 return all.filter(c => c.dungeon_id === dungeonId).sort((a,b) => new Date(a.created_at) - new Date(b.created_at));
             }
-            const query = () => supabaseClient
-                .from('comments')
-                .select('id,dungeon_id,parent_comment_id,author,content,invite_name,is_deleted,created_at')
-                .eq('dungeon_id', dungeonId)
-                .order('created_at', { ascending: true });
-            let { data, error } = await query();
-            if (error) {
-                console.warn('读取楼中楼证言失败，使用旧字段兼容:', error);
-                const fallback = await supabaseClient
+            return getShortCachedRead(`comments:${dungeonId}`, async () => {
+                const query = () => supabaseClient
                     .from('comments')
-                    .select('id,dungeon_id,author,content,invite_name,created_at')
+                    .select('id,dungeon_id,parent_comment_id,author,content,invite_name,is_deleted,created_at')
                     .eq('dungeon_id', dungeonId)
                     .order('created_at', { ascending: true });
-                data = fallback.data || [];
-                error = fallback.error;
-            }
-            if (error) return [];
-            const comments = (data || []).map(c => ({
-                ...c,
-                parent_comment_id: c.parent_comment_id || c.parentCommentId || null,
-                is_deleted: !!c.is_deleted
-            }));
-            return await enrichCommentsWithHonors(comments);
+                let { data, error } = await query();
+                if (error) {
+                    console.warn('读取楼中楼证言失败，使用旧字段兼容:', error);
+                    const fallback = await supabaseClient
+                        .from('comments')
+                        .select('id,dungeon_id,author,content,invite_name,created_at')
+                        .eq('dungeon_id', dungeonId)
+                        .order('created_at', { ascending: true });
+                    data = fallback.data || [];
+                    error = fallback.error;
+                }
+                if (error) return [];
+                const comments = (data || []).map(c => ({
+                    ...c,
+                    parent_comment_id: c.parent_comment_id || c.parentCommentId || null,
+                    is_deleted: !!c.is_deleted
+                }));
+                return await enrichCommentsWithHonors(comments);
+            });
         }
 
         async function fetchLatestComments(limit = 3) {
@@ -12898,12 +12968,14 @@
                 const local = getLocalData('clear_feedback', {});
                 return Object.entries(local[dungeonId] || {}).map(([tag, tag_count]) => ({ tag, tag_count }));
             }
-            const { data, error } = await supabaseClient
-                .from('clear_feedback_summary')
-                .select('tag,tag_count')
-                .eq('dungeon_id', dungeonId)
-                .order('tag_count', { ascending: false });
-            return error ? [] : data || [];
+            return getShortCachedRead(`feedback:${dungeonId}`, async () => {
+                const { data, error } = await supabaseClient
+                    .from('clear_feedback_summary')
+                    .select('tag,tag_count')
+                    .eq('dungeon_id', dungeonId)
+                    .order('tag_count', { ascending: false });
+                return error ? [] : data || [];
+            });
         }
 
         async function addDungeon(dungeonData) {
