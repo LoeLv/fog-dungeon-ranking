@@ -40,6 +40,9 @@ const MAX_REQUEST_BODY_BYTES = 48 * 1024;
 // unrelated origins before they reach the database. Requests without an Origin
 // header are kept for direct diagnostics and local file-based testing.
 const allowedBrowserOrigins = new Set([
+  // GitHub Pages uses the lower-cased repository owner: LoeLv -> loelv.
+  "https://loelv.github.io",
+  // Retain the historical spelling during the migration of older shared links.
   "https://loevl.github.io",
   "http://localhost:3000",
   "http://localhost:5173",
