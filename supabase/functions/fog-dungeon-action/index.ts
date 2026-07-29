@@ -2086,12 +2086,6 @@ Deno.serve(async (req) => {
     auth: { persistSession: false },
   });
 
-  if (action === "getCommentHonors") {
-    const result = await getCommentHonorBuckets(supabase, payload.commentIds);
-    if (result.error) return json({ error: result.error.message }, 400);
-    return json({ data: { byCommentId: result.byCommentId } });
-  }
-
   if (action === "listDungeons") {
     const identity = body.inviteCode ? await getInviteIdentity(supabase, body.inviteCode) : null;
     const limit = Math.max(1, Math.min(300, Number(payload.limit || 300)));
@@ -2112,18 +2106,54 @@ Deno.serve(async (req) => {
         const creatorOwned = !!identity && canManageDungeonRecord(record, identity);
         return {
           ...toPublicDungeonSummary(record),
-          description: cleanText(record.description, 1800),
-          pinned_note: cleanText(record.pinned_note, 800),
+          // The archive index only needs enough text to identify a dungeon.
+          // Full content is fetched when a player actually opens that dungeon.
+          description: cleanText(record.description, 280),
+          pinned_note: cleanText(record.pinned_note, 180),
           review_status: reviewStatus,
           reviewed_at: cleanText(record.reviewed_at, 80),
           reviewed_by_name: cleanText(record.reviewed_by_name, 40),
-          review_note: cleanText(record.review_note, 800),
+          review_note: cleanText(record.review_note, 240),
           can_manage: !!identity && (canReviewDungeons(identity) || creatorOwned),
           is_pending_review: reviewStatus === "pending",
           is_rejected: reviewStatus === "rejected",
         };
       });
     return json({ data: rows });
+  }
+
+  if (action === "getDungeonDetail") {
+    const identity = body.inviteCode ? await getInviteIdentity(supabase, body.inviteCode) : null;
+    const dungeonId = cleanText(payload.dungeonId, 80);
+    if (!isUuid(dungeonId)) return json({ error: "副本 ID 不正确" }, 400);
+
+    const selectFields = "id, name, creator, co_creators, difficulty, type, description, pinned_note, participant_count, run_count, clear_count, clear_rate, invite_code_hash, invite_name, avg_rating, rating_count, comment_count, created_at, is_one_shot, review_status, reviewed_at, reviewed_by_name, review_note";
+    const { data, error } = await supabase
+      .from("dungeons")
+      .select(selectFields)
+      .eq("id", dungeonId)
+      .maybeSingle();
+    if (error?.code === "42703") return json({ error: "请先运行 dungeon review migration" }, 400);
+    if (error) return json({ error: error.message }, 400);
+    if (!data || !canViewDungeonRecord(data as Record<string, unknown>, identity)) return json({ error: "试炼未找到" }, 404);
+
+    const record = data as Record<string, unknown>;
+    const reviewStatus = getDungeonReviewStatus(record);
+    const creatorOwned = !!identity && canManageDungeonRecord(record, identity);
+    return json({
+      data: {
+        ...toPublicDungeonSummary(record),
+        description: cleanText(record.description, 1800),
+        pinned_note: cleanText(record.pinned_note, 800),
+        review_status: reviewStatus,
+        reviewed_at: cleanText(record.reviewed_at, 80),
+        reviewed_by_name: cleanText(record.reviewed_by_name, 40),
+        review_note: cleanText(record.review_note, 800),
+        can_manage: !!identity && (canReviewDungeons(identity) || creatorOwned),
+        is_pending_review: reviewStatus === "pending",
+        is_rejected: reviewStatus === "rejected",
+      },
+    });
   }
 
   const identity = await getInviteIdentity(supabase, body.inviteCode);

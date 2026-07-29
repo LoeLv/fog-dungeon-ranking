@@ -12790,7 +12790,8 @@
         async function invokeDungeonAction(action, payload = {}, codeOverride = null) {
             const inviteCode = codeOverride ?? inviteSession?.code;
             const inviteSnapshot = codeOverride ? '' : getInviteSnapshot();
-            if (!USE_LOCAL_FALLBACK && !inviteCode && action !== 'listDungeons') {
+            const publicReadActions = new Set(['listDungeons', 'getDungeonDetail']);
+            if (!USE_LOCAL_FALLBACK && !inviteCode && !publicReadActions.has(action)) {
                 return { data: null, error: { message: '请先验入局谕令' } };
             }
             const response = await fetch(DUNGEON_ACTION_URL, {
@@ -12816,6 +12817,7 @@
                 invalidateShortReadCache('comments:');
                 invalidateShortReadCache('feedback:');
                 invalidateShortReadCache('my-clear-records');
+                invalidateShortReadCache('dungeon-detail:');
             }
             if (new Set(['saveProfile', 'updateDisplayName', 'updateTrickeryFaith', 'grantProfileTitle', 'revokeProfileTitle', 'grantBetrayalCurse', 'revokeProfileCurse']).has(action)) {
                 invalidateShortReadCache('leaderboard');
@@ -12859,6 +12861,23 @@
             }
         }
 
+        async function fetchDungeonDetail(dungeonId) {
+            const id = String(dungeonId || '').trim();
+            if (!id) return null;
+            if (USE_LOCAL_FALLBACK) {
+                const dungeons = await fetchDungeons();
+                return dungeons.find(dungeon => String(dungeon?.id) === id) || null;
+            }
+            return getShortCachedRead(`dungeon-detail:${id}`, async () => {
+                const { data, error } = await invokeDungeonAction('getDungeonDetail', { dungeonId: id });
+                if (error) {
+                    console.warn('获取试炼详情失败:', error.message);
+                    return null;
+                }
+                return data || null;
+            }, DUNGEON_LIST_CACHE_TTL_MS);
+        }
+
         function normalizeHonorBuckets(response) {
             const buckets = response?.data?.byCommentId || response?.byCommentId || {};
             return buckets && typeof buckets === 'object' ? buckets : {};
@@ -12866,18 +12885,8 @@
 
         async function fetchCommentHonorBuckets(commentIds) {
             if (USE_LOCAL_FALLBACK || !commentIds.length) return {};
-            const response = await fetch(DUNGEON_ACTION_URL, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'apikey': SUPABASE_ANON_KEY,
-                    'Authorization': `Bearer ${SUPABASE_ANON_KEY}`
-                },
-                body: JSON.stringify({ action: 'getCommentHonors', payload: { commentIds } })
-            });
-            if (!response.ok) return {};
-            const result = await response.json().catch(() => ({}));
-            return normalizeHonorBuckets(result);
+            const { data, error } = await invokeDungeonAction('getCommentHonors', { commentIds });
+            return error ? {} : normalizeHonorBuckets(data);
         }
 
         async function enrichCommentsWithHonors(comments) {
@@ -14570,11 +14579,16 @@
             if (!detailWasOpen) archiveScrollY = window.scrollY || document.documentElement.scrollTop || 0;
             currentDetailId = id;
             replyTarget = null;
-            const dungeons = await fetchDungeons(); const d = dungeons.find(d=>d.id===id);
-            if(!d){showToast('试炼未找到');return;}
-            const comments = await fetchComments(id);
-            const feedbackSummary = await fetchClearFeedbackSummary(id);
-            const rated = await checkHasRated(id);
+            const dungeons = await fetchDungeons();
+            const summary = dungeons.find(d=>d.id===id);
+            if(!summary){showToast('试炼未找到');return;}
+            const [detail, comments, feedbackSummary, rated] = await Promise.all([
+                fetchDungeonDetail(id),
+                fetchComments(id),
+                fetchClearFeedbackSummary(id),
+                checkHasRated(id)
+            ]);
+            const d = detail || summary;
             const reviewStatus = getDungeonReviewStatus(d);
             const published = isDungeonApproved(d);
             const ratingLocked = !canInteract() || !published;
@@ -15134,7 +15148,8 @@
             const dungeon = dungeons.find(item => String(item.id) === String(id));
             if (!dungeon) { showToast('试炼未找到'); return; }
             if (!canManageDungeon(dungeon)) { showToast('只有副本作者、同契共筑者或馆主可以重铸绝境'); return; }
-            openSubmitModal(dungeon);
+            const detail = await fetchDungeonDetail(id);
+            openSubmitModal(detail || dungeon);
         }
 
         function setSubmitModalMode(dungeon = null) {
