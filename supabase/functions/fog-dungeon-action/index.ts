@@ -2355,6 +2355,43 @@ Deno.serve(async (req) => {
     });
   }
 
+  if (action === "listProfiles") {
+    const { data, error } = await supabase
+      .from("player_profiles")
+      .select("invite_code_hash, display_name, role, faith_god, faith_path, original_faith_god, original_faith_path, trickery_display_faith_god, trickery_display_faith_path, trickery_display_profession, profession, ascension_score, audience_score, show_titles, updated_at")
+      .order("ascension_score", { ascending: false })
+      .limit(300);
+    if (error?.code === "42P01") return json({ error: "请先运行 player_profiles_migration.sql" }, 400);
+    if (error) return json({ error: error.message }, 400);
+
+    const titleResult = await getActiveTitlesByHashes(
+      supabase,
+      (data || []).map((profile: Record<string, unknown>) => cleanText(profile.invite_code_hash, 64)),
+    );
+    if (titleResult.error) return json({ error: titleResult.error.message }, 400);
+    const curseResult = await getActiveCursesByHashes(
+      supabase,
+      (data || []).map((profile: Record<string, unknown>) => cleanText(profile.invite_code_hash, 64)),
+    );
+    if (curseResult.error) return json({ error: curseResult.error.message }, 400);
+
+    const publicProfiles = await Promise.all((data || []).map(async (profile: Record<string, unknown>) => {
+      const inviteCodeHash = cleanText(profile.invite_code_hash, 64);
+      const { invite_code_hash: _hiddenInviteHash, ...rest } = profile;
+      return {
+        ...rest,
+        active_title: profile.show_titles === false ? null : ((titleResult.titles.get(inviteCodeHash) || [])[0] || null),
+        active_titles: profile.show_titles === false ? [] : (titleResult.titles.get(inviteCodeHash) || []),
+        active_curse: (curseResult.curses.get(inviteCodeHash) || [])[0] || null,
+        active_curses: curseResult.curses.get(inviteCodeHash) || [],
+        profile_key: await getPublicProfileKey(inviteCodeHash),
+        is_current: false,
+      };
+    }));
+
+    return json({ data: publicProfiles });
+  }
+
   const identity = await getInviteIdentity(supabase, body.inviteCode);
   if (!identity) return json({ error: "邀请码无效或已过期" }, 401);
   const role = identity.role;
@@ -2582,47 +2619,6 @@ Deno.serve(async (req) => {
           active_curse: curseResult.curse,
           active_curses: curseResult.curses || [],
         },
-      });
-    }
-
-    if (action === "listProfiles") {
-      const { data, error } = await supabase
-        .from("player_profiles")
-        .select("invite_code_hash, display_name, role, faith_god, faith_path, original_faith_god, original_faith_path, trickery_display_faith_god, trickery_display_faith_path, trickery_display_profession, profession, ascension_score, audience_score, show_titles, updated_at")
-        .order("ascension_score", { ascending: false })
-        .limit(300);
-      if (error?.code === "42P01") return json({ error: "请先运行 player_profiles_migration.sql" }, 400);
-      if (error) return json({ error: error.message }, 400);
-
-      const titleResult = await getActiveTitlesByHashes(
-        supabase,
-        (data || []).map((profile: Record<string, unknown>) => cleanText(profile.invite_code_hash, 64)),
-      );
-      if (titleResult.error) return json({ error: titleResult.error.message }, 400);
-      const curseResult = await getActiveCursesByHashes(
-        supabase,
-        (data || []).map((profile: Record<string, unknown>) => cleanText(profile.invite_code_hash, 64)),
-      );
-      if (curseResult.error) return json({ error: curseResult.error.message }, 400);
-
-      const publicProfiles = await Promise.all((data || []).map(async (profile: Record<string, unknown>) => {
-        const inviteCodeHash = cleanText(profile.invite_code_hash, 64);
-        const { invite_code_hash: _hiddenInviteHash, ...rest } = profile;
-        return {
-          ...rest,
-          active_title: profile.show_titles === false ? null : ((titleResult.titles.get(inviteCodeHash) || [])[0] || null),
-          active_titles: profile.show_titles === false ? [] : (titleResult.titles.get(inviteCodeHash) || []),
-          active_curse: (curseResult.curses.get(inviteCodeHash) || [])[0] || null,
-          active_curses: curseResult.curses.get(inviteCodeHash) || [],
-          profile_key: await getPublicProfileKey(inviteCodeHash),
-          is_current: inviteCodeHash === identity?.codeHash,
-        };
-      }));
-
-      return json({
-        role,
-        name: identity?.displayName || "",
-        data: publicProfiles,
       });
     }
 
