@@ -9281,17 +9281,19 @@
         async function fetchLeaderboardEntries() {
             const localEntries = getLeaderboardEntries();
             if (USE_LOCAL_FALLBACK || !inviteSession?.code) return { entries: localEntries, source: 'local' };
-            try {
-                const { data, error } = await invokeDungeonAction('listProfiles', {});
-                if (error || !Array.isArray(data)) {
-                    console.warn('云端榜单读取失败，使用本地榜单:', error);
+            return getShortCachedRead('leaderboard', async () => {
+                try {
+                    const { data, error } = await invokeDungeonAction('listProfiles', {});
+                    if (error || !Array.isArray(data)) {
+                        console.warn('云端榜单读取失败，使用本地榜单:', error);
+                        return { entries: localEntries, source: 'local', error };
+                    }
+                    return { entries: data.map(mapCloudLeaderboardEntry), source: 'cloud' };
+                } catch (error) {
+                    console.warn('云端榜单读取异常，使用本地榜单:', error);
                     return { entries: localEntries, source: 'local', error };
                 }
-                return { entries: data.map(mapCloudLeaderboardEntry), source: 'cloud' };
-            } catch (error) {
-                console.warn('云端榜单读取异常，使用本地榜单:', error);
-                return { entries: localEntries, source: 'local', error };
-            }
+            });
         }
 
         async function syncProfileToCloud(profile) {
@@ -12636,6 +12638,90 @@
             return false;
         }
 
+        // Keep the large archive payload out of repeated page renders. The cache is
+        // per invite identity and is cleared immediately after a write succeeds.
+        const DUNGEON_LIST_CACHE_TTL_MS = 3 * 60 * 1000;
+        const SHORT_READ_CACHE_TTL_MS = 90 * 1000;
+        let dungeonListRequest = null;
+        let dungeonListCacheVersion = 0;
+        const shortReadRequests = new Map();
+        let shortReadCacheVersion = 0;
+
+        function getDungeonListCacheKey() {
+            const identity = inviteSession?.code || 'guest';
+            return `fog-dungeon-list-v1:${identity}`;
+        }
+
+        function readDungeonListCache() {
+            try {
+                const cached = JSON.parse(sessionStorage.getItem(getDungeonListCacheKey()) || 'null');
+                if (!cached || !Array.isArray(cached.data) || Date.now() - Number(cached.savedAt || 0) > DUNGEON_LIST_CACHE_TTL_MS) return null;
+                return cached.data;
+            } catch (_) {
+                return null;
+            }
+        }
+
+        function writeDungeonListCache(data) {
+            try {
+                sessionStorage.setItem(getDungeonListCacheKey(), JSON.stringify({ savedAt: Date.now(), data }));
+            } catch (_) {
+                // Storage can be unavailable or full; the live request remains usable.
+            }
+        }
+
+        function invalidateDungeonListCache() {
+            try { sessionStorage.removeItem(getDungeonListCacheKey()); } catch (_) {}
+            dungeonListRequest = null;
+            dungeonListCacheVersion += 1;
+        }
+
+        function getShortReadCacheKey(name) {
+            return `fog-read-cache-v1:${name}:${inviteSession?.code || 'guest'}`;
+        }
+
+        function invalidateShortReadCache(name = '') {
+            try {
+                for (let index = sessionStorage.length - 1; index >= 0; index -= 1) {
+                    const key = sessionStorage.key(index);
+                    if (key?.startsWith(`fog-read-cache-v1:${name}`)) sessionStorage.removeItem(key);
+                }
+            } catch (_) {}
+            [...shortReadRequests.keys()]
+                .filter(key => key.startsWith(name))
+                .forEach(key => shortReadRequests.delete(key));
+            shortReadCacheVersion += 1;
+        }
+
+        async function getShortCachedRead(name, loader, ttl = SHORT_READ_CACHE_TTL_MS) {
+            const key = getShortReadCacheKey(name);
+            try {
+                const cached = JSON.parse(sessionStorage.getItem(key) || 'null');
+                if (cached && Date.now() - Number(cached.savedAt || 0) <= ttl) return cached.data;
+            } catch (_) {}
+            if (shortReadRequests.has(name)) return shortReadRequests.get(name);
+            const cacheVersion = shortReadCacheVersion;
+            const request = Promise.resolve()
+                .then(loader)
+                .then(data => {
+                    if (cacheVersion === shortReadCacheVersion) {
+                        try { sessionStorage.setItem(key, JSON.stringify({ savedAt: Date.now(), data })); } catch (_) {}
+                    }
+                    return data;
+                })
+                .finally(() => shortReadRequests.delete(name));
+            shortReadRequests.set(name, request);
+            return request;
+        }
+
+        function isDungeonListMutation(action) {
+            return new Set([
+                'submitDungeon', 'updateDungeon', 'deleteDungeon', 'reviewDungeon',
+                'advanceRun', 'markCleared', 'submitScoreBatch', 'submitScoreSingle',
+                'addComment', 'deleteComment', 'addRating', 'updatePinnedNote'
+            ]).has(action);
+        }
+
         async function invokeDungeonAction(action, payload = {}, codeOverride = null) {
             const inviteCode = codeOverride ?? inviteSession?.code;
             const inviteSnapshot = codeOverride ? '' : getInviteSnapshot();
@@ -12659,6 +12745,13 @@
             const role = normalizeRole(result.role);
             const canRefreshSession = !!codeOverride || isInviteSnapshotCurrent(inviteSnapshot);
             if (role && inviteCode && canRefreshSession) saveInviteSession({ role, code: inviteCode, name: result.name || result.label || ROLE_LABELS[role] });
+            if (isDungeonListMutation(action)) {
+                invalidateDungeonListCache();
+                invalidateShortReadCache('latest-comments');
+            }
+            if (new Set(['saveProfile', 'updateDisplayName', 'updateTrickeryFaith', 'grantProfileTitle', 'revokeProfileTitle', 'grantBetrayalCurse', 'revokeProfileCurse']).has(action)) {
+                invalidateShortReadCache('leaderboard');
+            }
             return { data: result.data ?? null, error: null, role, name: result.name };
         }
 
@@ -12675,11 +12768,27 @@
             return invokeDungeonAction('updateDisplayName', { displayName: name });
         }
 
-        async function fetchDungeons() {
+        async function fetchDungeons(options = {}) {
             if (USE_LOCAL_FALLBACK) return getLocalData('dungeons', []);
-            let { data, error } = await invokeDungeonAction('listDungeons', { limit: 300 });
-            if (error) { showToast('❌ 获取数据失败'); return []; }
-            return (data || []).map(d => ({ ...d, pinned_note: d.pinned_note || '' }));
+            const force = !!options.force;
+            if (!force) {
+                const cached = readDungeonListCache();
+                if (cached) return cached;
+                if (dungeonListRequest) return dungeonListRequest;
+            }
+            const cacheVersion = dungeonListCacheVersion;
+            dungeonListRequest = (async () => {
+                const { data, error } = await invokeDungeonAction('listDungeons', { limit: 300 });
+                if (error) { showToast('❌ 获取数据失败'); return []; }
+                const normalized = (data || []).map(d => ({ ...d, pinned_note: d.pinned_note || '' }));
+                if (cacheVersion === dungeonListCacheVersion) writeDungeonListCache(normalized);
+                return normalized;
+            })();
+            try {
+                return await dungeonListRequest;
+            } finally {
+                dungeonListRequest = null;
+            }
         }
 
         function normalizeHonorBuckets(response) {
@@ -12756,30 +12865,32 @@
                     .slice(0, limit)
                     .map(c => ({ ...c, dungeon: dungeons.find(d => d.id === c.dungeon_id) || null }));
             }
-            let { data, error } = await supabaseClient
-                .from('comments')
-                .select('id,dungeon_id,parent_comment_id,author,content,invite_name,is_deleted,created_at')
-                .eq('is_deleted', false)
-                .order('created_at', { ascending: false })
-                .limit(limit);
-            if (error) {
-                console.warn('读取最新楼中楼证言失败，使用旧字段兼容:', error);
-                const fallback = await supabaseClient
+            return getShortCachedRead(`latest-comments:${limit}`, async () => {
+                let { data, error } = await supabaseClient
                     .from('comments')
-                    .select('id,dungeon_id,author,content,invite_name,created_at')
+                    .select('id,dungeon_id,parent_comment_id,author,content,invite_name,is_deleted,created_at')
+                    .eq('is_deleted', false)
                     .order('created_at', { ascending: false })
                     .limit(limit);
-                data = fallback.data || [];
-                error = fallback.error;
-            }
-            if (error) return [];
-            const dungeons = await fetchDungeons();
-            return await enrichCommentsWithHonors((data || []).map(c => ({
-                ...c,
-                parent_comment_id: c.parent_comment_id || c.parentCommentId || null,
-                is_deleted: !!c.is_deleted,
-                dungeon: dungeons.find(d => d.id === c.dungeon_id) || null
-            })));
+                if (error) {
+                    console.warn('读取最新楼中楼证言失败，使用旧字段兼容:', error);
+                    const fallback = await supabaseClient
+                        .from('comments')
+                        .select('id,dungeon_id,author,content,invite_name,created_at')
+                        .order('created_at', { ascending: false })
+                        .limit(limit);
+                    data = fallback.data || [];
+                    error = fallback.error;
+                }
+                if (error) return [];
+                const dungeons = await fetchDungeons();
+                return await enrichCommentsWithHonors((data || []).map(c => ({
+                    ...c,
+                    parent_comment_id: c.parent_comment_id || c.parentCommentId || null,
+                    is_deleted: !!c.is_deleted,
+                    dungeon: dungeons.find(d => d.id === c.dungeon_id) || null
+                })));
+            });
         }
 
         async function fetchClearFeedbackSummary(dungeonId) {
