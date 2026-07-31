@@ -605,6 +605,8 @@ function toPublicProfile(profile: Record<string, unknown>, profileKey: string, i
     role: cleanText(profile.role, 20),
     faith_god: cleanText(profile.faith_god, 20),
     faith_path: cleanText(profile.faith_path, 20),
+    original_faith_god: cleanText(profile.original_faith_god, 20),
+    original_faith_path: cleanText(profile.original_faith_path, 20),
     trickery_display_faith_god: cleanText(profile.trickery_display_faith_god, 20),
     trickery_display_faith_path: cleanText(profile.trickery_display_faith_path, 20),
     trickery_display_profession: cleanText(profile.trickery_display_profession, 40),
@@ -618,6 +620,7 @@ function toPublicProfile(profile: Record<string, unknown>, profileKey: string, i
     active_titles: Array.isArray(profile.active_titles) ? profile.active_titles : [],
     active_curse: profile.active_curse || null,
     active_curses: Array.isArray(profile.active_curses) ? profile.active_curses : [],
+    scores_locked_at: cleanText(profile.scores_locked_at, 80),
     updated_at: cleanText(profile.updated_at, 80),
     is_current: isCurrent,
   };
@@ -640,11 +643,23 @@ async function getInviteIdentity(
 
   const roleFromTable = data?.role as InviteRole | undefined;
   if (data?.is_active && roleFromTable && ["player", "author", "reviewer", "admin", "god"].includes(roleFromTable)) {
-    const displayName = cleanText(data.display_name, 40) || roleLabels[roleFromTable];
+    let profileDisplayName = "";
+    const profileResult = await supabase
+      .from("player_profiles")
+      .select("display_name")
+      .eq("invite_code_hash", codeHash)
+      .maybeSingle();
+    if (!profileResult.error) {
+      profileDisplayName = cleanText(profileResult.data?.display_name, 40);
+    }
+    const inviteDisplayName = cleanText(data.display_name, 40);
+    const displayName = profileDisplayName || inviteDisplayName || roleLabels[roleFromTable];
     if (roleFromTable === "god" && !godNames.has(displayName)) return null;
+    const inviteUpdate: Record<string, unknown> = { last_used_at: new Date().toISOString() };
+    if (profileDisplayName && profileDisplayName !== inviteDisplayName) inviteUpdate.display_name = profileDisplayName;
     await supabase
       .from("invite_codes")
-      .update({ last_used_at: new Date().toISOString() })
+      .update(inviteUpdate)
       .eq("id", data.id);
     return {
       role: roleFromTable,
@@ -2407,6 +2422,37 @@ Deno.serve(async (req) => {
       return json({ role, label: roleLabels[role], name: identity.displayName });
     }
 
+    if (action === "getMyProfile") {
+      if (role === "god") return json({ role, name: identity.displayName, data: null });
+      if (!hasRole(role, ["player", "author", "reviewer", "admin"])) return json({ error: "需要入局谕令" }, 403);
+
+      const { data: profile, error: profileError } = await supabase
+        .from("player_profiles")
+        .select("invite_code_hash, display_name, role, faith_god, faith_path, original_faith_god, original_faith_path, trickery_display_faith_god, trickery_display_faith_path, trickery_display_profession, profession, ascension_score, audience_score, items, talents, show_titles, scores_locked_at, updated_at")
+        .eq("invite_code_hash", identity.codeHash)
+        .maybeSingle();
+      if (profileError?.code === "42P01") return json({ error: "请先运行 player_profiles_migration.sql" }, 400);
+      if (profileError) return json({ error: profileError.message }, 400);
+      if (!profile) return json({ role, name: identity.displayName, data: null });
+
+      const titleResult = await getActiveTitleForHash(supabase, identity.codeHash);
+      if (titleResult.error) return json({ error: titleResult.error.message }, 400);
+      const curseResult = await getActiveCurseForHash(supabase, identity.codeHash);
+      if (curseResult.error) return json({ error: curseResult.error.message }, 400);
+      const profileWithTitle = {
+        ...profile,
+        active_title: profile.show_titles === false ? null : titleResult.title,
+        active_titles: profile.show_titles === false ? [] : (titleResult.titles || []),
+        active_curse: curseResult.curse,
+        active_curses: curseResult.curses || [],
+      };
+      return json({
+        role,
+        name: identity.displayName,
+        data: toPublicProfile(profileWithTitle, await getPublicProfileKey(identity.codeHash), true),
+      });
+    }
+
     if (action === "adminLookupPlayer") {
       if (role !== "admin") return json({ error: "只有神谕馆主可以查询后台档案" }, 403);
       const result = await buildAdminPlayerSnapshot(supabase, payload.targetName);
@@ -2464,6 +2510,11 @@ Deno.serve(async (req) => {
         .single();
       if (error?.code === "23505") return json({ error: "这个昵称已经有人绑定了" }, 409);
       if (error) return json({ error: error.message }, 400);
+
+      await supabase
+        .from("player_profiles")
+        .update({ display_name: display.name, updated_at: new Date().toISOString() })
+        .eq("invite_code_hash", identity.codeHash);
 
       return json({ role, label: roleLabels[role], name: data.display_name });
     }
