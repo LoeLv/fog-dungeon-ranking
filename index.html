@@ -7843,7 +7843,7 @@
             污堕: '可以与其他人共赴沉沦，强制自己与一个目标无法行动一回合，CD 5 回合。',
             腐朽: '可以燃烧自己 15 血，对指定目标造成 25 伤害，CD 5 回合。',
             湮灭: '开局获得一次湮灭，湮灭人或物后获得加成，仅一次。战士：+15 血；法/刺/猎/歌：首次单体攻击 +15 伤；牧师：治疗最终 +5。',
-            秩序: '开局使自身获得律令：守序。每回合不主动攻击 +1 层守序，每层提升 2 点减伤；初始 2 层守序。违规后移除减伤并获得惩罚。',
+            秩序: '开局时自己获得律令:守序，每回合不主动攻击+1层守序，每层提升2点减伤（初始有2层），守序上限为4层，违规后移除减伤并获得惩罚。',
             真理: '解析：每次进行攻击或治疗获得 1 层，每层提升 2 点攻击或 2 点治疗加成，最多 3 层。',
             战争: '每局一次，击败一个玩家后获得永久攻击 +12。',
             混乱: '使一个目标进入混乱一回合，CD 6 回合。混乱后所有行动随机取目标。',
@@ -9417,6 +9417,9 @@
                 totalDrawsEarned: Number(state.totalDrawsEarned || 0),
                 spentDraws: Number(state.spentDraws || 0),
                 availableDraws: Number(state.availableDraws || 0),
+                baseBasicDrawsEarned: Number(state.baseBasicDrawsEarned || 0),
+                eventBasicDraws: Number(state.eventBasicDraws || 0),
+                eventAdvancedDraws: Number(state.eventAdvancedDraws || 0),
                 basicDrawsEarned: Number(state.basicDrawsEarned || 0),
                 basicSpentDraws: Number(state.basicSpentDraws || 0),
                 basicAvailableDraws: Number(state.basicAvailableDraws || 0),
@@ -9772,6 +9775,8 @@
                         <div class="metric-strip">
                             <span class="metric-pill">累计获得抽数 <strong>${Number(state.totalDrawsEarned || 0)}</strong></span>
                             <span class="metric-pill">已用抽数 <strong>${Number(state.spentDraws || 0)}</strong></span>
+                            ${Number(state.eventBasicDraws || 0) ? `<span class="metric-pill">腐朽登神 B/C <strong>${Number(state.eventBasicDraws || 0)}</strong></span>` : ''}
+                            ${Number(state.eventAdvancedDraws || 0) ? `<span class="metric-pill">腐朽登神 S/A/B/C <strong>${Number(state.eventAdvancedDraws || 0)}</strong></span>` : ''}
                             <span class="metric-pill">基础 B/C 抽 <strong>${basicAvailableDraws}</strong></span>
                             <span class="metric-pill">进阶 S/A/B/C 抽 <strong>${advancedAvailableDraws}</strong></span>
                             <span class="metric-pill">B级概率 <strong>${escapeHtml(bRateText)}</strong></span>
@@ -9783,6 +9788,8 @@
                         </div>
                         <div class="talent-rule-strip">
                             <span>新手赠送 <strong>${Number(state.starterTalentDrawGrant || 15)}</strong> 抽，不计保底</span>
+                            ${Number(state.eventBasicDraws || 0) ? `<span>庆祝腐朽登神活动 <strong>${Number(state.eventBasicDraws || 0)}</strong> 抽，属于基础 B/C 抽</span>` : ''}
+                            ${Number(state.eventAdvancedDraws || 0) ? `<span>庆祝腐朽登神活动 <strong>${Number(state.eventAdvancedDraws || 0)}</strong> 抽，属于进阶 S/A/B/C 抽</span>` : ''}
                             <span>${escapeHtml(drawRuleText)}</span>
                             <span>基础抽数优先消耗，1500 前获得的抽数不会转化为进阶抽数</span>
                             <span>重复 C/B：<strong>+${Number(state.cTalentFragmentGain || 5)} / +${Number(state.bTalentFragmentGain || 10)}</strong> 碎片</span>

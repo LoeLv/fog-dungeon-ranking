@@ -40,6 +40,7 @@ supabase/match_muster_migration.sql
 - `talent_inventory_migration.sql`：8 格天赋仓库、按分数开放最多 4 个携带槽、溢出取舍。
 - `talent_rules_support_20260711.sql`：新版天赋规则所需字段和权限。
 - `talent_slot_rules_support_20260712.sql`：4 个携带槽和 S/A/B/C 品级约束支持。
+- `talent_event_all_players_10_draws_20260802.sql`：2026-08-02「庆祝腐朽登神活动」，全体有效入局邀请码获得 10 抽；登神之路 1500 以下为基础 B/C 抽，1500 及以上为进阶 S/A/B/C 抽，重复执行不会叠加。
 - `talent_pool_refresh_20260712.sql`：按新版天赋池表刷新 22 个天赋池内容。
 - `match_system_migration.sql`：试炼匹配排队、自动成房、房间成员记录，供网站和微信小程序共用。
 

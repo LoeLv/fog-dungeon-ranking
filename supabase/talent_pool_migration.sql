@@ -15,6 +15,10 @@ create table if not exists public.talent_pool_items (
 create table if not exists public.talent_draw_state (
   invite_code_hash text primary key check (char_length(invite_code_hash) = 64),
   spent_draws integer not null default 0 check (spent_draws >= 0),
+  basic_spent_draws integer not null default 0 check (basic_spent_draws >= 0),
+  advanced_spent_draws integer not null default 0 check (advanced_spent_draws >= 0),
+  event_basic_draws integer not null default 0 check (event_basic_draws >= 0),
+  event_advanced_draws integer not null default 0 check (event_advanced_draws >= 0),
   updated_at timestamptz not null default now()
 );
 

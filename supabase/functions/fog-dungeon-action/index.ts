@@ -1195,17 +1195,40 @@ async function getTalentDrawState(
 ) {
   const { data, error } = await supabase
     .from("talent_draw_state")
-    .select("spent_draws, basic_spent_draws, advanced_spent_draws")
+    .select("spent_draws, basic_spent_draws, advanced_spent_draws, event_basic_draws, event_advanced_draws")
     .eq("invite_code_hash", codeHash)
     .maybeSingle();
-  if (error?.code === "42703") {
-    return { error: { ...error, message: "请先运行 talent_draw_tier_1500_20260727.sql" }, spentDraws: 0, basicSpentDraws: 0, advancedSpentDraws: 0 };
+  if (
+    error?.code === "42703" &&
+    (error.message?.includes("event_basic_draws") || error.message?.includes("event_advanced_draws"))
+  ) {
+    const fallback = await supabase
+      .from("talent_draw_state")
+      .select("spent_draws, basic_spent_draws, advanced_spent_draws")
+      .eq("invite_code_hash", codeHash)
+      .maybeSingle();
+    if (fallback.error?.code === "42703") {
+      return { error: { ...fallback.error, message: "请先运行 talent_draw_tier_1500_20260727.sql" }, spentDraws: 0, basicSpentDraws: 0, advancedSpentDraws: 0, eventBasicDraws: 0, eventAdvancedDraws: 0 };
+    }
+    if (fallback.error) return { error: fallback.error, spentDraws: 0, basicSpentDraws: 0, advancedSpentDraws: 0, eventBasicDraws: 0, eventAdvancedDraws: 0 };
+    return {
+      spentDraws: Number(fallback.data?.spent_draws || 0),
+      basicSpentDraws: Number(fallback.data?.basic_spent_draws || 0),
+      advancedSpentDraws: Number(fallback.data?.advanced_spent_draws || 0),
+      eventBasicDraws: 0,
+      eventAdvancedDraws: 0,
+    };
   }
-  if (error) return { error, spentDraws: 0, basicSpentDraws: 0, advancedSpentDraws: 0 };
+  if (error?.code === "42703") {
+    return { error: { ...error, message: "请先运行 talent_draw_tier_1500_20260727.sql" }, spentDraws: 0, basicSpentDraws: 0, advancedSpentDraws: 0, eventBasicDraws: 0, eventAdvancedDraws: 0 };
+  }
+  if (error) return { error, spentDraws: 0, basicSpentDraws: 0, advancedSpentDraws: 0, eventBasicDraws: 0, eventAdvancedDraws: 0 };
   return {
     spentDraws: Number(data?.spent_draws || 0),
     basicSpentDraws: Number(data?.basic_spent_draws || 0),
     advancedSpentDraws: Number(data?.advanced_spent_draws || 0),
+    eventBasicDraws: Number(data?.event_basic_draws || 0),
+    eventAdvancedDraws: Number(data?.event_advanced_draws || 0),
   };
 }
 
@@ -1464,8 +1487,11 @@ async function buildTalentState(
   const fragmentState = await getFragmentTotal(supabase, identity.codeHash);
   if (fragmentState.error) return { error: fragmentState.error };
 
-  const basicDrawsEarned = getBasicDrawsEarned(profile.ascension_score);
-  const advancedDrawsEarned = getAdvancedDrawsEarned(profile.ascension_score);
+  const baseBasicDrawsEarned = getBasicDrawsEarned(profile.ascension_score);
+  const eventBasicDraws = drawState.eventBasicDraws;
+  const eventAdvancedDraws = drawState.eventAdvancedDraws;
+  const basicDrawsEarned = baseBasicDrawsEarned + eventBasicDraws;
+  const advancedDrawsEarned = getAdvancedDrawsEarned(profile.ascension_score) + eventAdvancedDraws;
   const totalDrawsEarned = basicDrawsEarned + advancedDrawsEarned;
   const basicSpentDraws = drawState.basicSpentDraws;
   const advancedSpentDraws = drawState.advancedSpentDraws;
@@ -1642,6 +1668,9 @@ async function buildTalentState(
       totalDrawsEarned,
       spentDraws,
       availableDraws,
+      baseBasicDrawsEarned,
+      eventBasicDraws,
+      eventAdvancedDraws,
       basicDrawsEarned,
       basicSpentDraws,
       basicAvailableDraws,
@@ -3391,8 +3420,8 @@ Deno.serve(async (req) => {
       if (isMissingTalentTable(drawState.error ?? null)) return json({ error: "请先运行 talent_pool_migration.sql" }, 400);
       if (drawState.error) return json({ error: drawState.error.message }, 400);
 
-      const basicDrawsEarned = getBasicDrawsEarned(profile.ascension_score);
-      const advancedDrawsEarned = getAdvancedDrawsEarned(profile.ascension_score);
+      const basicDrawsEarned = getBasicDrawsEarned(profile.ascension_score) + drawState.eventBasicDraws;
+      const advancedDrawsEarned = getAdvancedDrawsEarned(profile.ascension_score) + drawState.eventAdvancedDraws;
       const basicSpentDraws = drawState.basicSpentDraws;
       const advancedSpentDraws = drawState.advancedSpentDraws;
       const basicAvailableDraws = Math.max(0, basicDrawsEarned - basicSpentDraws);
