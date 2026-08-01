@@ -9542,7 +9542,7 @@
                     const owned = ownedKeys.has(`${item.pool_key}:${item.talent_id}`);
                     const cost = item.rank === 'A' ? Number(state.aTalentExchangeCost || 260) : Number(state.targetTalentExchangeCost || 80);
                     const actionCost = Number(item.action_cost ?? item.actionCost ?? 0);
-                    return `<option value="${Number(item.talent_id)}" ${owned ? 'disabled' : ''}>${escapeHtml(item.rank)} · ${escapeHtml(item.talent_name)} · 行动点 ${actionCost}（${cost}碎片）${owned ? '（已拥有）' : ''}</option>`;
+                    return `<option value="${Number(item.talent_id)}" data-rank="${escapeHtml(item.rank)}" data-cost="${cost}" data-name="${escapeHtml(item.talent_name)}" ${owned ? 'disabled' : ''}>${escapeHtml(item.rank)} · ${escapeHtml(item.talent_name)} · 行动点 ${actionCost}（${cost}碎片）${owned ? '（已拥有）' : ''}</option>`;
                 });
             return options.length ? options.join('') : '<option value="">该池暂无可兑换 B/A 天赋</option>';
         }
@@ -9574,9 +9574,11 @@
         }
 
         function getTalentDismantleGain(state, rank) {
-            return String(rank || '').toUpperCase() === 'B'
-                ? Number(state.bTalentFragmentGain || 10)
-                : Number(state.cTalentFragmentGain || 5);
+            const normalizedRank = String(rank || '').toUpperCase();
+            if (normalizedRank === 'A') return 200;
+            if (normalizedRank === 'B') return Number(state.bTalentFragmentGain || 10);
+            if (normalizedRank === 'C') return Number(state.cTalentFragmentGain || 5);
+            return 0;
         }
 
         function getTalentRankWeight(rank) {
@@ -9683,6 +9685,7 @@
                 const effect = getTalentEffectText(state, talent);
                 const actionCost = getTalentActionCost(state, talent);
                 const fragmentGain = getTalentDismantleGain(state, talent.rank);
+                const canDismantle = String(talent.rank || '').toUpperCase() !== 'S';
                 return `
                     <div class="talent-slot-card">
                         <div class="talent-slot-head"><span>仓库位 ${slot}</span><span>未佩戴</span></div>
@@ -9690,7 +9693,7 @@
                         <div class="talent-slot-meta">${escapeHtml(talent.rank)}级 · ${escapeHtml(formatTalentPoolLabel(talent.pool_key))}池 · 行动点 ${actionCost}</div>
                         ${effect ? `<div class="talent-effect-text">${escapeHtml(effect)}</div>` : ''}
                         <div class="talent-slot-actions">
-                            <button type="button" class="btn btn-outline btn-sm" onclick="discardOwnedTalentUI(${Number(talent.id)})" ${talentManageInFlight ? 'disabled' : ''}>${talentManageInFlight ? '处理中' : `分解 +${fragmentGain}`}</button>
+                            <button type="button" class="btn btn-outline btn-sm" onclick="discardOwnedTalentUI(${Number(talent.id)})" ${talentManageInFlight || !canDismantle ? 'disabled' : ''}>${talentManageInFlight ? '处理中' : (canDismantle ? `分解 +${fragmentGain}` : 'S级不可分解')}</button>
                         </div>
                     </div>`;
             }).join('')}</div>`;
@@ -9701,6 +9704,7 @@
             if (!choices.length) return '';
             const replacementOptions = (state.ownedTalents || [])
                 .filter(talent => talent.storage_slot)
+                .filter(talent => String(talent.rank || '').toUpperCase() !== 'S')
                 .map(talent => `<option value="${Number(talent.id)}">仓库${Number(talent.storage_slot || 0)} · ${escapeHtml(renderTalentOptionLabel(talent))}</option>`)
                 .join('');
             return `
@@ -9708,6 +9712,7 @@
                 <div class="talent-overflow-list">${choices.map(choice => {
                     const id = Number(choice.id);
                     const actionCost = getTalentActionCost(state, choice);
+                    const canDiscardChoice = String(choice.rank || '').toUpperCase() !== 'S';
                     return `
                         <div class="talent-overflow-card">
                             <div class="talent-slot-head"><span>新天赋溢出</span><span>${escapeHtml(choice.source || 'draw')}</span></div>
@@ -9719,7 +9724,7 @@
                                 <button type="button" class="btn btn-primary btn-sm" onclick="resolveTalentOverflowUI(${id}, 'replace')" ${talentManageInFlight || !replacementOptions ? 'disabled' : ''}>${talentManageInFlight ? '处理中' : '保留并分解旧天赋'}</button>
                             </div>
                             <div class="talent-slot-actions">
-                                <button type="button" class="btn btn-outline btn-sm" onclick="resolveTalentOverflowUI(${id}, 'discard')" ${talentManageInFlight ? 'disabled' : ''}>${talentManageInFlight ? '处理中' : `分解新天赋 +${getTalentDismantleGain(state, choice.rank)}`}</button>
+                                <button type="button" class="btn btn-outline btn-sm" onclick="resolveTalentOverflowUI(${id}, 'discard')" ${talentManageInFlight || !canDiscardChoice ? 'disabled' : ''}>${talentManageInFlight ? '处理中' : (canDiscardChoice ? `分解新天赋 +${getTalentDismantleGain(state, choice.rank)}` : 'S级不可分解')}</button>
                             </div>
                         </div>`;
                 }).join('')}</div>`;
@@ -9793,7 +9798,7 @@
                             <span>${escapeHtml(drawRuleText)}</span>
                             <span>基础抽数优先消耗，1500 前获得的抽数不会转化为进阶抽数</span>
                             <span>重复 C/B：<strong>+${Number(state.cTalentFragmentGain || 5)} / +${Number(state.bTalentFragmentGain || 10)}</strong> 碎片</span>
-                            <span>分解 C/B：<strong>+${Number(state.cTalentFragmentGain || 5)} / +${Number(state.bTalentFragmentGain || 10)}</strong> 碎片</span>
+                            <span>分解 C/B/A：<strong>+${Number(state.cTalentFragmentGain || 5)} / +${Number(state.bTalentFragmentGain || 10)} / +200</strong> 碎片，S不可分解</span>
                             <span>携带上限：<strong>${escapeHtml(renderTalentSlotRuleText(state))}</strong></span>
                             <span>指定 B/A 兑换：<strong>${exchangeCost} / ${aExchangeCost}</strong> 碎片</span>
                         </div>
@@ -10212,10 +10217,19 @@
 
         async function exchangeTalentUI() {
             if (!inviteSession?.code) { openInviteModal('先验入局谕令后可兑换天赋。'); return; }
-            if (!acquireUiActionLock('exchangeTalent', '天赋兑换正在处理中，请勿重复点击')) return;
             const poolKey = document.getElementById('talentPoolSelect')?.value || selectedTalentPool;
-            const targetTalentId = Number(document.getElementById('talentExchangeSelect')?.value || 0);
-            if (!targetTalentId) { releaseUiActionLock('exchangeTalent'); showToast('请选择可兑换的 B 级天赋'); return; }
+            const exchangeSelect = document.getElementById('talentExchangeSelect');
+            const targetTalentId = Number(exchangeSelect?.value || 0);
+            if (!targetTalentId) { showToast('请选择可兑换的 B/A 级天赋'); return; }
+            const selectedOption = exchangeSelect?.selectedOptions?.[0];
+            const optionRank = selectedOption?.dataset?.rank || '';
+            const optionName = selectedOption?.dataset?.name || selectedOption?.textContent || '该天赋';
+            const optionCost = Number(selectedOption?.dataset?.cost || 0);
+            const confirmText = optionCost > 0
+                ? `确定消耗 ${optionCost} 碎片兑换 ${optionRank}级天赋「${optionName}」吗？`
+                : `确定兑换天赋「${optionName}」吗？`;
+            if (!window.confirm(confirmText)) return;
+            if (!acquireUiActionLock('exchangeTalent', '天赋兑换正在处理中，请勿重复点击')) return;
             const inviteSnapshot = getInviteSnapshot();
             try {
                 const { data, error } = await invokeDungeonAction('exchangeTalent', { poolKey, targetTalentId });

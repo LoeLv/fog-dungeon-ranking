@@ -1093,7 +1093,11 @@ async function buildScorePreview(
 }
 
 function getTalentFragmentGain(rank: unknown) {
-  return String(rank || "").toUpperCase() === "B" ? bTalentFragmentGain : cTalentFragmentGain;
+  const normalizedRank = String(rank || "").toUpperCase();
+  if (normalizedRank === "A") return 200;
+  if (normalizedRank === "B") return bTalentFragmentGain;
+  if (normalizedRank === "C") return cTalentFragmentGain;
+  return 0;
 }
 
 function getTalentExchangeCost(rank: unknown) {
@@ -3740,7 +3744,6 @@ Deno.serve(async (req) => {
 
       const { data: choice, error: choiceError } = await supabase
         .from("talent_overflow_choices")
-        .delete()
         .eq("id", choiceId)
         .eq("invite_code_hash", identity.codeHash)
         .select("id, pool_key, talent_id, talent_name, rank, source")
@@ -3748,12 +3751,17 @@ Deno.serve(async (req) => {
       if (isMissingTalentTable(choiceError)) return json({ error: "请先运行 talent_inventory_migration.sql" }, 400);
       if (choiceError) return json({ error: choiceError.message }, 400);
       if (!choice) return json({ error: "待处理天赋不存在或已处理" }, 404);
+      if (decision === "discard" && String(choice.rank || "").toUpperCase() === "S") {
+        return json({ error: "S级天赋不可分解，请选择保留并替换其他天赋" }, 400);
+      }
 
       let fragmentGainTotal = 0;
+      let existingSame: Record<string, unknown> | null = null;
+      let replaced: Record<string, unknown> | null = null;
       if (decision === "discard") {
         fragmentGainTotal += getTalentFragmentGain(choice.rank);
       } else {
-        const { data: existingSame, error: existingSameError } = await supabase
+        const { data: existingSameRow, error: existingSameError } = await supabase
           .from("owned_talents")
           .select("id")
           .eq("invite_code_hash", identity.codeHash)
@@ -3761,34 +3769,54 @@ Deno.serve(async (req) => {
           .eq("talent_id", choice.talent_id)
           .maybeSingle();
         if (existingSameError) return json({ error: existingSameError.message }, 400);
+        existingSame = existingSameRow;
         if (existingSame) {
           fragmentGainTotal += getTalentFragmentGain(choice.rank);
         } else {
-          const { data: replaced, error: deleteOwnedError } = await supabase
+          const { data: replacedRow, error: replacedReadError } = await supabase
             .from("owned_talents")
-            .delete()
+            .select("id, storage_slot, rank")
             .eq("id", replaceOwnedId)
             .eq("invite_code_hash", identity.codeHash)
             .not("storage_slot", "is", null)
-            .select("id, storage_slot, rank")
             .maybeSingle();
-          if (deleteOwnedError) return json({ error: deleteOwnedError.message }, 400);
-          if (!replaced) return json({ error: "要替换的仓库天赋不存在或已处理" }, 404);
+          if (replacedReadError) return json({ error: replacedReadError.message }, 400);
+          if (!replacedRow) return json({ error: "要替换的仓库天赋不存在或已处理" }, 404);
+          if (String(replacedRow.rank || "").toUpperCase() === "S") {
+            return json({ error: "S级天赋不可作为替换分解对象" }, 400);
+          }
+          replaced = replacedRow;
           fragmentGainTotal += getTalentFragmentGain(replaced.rank);
-
-          const { error: insertReplacementError } = await supabase
-            .from("owned_talents")
-            .insert({
-              invite_code_hash: identity.codeHash,
-              pool_key: choice.pool_key,
-              talent_id: choice.talent_id,
-              talent_name: choice.talent_name,
-              rank: choice.rank,
-              acquired_from: choice.source === "exchange" ? "exchange" : "draw",
-              storage_slot: replaced.storage_slot,
-            });
-          if (insertReplacementError) return json({ error: insertReplacementError.message }, 400);
         }
+      }
+
+      const { error: clearChoiceError } = await supabase
+        .from("talent_overflow_choices")
+        .delete()
+        .eq("id", choiceId)
+        .eq("invite_code_hash", identity.codeHash);
+      if (clearChoiceError) return json({ error: clearChoiceError.message }, 400);
+
+      if (decision === "replace" && !existingSame && replaced) {
+        const { error: deleteOwnedError } = await supabase
+          .from("owned_talents")
+          .delete()
+          .eq("id", replaceOwnedId)
+          .eq("invite_code_hash", identity.codeHash)
+          .not("storage_slot", "is", null);
+        if (deleteOwnedError) return json({ error: deleteOwnedError.message }, 400);
+        const { error: insertReplacementError } = await supabase
+          .from("owned_talents")
+          .insert({
+            invite_code_hash: identity.codeHash,
+            pool_key: choice.pool_key,
+            talent_id: choice.talent_id,
+            talent_name: choice.talent_name,
+            rank: choice.rank,
+            acquired_from: choice.source === "exchange" ? "exchange" : "draw",
+            storage_slot: replaced.storage_slot,
+          });
+        if (insertReplacementError) return json({ error: insertReplacementError.message }, 400);
       }
 
       if (fragmentGainTotal > 0) {
@@ -3912,18 +3940,28 @@ Deno.serve(async (req) => {
       const ownedTalentId = cleanBigIntId(payload.ownedTalentId);
       if (!ownedTalentId) return json({ error: "仓库天赋不正确" }, 400);
 
-      const { data: ownedTalent, error: deleteOwnedError } = await supabase
+      const { data: ownedTalent, error: ownedReadError } = await supabase
         .from("owned_talents")
-        .delete()
         .eq("id", ownedTalentId)
         .eq("invite_code_hash", identity.codeHash)
         .not("storage_slot", "is", null)
         .select("id, rank")
         .maybeSingle();
-      if (deleteOwnedError) return json({ error: deleteOwnedError.message }, 400);
+      if (ownedReadError) return json({ error: ownedReadError.message }, 400);
       if (!ownedTalent) return json({ error: "仓库天赋不存在或已处理" }, 404);
+      if (String(ownedTalent.rank || "").toUpperCase() === "S") {
+        return json({ error: "S级天赋不可分解" }, 400);
+      }
 
       const fragmentGain = getTalentFragmentGain(ownedTalent.rank);
+      const { error: deleteOwnedError } = await supabase
+        .from("owned_talents")
+        .delete()
+        .eq("id", ownedTalentId)
+        .eq("invite_code_hash", identity.codeHash)
+        .not("storage_slot", "is", null);
+      if (deleteOwnedError) return json({ error: deleteOwnedError.message }, 400);
+
       const fragmentUpdate = await addUserFragments(supabase, identity.codeHash, fragmentGain);
       if (fragmentUpdate.error) return json({ error: fragmentUpdate.error.message }, 400);
 
