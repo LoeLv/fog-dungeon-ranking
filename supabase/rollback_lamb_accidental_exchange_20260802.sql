@@ -31,7 +31,10 @@ join target_identity t on t.invite_code_hash = e.invite_code_hash;
 
 begin;
 
-create temp table _lamb_target_identity on commit drop as
+drop table if exists _lamb_target_identity;
+drop table if exists _lamb_exchange_rollback;
+
+create temp table _lamb_target_identity as
 select distinct invite_code_hash, display_name
 from (
   select invite_code_hash, display_name from public.player_profiles where display_name = '羔羊'
@@ -46,7 +49,7 @@ begin
   end if;
 end $$;
 
-create temp table _lamb_exchange_rollback on commit drop as
+create temp table _lamb_exchange_rollback as
 with latest_exchange as (
   select e.*
   from public.talent_exchange_logs e
@@ -131,6 +134,9 @@ delete from public.talent_exchange_logs log
 using _lamb_exchange_rollback r
 where log.id = r.exchange_log_id
   and log.invite_code_hash = r.invite_code_hash;
+
+drop table if exists _lamb_exchange_rollback;
+drop table if exists _lamb_target_identity;
 
 commit;
 
