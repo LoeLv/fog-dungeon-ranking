@@ -10196,7 +10196,11 @@
             try {
                 const { data, error } = await invokeDungeonAction('drawTalent', { poolKey, drawType });
                 if (!isInviteSnapshotCurrent(inviteSnapshot)) return;
-                if (error) { showToast(`❌ ${error.message || '抽取失败'}`); return; }
+                if (error) {
+                    showToast(`❌ ${error.message || '抽取失败'}`);
+                    if (String(error.message || '').includes('抽数不足')) await refreshTalentPoolUI(false);
+                    return;
+                }
                 selectedTalentPool = poolKey;
                 lastTalentDrawResult = Array.isArray(data?.results) ? data.results : [];
                 applyTalentActionState(data);
