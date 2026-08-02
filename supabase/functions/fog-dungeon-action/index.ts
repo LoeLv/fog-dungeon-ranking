@@ -3744,9 +3744,9 @@ Deno.serve(async (req) => {
 
       const { data: choice, error: choiceError } = await supabase
         .from("talent_overflow_choices")
+        .select("id, pool_key, talent_id, talent_name, rank, source")
         .eq("id", choiceId)
         .eq("invite_code_hash", identity.codeHash)
-        .select("id, pool_key, talent_id, talent_name, rank, source")
         .maybeSingle();
       if (isMissingTalentTable(choiceError)) return json({ error: "请先运行 talent_inventory_migration.sql" }, 400);
       if (choiceError) return json({ error: choiceError.message }, 400);
@@ -3942,10 +3942,10 @@ Deno.serve(async (req) => {
 
       const { data: ownedTalent, error: ownedReadError } = await supabase
         .from("owned_talents")
+        .select("id, rank")
         .eq("id", ownedTalentId)
         .eq("invite_code_hash", identity.codeHash)
         .not("storage_slot", "is", null)
-        .select("id, rank")
         .maybeSingle();
       if (ownedReadError) return json({ error: ownedReadError.message }, 400);
       if (!ownedTalent) return json({ error: "仓库天赋不存在或已处理" }, 404);
