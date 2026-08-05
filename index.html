@@ -7813,19 +7813,65 @@
         );
         const PROFESSION_NAMES = new Set(PROFESSIONS.map(item => item.name));
         const CLASS_HEALTH_RULES = {
-            战士: { baseHp: 120, growthPer100: 6 },
-            刺客: { baseHp: 80, growthPer100: 4 },
-            法师: { baseHp: 80, growthPer100: 4 },
-            猎人: { baseHp: 80, growthPer100: 4 },
-            牧师: { baseHp: 105, growthPer100: 5 },
-            歌者: { baseHp: 100, growthPer100: 5 }
+            战士: { baseHp: 120 },
+            刺客: { baseHp: 80 },
+            法师: { baseHp: 80 },
+            猎人: { baseHp: 80 },
+            牧师: { baseHp: 105 },
+            歌者: { baseHp: 100 }
+        };
+        const CLASS_HEALTH_TABLE = [
+            { score: 1000, 战士: 120, 牧师: 105, 歌者: 100, 法师: 80, 刺客: 80, 猎人: 80 },
+            { score: 1100, 战士: 126, 牧师: 110, 歌者: 105, 法师: 84, 刺客: 84, 猎人: 84 },
+            { score: 1200, 战士: 132, 牧师: 115, 歌者: 110, 法师: 88, 刺客: 88, 猎人: 88 },
+            { score: 1300, 战士: 138, 牧师: 120, 歌者: 115, 法师: 92, 刺客: 92, 猎人: 92 },
+            { score: 1400, 战士: 150, 牧师: 130, 歌者: 125, 法师: 100, 刺客: 100, 猎人: 100 },
+            { score: 1500, 战士: 162, 牧师: 140, 歌者: 135, 法师: 108, 刺客: 108, 猎人: 108 },
+            { score: 1600, 战士: 174, 牧师: 150, 歌者: 145, 法师: 116, 刺客: 116, 猎人: 116 },
+            { score: 1700, 战士: 186, 牧师: 160, 歌者: 155, 法师: 124, 刺客: 124, 猎人: 124 },
+            { score: 1800, 战士: 198, 牧师: 180, 歌者: 175, 法师: 132, 刺客: 132, 猎人: 132 },
+            { score: 1900, 战士: 222, 牧师: 200, 歌者: 195, 法师: 148, 刺客: 148, 猎人: 148 },
+            { score: 2000, 战士: 246, 牧师: 220, 歌者: 215, 法师: 164, 刺客: 164, 猎人: 164 },
+            { score: 2100, 战士: 270, 牧师: 240, 歌者: 235, 法师: 180, 刺客: 180, 猎人: 180 },
+            { score: 2200, 战士: 294, 牧师: 260, 歌者: 255, 法师: 196, 刺客: 196, 猎人: 196 },
+            { score: 2300, 战士: 318, 牧师: 280, 歌者: 275, 法师: 212, 刺客: 212, 猎人: 212 },
+            { score: 2400, 战士: 342, 牧师: 300, 歌者: 295, 法师: 228, 刺客: 228, 猎人: 228 }
+        ];
+        const SCORE_RESISTANCE_SKINS = [
+            { minScore: 2200, name: '抗性皮肤++', description: '获得抵抗一次硬控，冷却 2 回合。' },
+            { minScore: 1800, name: '抗性皮肤+', description: '获得抵抗一次硬控，冷却 3 回合。' },
+            { minScore: 1400, name: '抗性皮肤', description: '获得抵抗一次硬控，冷却 4 回合。' }
+        ];
+        const SCORE_RESISTANCE_NOTE = '抗性皮肤为被动，会自动获得；冷却是指抵抗控制后，下次再获得的回合。';
+        const CLASS_HEALTH_SCORE_MIN = CLASS_HEALTH_TABLE[0].score;
+        const CLASS_HEALTH_SCORE_MAX = CLASS_HEALTH_TABLE[CLASS_HEALTH_TABLE.length - 1].score;
+        const CLASS_HEALTH_SCORE_STEP = 100;
+        const CLASS_HEALTH_BY_SCORE = Object.fromEntries(
+            CLASS_HEALTH_TABLE.map(row => [row.score, row])
+        );
+        const CLASS_HEALTH_SCORE_LABEL = `${CLASS_HEALTH_SCORE_MIN}-${CLASS_HEALTH_SCORE_MAX}`;
+        const getHealthScoreBand = (score) => Math.max(
+            CLASS_HEALTH_SCORE_MIN,
+            Math.min(CLASS_HEALTH_SCORE_MAX, Math.floor(Number(score || CLASS_HEALTH_SCORE_MIN) / CLASS_HEALTH_SCORE_STEP) * CLASS_HEALTH_SCORE_STEP)
+        );
+        const getHealthTableValue = (className, score) => {
+            const band = getHealthScoreBand(score);
+            return {
+                band,
+                hp: Number(CLASS_HEALTH_BY_SCORE[band]?.[className] || 0),
+                isClampedHigh: Number(score || 0) > CLASS_HEALTH_SCORE_MAX
+            };
+        };
+        const getScoreResistanceSkin = (score) => {
+            const cleanScore = Number(score || 0);
+            return SCORE_RESISTANCE_SKINS.find(item => cleanScore >= item.minScore) || null;
         };
         const CLASS_TRAITS = {
-            战士: '高血量前排。适合承伤、贴身压制和保护队友；每 100 登神分获得更高血量成长。',
+            战士: '高血量前排。适合承伤、贴身压制和保护队友；血量按登神分档位表提升。',
             刺客: '高爆发游击。适合绕后、收割和制造单点威胁；身板较脆，需要依靠先手与位移。',
             法师: '远程术式输出。适合范围压制、控制与规则型技能；血量较低，怕被近身集火。',
             猎人: '追踪与远程压制。适合标记目标、陷阱、风筝和稳定补刀；血量较低，但战术距离更灵活。',
-            牧师: '治疗与守护核心。适合续航、净化、救援和团队保护；基础血量较高，输出通常不作为主职能。',
+            牧师: '治疗与守护核心。适合续航、净化、救援和团队保护；分数档成长后血量能明显抬升。',
             歌者: '节奏与群体支援。适合增益、削弱、士气操控和回合节奏干预；血量中等，依赖站位与时机。'
         };
         const PROSPERITY_HEALTH_BONUS = {
@@ -8984,7 +9030,7 @@
         function getClassHealthRule(className) {
             const clean = String(className || '').trim();
             const rule = CLASS_HEALTH_RULES[clean];
-            return rule ? { className: clean, ...rule, known: true } : { className: clean, baseHp: 0, growthPer100: 0, known: false };
+            return rule ? { className: clean, ...rule, known: true } : { className: clean, baseHp: 0, known: false };
         }
 
         function getFaithHealthBonus(god, className) {
@@ -8995,19 +9041,25 @@
             const profession = getProfessionInfo(profile?.profession);
             const rule = getClassHealthRule(profession.className);
             const ascensionScore = normalizeProfileScore(profile?.ascensionScore, DEFAULT_ASCENSION_SCORE);
-            const growthSteps = rule.known ? Math.max(0, Math.floor((ascensionScore - DEFAULT_ASCENSION_SCORE) / 100)) : 0;
-            const growthHp = growthSteps * rule.growthPer100;
+            const tableHealth = rule.known ? getHealthTableValue(rule.className, ascensionScore) : { band: CLASS_HEALTH_SCORE_MIN, hp: 0, isClampedHigh: false };
+            const growthSteps = rule.known ? Math.max(0, Math.floor((tableHealth.band - DEFAULT_ASCENSION_SCORE) / 100)) : 0;
+            const growthHp = rule.known ? Math.max(0, tableHealth.hp - rule.baseHp) : 0;
             const faithGod = getProfileFaithGod(profile);
             const faithBonus = rule.known ? getFaithHealthBonus(faithGod, rule.className) : 0;
+            const resistanceSkin = getScoreResistanceSkin(ascensionScore);
             return {
                 profession,
                 rule,
                 ascensionScore,
+                healthBand: tableHealth.band,
+                tableHp: tableHealth.hp,
+                isHealthClampedHigh: tableHealth.isClampedHigh,
                 growthSteps,
                 growthHp,
                 faithGod,
                 faithBonus,
-                maxHp: rule.known ? rule.baseHp + growthHp + faithBonus : 0,
+                resistanceSkin,
+                maxHp: rule.known ? tableHealth.hp + faithBonus : 0,
                 trait: FAITH_TRAITS[faithGod] || '',
                 classTrait: CLASS_TRAITS[rule.className] || ''
             };
@@ -9033,12 +9085,18 @@
                             </div>
                             <div class="profile-battle-breakdown">
                                 <div class="profile-battle-line"><span>职业基础血量</span><strong>${summary.rule.baseHp}</strong></div>
-                                <div class="profile-battle-line"><span>成长血量</span><strong>+${summary.growthHp}</strong></div>
+                                <div class="profile-battle-line"><span>${summary.healthBand} 档血量</span><strong>${summary.tableHp}</strong></div>
+                                <div class="profile-battle-line"><span>档位成长</span><strong>+${summary.growthHp}</strong></div>
                                 <div class="profile-battle-line"><span>信仰生命加成</span><strong>${summary.faithBonus ? `+${summary.faithBonus}` : '0'}</strong></div>
-                                <div class="profile-battle-line"><span>职业成长规则</span><strong>每 100 分 +${summary.rule.growthPer100} 血</strong></div>
+                                <div class="profile-battle-line"><span>血量表范围</span><strong>${escapeHtml(CLASS_HEALTH_SCORE_LABEL)} 分</strong></div>
                             </div>
                         </div>` : `
                         <div class="profile-empty">请选择职业后查看血量成长。</div>`}
+                    ${hasProfession && summary.resistanceSkin ? `
+                    <div class="profile-battle-trait">
+                        <strong>${escapeHtml(summary.resistanceSkin.name)} · 分数档被动</strong>
+                        ${escapeHtml(summary.resistanceSkin.description)}<br>${escapeHtml(SCORE_RESISTANCE_NOTE)}
+                    </div>` : ''}
                     <div class="profile-battle-trait">
                         <strong>${hasFaith ? `${escapeHtml(faithGod)}之神 · 信仰特性` : '信仰特性'}</strong>
                         ${hasFaith ? escapeHtml(summary.trait) : '请选择信仰后查看信仰特性。'}
@@ -9922,9 +9980,12 @@
                 health: {
                     maxHp: healthSummary.maxHp,
                     baseHp: healthSummary.rule.baseHp,
+                    tableHp: healthSummary.tableHp,
+                    healthBand: healthSummary.healthBand,
                     growthHp: healthSummary.growthHp,
                     faithBonus: healthSummary.faithBonus,
-                    growthPer100: healthSummary.rule.growthPer100,
+                    resistanceSkinName: healthSummary.resistanceSkin?.name || '',
+                    resistanceSkinDescription: healthSummary.resistanceSkin?.description || '',
                     className: healthSummary.rule.className || healthSummary.profession.className || '',
                     trait: healthSummary.trait || ''
                 },
@@ -10082,11 +10143,11 @@
             ctx.fillStyle = 'rgba(234,234,242,0.62)';
             ctx.font = '600 21px "Microsoft YaHei", sans-serif';
             const healthParts = payload.health.maxHp
-                ? [`基础 ${payload.health.baseHp}`, `成长 +${payload.health.growthHp}`]
+                ? [`基础 ${payload.health.baseHp}`, `${payload.health.healthBand}档 ${payload.health.tableHp}`, `成长 +${payload.health.growthHp}`]
                 : ['请选择职业后查看血量成长'];
             ctx.fillText(healthParts.join(' / '), 136, battleTop + 156);
             const healthRuleText = payload.health.maxHp
-                ? `信仰 +${payload.health.faithBonus} / 每 100 分 +${payload.health.growthPer100} 血`
+                ? `信仰 +${payload.health.faithBonus || 0} / ${payload.health.resistanceSkinName || '暂无分数档被动'}`
                 : '';
             if (healthRuleText) ctx.fillText(healthRuleText, 136, battleTop + 188);
 
