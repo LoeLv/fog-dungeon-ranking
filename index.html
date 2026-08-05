@@ -7224,6 +7224,22 @@
                 display: grid !important;
             }
         }
+        #publicProfileModalOverlay {
+            align-items: center;
+            justify-content: center;
+            padding: clamp(12px, 3dvh, 24px) 12px;
+            overscroll-behavior: contain;
+        }
+        #publicProfileModal {
+            width: min(1040px, calc(100vw - 24px));
+            max-height: calc(100dvh - 24px);
+            margin: auto;
+            display: grid;
+        }
+        #publicProfileModalContent {
+            max-height: calc(100dvh - 24px);
+            scroll-padding-top: 72px;
+        }
     </style>
 </head>
 <body>
@@ -11123,12 +11139,15 @@
             overlay.style.display = 'flex';
             document.body.style.overflow = 'hidden';
             content.innerHTML = '<div class="loading"><div class="spinner"></div><br>正在读取公开档案...</div>';
+            overlay.scrollTop = 0;
+            content.scrollTop = 0;
             const { data, error } = await fetchPublicProfilePreview(key);
             if (error || !data) {
                 content.innerHTML = renderRitualEmpty(error?.message || '公开档案暂不可读。', '命运', '档案读取失败');
                 return;
             }
             content.innerHTML = renderPublicProfileDossier(data);
+            content.scrollTop = 0;
         }
 
         async function openDetailFromPublicProfile(id) {
