@@ -10,6 +10,7 @@ create table if not exists public.profile_curses (
   curse_text text not null default '背弃诅咒' check (char_length(trim(curse_text)) between 1 and 32),
   curse_god text not null default '' check (char_length(trim(curse_god)) <= 20),
   curse_note text not null default '' check (char_length(trim(curse_note)) <= 120),
+  curse_type text not null default 'betrayal' check (curse_type in ('betrayal', 'ordinary')),
   granted_by_type text not null default 'admin' check (granted_by_type in ('admin', 'god')),
   granted_by_hash text not null,
   granted_by_name text not null check (char_length(trim(granted_by_name)) between 1 and 40),

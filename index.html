@@ -4395,6 +4395,25 @@
             font-size: 0.72rem;
             line-height: 1.55;
         }
+        .profile-action-status {
+            padding: 9px 11px;
+            border: 1px solid rgba(255,255,255,0.10);
+            border-radius: 8px;
+            background: rgba(255,255,255,0.045);
+            color: var(--text-muted);
+            font-size: 0.75rem;
+            line-height: 1.5;
+        }
+        .profile-action-status.success {
+            border-color: rgba(119, 211, 151, 0.32);
+            background: rgba(70, 145, 98, 0.12);
+            color: #c7f0d0;
+        }
+        .profile-action-status.error {
+            border-color: rgba(217, 141, 141, 0.36);
+            background: rgba(128, 37, 50, 0.15);
+            color: #f0c7c7;
+        }
         .profile-subline {
             position: relative;
             z-index: 1;
@@ -8439,6 +8458,7 @@
         let scoreScrollY = 0;
         let adminScrollY = 0;
         let adminLookupState = { targetName: '', snapshot: null };
+        let honorActionStatus = null;
         let adminRecentOperations = [];
         let adminOperationsUnavailable = false;
         let editingDungeonId = '';
@@ -9198,10 +9218,23 @@
                 curseText,
                 curseGod: cleanGodName(value.curse_god || value.curseGod || ''),
                 curseNote: String(value.curse_note || value.curseNote || '').trim().slice(0, 120),
+                curseType: normalizeProfileCurseType(value.curse_type || value.curseType),
                 grantedByType: String(value.granted_by_type || value.grantedByType || 'god').trim(),
                 grantedByName: String(value.granted_by_name || value.grantedByName || '').trim().slice(0, 40),
                 grantedAt: value.granted_at || value.grantedAt || ''
             };
+        }
+
+        function normalizeProfileCurseType(value) {
+            return String(value || '').trim() === 'ordinary' ? 'ordinary' : 'betrayal';
+        }
+
+        function getProfileCurseTypeLabel(value) {
+            return normalizeProfileCurseType(value) === 'ordinary' ? '普通诅咒' : '背弃诅咒';
+        }
+
+        function getProfileCurseBadgeLabel(value) {
+            return normalizeProfileCurseType(value) === 'ordinary' ? '普通' : '背弃';
         }
 
         function normalizeProfileCurseList(value, fallback = null) {
@@ -9242,21 +9275,23 @@
                             <strong>当前诅咒</strong>
                             <span class="metric-pill">暂无诅咒</span>
                         </div>
-                        <div class="profile-title-status-note">未被神明下放背弃诅咒。</div>
+                        <div class="profile-title-status-note">未被神明下放诅咒。</div>
                     </div>`;
             }
             const primary = normalizedCurses[0];
             const god = primary.curseGod || fallbackGod;
             const curseBadges = normalizedCurses.slice(0, 5).map(item => {
                 const itemGod = item.curseGod || fallbackGod;
-                return `<span class="divine-curse-badge" style="${getGodSkinStyle(itemGod)}" title="${escapeHtml(`${itemGod}｜${item.curseText}${item.curseNote ? `｜${item.curseNote}` : ''}`)}">叛誓 · ${escapeHtml(item.curseText)}</span>`;
+                const typeLabel = getProfileCurseBadgeLabel(item.curseType);
+                return `<span class="divine-curse-badge" style="${getGodSkinStyle(itemGod)}" title="${escapeHtml(`${itemGod}｜${getProfileCurseTypeLabel(item.curseType)}｜${item.curseText}${item.curseNote ? `｜${item.curseNote}` : ''}`)}">${escapeHtml(typeLabel)} · ${escapeHtml(item.curseText)}</span>`;
             }).join('');
             const curseEffects = normalizedCurses.slice(0, 5).map(item => {
                 const itemGod = item.curseGod || fallbackGod;
+                const typeLabel = getProfileCurseTypeLabel(item.curseType);
                 return `
                     <div class="profile-curse-effect-row" style="${getGodSkinStyle(itemGod)}">
                         <div class="profile-curse-effect-head">
-                            <strong>诅咒效果｜${escapeHtml(item.curseText)}</strong>
+                            <strong>${escapeHtml(typeLabel)}｜${escapeHtml(item.curseText)}</strong>
                             <small>${escapeHtml(itemGod)}</small>
                         </div>
                         <div class="profile-curse-effect-note">${escapeHtml(item.curseNote || '暂无记录具体效果。')}</div>
@@ -9265,13 +9300,17 @@
             const issuer = primary.grantedByType === 'god'
                 ? `${god}之神下放`
                 : (primary.grantedByName ? `${primary.grantedByName}下放` : '馆主下放');
+            const hasBetrayalCurse = normalizedCurses.some(item => normalizeProfileCurseType(item.curseType) === 'betrayal');
+            const curseRuleNote = hasBetrayalCurse
+                ? '背弃诅咒会自动赋予称号「背弃者」；普通诅咒不会自动赋予称号。'
+                : '普通诅咒不会自动赋予称号；诅咒不会受称号佩戴开关影响。';
             return `
                 <div class="profile-title-status profile-curse-status" style="${getGodSkinStyle(god)}">
                     <div class="profile-title-status-head">
                         <strong>当前诅咒</strong>
                         <div class="comment-honor-stack">${curseBadges}</div>
                     </div>
-                    <div class="profile-title-status-note">${escapeHtml(issuer)}｜自动赋予称号「背弃者」。诅咒不会受称号佩戴开关影响。</div>
+                    <div class="profile-title-status-note">${escapeHtml(issuer)}｜${escapeHtml(curseRuleNote)}</div>
                     <div class="profile-curse-effect-list">${curseEffects}</div>
                 </div>`;
         }
@@ -10008,6 +10047,7 @@
                 name: curse.curseText,
                 god: curse.curseGod || '',
                 effect: curse.curseNote || '',
+                type: curse.curseType || 'betrayal',
             })).filter(curse => curse.name);
             const healthSummary = getProfileHealthSummary({ ...profile, profession: visualProfession || profile.profession });
             const equippedTalents = (state.ownedTalents || [])
@@ -10066,7 +10106,7 @@
             const titleLines = wrapCanvasText(measureCtx, titleText, 960, Infinity);
             const curseEntries = Array.isArray(payload.curses) && payload.curses.length
                 ? payload.curses
-                : [{ name: '暂无诅咒', god: payload.faithGod || '命运', effect: '当前没有挂载中的诅咒。', empty: true }];
+                : [{ name: '暂无诅咒', god: payload.faithGod || '命运', effect: '当前没有挂载中的诅咒。', type: 'ordinary', empty: true }];
             const curseLayouts = curseEntries.slice(0, 5).map(curse => {
                 measureCtx.font = '900 32px "Microsoft YaHei", sans-serif';
                 const nameLines = wrapCanvasText(measureCtx, String(curse.name || '未知诅咒'), 880, Infinity);
@@ -10277,7 +10317,8 @@
                 ctx.globalAlpha = 1;
                 ctx.fillStyle = curse.empty ? 'rgba(231,207,138,0.76)' : 'rgba(217,141,141,0.92)';
                 ctx.font = '800 24px "Microsoft YaHei", sans-serif';
-                ctx.fillText(curse.empty ? '诅咒状态' : `${curseGod} · 诅咒效果`, 136, y + 38);
+                const curseTypeLabel = getProfileCurseTypeLabel(curse.type || curse.curseType);
+                ctx.fillText(curse.empty ? '诅咒状态' : `${curseGod} · ${curseTypeLabel}`, 136, y + 38);
                 ctx.fillStyle = '#f4f0df';
                 ctx.font = '900 32px "Microsoft YaHei", sans-serif';
                 nameLines.forEach((line, lineIndex) => {
@@ -11530,11 +11571,37 @@
             ).join('');
         }
 
+        function renderHonorActionStatus() {
+            const type = honorActionStatus?.type === 'error'
+                ? 'error'
+                : (honorActionStatus?.type === 'success' ? 'success' : '');
+            const message = honorActionStatus?.message || '等待称号或诅咒操作。';
+            return `<div id="honorActionStatus" class="profile-action-status ${type}">${escapeHtml(message)}</div>`;
+        }
+
+        function setHonorActionStatus(message, type = 'success') {
+            honorActionStatus = { message, type };
+            const el = document.getElementById('honorActionStatus');
+            if (el) {
+                el.className = `profile-action-status ${type === 'error' ? 'error' : 'success'}`;
+                el.textContent = message;
+            }
+        }
+
+        function updateCurseTypeUI() {
+            const curseType = normalizeProfileCurseType(document.getElementById('curseTypeSelect')?.value);
+            const nameInput = document.getElementById('curseTextInput');
+            if (!nameInput) return;
+            nameInput.placeholder = curseType === 'ordinary'
+                ? '普通诅咒请填写具体名称'
+                : '默认：背弃诅咒';
+        }
+
         function renderTitleAdminPanel(entries) {
             if (!canGrantTitlesUI()) return '';
             const godName = isGodRole() ? cleanGodName(inviteSession?.name || '') : '';
             const titleOptions = renderTitlePlayerOptions(entries, 'title');
-            const curseOptions = renderTitlePlayerOptions(entries, 'curse');
+            const curseOptions = renderTitlePlayerOptions(entries, 'any');
             const titleGodControl = isGodRole()
                 ? `<input id="titleGodSelect" value="${escapeHtml(godName)}" disabled>`
                 : `<select id="titleGodSelect">${renderGodSelectOptions()}</select>`;
@@ -11545,9 +11612,10 @@
                 ? `${escapeHtml(godName)}之神只能为当前 ${escapeHtml(godName)} 信徒降下称号`
                 : '选择降号名义';
             const curseHelp = isGodRole()
-                ? `${escapeHtml(godName)}之神可对已改信者下放背弃诅咒，并自动赋予「背弃者」称号`
-                : '馆主可代任一神明下放背弃诅咒，并自动赋予「背弃者」称号';
+                ? `${escapeHtml(godName)}之神下放背弃诅咒时仍要求对方已改信；普通诅咒不要求改信`
+                : '馆主可代任一神明下放背弃诅咒或普通诅咒';
             return `
+                ${renderHonorActionStatus()}
                 <section class="profile-panel" data-god="${escapeHtml(godName || '命运')}" style="${getGodSkinStyle(godName || '命运')}">
                     <div class="profile-panel-title"><span>称号敕令</span><small>${isGodRole() ? '神明降号' : '馆主降下 / 神明名义'}</small></div>
                     <div class="profile-form-grid">
@@ -11567,20 +11635,27 @@
                     </div>
                 </section>
                 <section class="profile-panel" data-god="${escapeHtml(godName || '命运')}" style="${getGodSkinStyle(godName || '命运')}">
-                    <div class="profile-panel-title"><span>背弃诅咒</span><small>改信处置 / 自动称号</small></div>
+                    <div class="profile-panel-title"><span>下放诅咒</span><small>背弃 / 普通</small></div>
                     <div class="profile-form-grid">
                         <div class="form-group full">
                             <label>受诅昵称</label>
-                            <input id="curseTargetName" list="cursePlayerList" maxlength="40" placeholder="选择已改信的玩家昵称">
+                            <input id="curseTargetName" list="cursePlayerList" maxlength="40" placeholder="选择或输入玩家昵称">
                             <datalist id="cursePlayerList">${curseOptions}</datalist>
+                        </div>
+                        <div class="form-group">
+                            <label>诅咒类型</label>
+                            <select id="curseTypeSelect" onchange="updateCurseTypeUI()">
+                                <option value="betrayal">背弃诅咒</option>
+                                <option value="ordinary">普通诅咒</option>
+                            </select>
                         </div>
                         <div class="form-group"><label>诅咒名义</label>${curseGodControl}</div>
                         <div class="form-group"><label>诅咒名</label><input id="curseTextInput" maxlength="32" placeholder="默认：背弃诅咒"></div>
                         <div class="form-group"><label>诅咒效果</label><input id="curseNoteInput" maxlength="120" placeholder="建议填写：此诅咒的实际效果或限制"></div>
                     </div>
-                    <div class="identity-help">${curseHelp}。诅咒效果会显示在玩家个人页与个人档案导出图中。</div>
+                    <div class="identity-help">${curseHelp}。背弃诅咒会自动授予「背弃者」；普通诅咒不会自动授予称号。诅咒效果会显示在玩家个人页与个人档案导出图中。</div>
                     <div class="profile-tools">
-                        <button class="btn btn-danger btn-sm" onclick="grantBetrayalCurseUI()">背弃诅咒</button>
+                        <button class="btn btn-danger btn-sm" onclick="grantBetrayalCurseUI()">下放诅咒</button>
                         <button class="btn btn-outline btn-sm" onclick="revokeProfileCurseUI()">回收诅咒</button>
                     </div>
                 </section>`;
@@ -11592,13 +11667,25 @@
             const titleText = String(document.getElementById('titleTextInput')?.value || '').trim().slice(0, 32);
             const titleGod = isGodRole() ? cleanGodName(inviteSession?.name || '') : cleanGodName(document.getElementById('titleGodSelect')?.value || '');
             const titleNote = String(document.getElementById('titleNoteInput')?.value || '').trim().slice(0, 120);
-            if (!targetName || !titleText) { showToast('请填写受封昵称和称号'); return; }
+            if (!targetName || !titleText) {
+                const message = '称号降下失败：请填写受封昵称和称号';
+                setHonorActionStatus(message, 'error');
+                showToast(message);
+                return;
+            }
             const lockKey = `grantTitle:${targetName}:${titleText}`;
             if (!acquireUiActionLock(lockKey, '称号正在授予，请勿重复点击')) return;
             try {
-                const { error } = await invokeDungeonAction('grantProfileTitle', { targetName, titleText, titleGod, titleNote });
-                if (error) { showToast(`❌ ${error.message || '称号授予失败'}`); return; }
-                showToast(`已为 ${targetName} 降下称号：${titleText}`);
+                const { data, error } = await invokeDungeonAction('grantProfileTitle', { targetName, titleText, titleGod, titleNote });
+                if (error) {
+                    const message = `称号降下失败：${error.message || '后端未返回原因'}`;
+                    setHonorActionStatus(message, 'error');
+                    showToast(`❌ ${message}`);
+                    return;
+                }
+                const message = `称号降下成功：已为 ${data?.targetName || targetName} 降下「${data?.activeTitle?.title_text || titleText}」`;
+                setHonorActionStatus(message, 'success');
+                showToast(message);
                 await renderScorePage();
             } finally {
                 releaseUiActionLock(lockKey);
@@ -11609,16 +11696,46 @@
             if (!canGrantTitlesUI()) { showToast('需要馆主或神明谕令'); return; }
             const targetName = cleanDisplayNameInput(document.getElementById('curseTargetName')?.value || '');
             const curseGod = isGodRole() ? cleanGodName(inviteSession?.name || '') : cleanGodName(document.getElementById('curseGodSelect')?.value || '');
+            const curseType = normalizeProfileCurseType(document.getElementById('curseTypeSelect')?.value);
+            const curseText = String(document.getElementById('curseTextInput')?.value || '').trim().slice(0, 32);
             const curseNote = String(document.getElementById('curseNoteInput')?.value || '').trim().slice(0, 120);
-            if (!targetName) { showToast('请填写受诅昵称'); return; }
-            if (!curseGod) { showToast('请选择诅咒名义'); return; }
-            if (!window.confirm(`对 ${targetName} 下放背弃诅咒，并自动赋予「背弃者」称号？`)) return;
-            const lockKey = `grantCurse:${targetName}`;
-            if (!acquireUiActionLock(lockKey, '背弃诅咒正在下放，请勿重复点击')) return;
+            if (!targetName) {
+                const message = '诅咒下放失败：请填写受诅昵称';
+                setHonorActionStatus(message, 'error');
+                showToast(message);
+                return;
+            }
+            if (!curseGod) {
+                const message = '诅咒下放失败：请选择诅咒名义';
+                setHonorActionStatus(message, 'error');
+                showToast(message);
+                return;
+            }
+            if (curseType === 'ordinary' && !curseText) {
+                const message = '普通诅咒下放失败：请填写具体诅咒名';
+                setHonorActionStatus(message, 'error');
+                showToast(message);
+                return;
+            }
+            const curseName = curseText || '背弃诅咒';
+            const titleHint = curseType === 'betrayal' ? '，并自动赋予「背弃者」称号' : '，不自动赋予称号';
+            if (!window.confirm(`对 ${targetName} 下放${getProfileCurseTypeLabel(curseType)}「${curseName}」${titleHint}？`)) return;
+            const lockKey = `grantCurse:${targetName}:${curseType}:${curseName}`;
+            if (!acquireUiActionLock(lockKey, '诅咒正在下放，请勿重复点击')) return;
             try {
-                const { error } = await invokeDungeonAction('grantBetrayalCurse', { targetName, curseGod, curseNote });
-                if (error) { showToast(`❌ ${error.message || '背弃诅咒失败'}`); return; }
-                showToast(`已对 ${targetName} 下放背弃诅咒`);
+                const { data, error } = await invokeDungeonAction('grantBetrayalCurse', { targetName, curseGod, curseType, curseText, curseNote });
+                if (error) {
+                    const message = `诅咒下放失败：${error.message || '后端未返回原因'}`;
+                    setHonorActionStatus(message, 'error');
+                    showToast(`❌ ${message}`);
+                    return;
+                }
+                const grantedCurse = data?.activeCurse?.curse_text || curseName;
+                const message = curseType === 'betrayal'
+                    ? `背弃诅咒下放成功：${data?.targetName || targetName} 获得「${grantedCurse}」与称号「${data?.grantedTitle || '背弃者'}」`
+                    : `普通诅咒下放成功：${data?.targetName || targetName} 获得「${grantedCurse}」`;
+                setHonorActionStatus(message, 'success');
+                showToast(message);
                 await renderScorePage();
                 if (document.getElementById('profilePage')?.style.display !== 'none') await renderProfilePage();
                 if (document.getElementById('leaderboardPage')?.style.display !== 'none') await renderLeaderboardPage();
@@ -11631,14 +11748,26 @@
             if (!canGrantTitlesUI()) { showToast('需要馆主或神明谕令'); return; }
             const targetName = cleanDisplayNameInput(document.getElementById('titleTargetName')?.value || '');
             const titleText = String(document.getElementById('titleTextInput')?.value || '').trim().slice(0, 32);
-            if (!targetName) { showToast('请填写要回收称号的昵称'); return; }
+            if (!targetName) {
+                const message = '称号回收失败：请填写要回收称号的昵称';
+                setHonorActionStatus(message, 'error');
+                showToast(message);
+                return;
+            }
             if (!window.confirm(titleText ? `回收 ${targetName} 的称号「${titleText}」？` : `回收 ${targetName} 最新生效称号？`)) return;
             const lockKey = `revokeTitle:${targetName}:${titleText || 'latest'}`;
             if (!acquireUiActionLock(lockKey, '称号正在回收，请勿重复点击')) return;
             try {
                 const { data, error } = await invokeDungeonAction('revokeProfileTitle', { targetName, titleText });
-                if (error) { showToast(`❌ ${error.message || '撤销失败'}`); return; }
-                showToast(`已回收 ${targetName} 的称号：${data?.revokedTitle || titleText || '最新称号'}`);
+                if (error) {
+                    const message = `称号回收失败：${error.message || '后端未返回原因'}`;
+                    setHonorActionStatus(message, 'error');
+                    showToast(`❌ ${message}`);
+                    return;
+                }
+                const message = `称号回收成功：已回收 ${data?.targetName || targetName} 的「${data?.revokedTitle || titleText || '最新称号'}」`;
+                setHonorActionStatus(message, 'success');
+                showToast(message);
                 await renderScorePage();
                 if (document.getElementById('profilePage')?.style.display !== 'none') await renderProfilePage();
                 if (document.getElementById('leaderboardPage')?.style.display !== 'none') await renderLeaderboardPage();
@@ -11651,14 +11780,26 @@
             if (!canGrantTitlesUI()) { showToast('需要馆主或神明谕令'); return; }
             const targetName = cleanDisplayNameInput(document.getElementById('curseTargetName')?.value || '');
             const curseText = String(document.getElementById('curseTextInput')?.value || '').trim().slice(0, 32);
-            if (!targetName) { showToast('请填写要回收诅咒的昵称'); return; }
+            if (!targetName) {
+                const message = '诅咒回收失败：请填写要回收诅咒的昵称';
+                setHonorActionStatus(message, 'error');
+                showToast(message);
+                return;
+            }
             if (!window.confirm(curseText ? `回收 ${targetName} 的诅咒「${curseText}」？` : `回收 ${targetName} 最新生效诅咒？`)) return;
             const lockKey = `revokeCurse:${targetName}:${curseText || 'latest'}`;
             if (!acquireUiActionLock(lockKey, '诅咒正在回收，请勿重复点击')) return;
             try {
-                const { error } = await invokeDungeonAction('revokeProfileCurse', { targetName, curseText });
-                if (error) { showToast(`❌ ${error.message || '回收失败'}`); return; }
-                showToast(`已回收 ${targetName} 的诅咒`);
+                const { data, error } = await invokeDungeonAction('revokeProfileCurse', { targetName, curseText });
+                if (error) {
+                    const message = `诅咒回收失败：${error.message || '后端未返回原因'}`;
+                    setHonorActionStatus(message, 'error');
+                    showToast(`❌ ${message}`);
+                    return;
+                }
+                const message = `诅咒回收成功：已回收 ${data?.targetName || targetName} 的「${data?.revokedCurse || curseText || '最新诅咒'}」`;
+                setHonorActionStatus(message, 'success');
+                showToast(message);
                 await renderScorePage();
                 if (document.getElementById('profilePage')?.style.display !== 'none') await renderProfilePage();
                 if (document.getElementById('leaderboardPage')?.style.display !== 'none') await renderLeaderboardPage();
@@ -11826,12 +11967,13 @@
                 const active = !!item.is_active;
                 const label = type === 'title' ? item.title_text : item.curse_text;
                 const source = type === 'title' ? item.title_god : item.curse_god;
+                const typeLabel = type === 'curse' ? ` · ${getProfileCurseTypeLabel(item.curse_type || item.curseType)}` : '';
                 const action = active
                     ? `<button class="btn btn-outline btn-sm" onclick="adminRevokeHonor('${type}', ${Number(item.id)}, ${escapeHtml(jsString(targetName))}, ${escapeHtml(jsString(label))})">回收</button>`
                     : `<button class="btn btn-primary btn-sm" onclick="adminRestoreHonor('${type}', ${Number(item.id)}, ${escapeHtml(jsString(targetName))}, ${escapeHtml(jsString(label))})">恢复</button>`;
                 return `<div class="profile-title-status ${type === 'curse' ? 'profile-curse-status' : ''}">
                     <div class="profile-title-status-head"><strong>${escapeHtml(label || '未命名')}</strong><small>${active ? '生效中' : '已回收'}</small></div>
-                    <div class="profile-title-status-note">${escapeHtml(source || '馆主亲授')} · ${escapeHtml(item.granted_by_name || '未记录')} · ${escapeHtml(formatAdminTime(item.granted_at))}</div>
+                    <div class="profile-title-status-note">${escapeHtml(source || '馆主亲授')}${escapeHtml(typeLabel)} · ${escapeHtml(item.granted_by_name || '未记录')} · ${escapeHtml(formatAdminTime(item.granted_at))}</div>
                     ${item.title_note || item.curse_note ? `<div class="profile-title-status-note">${escapeHtml(item.title_note || item.curse_note)}</div>` : ''}
                     <div class="profile-tools">${action}</div>
                 </div>`;
@@ -14764,10 +14906,11 @@
             });
             const curseBadges = curses.slice(0, 2).map(curse => {
                 const god = curse.curseGod || '命运';
+                const typeLabel = getProfileCurseBadgeLabel(curse.curseType);
                 const visibleText = curse.curseNote
                     ? `${curse.curseText}｜${truncateText(curse.curseNote, 14)}`
                     : curse.curseText;
-                return `<span class="comment-honor-badge curse" style="${getGodSkinStyle(god)}" title="${escapeHtml(`${god}｜${curse.curseText}${curse.curseNote ? `｜${curse.curseNote}` : ''}`)}">叛誓 · ${escapeHtml(visibleText)}</span>`;
+                return `<span class="comment-honor-badge curse" style="${getGodSkinStyle(god)}" title="${escapeHtml(`${god}｜${getProfileCurseTypeLabel(curse.curseType)}｜${curse.curseText}${curse.curseNote ? `｜${curse.curseNote}` : ''}`)}">${escapeHtml(typeLabel)} · ${escapeHtml(visibleText)}</span>`;
             });
             const extra = Math.max(0, titles.length - 3) + Math.max(0, curses.length - 2);
             const extraBadge = extra ? [`<span class="comment-honor-badge" title="还有 ${extra} 条称号或诅咒">+${extra}</span>`] : [];

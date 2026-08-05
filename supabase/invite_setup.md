@@ -16,6 +16,7 @@ supabase/nickname_binding_migration.sql
 supabase/player_profiles_migration.sql
 supabase/profile_titles_migration.sql
 supabase/profile_curses_migration.sql
+supabase/profile_curse_type_20260805.sql
 supabase/profile_honor_multi_active_20260712.sql
 supabase/score_system_migration.sql
 supabase/talent_pool_migration.sql
@@ -33,7 +34,8 @@ supabase/match_muster_migration.sql
 - `nickname_binding_migration.sql`：每个邀请码绑定唯一昵称。
 - `player_profiles_migration.sql`：个人档案、神格榜单、登神之路、觐见之梯。
 - `profile_titles_migration.sql`：馆主/神明下放个人称号。
-- `profile_curses_migration.sql`：背弃诅咒和背弃者称号记录。
+- `profile_curses_migration.sql`：背弃诅咒、普通诅咒和背弃者称号记录。
+- `profile_curse_type_20260805.sql`：为已有线上诅咒记录补充 `curse_type`，区分背弃诅咒和普通诅咒。
 - `profile_honor_multi_active_20260712.sql`：允许同一玩家同时持有多条生效称号/诅咒。
 - `score_system_migration.sql`：审核员、分数结算、补分、撤销、结算信封。
 - `talent_pool_migration.sql`：天赋池、抽取记录、碎片兑换。

@@ -367,6 +367,10 @@ function toPublicTitle(title: Record<string, unknown> | null | undefined) {
   };
 }
 
+function normalizeCurseType(value: unknown) {
+  return cleanText(value, 20) === "ordinary" ? "ordinary" : "betrayal";
+}
+
 function toPublicCurse(curse: Record<string, unknown> | null | undefined) {
   if (!curse) return null;
   return {
@@ -374,6 +378,7 @@ function toPublicCurse(curse: Record<string, unknown> | null | undefined) {
     curse_text: cleanText(curse.curse_text, 32),
     curse_god: cleanText(curse.curse_god, 20),
     curse_note: cleanText(curse.curse_note, 120),
+    curse_type: normalizeCurseType(curse.curse_type),
     granted_by_type: cleanText(curse.granted_by_type, 20) || "admin",
     granted_by_name: cleanText(curse.granted_by_name, 40),
     granted_at: cleanText(curse.granted_at, 80),
@@ -422,7 +427,7 @@ async function getActiveCursesByHashes(
   if (!hashes.length) return { curses };
   const { data, error } = await supabase
     .from("profile_curses")
-    .select("id, invite_code_hash, curse_text, curse_god, curse_note, granted_by_type, granted_by_name, granted_at")
+    .select("id, invite_code_hash, curse_text, curse_god, curse_note, curse_type, granted_by_type, granted_by_name, granted_at")
     .in("invite_code_hash", hashes)
     .eq("is_active", true)
     .order("granted_at", { ascending: false });
@@ -2186,7 +2191,7 @@ async function buildAdminPlayerSnapshot(
   const codeHash = cleanText(profile.invite_code_hash, 64);
   const [titlesResult, cursesResult, talentsResult, overflowResult, fragmentsResult, scoreLogsResult, messagesResult] = await Promise.all([
     supabase.from("profile_titles").select("id, title_text, title_god, title_note, granted_by_type, granted_by_name, granted_at, is_active, revoked_at, revoked_by_name").eq("invite_code_hash", codeHash).order("granted_at", { ascending: false }),
-    supabase.from("profile_curses").select("id, curse_text, curse_god, curse_note, granted_by_type, granted_by_name, granted_at, is_active, revoked_at, revoked_by_name").eq("invite_code_hash", codeHash).order("granted_at", { ascending: false }),
+    supabase.from("profile_curses").select("id, curse_text, curse_god, curse_note, curse_type, granted_by_type, granted_by_name, granted_at, is_active, revoked_at, revoked_by_name").eq("invite_code_hash", codeHash).order("granted_at", { ascending: false }),
     supabase.from("owned_talents").select("id, pool_key, talent_id, talent_name, rank, acquired_from, storage_slot, equipped_slot, acquired_at").eq("invite_code_hash", codeHash).order("acquired_at", { ascending: true }),
     supabase.from("talent_overflow_choices").select("id, pool_key, talent_id, talent_name, rank, source, created_at").eq("invite_code_hash", codeHash).order("created_at", { ascending: true }),
     supabase.from("user_fragments").select("fragment_total, updated_at").eq("invite_code_hash", codeHash).maybeSingle(),
@@ -2941,13 +2946,15 @@ Deno.serve(async (req) => {
       const targetFaithGod = cleanText(target.faith_god, 20);
       const curseGod = getTitleGrantGod(identity, payload.curseGod || payload.titleGod);
       const curseNote = cleanText(payload.curseNote ?? payload.titleNote, 120);
+      const curseType = normalizeCurseType(payload.curseType ?? payload.curse_type);
+      const isBetrayalCurse = curseType === "betrayal";
+      const curseText = cleanText(payload.curseText, 32) || (isBetrayalCurse ? "背弃诅咒" : "普通诅咒");
       if (!targetHash) return json({ error: "请填写受诅昵称" }, 400);
       if (!curseGod) return json({ error: "请选择诅咒名义" }, 400);
-      if (role === "god" && (!targetFaithGod || targetFaithGod === identity.displayName)) {
+      if (role === "god" && isBetrayalCurse && (!targetFaithGod || targetFaithGod === identity.displayName)) {
         return json({ error: "对应神明只能对已改信者下放背弃诅咒" }, 403);
       }
 
-      const curseText = "背弃诅咒";
       const apostateTitle = "背弃者";
       const { data: curseData, error: curseError } = await supabase
         .from("profile_curses")
@@ -2957,36 +2964,42 @@ Deno.serve(async (req) => {
           curse_text: curseText,
           curse_god: curseGod,
           curse_note: curseNote,
+          curse_type: curseType,
           granted_by_type: role === "god" || curseGod ? "god" : "admin",
           granted_by_hash: identity.codeHash,
           granted_by_name: identity.displayName,
           is_active: true,
         })
-        .select("id, curse_text, curse_god, curse_note, granted_by_type, granted_by_name, granted_at")
+        .select("id, curse_text, curse_god, curse_note, curse_type, granted_by_type, granted_by_name, granted_at")
         .single();
       if (curseError?.code === "42P01") return json({ error: "请先运行 profile_curses_migration.sql" }, 400);
       if (curseError) return json({ error: curseError.message }, 400);
 
-      const { data: titleData, error: titleError } = await supabase
-        .from("profile_titles")
-        .insert({
-          invite_code_hash: targetHash,
-          display_name: cleanText(target.display_name, 40),
-          title_text: apostateTitle,
-          title_god: curseGod,
-          title_note: curseNote || curseText,
-          granted_by_type: "god",
-          granted_by_hash: identity.codeHash,
-          granted_by_name: identity.displayName,
-          is_active: true,
-        })
-        .select("id, title_text, title_god, title_note, granted_by_type, granted_by_name, granted_at")
-        .single();
-      if (titleError?.code === "42P01") return json({ error: "请先运行 profile_titles_migration.sql" }, 400);
-      if (titleError) return json({ error: titleError.message }, 400);
+      let titleData: Record<string, unknown> | null = null;
+      if (isBetrayalCurse) {
+        const titleResult = await supabase
+          .from("profile_titles")
+          .insert({
+            invite_code_hash: targetHash,
+            display_name: cleanText(target.display_name, 40),
+            title_text: apostateTitle,
+            title_god: curseGod,
+            title_note: curseNote || curseText,
+            granted_by_type: "god",
+            granted_by_hash: identity.codeHash,
+            granted_by_name: identity.displayName,
+            is_active: true,
+          })
+          .select("id, title_text, title_god, title_note, granted_by_type, granted_by_name, granted_at")
+          .single();
+        if (titleResult.error?.code === "42P01") return json({ error: "请先运行 profile_titles_migration.sql" }, 400);
+        if (titleResult.error) return json({ error: titleResult.error.message }, 400);
+        titleData = titleResult.data as Record<string, unknown>;
+      }
       await writeAdminOperationLog(supabase, identity, {
         action: "curse.grant", targetCodeHash: targetHash, targetName: target.display_name, objectType: "profile_curse", objectId: curseData.id,
-        summary: `下放诅咒「${curseText}」，并授予「${apostateTitle}」`, afterState: { curse: curseText, title: apostateTitle, god: curseGod, note: curseNote },
+        summary: isBetrayalCurse ? `下放背弃诅咒「${curseText}」，并授予「${apostateTitle}」` : `下放普通诅咒「${curseText}」`,
+        afterState: { curse: curseText, curseType, title: isBetrayalCurse ? apostateTitle : "", god: curseGod, note: curseNote },
       });
 
       return json({
@@ -2994,8 +3007,10 @@ Deno.serve(async (req) => {
         name: identity.displayName,
         data: {
           targetName: cleanText(target.display_name, 40),
-          activeTitle: toPublicTitle(titleData as Record<string, unknown>),
-          activeTitles: [toPublicTitle(titleData as Record<string, unknown>)].filter(Boolean),
+          curseType,
+          grantedTitle: isBetrayalCurse ? apostateTitle : "",
+          activeTitle: toPublicTitle(titleData),
+          activeTitles: [toPublicTitle(titleData)].filter(Boolean),
           activeCurse: toPublicCurse(curseData as Record<string, unknown>),
           activeCurses: [toPublicCurse(curseData as Record<string, unknown>)].filter(Boolean),
         },
