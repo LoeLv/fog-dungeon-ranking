@@ -4365,6 +4365,36 @@
                 linear-gradient(90deg, color-mix(in srgb, var(--god-primary, #b84545) 15%, rgba(70,12,20,0.34)), rgba(0,0,0,0.22)),
                 rgba(30,6,10,0.30);
         }
+        .profile-curse-effect-list {
+            display: grid;
+            gap: 8px;
+        }
+        .profile-curse-effect-row {
+            display: grid;
+            gap: 5px;
+            padding: 10px 12px;
+            border: 1px solid color-mix(in srgb, var(--god-primary, #b84545) 26%, rgba(255,255,255,0.08));
+            border-radius: 8px;
+            background:
+                linear-gradient(90deg, color-mix(in srgb, var(--god-primary, #b84545) 10%, rgba(80,15,22,0.28)), rgba(0,0,0,0.12)),
+                rgba(255,255,255,0.035);
+        }
+        .profile-curse-effect-head {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 8px;
+        }
+        .profile-curse-effect-head strong {
+            color: var(--text-bright);
+            font-size: 0.78rem;
+        }
+        .profile-curse-effect-head small,
+        .profile-curse-effect-note {
+            color: var(--text-muted);
+            font-size: 0.72rem;
+            line-height: 1.55;
+        }
         .profile-subline {
             position: relative;
             z-index: 1;
@@ -9221,6 +9251,17 @@
                 const itemGod = item.curseGod || fallbackGod;
                 return `<span class="divine-curse-badge" style="${getGodSkinStyle(itemGod)}" title="${escapeHtml(`${itemGod}｜${item.curseText}${item.curseNote ? `｜${item.curseNote}` : ''}`)}">叛誓 · ${escapeHtml(item.curseText)}</span>`;
             }).join('');
+            const curseEffects = normalizedCurses.slice(0, 5).map(item => {
+                const itemGod = item.curseGod || fallbackGod;
+                return `
+                    <div class="profile-curse-effect-row" style="${getGodSkinStyle(itemGod)}">
+                        <div class="profile-curse-effect-head">
+                            <strong>诅咒效果｜${escapeHtml(item.curseText)}</strong>
+                            <small>${escapeHtml(itemGod)}</small>
+                        </div>
+                        <div class="profile-curse-effect-note">${escapeHtml(item.curseNote || '暂无记录具体效果。')}</div>
+                    </div>`;
+            }).join('');
             const issuer = primary.grantedByType === 'god'
                 ? `${god}之神下放`
                 : (primary.grantedByName ? `${primary.grantedByName}下放` : '馆主下放');
@@ -9230,7 +9271,8 @@
                         <strong>当前诅咒</strong>
                         <div class="comment-honor-stack">${curseBadges}</div>
                     </div>
-                    <div class="profile-title-status-note">${escapeHtml(issuer)}｜自动赋予称号「背弃者」${primary.curseNote ? `｜${escapeHtml(primary.curseNote)}` : ''}</div>
+                    <div class="profile-title-status-note">${escapeHtml(issuer)}｜自动赋予称号「背弃者」。诅咒不会受称号佩戴开关影响。</div>
+                    <div class="profile-curse-effect-list">${curseEffects}</div>
                 </div>`;
         }
 
@@ -9957,7 +9999,16 @@
             const professionInfo = getProfessionInfo(visualProfession);
             const titles = profile.showTitles === false
                 ? []
-                : normalizeProfileTitleList(profile.activeTitles, profile.activeTitle).map(title => title.titleText).filter(Boolean);
+                : normalizeProfileTitleList(profile.activeTitles, profile.activeTitle).map(title => ({
+                    name: title.titleText,
+                    god: title.titleGod || '',
+                    note: title.titleNote || '',
+                })).filter(title => title.name);
+            const curses = normalizeProfileCurseList(profile.activeCurses, profile.activeCurse).map(curse => ({
+                name: curse.curseText,
+                god: curse.curseGod || '',
+                effect: curse.curseNote || '',
+            })).filter(curse => curse.name);
             const healthSummary = getProfileHealthSummary({ ...profile, profession: visualProfession || profile.profession });
             const equippedTalents = (state.ownedTalents || [])
                 .filter(talent => Number(talent.equipped_slot || 0) > 0)
@@ -9990,6 +10041,7 @@
                     trait: healthSummary.trait || ''
                 },
                 titles,
+                curses,
                 equippedTalents,
                 exportedAt: new Date(),
             };
@@ -10004,8 +10056,25 @@
             const faithTraitLines = wrapCanvasText(measureCtx, payload.health.trait || '请选择信仰后查看信仰特性。', 570, Infinity);
             const professionTraitLines = wrapCanvasText(measureCtx, payload.professionTrait || '请选择职业后查看职业特性。', 570, Infinity);
             measureCtx.font = '800 34px "Microsoft YaHei", sans-serif';
-            const titleText = payload.titles.length ? payload.titles.slice(0, 5).join(' / ') : '暂无称号';
+            const titleEntries = Array.isArray(payload.titles) ? payload.titles : [];
+            const titleText = titleEntries.length
+                ? titleEntries.slice(0, 5).map(title => {
+                    if (typeof title === 'string') return title;
+                    return [title.name, title.note].filter(Boolean).join('｜');
+                }).filter(Boolean).join(' / ')
+                : '暂无已佩戴称号';
             const titleLines = wrapCanvasText(measureCtx, titleText, 960, Infinity);
+            const curseEntries = Array.isArray(payload.curses) && payload.curses.length
+                ? payload.curses
+                : [{ name: '暂无诅咒', god: payload.faithGod || '命运', effect: '当前没有挂载中的诅咒。', empty: true }];
+            const curseLayouts = curseEntries.slice(0, 5).map(curse => {
+                measureCtx.font = '900 32px "Microsoft YaHei", sans-serif';
+                const nameLines = wrapCanvasText(measureCtx, String(curse.name || '未知诅咒'), 880, Infinity);
+                measureCtx.font = '600 22px "Microsoft YaHei", sans-serif';
+                const effectLines = wrapCanvasText(measureCtx, curse.effect || '暂无记录具体效果。', 880, Infinity);
+                const cardHeight = Math.max(132, 98 + nameLines.length * 36 + effectLines.length * 29);
+                return { curse, nameLines, effectLines, cardHeight };
+            });
             const talents = payload.equippedTalents.length ? payload.equippedTalents : [{ slot: 0, name: '尚未携带天赋', rank: '', pool: '', effect: '打开个人面板后可在天赋仓库配置携带槽。' }];
             const talentLayouts = talents.slice(0, 4).map(talent => {
                 measureCtx.font = '900 34px "Microsoft YaHei", sans-serif';
@@ -10021,7 +10090,10 @@
             const battleHeight = Math.max(240, 104 + faithTraitLines.length * 31 + 58 + professionTraitLines.length * 31);
             const titlesHeadingY = battleTop + battleHeight + 84;
             const titleStartY = titlesHeadingY + 52;
-            const talentsHeadingY = titleStartY + titleLines.length * 44 + 96;
+            const curseHeadingY = titleStartY + titleLines.length * 44 + 86;
+            const curseStartY = curseHeadingY + 38;
+            const curseTotalHeight = curseLayouts.reduce((sum, item, index) => sum + item.cardHeight + (index ? 18 : 0), 0);
+            const talentsHeadingY = curseStartY + curseTotalHeight + 76;
             const firstTalentY = talentsHeadingY + 38;
             const talentTotalHeight = talentLayouts.reduce((sum, item, index) => sum + item.cardHeight + (index ? 22 : 0), 0);
             const footerY = firstTalentY + talentTotalHeight + 90;
@@ -10179,11 +10251,45 @@
 
             ctx.fillStyle = main;
             ctx.font = '900 30px "Microsoft YaHei", sans-serif';
-            ctx.fillText('神诞称号', 108, titlesHeadingY);
+            ctx.fillText('已佩戴称号', 108, titlesHeadingY);
             titleLines.forEach((line, index) => {
                 ctx.fillStyle = index ? 'rgba(244,240,223,0.72)' : '#f4f0df';
                 ctx.font = '800 34px "Microsoft YaHei", sans-serif';
                 ctx.fillText(line, 108, titleStartY + index * 44);
+            });
+
+            ctx.fillStyle = '#d98d8d';
+            ctx.font = '900 30px "Microsoft YaHei", sans-serif';
+            ctx.fillText('现存诅咒', 108, curseHeadingY);
+            let curseY = curseStartY;
+            curseLayouts.forEach((layout, index) => {
+                const { curse, nameLines, effectLines, cardHeight } = layout;
+                const y = curseY;
+                const curseGod = curse.god || payload.faithGod || '命运';
+                const curseSkin = getGodSkin(curseGod);
+                const curseAccent = curse.empty ? main : (curseSkin.primary || '#b84545');
+                drawRoundRect(ctx, 108, y, 984, cardHeight, 18);
+                ctx.fillStyle = curse.empty ? 'rgba(255,255,255,0.035)' : 'rgba(80,15,22,0.18)';
+                ctx.fill();
+                ctx.strokeStyle = curseAccent;
+                ctx.globalAlpha = curse.empty ? 0.24 : 0.42;
+                ctx.stroke();
+                ctx.globalAlpha = 1;
+                ctx.fillStyle = curse.empty ? 'rgba(231,207,138,0.76)' : 'rgba(217,141,141,0.92)';
+                ctx.font = '800 24px "Microsoft YaHei", sans-serif';
+                ctx.fillText(curse.empty ? '诅咒状态' : `${curseGod} · 诅咒效果`, 136, y + 38);
+                ctx.fillStyle = '#f4f0df';
+                ctx.font = '900 32px "Microsoft YaHei", sans-serif';
+                nameLines.forEach((line, lineIndex) => {
+                    ctx.fillText(line, 136, y + 76 + lineIndex * 36);
+                });
+                ctx.fillStyle = 'rgba(234,234,242,0.68)';
+                ctx.font = '600 22px "Microsoft YaHei", sans-serif';
+                const effectStartY = y + 100 + nameLines.length * 36;
+                effectLines.forEach((line, lineIndex) => {
+                    ctx.fillText(line, 136, effectStartY + lineIndex * 29);
+                });
+                curseY += cardHeight + 18;
             });
 
             ctx.fillStyle = main;
@@ -11470,9 +11576,9 @@
                         </div>
                         <div class="form-group"><label>诅咒名义</label>${curseGodControl}</div>
                         <div class="form-group"><label>诅咒名</label><input id="curseTextInput" maxlength="32" placeholder="默认：背弃诅咒"></div>
-                        <div class="form-group"><label>诅咒备注</label><input id="curseNoteInput" maxlength="120" placeholder="可选，背弃缘由"></div>
+                        <div class="form-group"><label>诅咒效果</label><input id="curseNoteInput" maxlength="120" placeholder="建议填写：此诅咒的实际效果或限制"></div>
                     </div>
-                    <div class="identity-help">${curseHelp}</div>
+                    <div class="identity-help">${curseHelp}。诅咒效果会显示在玩家个人页与个人档案导出图中。</div>
                     <div class="profile-tools">
                         <button class="btn btn-danger btn-sm" onclick="grantBetrayalCurseUI()">背弃诅咒</button>
                         <button class="btn btn-outline btn-sm" onclick="revokeProfileCurseUI()">回收诅咒</button>
@@ -14658,7 +14764,10 @@
             });
             const curseBadges = curses.slice(0, 2).map(curse => {
                 const god = curse.curseGod || '命运';
-                return `<span class="comment-honor-badge curse" style="${getGodSkinStyle(god)}" title="${escapeHtml(`${god}｜${curse.curseText}${curse.curseNote ? `｜${curse.curseNote}` : ''}`)}">叛誓 · ${escapeHtml(curse.curseText)}</span>`;
+                const visibleText = curse.curseNote
+                    ? `${curse.curseText}｜${truncateText(curse.curseNote, 14)}`
+                    : curse.curseText;
+                return `<span class="comment-honor-badge curse" style="${getGodSkinStyle(god)}" title="${escapeHtml(`${god}｜${curse.curseText}${curse.curseNote ? `｜${curse.curseNote}` : ''}`)}">叛誓 · ${escapeHtml(visibleText)}</span>`;
             });
             const extra = Math.max(0, titles.length - 3) + Math.max(0, curses.length - 2);
             const extraBadge = extra ? [`<span class="comment-honor-badge" title="还有 ${extra} 条称号或诅咒">+${extra}</span>`] : [];
