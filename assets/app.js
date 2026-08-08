@@ -798,6 +798,9 @@ let honorActionStatus = null;
 let honorOperationLogs = [];
 let honorOperationLogsUnavailable = false;
 let honorOperationLogsLoading = false;
+let godBelievers = [];
+let godBelieversLoading = false;
+let godBelieverStatus = null;
 let adminRecentOperations = [];
 let adminOperationsUnavailable = false;
 let editingDungeonId = '';
@@ -3954,6 +3957,232 @@ function renderHonorOperationLogRows() {
         : renderAdminOperationRows(honorOperationLogs, honorOperationLogsUnavailable);
 }
 
+function renderGodBelieverOptions() {
+    const list = Array.isArray(godBelievers) ? godBelievers : [];
+    if (!list.length) {
+        return '<option value="">暂无信徒，请先刷新</option>';
+    }
+    return '<option value="">请选择信徒</option>' + list.map(entry => {
+        const displayName = String(entry.display_name || '').trim();
+        const faith = String(entry.faith_god || '').trim();
+        const profession = String(entry.profession || '').trim();
+        const ascension = Number(entry.ascension_score || 0);
+        const audience = Number(entry.audience_score || 0);
+        return `<option value="${escapeHtml(String(entry.invite_code_hash || ''))}" data-faith="${escapeHtml(faith)}" data-profession="${escapeHtml(profession)}">${escapeHtml(displayName)}｜${escapeHtml(faith)}｜${escapeHtml(profession)}｜登神${ascension}｜觐见${audience}</option>`;
+    }).join('');
+}
+
+function renderGodConversionFaithOptions(selected = '') {
+    const actorGod = cleanGodName(inviteSession?.name || '');
+    const cleanSelected = cleanGodName(selected || '');
+    return '<option value="">请选择新的信仰神明</option>' + GOD_GROUPS.flatMap(group => group.gods)
+        .filter(god => god !== actorGod)
+        .map(god => `<option value="${escapeHtml(god)}" ${god === cleanSelected ? 'selected' : ''}>${escapeHtml(getGodIcon(god))} ${escapeHtml(god)}之神 · ${escapeHtml(getGodInfo(god).path)}命途</option>`)
+        .join('');
+}
+
+function renderGodBelieverStatus() {
+    const type = godBelieverStatus?.type === 'error'
+        ? 'error'
+        : (godBelieverStatus?.type === 'pending' ? 'pending' : (godBelieverStatus?.type === 'success' ? 'success' : ''));
+    const message = godBelieverStatus?.message || '等待神明改信敕令。';
+    return `<div id="godBelieverStatus" class="profile-action-status ${type}">${escapeHtml(message)}</div>`;
+}
+
+function renderGodBelieverRows() {
+    if (godBelieversLoading) return '<div class="profile-empty">正在读取本神信徒名单...</div>';
+    const list = Array.isArray(godBelievers) ? godBelievers : [];
+    if (!list.length) return '<div class="profile-empty">暂无属于本神的信徒，请先刷新或确认信仰是否绑定正确。</div>';
+    return list.map(entry => `<article class="profile-list-item">
+        <div class="profile-list-title"><span>${escapeHtml(String(entry.display_name || ''))}</span><small>${escapeHtml(String(entry.role || ''))}</small></div>
+        <div class="profile-list-meta">${escapeHtml(String(entry.faith_god || ''))} · ${escapeHtml(String(entry.profession || ''))}</div>
+        <div class="profile-list-meta">登神 ${Number(entry.ascension_score || 0)} / 觐见 ${Number(entry.audience_score || 0)}</div>
+    </article>`).join('');
+}
+
+function setGodBelieverStatus(message, type = 'success') {
+    godBelieverStatus = { message, type };
+    const el = document.getElementById('godBelieverStatus');
+    if (el) {
+        el.className = `profile-action-status ${type === 'error' ? 'error' : (type === 'pending' ? 'pending' : 'success')}`;
+        el.textContent = message;
+    }
+}
+
+function updateGodConversionProfessionOptions() {
+    const faithSelect = document.getElementById('godConvertFaithSelect');
+    const professionSelect = document.getElementById('godConvertProfessionSelect');
+    if (!faithSelect || !professionSelect) return;
+    professionSelect.innerHTML = renderProfileProfessionOptions('', faithSelect.value || '');
+}
+
+function syncGodConversionSelection() {
+    const believerSelect = document.getElementById('godConvertTargetSelect');
+    const faithSelect = document.getElementById('godConvertFaithSelect');
+    const professionSelect = document.getElementById('godConvertProfessionSelect');
+    if (!believerSelect || !faithSelect || !professionSelect) return;
+    const selected = Array.isArray(godBelievers) ? godBelievers.find(entry => String(entry.invite_code_hash || '') === believerSelect.value) : null;
+    if (!selected) return;
+    const currentFaith = cleanGodName(selected.faith_god || '');
+    const nextFaith = GOD_GROUPS.flatMap(group => group.gods).find(god => god !== currentFaith && god !== cleanGodName(inviteSession?.name || '')) || '';
+    faithSelect.value = nextFaith;
+    updateGodConversionProfessionOptions();
+    const professionInfo = getProfessionInfo(String(selected.profession || ''));
+    const nextProfession = professionInfo.known && getProfessionInfo(String(selected.profession || '')).god === faithSelect.value
+        ? String(selected.profession || '')
+        : (Object.values((PROFESSION_GROUPS.find(group => group.god === faithSelect.value) || {}).careers || {})[0] || '');
+    professionSelect.value = nextProfession;
+}
+
+function renderGodCommandPanel() {
+    if (!isGodRole()) return '';
+    const godName = cleanGodName(inviteSession?.name || '') || '命运';
+    const currentBeliever = Array.isArray(godBelievers) ? godBelievers[0] : null;
+    const currentFaith = currentBeliever ? cleanGodName(currentBeliever.faith_god || '') : godName;
+    const initialFaith = GOD_GROUPS.flatMap(group => group.gods).find(god => god !== currentFaith && god !== godName) || '';
+    const initialProfession = Object.values((PROFESSION_GROUPS.find(group => group.god === initialFaith) || {}).careers || {})[0] || '';
+    const curseHelp = '勾选后才填写诅咒名与效果；不勾选则本次只改信仰与职业。';
+    return `
+        ${renderGodBelieverStatus()}
+        <section class="profile-panel" data-god="${escapeHtml(godName)}" style="${getGodSkinStyle(godName)}">
+            <div class="profile-panel-title"><span>神明改信区</span><small>改命途 + 职业，诅咒可选</small></div>
+            <div class="profile-form-grid">
+                <div class="form-group full">
+                    <label>目标信徒</label>
+                    <select id="godConvertTargetSelect" onchange="syncGodConversionSelection()">${renderGodBelieverOptions()}</select>
+                </div>
+                <div class="form-group">
+                    <label>新的信仰神明</label>
+                    <select id="godConvertFaithSelect" onchange="updateGodConversionProfessionOptions()">${renderGodConversionFaithOptions(initialFaith)}</select>
+                </div>
+                <div class="form-group">
+                    <label>新的职业</label>
+                    <select id="godConvertProfessionSelect">${renderProfileProfessionOptions(initialProfession, initialFaith)}</select>
+                </div>
+                <div class="form-group full">
+                    <label class="identity-help"><input type="checkbox" id="godConvertCurseEnabled" onchange="toggleGodConversionCurseFields()"> 追加诅咒（可选）</label>
+                </div>
+                <div class="form-group"><label>诅咒名字</label><input id="godConvertCurseName" maxlength="32" placeholder="勾选后填写" disabled></div>
+                <div class="form-group"><label>诅咒效果</label><input id="godConvertCurseEffect" maxlength="120" placeholder="勾选后填写" disabled></div>
+            </div>
+            <div class="identity-help">${escapeHtml(curseHelp)} 只有“改信仰”时才能同步改职业，同信仰单独改职业会被后端拒绝。</div>
+            <div class="profile-tools">
+                <button class="btn btn-primary btn-sm" data-god-convert-action="convert" onclick="godConvertBelieverUI()">执行改信敕令</button>
+                <button class="btn btn-outline btn-sm" data-god-convert-action="refresh" onclick="refreshGodBelievers(true)">刷新信徒名单</button>
+            </div>
+            <div id="godBelieverPanel" class="profile-list" style="margin-top:14px;">${renderGodBelieverRows()}</div>
+        </section>`;
+}
+
+function toggleGodConversionCurseFields() {
+    const enabled = !!document.getElementById('godConvertCurseEnabled')?.checked;
+    const nameInput = document.getElementById('godConvertCurseName');
+    const effectInput = document.getElementById('godConvertCurseEffect');
+    if (nameInput) nameInput.disabled = !enabled;
+    if (effectInput) effectInput.disabled = !enabled;
+}
+
+async function refreshGodBelievers(showResult = false) {
+    if (!isGodRole()) return;
+    godBelieversLoading = true;
+    const panel = document.getElementById('godBelieverPanel');
+    if (panel) panel.innerHTML = '<div class="profile-empty">正在读取本神信徒名单...</div>';
+    try {
+        const { data, error } = await invokeDungeonAction('listGodBelievers', {});
+        if (error) {
+            godBelievers = [];
+            if (showResult) showToast(`❌ ${error.message || '信徒名单读取失败'}`);
+            return;
+        }
+        godBelievers = Array.isArray(data?.believers) ? data.believers : [];
+        if (showResult) showToast(`已加载 ${godBelievers.length} 位信徒`);
+    } finally {
+        godBelieversLoading = false;
+        const targetSelect = document.getElementById('godConvertTargetSelect');
+        if (targetSelect) targetSelect.innerHTML = renderGodBelieverOptions();
+        const container = document.getElementById('godBelieverPanel');
+        if (container) container.innerHTML = renderGodBelieverRows();
+    }
+}
+
+async function godConvertBelieverUI() {
+    if (!isGodRole()) { showToast('只有神明账号可以执行改信敕令'); return; }
+    const targetHash = String(document.getElementById('godConvertTargetSelect')?.value || '').trim();
+    const faithGod = cleanGodName(document.getElementById('godConvertFaithSelect')?.value || '');
+    const profession = normalizeProfession(document.getElementById('godConvertProfessionSelect')?.value || '');
+    const curseEnabled = !!document.getElementById('godConvertCurseEnabled')?.checked;
+    const curseName = String(document.getElementById('godConvertCurseName')?.value || '').trim().slice(0, 32);
+    const curseEffect = String(document.getElementById('godConvertCurseEffect')?.value || '').trim().slice(0, 120);
+    const target = Array.isArray(godBelievers) ? godBelievers.find(entry => String(entry.invite_code_hash || '') === targetHash) : null;
+    if (!targetHash || !target) {
+        const message = '请先选择要改信的信徒';
+        setGodBelieverStatus(message, 'error');
+        showToast(message);
+        return;
+    }
+    if (!faithGod) {
+        const message = '请选择新的信仰神明';
+        setGodBelieverStatus(message, 'error');
+        showToast(message);
+        return;
+    }
+    if (!profession) {
+        const message = '请选择新的职业';
+        setGodBelieverStatus(message, 'error');
+        showToast(message);
+        return;
+    }
+    const professionInfo = getProfessionInfo(profession);
+    if (!professionInfo.known || professionInfo.god !== faithGod) {
+        const message = '职业必须属于新的信仰神明';
+        setGodBelieverStatus(message, 'error');
+        showToast(message);
+        return;
+    }
+    if (cleanGodName(target.faith_god || '') === faithGod) {
+        const message = '只能在改信仰时同步改职业，不能同信仰内单独改职业';
+        setGodBelieverStatus(message, 'error');
+        showToast(message);
+        return;
+    }
+    if (curseEnabled && (!curseName || !curseEffect)) {
+        const message = '勾选诅咒后必须填写诅咒名字和效果';
+        setGodBelieverStatus(message, 'error');
+        showToast(message);
+        return;
+    }
+    if (!window.confirm(`确认将 ${target.display_name} 从 ${target.faith_god} 改到 ${faithGod}，并同步改成 ${profession} 吗？`)) return;
+    const lockKey = `godConvert:${targetHash}:${faithGod}:${profession}`;
+    if (!acquireUiActionLock(lockKey, '神明改信正在处理中，请勿重复点击')) return;
+    setGodBelieverStatus(`正在改信：${target.display_name} -> ${faithGod}/${profession}...`, 'pending');
+    const restore = setActionButtonsBusy('[data-god-convert-action]', '处理中...');
+    try {
+        const { data, error } = await invokeDungeonAction('godConvertBeliever', {
+            targetHash,
+            targetName: target.display_name,
+            faithGod,
+            profession,
+            curseEnabled,
+            curseName,
+            curseEffect,
+        });
+        if (error) {
+            const message = `改信失败：${error.message || '后端未返回原因'}`;
+            setGodBelieverStatus(message, 'error');
+            showToast(`❌ ${message}`);
+            return;
+        }
+        setGodBelieverStatus(`改信成功：${data?.targetName || target.display_name} 已改为 ${faithGod}/${profession}`, 'success');
+        await refreshGodBelievers(false);
+        if (document.getElementById('scorePage')?.style.display !== 'none') await renderScorePage();
+        if (document.getElementById('profilePage')?.style.display !== 'none') await renderProfilePage();
+        showToast(`改信成功：${data?.targetName || target.display_name} 已完成改信敕令`);
+    } finally {
+        restore();
+        releaseUiActionLock(lockKey);
+    }
+}
+
 async function refreshHonorOperationLogs(showResult = false) {
     if (!canGrantTitlesUI()) return;
     honorOperationLogsLoading = true;
@@ -4236,6 +4465,7 @@ async function renderScorePage() {
     if (!canSettleScores()) {
         if (isGodRole()) {
             const { entries: titleEntries } = await fetchLeaderboardEntries();
+            await refreshGodBelievers(false);
             await refreshHonorOperationLogs(false);
             const godName = cleanGodName(inviteSession?.name || '') || '命运';
             container.innerHTML = `
@@ -4252,8 +4482,12 @@ async function renderScorePage() {
                     </div>
                 </section>
                 <div class="profile-grid">
-                    <div>${renderTitleAdminPanel(titleEntries)}</div>
+                    <div>
+                        ${renderGodCommandPanel()}
+                        ${renderTitleAdminPanel(titleEntries)}
+                    </div>
                 </div>`;
+            toggleGodConversionCurseFields();
             return;
         }
         container.innerHTML = renderRitualEmpty('此页只对结算审核员与神谕馆主开放；未持审核席权限的身份不会进入分数结算。', '真理', '需要审核席权限');
@@ -5584,7 +5818,7 @@ async function invokeDungeonAction(action, payload = {}, codeOverride = null) {
         invalidateShortReadCache('my-clear-records');
         invalidateShortReadCache('dungeon-detail:');
     }
-    if (new Set(['saveProfile', 'updateDisplayName', 'updateTrickeryFaith', 'grantProfileTitle', 'revokeProfileTitle', 'restoreProfileTitle', 'grantBetrayalCurse', 'revokeProfileCurse', 'restoreProfileCurse']).has(action)) {
+    if (new Set(['saveProfile', 'updateDisplayName', 'updateTrickeryFaith', 'godConvertBeliever', 'grantProfileTitle', 'revokeProfileTitle', 'restoreProfileTitle', 'grantBetrayalCurse', 'revokeProfileCurse', 'restoreProfileCurse']).has(action)) {
         invalidateShortReadCache('leaderboard');
     }
     return { data: result.data ?? null, error: null, role, name: result.name };
