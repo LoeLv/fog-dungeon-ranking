@@ -60,18 +60,6 @@ let testimonyTargetId = null;
 let pendingRating = { dungeonId: null, value: 5 };
 const uiActionLocks = new Set();
 
-function getInviteRole() { return inviteSession?.role || null; }
-function canUseRole(roles) { return roles.includes(getInviteRole()); }
-function canInteract() { return canUseRole(['player', 'author', 'reviewer', 'admin']); }
-function canTestify() { return canUseRole(['player', 'author', 'reviewer', 'admin', 'god']); }
-function canSubmit() { return canUseRole(['author', 'reviewer', 'admin', 'god']); }
-function isAdmin() { return getInviteRole() === 'admin'; }
-function isGodRole() { return getInviteRole() === 'god'; }
-function canGrantTitlesUI() { return canUseRole(['admin', 'god']); }
-function canSettleScores() { return canUseRole(['reviewer', 'admin']); }
-function canReviewDungeonsUI() {
-    return canUseRole(['admin', 'god']) || (getInviteRole() === 'reviewer' && ['羔羊', '槐柏'].includes(inviteSession?.name || ''));
-}
 function updateReviewFilterButton() {
     const button = document.getElementById('reviewFilterBtn');
     if (!button) return;
@@ -79,17 +67,6 @@ function updateReviewFilterButton() {
     button.style.display = visible ? '' : 'none';
     button.classList.toggle('active', reviewFilter === 'pending');
     button.textContent = reviewFilter === 'pending' ? '待审核中' : '待审核';
-}
-function isInitialDisplayNameBinding() {
-    if (!inviteSession?.code || !inviteSession?.name || isGodRole()) return false;
-    return String(inviteSession.name).trim().toLowerCase() === String(inviteSession.code).trim().toLowerCase();
-}
-function canEditDisplayName() { return isAdmin() || isInitialDisplayNameBinding(); }
-function isAdminDisplayNameEdit() { return isAdmin() && !isInitialDisplayNameBinding(); }
-function canOverrideProfileLocks() { return isAdmin(); }
-function canEditProfileScores() { return canOverrideProfileLocks(); }
-function shouldAutoFocusModalInput() {
-    return !window.matchMedia('(max-width: 720px)').matches;
 }
 
 function isMobileViewport() {
@@ -286,20 +263,6 @@ function setActionButtonsBusy(selector, busyText = '处理中...') {
             delete button.dataset.idleText;
         });
     };
-}
-
-function saveInviteSession(session) {
-    inviteSession = session;
-    setLocalData(INVITE_STORAGE_KEY, inviteSession);
-    updateInviteUI();
-}
-
-function getInviteSnapshot() {
-    return inviteSession?.code || '';
-}
-
-function isInviteSnapshotCurrent(snapshot) {
-    return (snapshot || '') === getInviteSnapshot();
 }
 
 function resetTalentViewState() {
