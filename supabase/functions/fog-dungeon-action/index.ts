@@ -809,6 +809,32 @@ async function listAdminOperationLogs(
   return { data: data || [], unavailable: false };
 }
 
+async function listHonorOperationLogs(
+  supabase: ReturnType<typeof createClient>,
+  identity: InviteIdentity,
+  limit = 30,
+) {
+  const honorActions = [
+    "title.grant",
+    "title.revoke",
+    "title.restore",
+    "curse.grant",
+    "curse.revoke",
+    "curse.restore",
+  ];
+  let query = supabase
+    .from("admin_operation_logs")
+    .select("id, actor_name, actor_role, action, target_name, object_type, object_id, summary, before_state, after_state, created_at")
+    .in("action", honorActions)
+    .order("created_at", { ascending: false })
+    .limit(Math.max(1, Math.min(50, limit)));
+  if (identity.role === "god") query = query.eq("actor_code_hash", identity.codeHash);
+  const { data, error } = await query;
+  if (isMissingAdminOperationLogTable(error)) return { data: [], unavailable: true };
+  if (error) return { data: [], error };
+  return { data: data || [], unavailable: false };
+}
+
 function isMissingTalentEffectColumn(error: LooseError) {
   return error?.code === "42703" && !!error.message?.includes("effect");
 }
@@ -928,6 +954,127 @@ function getAllowedTalentPools(profile: Record<string, unknown>) {
   if (faithPoolKey) poolSet.add(faithPoolKey);
   if (professionPoolKey) poolSet.add(professionPoolKey);
   return [...poolSet].filter((poolKey) => knownTalentPools.includes(poolKey));
+}
+
+type TalentPoolRebalanceResult = {
+  removedPoolKeys: string[];
+  refundedDraws: number;
+  refundedFragments: number;
+  removedFragments?: number;
+  fragmentDelta?: number;
+  error?: LooseError;
+};
+
+type TalentDrawRollbackRow = {
+  draw_type?: string | null;
+  fragment_gain?: number | null;
+};
+
+type TalentExchangeRollbackRow = {
+  cost_fragment?: number | null;
+};
+
+function talentPoolRebalanceError(error: LooseError): TalentPoolRebalanceResult {
+  return { removedPoolKeys: [], refundedDraws: 0, refundedFragments: 0, error };
+}
+
+async function rebalanceTalentPoolsAfterProfileChange(
+  supabase: ReturnType<typeof createClient>,
+  codeHash: string,
+  previousProfile: Record<string, unknown> | null | undefined,
+  nextProfile: Record<string, unknown> | null | undefined,
+): Promise<TalentPoolRebalanceResult> {
+  const previousPools = new Set(getAllowedTalentPools(previousProfile || {}));
+  const nextPools = new Set(getAllowedTalentPools(nextProfile || {}));
+  const removedPoolKeys = [...previousPools].filter((poolKey) => !nextPools.has(poolKey));
+  if (!removedPoolKeys.length) {
+    return { removedPoolKeys: [], refundedDraws: 0, refundedFragments: 0 };
+  }
+
+  const [drawLogResult, exchangeResult, drawStateResult, fragmentResult] = await Promise.all([
+    supabase
+      .from("talent_draw_logs")
+      .select("id, pool_key, draw_type, fragment_gain")
+      .eq("invite_code_hash", codeHash)
+      .in("pool_key", removedPoolKeys),
+    supabase
+      .from("talent_exchange_logs")
+      .select("id, pool_key, cost_fragment")
+      .eq("invite_code_hash", codeHash)
+      .in("pool_key", removedPoolKeys),
+    supabase
+      .from("talent_draw_state")
+      .select("spent_draws, basic_spent_draws, advanced_spent_draws")
+      .eq("invite_code_hash", codeHash)
+      .maybeSingle(),
+    supabase
+      .from("user_fragments")
+      .select("fragment_total")
+      .eq("invite_code_hash", codeHash)
+      .maybeSingle(),
+  ]);
+
+  if (drawLogResult.error) return talentPoolRebalanceError(drawLogResult.error);
+  if (exchangeResult.error) return talentPoolRebalanceError(exchangeResult.error);
+  if (drawStateResult.error) return talentPoolRebalanceError(drawStateResult.error);
+  if (fragmentResult.error) return talentPoolRebalanceError(fragmentResult.error);
+
+  const removedDrawLogs = (drawLogResult.data || []) as TalentDrawRollbackRow[];
+  const removedExchangeLogs = (exchangeResult.data || []) as TalentExchangeRollbackRow[];
+  const refundedDraws = removedDrawLogs.length;
+  const refundedBasicDraws = removedDrawLogs.filter((row: TalentDrawRollbackRow) => String(row.draw_type || "") === "basic").length;
+  const refundedAdvancedDraws = removedDrawLogs.filter((row: TalentDrawRollbackRow) => String(row.draw_type || "") === "advanced").length;
+  const removedFragments = removedDrawLogs.reduce((sum: number, row: TalentDrawRollbackRow) => sum + Number(row.fragment_gain || 0), 0);
+  const exchangeFragmentRefund = removedExchangeLogs.reduce((sum: number, row: TalentExchangeRollbackRow) => sum + Number(row.cost_fragment || 0), 0);
+  const currentFragmentTotal = Number(fragmentResult.data?.fragment_total || 0);
+  const nextFragmentTotal = Math.max(0, currentFragmentTotal - removedFragments + exchangeFragmentRefund);
+  const currentSpentDraws = Number(drawStateResult.data?.spent_draws || 0);
+  const currentBasicSpentDraws = Number(drawStateResult.data?.basic_spent_draws || 0);
+  const currentAdvancedSpentDraws = Number(drawStateResult.data?.advanced_spent_draws || 0);
+  const nextDrawState = {
+    invite_code_hash: codeHash,
+    spent_draws: Math.max(0, currentSpentDraws - refundedDraws),
+    basic_spent_draws: Math.max(0, currentBasicSpentDraws - refundedBasicDraws),
+    advanced_spent_draws: Math.max(0, currentAdvancedSpentDraws - refundedAdvancedDraws),
+    updated_at: new Date().toISOString(),
+  };
+
+  const deleteOps = [
+    supabase.from("owned_talents").delete().eq("invite_code_hash", codeHash).in("pool_key", removedPoolKeys),
+    supabase.from("talent_overflow_choices").delete().eq("invite_code_hash", codeHash).in("pool_key", removedPoolKeys),
+    supabase.from("talent_draw_logs").delete().eq("invite_code_hash", codeHash).in("pool_key", removedPoolKeys),
+    supabase.from("talent_exchange_logs").delete().eq("invite_code_hash", codeHash).in("pool_key", removedPoolKeys),
+    supabase.from("talent_pool_counters").delete().eq("invite_code_hash", codeHash).in("pool_key", removedPoolKeys),
+  ] as const;
+
+  for (const op of deleteOps) {
+    const { error } = await op;
+    if (error) return talentPoolRebalanceError(error);
+  }
+
+  if (fragmentResult.data || nextFragmentTotal > 0 || removedFragments > 0 || removedExchangeLogs.length > 0) {
+    const { error: fragmentUpdateError } = await supabase
+      .from("user_fragments")
+      .upsert({
+        invite_code_hash: codeHash,
+        fragment_total: nextFragmentTotal,
+        updated_at: new Date().toISOString(),
+      });
+    if (fragmentUpdateError) return talentPoolRebalanceError(fragmentUpdateError);
+  }
+
+  const { error: drawStateUpdateError } = await supabase
+    .from("talent_draw_state")
+    .upsert(nextDrawState);
+  if (drawStateUpdateError) return talentPoolRebalanceError(drawStateUpdateError);
+
+  return {
+    removedPoolKeys,
+    refundedDraws,
+    refundedFragments: exchangeFragmentRefund,
+    removedFragments,
+    fragmentDelta: nextFragmentTotal - currentFragmentTotal,
+  };
 }
 
 function canSettleScores(role: InviteRole) {
@@ -2505,6 +2652,14 @@ Deno.serve(async (req) => {
       return json({ role, name: identity.displayName, data: { logs: result.data || [], unavailable: !!result.unavailable } });
     }
 
+    if (action === "listHonorOperationLogs") {
+      if (!canGrantTitles(role)) return json({ error: "需要馆主或神明谕令" }, 403);
+      const limit = Math.max(1, Math.min(50, Number(payload.limit || 30)));
+      const result = await listHonorOperationLogs(supabase, identity, limit);
+      if (result.error) return json({ error: result.error.message || "称号诅咒操作日志读取失败" }, 400);
+      return json({ role, name: identity.displayName, data: { logs: result.data || [], unavailable: !!result.unavailable } });
+    }
+
     if (action === "adminScanTalentState") {
       if (role !== "admin") return json({ error: "只有神谕馆主可以扫描天赋状态" }, 403);
       const result = await buildAdminPlayerSnapshot(supabase, payload.targetName);
@@ -2631,12 +2786,24 @@ Deno.serve(async (req) => {
       if (error?.code === "42P01") return json({ error: "请先运行 player_profiles_migration.sql" }, 400);
       if (error) return json({ error: error.message }, 400);
 
+      const talentRebalance = await rebalanceTalentPoolsAfterProfileChange(supabase, identity.codeHash, existing, data);
+      if (talentRebalance.error) return json({ error: talentRebalance.error.message }, 400);
+      let profileData = data;
+      if (talentRebalance.removedPoolKeys.length) {
+        const talentTextUpdate = await updateProfileTalentText(supabase, identity.codeHash);
+        if (talentTextUpdate.error) return json({ error: talentTextUpdate.error.message }, 400);
+        profileData = {
+          ...data,
+          talents: talentTextUpdate.talentText ?? data.talents,
+        };
+      }
+
       const titleResult = await getActiveTitleForHash(supabase, identity.codeHash);
       if (titleResult.error) return json({ error: titleResult.error.message }, 400);
       const curseResult = await getActiveCurseForHash(supabase, identity.codeHash);
       if (curseResult.error) return json({ error: curseResult.error.message }, 400);
       const dataWithTitle = {
-        ...data,
+        ...profileData,
         active_title: titleResult.title,
         active_titles: titleResult.titles || [],
         active_curse: curseResult.curse,

@@ -4414,6 +4414,11 @@
             background: rgba(128, 37, 50, 0.15);
             color: #f0c7c7;
         }
+        .profile-action-status.pending {
+            border-color: rgba(231,207,138,0.30);
+            background: rgba(231,207,138,0.10);
+            color: var(--gold-light);
+        }
         .profile-subline {
             position: relative;
             z-index: 1;
@@ -8475,6 +8480,9 @@
         let adminScrollY = 0;
         let adminLookupState = { targetName: '', snapshot: null };
         let honorActionStatus = null;
+        let honorOperationLogs = [];
+        let honorOperationLogsUnavailable = false;
+        let honorOperationLogsLoading = false;
         let adminRecentOperations = [];
         let adminOperationsUnavailable = false;
         let editingDungeonId = '';
@@ -11593,7 +11601,7 @@
         function renderHonorActionStatus() {
             const type = honorActionStatus?.type === 'error'
                 ? 'error'
-                : (honorActionStatus?.type === 'success' ? 'success' : '');
+                : (honorActionStatus?.type === 'pending' ? 'pending' : (honorActionStatus?.type === 'success' ? 'success' : ''));
             const message = honorActionStatus?.message || '等待称号或诅咒操作。';
             return `<div id="honorActionStatus" class="profile-action-status ${type}">${escapeHtml(message)}</div>`;
         }
@@ -11602,8 +11610,55 @@
             honorActionStatus = { message, type };
             const el = document.getElementById('honorActionStatus');
             if (el) {
-                el.className = `profile-action-status ${type === 'error' ? 'error' : 'success'}`;
+                el.className = `profile-action-status ${type === 'error' ? 'error' : (type === 'pending' ? 'pending' : 'success')}`;
                 el.textContent = message;
+            }
+        }
+
+        function renderHonorOperationLogPanel() {
+            const title = isGodRole() ? '本神最近敕令' : '称号诅咒最近敕令';
+            const note = isGodRole() ? '仅显示你自己发出的称号/诅咒操作' : '最近 30 条称号/诅咒操作';
+            const body = honorOperationLogsLoading
+                ? '<div class="profile-empty">正在读取敕令日志...</div>'
+                : renderAdminOperationRows(honorOperationLogs, honorOperationLogsUnavailable);
+            return `
+                <section class="profile-panel" data-god="${escapeHtml(isGodRole() ? (inviteSession?.name || '命运') : '真理')}" style="${getGodSkinStyle(isGodRole() ? (inviteSession?.name || '命运') : '真理')}">
+                    <div class="profile-panel-title"><span>${escapeHtml(title)}</span><small>${escapeHtml(note)}</small></div>
+                    <div class="profile-tools" style="margin-bottom:10px;">
+                        <button class="btn btn-outline btn-sm" data-honor-log-refresh onclick="refreshHonorOperationLogs(true)">刷新日志</button>
+                    </div>
+                    <div id="honorOperationLogRows">${body}</div>
+                </section>`;
+        }
+
+        function renderHonorOperationLogRows() {
+            const container = document.getElementById('honorOperationLogRows');
+            if (!container) return;
+            container.innerHTML = honorOperationLogsLoading
+                ? '<div class="profile-empty">正在读取敕令日志...</div>'
+                : renderAdminOperationRows(honorOperationLogs, honorOperationLogsUnavailable);
+        }
+
+        async function refreshHonorOperationLogs(showResult = false) {
+            if (!canGrantTitlesUI()) return;
+            honorOperationLogsLoading = true;
+            renderHonorOperationLogRows();
+            const restore = setActionButtonsBusy('[data-honor-log-refresh]', '刷新中...');
+            try {
+                const { data, error } = await invokeDungeonAction('listHonorOperationLogs', { limit: 30 });
+                if (error) {
+                    honorOperationLogs = [];
+                    honorOperationLogsUnavailable = true;
+                    if (showResult) showToast(`❌ ${error.message || '敕令日志读取失败'}`);
+                    return;
+                }
+                honorOperationLogs = Array.isArray(data?.logs) ? data.logs : [];
+                honorOperationLogsUnavailable = !!data?.unavailable;
+                if (showResult) showToast(honorOperationLogsUnavailable ? '敕令日志尚未启用，请先运行后台日志 SQL' : '敕令日志已刷新');
+            } finally {
+                honorOperationLogsLoading = false;
+                restore();
+                renderHonorOperationLogRows();
             }
         }
 
@@ -11649,8 +11704,8 @@
                     </div>
                     <div class="identity-help">${titleGodHelp}</div>
                     <div class="profile-tools">
-                        <button class="btn btn-primary btn-sm" onclick="grantProfileTitleUI()">降下称号</button>
-                        <button class="btn btn-outline btn-sm" onclick="revokeProfileTitleUI()">回收称号</button>
+                        <button class="btn btn-primary btn-sm" data-honor-action="grant-title" onclick="grantProfileTitleUI()">降下称号</button>
+                        <button class="btn btn-outline btn-sm" data-honor-action="revoke-title" onclick="revokeProfileTitleUI()">回收称号</button>
                     </div>
                 </section>
                 <section class="profile-panel" data-god="${escapeHtml(godName || '命运')}" style="${getGodSkinStyle(godName || '命运')}">
@@ -11674,10 +11729,11 @@
                     </div>
                     <div class="identity-help">${curseHelp}。背弃诅咒会自动授予「背弃者」；普通诅咒不会自动授予称号。诅咒效果会显示在玩家个人页与个人档案导出图中。</div>
                     <div class="profile-tools">
-                        <button class="btn btn-danger btn-sm" onclick="grantBetrayalCurseUI()">下放诅咒</button>
-                        <button class="btn btn-outline btn-sm" onclick="revokeProfileCurseUI()">回收诅咒</button>
+                        <button class="btn btn-danger btn-sm" data-honor-action="grant-curse" onclick="grantBetrayalCurseUI()">下放诅咒</button>
+                        <button class="btn btn-outline btn-sm" data-honor-action="revoke-curse" onclick="revokeProfileCurseUI()">回收诅咒</button>
                     </div>
-                </section>`;
+                </section>
+                ${renderHonorOperationLogPanel()}`;
         }
 
         async function grantProfileTitleUI() {
@@ -11694,6 +11750,8 @@
             }
             const lockKey = `grantTitle:${targetName}:${titleText}`;
             if (!acquireUiActionLock(lockKey, '称号正在授予，请勿重复点击')) return;
+            setHonorActionStatus(`称号降下中：正在为 ${targetName} 写入「${titleText}」...`, 'pending');
+            const restore = setActionButtonsBusy('[data-honor-action]', '处理中...');
             try {
                 const { data, error } = await invokeDungeonAction('grantProfileTitle', { targetName, titleText, titleGod, titleNote });
                 if (error) {
@@ -11703,10 +11761,11 @@
                     return;
                 }
                 const message = `称号降下成功：已为 ${data?.targetName || targetName} 降下「${data?.activeTitle?.title_text || titleText}」`;
+                await renderScorePage();
                 setHonorActionStatus(message, 'success');
                 showToast(message);
-                await renderScorePage();
             } finally {
+                restore();
                 releaseUiActionLock(lockKey);
             }
         }
@@ -11741,6 +11800,8 @@
             if (!window.confirm(`对 ${targetName} 下放${getProfileCurseTypeLabel(curseType)}「${curseName}」${titleHint}？`)) return;
             const lockKey = `grantCurse:${targetName}:${curseType}:${curseName}`;
             if (!acquireUiActionLock(lockKey, '诅咒正在下放，请勿重复点击')) return;
+            setHonorActionStatus(`诅咒下放中：正在为 ${targetName} 写入「${curseName}」...`, 'pending');
+            const restore = setActionButtonsBusy('[data-honor-action]', '处理中...');
             try {
                 const { data, error } = await invokeDungeonAction('grantBetrayalCurse', { targetName, curseGod, curseType, curseText, curseNote });
                 if (error) {
@@ -11753,12 +11814,13 @@
                 const message = curseType === 'betrayal'
                     ? `背弃诅咒下放成功：${data?.targetName || targetName} 获得「${grantedCurse}」与称号「${data?.grantedTitle || '背弃者'}」`
                     : `普通诅咒下放成功：${data?.targetName || targetName} 获得「${grantedCurse}」`;
-                setHonorActionStatus(message, 'success');
-                showToast(message);
                 await renderScorePage();
                 if (document.getElementById('profilePage')?.style.display !== 'none') await renderProfilePage();
                 if (document.getElementById('leaderboardPage')?.style.display !== 'none') await renderLeaderboardPage();
+                setHonorActionStatus(message, 'success');
+                showToast(message);
             } finally {
+                restore();
                 releaseUiActionLock(lockKey);
             }
         }
@@ -11776,6 +11838,8 @@
             if (!window.confirm(titleText ? `回收 ${targetName} 的称号「${titleText}」？` : `回收 ${targetName} 最新生效称号？`)) return;
             const lockKey = `revokeTitle:${targetName}:${titleText || 'latest'}`;
             if (!acquireUiActionLock(lockKey, '称号正在回收，请勿重复点击')) return;
+            setHonorActionStatus(`称号回收中：正在处理 ${targetName} 的${titleText ? `「${titleText}」` : '最新生效称号'}...`, 'pending');
+            const restore = setActionButtonsBusy('[data-honor-action]', '处理中...');
             try {
                 const { data, error } = await invokeDungeonAction('revokeProfileTitle', { targetName, titleText });
                 if (error) {
@@ -11785,12 +11849,13 @@
                     return;
                 }
                 const message = `称号回收成功：已回收 ${data?.targetName || targetName} 的「${data?.revokedTitle || titleText || '最新称号'}」`;
-                setHonorActionStatus(message, 'success');
-                showToast(message);
                 await renderScorePage();
                 if (document.getElementById('profilePage')?.style.display !== 'none') await renderProfilePage();
                 if (document.getElementById('leaderboardPage')?.style.display !== 'none') await renderLeaderboardPage();
+                setHonorActionStatus(message, 'success');
+                showToast(message);
             } finally {
+                restore();
                 releaseUiActionLock(lockKey);
             }
         }
@@ -11808,6 +11873,8 @@
             if (!window.confirm(curseText ? `回收 ${targetName} 的诅咒「${curseText}」？` : `回收 ${targetName} 最新生效诅咒？`)) return;
             const lockKey = `revokeCurse:${targetName}:${curseText || 'latest'}`;
             if (!acquireUiActionLock(lockKey, '诅咒正在回收，请勿重复点击')) return;
+            setHonorActionStatus(`诅咒回收中：正在处理 ${targetName} 的${curseText ? `「${curseText}」` : '最新生效诅咒'}...`, 'pending');
+            const restore = setActionButtonsBusy('[data-honor-action]', '处理中...');
             try {
                 const { data, error } = await invokeDungeonAction('revokeProfileCurse', { targetName, curseText });
                 if (error) {
@@ -11817,12 +11884,13 @@
                     return;
                 }
                 const message = `诅咒回收成功：已回收 ${data?.targetName || targetName} 的「${data?.revokedCurse || curseText || '最新诅咒'}」`;
-                setHonorActionStatus(message, 'success');
-                showToast(message);
                 await renderScorePage();
                 if (document.getElementById('profilePage')?.style.display !== 'none') await renderProfilePage();
                 if (document.getElementById('leaderboardPage')?.style.display !== 'none') await renderLeaderboardPage();
+                setHonorActionStatus(message, 'success');
+                showToast(message);
             } finally {
+                restore();
                 releaseUiActionLock(lockKey);
             }
         }
@@ -11853,6 +11921,7 @@
             if (!canSettleScores()) {
                 if (isGodRole()) {
                     const { entries: titleEntries } = await fetchLeaderboardEntries();
+                    await refreshHonorOperationLogs(false);
                     const godName = cleanGodName(inviteSession?.name || '') || '命运';
                     container.innerHTML = `
                         <section class="profile-hero" data-god="${escapeHtml(godName)}" data-motif="${escapeHtml(getGodSkin(godName).motif)}" style="${getGodSkinStyle(godName)}">
@@ -11880,6 +11949,7 @@
             const { entries: titleEntries } = canGrantTitlesUI()
                 ? await fetchLeaderboardEntries()
                 : { entries: [] };
+            if (canGrantTitlesUI()) await refreshHonorOperationLogs(false);
             const { settlements, error } = await fetchScoreSettlements(50);
             scoreSettlementState = { settlements, error };
             scoreSettlementDetails.clear();
@@ -13199,7 +13269,7 @@
                 invalidateShortReadCache('my-clear-records');
                 invalidateShortReadCache('dungeon-detail:');
             }
-            if (new Set(['saveProfile', 'updateDisplayName', 'updateTrickeryFaith', 'grantProfileTitle', 'revokeProfileTitle', 'grantBetrayalCurse', 'revokeProfileCurse']).has(action)) {
+            if (new Set(['saveProfile', 'updateDisplayName', 'updateTrickeryFaith', 'grantProfileTitle', 'revokeProfileTitle', 'restoreProfileTitle', 'grantBetrayalCurse', 'revokeProfileCurse', 'restoreProfileCurse']).has(action)) {
                 invalidateShortReadCache('leaderboard');
             }
             return { data: result.data ?? null, error: null, role, name: result.name };

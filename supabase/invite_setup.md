@@ -18,6 +18,7 @@ supabase/profile_titles_migration.sql
 supabase/profile_curses_migration.sql
 supabase/profile_curse_type_20260805.sql
 supabase/profile_honor_multi_active_20260712.sql
+supabase/admin_operation_logs_migration_20260719.sql
 supabase/score_system_migration.sql
 supabase/talent_pool_migration.sql
 supabase/talent_inventory_migration.sql
@@ -37,6 +38,7 @@ supabase/match_muster_migration.sql
 - `profile_curses_migration.sql`：背弃诅咒、普通诅咒和背弃者称号记录。
 - `profile_curse_type_20260805.sql`：为已有线上诅咒记录补充 `curse_type`，区分背弃诅咒和普通诅咒。
 - `profile_honor_multi_active_20260712.sql`：允许同一玩家同时持有多条生效称号/诅咒。
+- `admin_operation_logs_migration_20260719.sql`：启用馆主/神明/审核员后台操作日志；称号、诅咒、天赋维护等操作会写入审计记录。
 - `score_system_migration.sql`：审核员、分数结算、补分、撤销、结算信封。
 - `talent_pool_migration.sql`：天赋池、抽取记录、碎片兑换。
 - `talent_inventory_migration.sql`：8 格天赋仓库、按分数开放最多 4 个携带槽、溢出取舍。
