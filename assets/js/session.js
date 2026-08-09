@@ -10,6 +10,10 @@ function hasInvitePermission(permission) {
     return getInviteRole() === 'admin' || getInvitePermissions().includes(permission);
 }
 
+function getClientDeviceKind() {
+    return window.matchMedia('(max-width: 720px), (pointer: coarse)').matches ? 'mobile' : 'desktop';
+}
+
 function canUseRole(roles) { return roles.includes(getInviteRole()); }
 
 function canInteract() { return canUseRole(['player', 'author', 'reviewer', 'admin']); }

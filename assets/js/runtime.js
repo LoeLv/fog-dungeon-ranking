@@ -363,13 +363,13 @@ async function submitInviteCode() {
     btn.disabled = true;
     btn.textContent = '掷骰中...';
     try {
-        const { error, role, name, permissions } = USE_LOCAL_FALLBACK ? { error: null, role: 'author', name: '本地构筑者', permissions: [] } : await invokeDungeonAction('verifyInvite', {}, code);
+        const { error, role, name, permissions, sessionId, deviceKind } = USE_LOCAL_FALLBACK ? { error: null, role: 'author', name: '本地构筑者', permissions: [], sessionId: 'local', deviceKind: getClientDeviceKind() } : await invokeDungeonAction('verifyInvite', {}, code);
         if (error || !role) { showToast(`❌ ${getFriendlyActionError(error, '入局谕令无效')}`); return; }
         resetTalentViewState();
-        saveInviteSession({ role, code, name: name || ROLE_LABELS[role], permissions: Array.isArray(permissions) ? permissions : [] });
+        saveInviteSession({ role, code, name: name || ROLE_LABELS[role], permissions: Array.isArray(permissions) ? permissions : [], sessionId: sessionId || '', deviceKind: deviceKind || getClientDeviceKind() });
         const profileRefresh = await refreshCurrentProfileFromCloud();
         if (profileRefresh.data?.displayName) {
-            saveInviteSession({ role, code, name: profileRefresh.data.displayName, permissions: Array.isArray(permissions) ? permissions : [] });
+            saveInviteSession({ role, code, name: profileRefresh.data.displayName, permissions: Array.isArray(permissions) ? permissions : [], sessionId: sessionId || '', deviceKind: deviceKind || getClientDeviceKind() });
         }
         input.value = '';
         closeInviteModal();

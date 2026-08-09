@@ -11,6 +11,8 @@ type InviteRole = "player" | "author" | "reviewer" | "admin" | "god";
 type RequestBody = {
   action?: string;
   inviteCode?: string;
+  sessionId?: string;
+  deviceKind?: string;
   payload?: Record<string, unknown>;
 };
 
@@ -20,6 +22,7 @@ type InviteIdentity = {
   displayName: string;
   inviteId?: string;
   permissions: string[];
+  sessionGeneration: number;
 };
 
 type LooseError = { code?: string; message?: string } | null | undefined;
@@ -40,6 +43,7 @@ const delegatedPermissionKeys = new Set([
   "account_role_manage",
   "review_dungeons",
 ]);
+const inviteDeviceKinds = new Set(["desktop", "mobile"]);
 
 // Keep malformed or oversized browser requests from consuming function memory.
 // The frontend only sends compact JSON action payloads, so 48 KB leaves ample room
@@ -243,6 +247,16 @@ function cleanText(value: unknown, maxLength: number) {
 function cleanPermissionList(value: unknown) {
   if (!Array.isArray(value)) return [];
   return [...new Set(value.map((item) => cleanText(item, 40)).filter((item) => delegatedPermissionKeys.has(item)))];
+}
+
+function cleanDeviceKind(value: unknown) {
+  const kind = cleanText(value, 20);
+  return inviteDeviceKinds.has(kind) ? kind : "desktop";
+}
+
+function cleanSessionId(value: unknown) {
+  const text = cleanText(value, 80);
+  return /^[0-9a-f-]{20,80}$/i.test(text) ? text : "";
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -699,7 +713,7 @@ async function getInviteIdentity(
 
   const { data, error } = await supabase
     .from("invite_codes")
-    .select("id, role, display_name, is_active, permissions")
+    .select("id, role, display_name, is_active, permissions, session_generation")
     .eq("code_hash", codeHash)
     .maybeSingle();
   if (error) return null;
@@ -730,9 +744,63 @@ async function getInviteIdentity(
       displayName,
       inviteId: data.id,
       permissions: cleanPermissionList(data.permissions),
+      sessionGeneration: Number(data.session_generation || 0),
     };
   }
   return null;
+}
+
+async function issueInviteSession(
+  supabase: ReturnType<typeof createClient>,
+  identity: InviteIdentity,
+  deviceKindInput: unknown,
+  userAgentInput: unknown,
+) {
+  const deviceKind = cleanDeviceKind(deviceKindInput);
+  const sessionId = crypto.randomUUID();
+  const { error } = await supabase
+    .from("invite_sessions")
+    .upsert({
+      invite_code_hash: identity.codeHash,
+      device_kind: deviceKind,
+      session_id: sessionId,
+      session_generation: identity.sessionGeneration,
+      user_agent: cleanText(userAgentInput, 240),
+      created_at: new Date().toISOString(),
+      last_seen_at: new Date().toISOString(),
+    }, { onConflict: "invite_code_hash,device_kind" });
+  if (error) return { error };
+  return { data: { sessionId, deviceKind } };
+}
+
+async function validateInviteSession(
+  supabase: ReturnType<typeof createClient>,
+  identity: InviteIdentity,
+  sessionIdInput: unknown,
+  deviceKindInput: unknown,
+) {
+  const sessionId = cleanSessionId(sessionIdInput);
+  const deviceKind = cleanDeviceKind(deviceKindInput);
+  if (!sessionId) return { error: { message: "登录状态已更新，请重新输入邀请码", code: "session_invalid" } };
+  const { data, error } = await supabase
+    .from("invite_sessions")
+    .select("session_id, session_generation")
+    .eq("invite_code_hash", identity.codeHash)
+    .eq("device_kind", deviceKind)
+    .maybeSingle();
+  if (error?.code === "42P01" || error?.code === "42703") return { error: { message: "请先运行 invite_device_sessions_20260809.sql", code: "session_invalid" } };
+  if (error) return { error };
+  if (!data || data.session_id !== sessionId || Number(data.session_generation || 0) !== identity.sessionGeneration) {
+    return { error: { message: "此设备的登录已被新登录顶下，请重新输入邀请码", code: "session_invalid" } };
+  }
+  const { error: touchError } = await supabase
+    .from("invite_sessions")
+    .update({ last_seen_at: new Date().toISOString() })
+    .eq("invite_code_hash", identity.codeHash)
+    .eq("device_kind", deviceKind)
+    .eq("session_id", sessionId);
+  if (touchError) console.error("invite session touch failed", touchError);
+  return { data: { deviceKind } };
 }
 
 function hasRole(role: InviteRole, allowed: InviteRole[]) {
@@ -2864,11 +2932,24 @@ Deno.serve(async (req) => {
   const identity = await getInviteIdentity(supabase, body.inviteCode);
   if (!identity) return json({ error: "邀请码无效或已过期" }, 401);
   const role = identity.role;
+  if (action !== "verifyInvite") {
+    const sessionResult = await validateInviteSession(supabase, identity, body.sessionId, body.deviceKind);
+    if (sessionResult.error) return json({ error: sessionResult.error.message || "请重新登录", code: sessionResult.error.code || "session_invalid" }, 401);
+  }
   await touchInviteActivity(supabase, identity, action);
 
   try {
     if (action === "verifyInvite") {
-      return json({ role, label: roleLabels[role], name: identity.displayName, permissions: identity.permissions });
+      const sessionResult = await issueInviteSession(supabase, identity, body.deviceKind, req.headers.get("user-agent"));
+      if (sessionResult.error) return json({ error: sessionResult.error.message || "登录会话签发失败" }, 400);
+      return json({
+        role,
+        label: roleLabels[role],
+        name: identity.displayName,
+        permissions: identity.permissions,
+        sessionId: sessionResult.data?.sessionId,
+        deviceKind: sessionResult.data?.deviceKind,
+      });
     }
 
     if (action === "getMyProfile") {

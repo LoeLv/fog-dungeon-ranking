@@ -102,13 +102,24 @@ async function invokeDungeonAction(action, payload = {}, codeOverride = null) {
             'apikey': SUPABASE_ANON_KEY,
             'Authorization': `Bearer ${SUPABASE_ANON_KEY}`
         },
-        body: JSON.stringify({ action, inviteCode, payload }),
+        body: JSON.stringify({
+            action,
+            inviteCode,
+            sessionId: codeOverride ? '' : (inviteSession?.sessionId || ''),
+            deviceKind: codeOverride ? getClientDeviceKind() : (inviteSession?.deviceKind || getClientDeviceKind()),
+            payload
+        }),
         signal: requestController.signal
     }).catch(error => ({ ok: false, status: 0, json: async () => ({ error: getFriendlyActionError(error, requestController.signal.aborted ? '请求超时，请稍后重试' : '网络请求失败') }) }));
     window.clearTimeout(requestTimeout);
     const result = await response.json().catch(() => ({}));
     if (!response.ok) {
         const errorData = result.data ?? null;
+        if (result.code === 'session_invalid') {
+            inviteSession = null;
+            setLocalData(INVITE_STORAGE_KEY, null);
+            updateInviteUI();
+        }
         return { data: errorData, error: { message: getFriendlyActionError(result.error, '请求失败'), data: errorData } };
     }
     const role = normalizeRole(result.role);
@@ -118,7 +129,9 @@ async function invokeDungeonAction(action, payload = {}, codeOverride = null) {
             role,
             code: inviteCode,
             name: result.name || result.label || ROLE_LABELS[role],
-            permissions: Array.isArray(result.permissions) ? result.permissions : (inviteSession?.permissions || [])
+            permissions: Array.isArray(result.permissions) ? result.permissions : (inviteSession?.permissions || []),
+            sessionId: result.sessionId || inviteSession?.sessionId || '',
+            deviceKind: result.deviceKind || inviteSession?.deviceKind || getClientDeviceKind()
         });
     }
     if (isDungeonListMutation(action)) {
