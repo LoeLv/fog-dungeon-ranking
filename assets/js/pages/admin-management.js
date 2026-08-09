@@ -335,8 +335,8 @@ if (typeof renderAdminPage === 'function') {
         await renderAdminPageBase();
         injectAdminManagementPanels();
         if (isAdmin()) {
-            if (!adminMembers.length && !adminManagementLoading) adminLoadMembers(false);
-            if (!adminTalentPools.length && !adminTalentWarehouseLoading) adminLoadTalentWarehouse(false);
+            if (!adminMembers.length && !adminManagementLoading) await adminLoadMembers(false);
+            if (!adminTalentPools.length && !adminTalentWarehouseLoading) await adminLoadTalentWarehouse(false);
         }
     };
 }
