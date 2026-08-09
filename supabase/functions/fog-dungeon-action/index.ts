@@ -2686,15 +2686,24 @@ async function listAdminMembers(supabase: ReturnType<typeof createClient>) {
   if (inviteError) return { error: inviteError };
 
   const hashes = (invites || []).map((item: Record<string, unknown>) => cleanText(item.code_hash, 64)).filter(Boolean);
-  const profilesResult = hashes.length
-    ? await supabase
+  const profileMap = new Map<string, Record<string, unknown>>();
+  if (hashes.length) {
+    const chunkSize = 40;
+    for (let index = 0; index < hashes.length; index += chunkSize) {
+      const chunk = hashes.slice(index, index + chunkSize);
+      const profilesResult = await supabase
         .from("player_profiles")
         .select("invite_code_hash, faith_god, profession, ascension_score, audience_score, updated_at")
-        .in("invite_code_hash", hashes)
-    : { data: [], error: null };
-  if (profilesResult.error?.code !== "42P01" && profilesResult.error) return { error: profilesResult.error };
-  const profileMap = new Map<string, Record<string, unknown>>();
-  (profilesResult.data || []).forEach((profile: Record<string, unknown>) => profileMap.set(cleanText(profile.invite_code_hash, 64), profile));
+        .in("invite_code_hash", chunk);
+      if (profilesResult.error?.code === "42P01") {
+        continue;
+      }
+      if (profilesResult.error) return { error: profilesResult.error };
+      (profilesResult.data || []).forEach((profile: Record<string, unknown>) => {
+        profileMap.set(cleanText(profile.invite_code_hash, 64), profile);
+      });
+    }
+  }
   const now = Date.now();
   return {
     data: (invites || []).map((invite: Record<string, unknown>) => {
