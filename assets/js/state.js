@@ -1,4 +1,8 @@
 let inviteSession = getLocalData(INVITE_STORAGE_KEY, null);
+if (!USE_LOCAL_FALLBACK && inviteSession?.code && !inviteSession.sessionId) {
+    inviteSession = null;
+    setLocalData(INVITE_STORAGE_KEY, null);
+}
 let currentSort = 'popular', searchQuery = '', selectedGod = 'all', selectedPath = 'all', selectedDifficulty = 'all', reviewFilter = 'all', searchTimeout = null, currentDetailId = null;
 let archivePage = 1;
 let archiveFilteredDungeons = [];

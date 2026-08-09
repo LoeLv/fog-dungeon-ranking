@@ -368,6 +368,10 @@ async function submitInviteCode() {
         resetTalentViewState();
         saveInviteSession({ role, code, name: name || ROLE_LABELS[role], permissions: Array.isArray(permissions) ? permissions : [], sessionId: sessionId || '', deviceKind: deviceKind || getClientDeviceKind() });
         const profileRefresh = await refreshCurrentProfileFromCloud();
+        if (profileRefresh.error) {
+            showToast(`❌ ${getFriendlyActionError(profileRefresh.error, '登录状态确认失败，请重新输入邀请码')}`);
+            return;
+        }
         if (profileRefresh.data?.displayName) {
             saveInviteSession({ role, code, name: profileRefresh.data.displayName, permissions: Array.isArray(permissions) ? permissions : [], sessionId: sessionId || '', deviceKind: deviceKind || getClientDeviceKind() });
         }
