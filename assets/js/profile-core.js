@@ -461,9 +461,11 @@ async function syncProfileToCloud(profile) {
     return { data: cloudProfile, error: null };
 }
 
-async function refreshCurrentProfileFromCloud() {
+async function refreshCurrentProfileFromCloud(options = {}) {
     if (USE_LOCAL_FALLBACK || !inviteSession?.code) return { data: null, error: null };
-    const { data, error, name, role } = await invokeDungeonAction('getMyProfile', {});
+    const { data, error, name, role } = await invokeDungeonAction('getMyProfile', {}, null, {
+        preserveSessionOnInvalid: options.preserveSessionOnInvalid === true
+    });
     if (error) return { data: null, error };
     if (name || role) {
         saveInviteSession({

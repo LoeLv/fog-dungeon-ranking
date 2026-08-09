@@ -86,7 +86,7 @@ function isDungeonListMutation(action) {
     ]).has(action);
 }
 
-async function invokeDungeonAction(action, payload = {}, codeOverride = null) {
+async function invokeDungeonAction(action, payload = {}, codeOverride = null, options = {}) {
     const inviteCode = codeOverride ?? inviteSession?.code;
     const inviteSnapshot = codeOverride ? '' : getInviteSnapshot();
     const publicReadActions = new Set(['listDungeons', 'listDungeonArchivePage', 'getDungeonDetail', 'listProfiles']);
@@ -115,7 +115,7 @@ async function invokeDungeonAction(action, payload = {}, codeOverride = null) {
     const result = await response.json().catch(() => ({}));
     if (!response.ok) {
         const errorData = result.data ?? null;
-        if (result.code === 'session_invalid') {
+        if (result.code === 'session_invalid' && !options.preserveSessionOnInvalid) {
             inviteSession = null;
             setLocalData(INVITE_STORAGE_KEY, null);
             updateInviteUI();
