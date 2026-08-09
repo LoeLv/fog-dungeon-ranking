@@ -6238,10 +6238,60 @@ body.visual-effects-muted .profile-chronicle-card.is-rotating .profile-chronicle
         padding-bottom: var(--mobile-nav-space);
         backdrop-filter: none;
     }
+    .header {
+        padding: 10px 10px 12px;
+    }
+    .header .logo,
+    .brand-copy {
+        min-width: 0;
+    }
+    .brand-copy {
+        overflow: hidden;
+    }
+    .header-actions {
+        display: none;
+    }
     .container {
         width: min(100%, calc(100vw - 20px));
         margin-top: 12px;
         gap: 12px;
+    }
+    .world-altar {
+        grid-template-columns: 1fr;
+        gap: 14px;
+    }
+    .world-altar-copy {
+        min-width: 0;
+    }
+    .world-altar-symbols {
+        min-height: 148px;
+    }
+    .world-title {
+        max-width: 100%;
+        font-size: clamp(1.45rem, 8vw, 2.15rem);
+        line-height: 1.08;
+        letter-spacing: 0.03em;
+        word-break: break-word;
+    }
+    .world-line {
+        max-width: none;
+    }
+    .controls .sort-group {
+        width: 100%;
+    }
+    .control-topline {
+        align-items: stretch;
+    }
+    .search-shell {
+        width: 100%;
+    }
+    .search-input {
+        min-width: 0;
+        width: 100%;
+    }
+    .filter-toggle-btn {
+        width: 100%;
+        justify-content: space-between;
     }
     body.mobile-app-mode > .header,
     body.mobile-app-mode > .container,
@@ -6272,12 +6322,13 @@ body.visual-effects-muted .profile-chronicle-card.is-rotating .profile-chronicle
         position: sticky;
         top: 0;
         z-index: 70;
-        display: grid;
-        grid-template-columns: repeat(3, minmax(0, 1fr));
+        display: flex;
+        flex-wrap: nowrap;
         gap: 7px;
         margin: 0;
         padding: 8px 10px;
-        overflow: visible;
+        overflow-x: auto;
+        overflow-y: hidden;
         background:
             linear-gradient(180deg, rgba(12,14,20,0.98), rgba(12,14,20,0.88)),
             rgba(12,14,20,0.94);
@@ -6286,11 +6337,15 @@ body.visual-effects-muted .profile-chronicle-card.is-rotating .profile-chronicle
     }
     .path-nav::-webkit-scrollbar { display: none; }
     .path-nav-btn {
+        flex: 0 0 auto;
         justify-content: center;
-        min-width: 0;
+        min-width: 92px;
         min-height: 36px;
         padding: 7px 10px;
         font-size: 0.74rem;
+    }
+    .path-nav-prayer {
+        display: none;
     }
     body.mobile-keyboard-active .mobile-bottom-nav {
         transform: translateY(calc(100% + 18px));
@@ -6367,6 +6422,67 @@ body.visual-effects-muted .profile-chronicle-card.is-rotating .profile-chronicle
         border-radius: 12px;
         font-size: 0.82rem;
         font-weight: 900;
+    }
+    .leaderboard-layout,
+    .match-layout,
+    .profile-grid,
+    .public-profile-grid {
+        grid-template-columns: 1fr;
+    }
+    .leaderboard-pagination,
+    .leaderboard-lookup-controls,
+    .match-state-grid,
+    .match-inline-actions,
+    .profile-hero,
+    .profile-hero[data-god],
+    .profile-toolbar {
+        grid-template-columns: 1fr;
+    }
+    .leaderboard-row {
+        grid-template-columns: auto minmax(0, 1fr);
+    }
+    .leaderboard-score {
+        grid-column: 1 / -1;
+        text-align: left;
+        min-width: 0;
+    }
+    .leaderboard-score em {
+        white-space: normal;
+    }
+    .leaderboard-lookup-head,
+    .faith-progress-label,
+    .profile-panel-title,
+    .match-card-head,
+    .match-room-head {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+    .leaderboard-lookup-controls {
+        grid-template-columns: 1fr;
+    }
+    .leaderboard-page-button {
+        width: 100%;
+    }
+    .leaderboard-page-status {
+        order: 3;
+    }
+    .match-card,
+    .match-room-card,
+    .profile-panel,
+    .leaderboard-board {
+        padding: 12px;
+    }
+    .profile-hero {
+        gap: 12px;
+    }
+    .profile-hero[data-god] {
+        grid-template-columns: 1fr;
+    }
+    .profile-hero-stats {
+        grid-template-columns: 1fr;
+    }
+    .faith-progress-card {
+        grid-column: auto;
     }
     .mobile-action-strip .btn[hidden] {
         display: none;

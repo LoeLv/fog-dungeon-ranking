@@ -2,6 +2,14 @@
 
 function getInviteRole() { return inviteSession?.role || null; }
 
+function getInvitePermissions() {
+    return Array.isArray(inviteSession?.permissions) ? inviteSession.permissions : [];
+}
+
+function hasInvitePermission(permission) {
+    return getInviteRole() === 'admin' || getInvitePermissions().includes(permission);
+}
+
 function canUseRole(roles) { return roles.includes(getInviteRole()); }
 
 function canInteract() { return canUseRole(['player', 'author', 'reviewer', 'admin']); }
@@ -16,10 +24,10 @@ function isGodRole() { return getInviteRole() === 'god'; }
 
 function canGrantTitlesUI() { return canUseRole(['admin', 'god']); }
 
-function canSettleScores() { return canUseRole(['reviewer', 'admin']); }
+function canSettleScores() { return canUseRole(['reviewer', 'admin']) || hasInvitePermission('settle_scores'); }
 
 function canReviewDungeonsUI() {
-    return canUseRole(['admin', 'god']) || (getInviteRole() === 'reviewer' && ['羔羊', '槐柏'].includes(inviteSession?.name || ''));
+    return canUseRole(['admin', 'god']) || hasInvitePermission('review_dungeons') || (getInviteRole() === 'reviewer' && ['羔羊', '槐柏'].includes(inviteSession?.name || ''));
 }
 
 function isInitialDisplayNameBinding() {

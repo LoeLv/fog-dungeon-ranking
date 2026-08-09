@@ -113,7 +113,14 @@ async function invokeDungeonAction(action, payload = {}, codeOverride = null) {
     }
     const role = normalizeRole(result.role);
     const canRefreshSession = !!codeOverride || isInviteSnapshotCurrent(inviteSnapshot);
-    if (role && inviteCode && canRefreshSession) saveInviteSession({ role, code: inviteCode, name: result.name || result.label || ROLE_LABELS[role] });
+    if (role && inviteCode && canRefreshSession) {
+        saveInviteSession({
+            role,
+            code: inviteCode,
+            name: result.name || result.label || ROLE_LABELS[role],
+            permissions: Array.isArray(result.permissions) ? result.permissions : (inviteSession?.permissions || [])
+        });
+    }
     if (isDungeonListMutation(action)) {
         invalidateDungeonListCache();
         invalidateShortReadCache('latest-comments');

@@ -6,7 +6,7 @@
     <title>诸神愚戏 · 祈愿试炼留存地</title>
     <link rel="icon" href='data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"%3E%3Crect width="64" height="64" rx="14" fill="%23101218"/%3E%3Cpath d="M15 26c4-11 30-11 34 0v7c0 10-8 18-17 18S15 43 15 33z" fill="none" stroke="%23e7cf8a" stroke-width="4"/%3E%3Cpath d="M23 31c3-3 7-3 10 0M31 31c3-3 7-3 10 0M24 41c5 3 11 3 16 0" fill="none" stroke="%238fd8cf" stroke-width="3" stroke-linecap="round"/%3E%3Ccircle cx="47" cy="17" r="7" fill="%23e7cf8a"/%3E%3Ccircle cx="45" cy="15" r="1.5" fill="%23101218"/%3E%3Ccircle cx="49" cy="19" r="1.5" fill="%23101218"/%3E%3C/svg%3E'>
     <script src="assets/vendor/supabase-js-2.110.2.js"></script>
-    <link rel="stylesheet" href="assets/app.css?v=20260808-structure1">
+    <link rel="stylesheet" href="assets/app.css?v=20260809-structure2">
 </head>
 <body>
     <div class="boot-error" id="bootError" role="alert" aria-live="assertive">
@@ -59,6 +59,7 @@
             <button type="button" class="role-badge" id="roleBadge" onclick="openProfilePage()">旁观者只读</button>
             <button class="btn btn-outline header-action header-action-ledger" onclick="openLeaderboardPage()">◈ 觐见榜单</button>
             <button class="btn btn-outline header-action header-action-score" id="scoreDeskButton" onclick="openScorePage()" style="display:none;">⚖ 分数结算</button>
+            <button class="btn btn-outline header-action" id="permissionDeskButton" onclick="openPermissionDesk()" style="display:none;">权限工作台</button>
             <button class="btn btn-outline header-action" id="adminDeskButton" onclick="openAdminPage()" style="display:none;">▣ 馆主后台</button>
             <button class="btn btn-outline header-action header-action-invite" id="inviteButton" onclick="openInviteModal()">◇ 同契召引</button>
             <button class="btn btn-primary btn-folly header-action header-action-build" id="submitEntryButton" onclick="openSubmitModal()">🎭 构筑愚戏</button>
@@ -91,6 +92,7 @@
             <button type="button" class="btn btn-outline btn-sm" onclick="openInviteModal()">入局谕令</button>
             <button type="button" class="btn btn-primary btn-sm" onclick="openSubmitModal()">构筑试炼</button>
             <button type="button" class="btn btn-outline btn-sm" id="mobileScoreButton" onclick="openScorePage()" hidden>分数结算</button>
+            <button type="button" class="btn btn-outline btn-sm" id="mobilePermissionButton" onclick="openPermissionDesk()" hidden>权限工作台</button>
             <button type="button" class="btn btn-outline btn-sm" id="mobileAdminButton" onclick="openAdminPage()" hidden>馆主后台</button>
         </div>
 
@@ -296,6 +298,17 @@
         </div>
     </main>
 
+    <main class="profile-page" id="permissionPage" style="display:none;">
+        <div class="profile-shell">
+            <div class="profile-toolbar">
+                <button class="detail-back" onclick="closePermissionDesk()">← 返回试炼列表</button>
+                <div class="detail-window-title">权限工作台</div>
+                <button class="detail-close-icon" onclick="closePermissionDesk()" title="返回试炼列表" aria-label="返回试炼列表">✕</button>
+            </div>
+            <div id="permissionContent" class="profile-content"></div>
+        </div>
+    </main>
+
     <!-- 邀请弹窗 -->
     <div class="modal-overlay" id="inviteModalOverlay" style="display:none;" onclick="closeInviteModal(event)">
         <div class="modal" id="inviteModal" onclick="event.stopPropagation()">
@@ -443,17 +456,37 @@
             </div>
         </div>
     </div>
-    <script src="assets/js/foundation.js?v=20260808-structure1"></script>
-    <script src="assets/js/world-data.js?v=20260808-structure1"></script>
-    <script src="assets/js/utils.js?v=20260808-structure1"></script>
-    <script src="assets/js/session.js?v=20260808-structure1"></script>
-    <script src="assets/js/api.js?v=20260808-structure1"></script>
-    <script src="assets/js/pages/leaderboard.js?v=20260808-structure1"></script>
+<script src="assets/js/foundation.js?v=20260808-structure1"></script>
+<script src="assets/js/world-data.js?v=20260808-structure1"></script>
+<script src="assets/js/utils.js?v=20260808-structure1"></script>
+<script src="assets/js/session.js?v=20260808-structure1"></script>
+<script src="assets/js/state.js?v=20260809-structure5"></script>
+<script src="assets/js/api.js?v=20260808-structure1"></script>
+<script src="assets/js/profile-core.js?v=20260808-structure1"></script>
+<script src="assets/js/profile-talent.js?v=20260808-structure1"></script>
+<script src="assets/js/runtime.js?v=20260808-structure1"></script>
+<script src="assets/js/data-access.js?v=20260808-structure1"></script>
+<script src="assets/js/detail.js?v=20260808-structure1"></script>
+<script src="assets/js/discovery.js?v=20260809-structure1"></script>
+    <script src="assets/js/pages/leaderboard.js?v=20260809-rankfix1"></script>
+    <script src="assets/js/pages/archive-tools.js?v=20260809-structure1"></script>
     <script src="assets/js/pages/archive.js?v=20260808-structure1"></script>
+    <script src="assets/js/pages/profile-data.js?v=20260809-structure1"></script>
+    <script src="assets/js/pages/profile-panels.js?v=20260809-structure1"></script>
     <script src="assets/js/pages/profile.js?v=20260808-structure1"></script>
+    <script src="assets/js/pages/score-tools.js?v=20260809-structure1"></script>
     <script src="assets/js/pages/score.js?v=20260808-structure1"></script>
     <script src="assets/js/pages/admin.js?v=20260808-structure1"></script>
+    <script src="assets/js/pages/admin-panel.js?v=20260809-structure1"></script>
+    <script src="assets/js/pages/admin-management.js?v=20260809-curator1"></script>
+    <script src="assets/js/pages/permission-desk.js?v=20260809-permission1"></script>
+    <script src="assets/js/pages/match-tools.js?v=20260809-structure1"></script>
     <script src="assets/js/pages/match.js?v=20260808-structure1"></script>
-    <script src="assets/app.js?v=20260808-structure1"></script>
+    <script src="assets/js/pages/public-profile.js?v=20260809-structure1"></script>
+    <script src="assets/js/comment-ui.js?v=20260809-structure2"></script>
+    <script src="assets/js/trial-detail-ui.js?v=20260809-structure3"></script>
+    <script src="assets/js/trial-actions.js?v=20260809-structure2"></script>
+<script src="assets/app.js?v=20260808-structure1"></script>
+<script src="assets/js/startup.js?v=20260809-structure4"></script>
 </body>
 </html>

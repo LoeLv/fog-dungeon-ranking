@@ -19,6 +19,7 @@ type InviteIdentity = {
   codeHash: string;
   displayName: string;
   inviteId?: string;
+  permissions: string[];
 };
 
 type LooseError = { code?: string; message?: string } | null | undefined;
@@ -29,7 +30,16 @@ type TalentPoolItem = {
   rank: string;
   effect?: string | null;
   action_cost?: number | null;
+  is_enabled?: boolean | null;
+  admin_note?: string | null;
 };
+
+const delegatedPermissionKeys = new Set([
+  "talent_pool_manage",
+  "settle_scores",
+  "account_role_manage",
+  "review_dungeons",
+]);
 
 // Keep malformed or oversized browser requests from consuming function memory.
 // The frontend only sends compact JSON action payloads, so 48 KB leaves ample room
@@ -228,6 +238,11 @@ function json(body: Record<string, unknown>, status = 200) {
 
 function cleanText(value: unknown, maxLength: number) {
   return String(value ?? "").trim().slice(0, maxLength);
+}
+
+function cleanPermissionList(value: unknown) {
+  if (!Array.isArray(value)) return [];
+  return [...new Set(value.map((item) => cleanText(item, 40)).filter((item) => delegatedPermissionKeys.has(item)))];
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -684,7 +699,7 @@ async function getInviteIdentity(
 
   const { data, error } = await supabase
     .from("invite_codes")
-    .select("id, role, display_name, is_active")
+    .select("id, role, display_name, is_active, permissions")
     .eq("code_hash", codeHash)
     .maybeSingle();
   if (error) return null;
@@ -714,6 +729,7 @@ async function getInviteIdentity(
       codeHash,
       displayName,
       inviteId: data.id,
+      permissions: cleanPermissionList(data.permissions),
     };
   }
   return null;
@@ -723,12 +739,17 @@ function hasRole(role: InviteRole, allowed: InviteRole[]) {
   return allowed.includes(role);
 }
 
-function canGrantTitles(role: InviteRole) {
-  return hasRole(role, ["admin", "god"]);
+function hasPermission(identity: InviteIdentity, permission: string) {
+  return identity.role === "admin" || identity.permissions.includes(permission);
+}
+
+function canGrantTitles(identity: InviteIdentity) {
+  return hasRole(identity.role, ["admin", "god"]);
 }
 
 function canReviewDungeons(identity: InviteIdentity) {
   if (hasRole(identity.role, ["admin", "god"])) return true;
+  if (hasPermission(identity, "review_dungeons")) return true;
   return identity.role === "reviewer" && dungeonReviewerNames.has(identity.displayName);
 }
 
@@ -816,7 +837,7 @@ async function writeAdminOperationLog(
     afterState?: Record<string, unknown>;
   },
 ) {
-  if (!hasRole(identity.role, ["admin", "god", "reviewer"])) return { skipped: true };
+  if (!hasRole(identity.role, ["admin", "god", "reviewer"]) && identity.permissions.length === 0) return { skipped: true };
   const { error } = await supabase.from("admin_operation_logs").insert({
     actor_code_hash: identity.codeHash,
     actor_name: identity.displayName,
@@ -1125,8 +1146,8 @@ async function rebalanceTalentPoolsAfterProfileChange(
   };
 }
 
-function canSettleScores(role: InviteRole) {
-  return hasRole(role, ["reviewer", "admin"]);
+function canSettleScores(identity: InviteIdentity) {
+  return hasRole(identity.role, ["reviewer", "admin"]) || hasPermission(identity, "settle_scores");
 }
 
 function cleanSettlementScore(value: unknown) {
@@ -1713,6 +1734,7 @@ async function buildTalentState(
       .from("talent_pool_items")
       .select("pool_key, talent_id, talent_name, rank, effect, action_cost")
       .in("pool_key", allowedPoolKeys)
+      .eq("is_enabled", true)
       .order("pool_key", { ascending: true })
       .order("rank", { ascending: true })
       .order("talent_id", { ascending: true });
@@ -1721,6 +1743,7 @@ async function buildTalentState(
         .from("talent_pool_items")
         .select("pool_key, talent_id, talent_name, rank")
         .in("pool_key", allowedPoolKeys)
+        .eq("is_enabled", true)
         .order("pool_key", { ascending: true })
         .order("rank", { ascending: true })
         .order("talent_id", { ascending: true });
@@ -2478,6 +2501,198 @@ async function repairAdminTalentState(
   return { data: { repaired, unresolved, snapshot: refreshed.data } };
 }
 
+async function touchInviteActivity(
+  supabase: ReturnType<typeof createClient>,
+  identity: InviteIdentity,
+  action: string,
+) {
+  const { error } = await supabase
+    .from("invite_codes")
+    .update({ last_seen_at: new Date().toISOString(), last_seen_action: cleanText(action, 80) })
+    .eq("code_hash", identity.codeHash);
+  if (error && error.code !== "42703") console.error("invite activity update failed", error);
+}
+
+async function getAdminTargetAccount(
+  supabase: ReturnType<typeof createClient>,
+  targetHashInput: unknown,
+  targetNameInput: unknown = "",
+) {
+  const targetHash = cleanText(targetHashInput, 64);
+  const targetName = cleanText(targetNameInput, 40);
+  if (!targetHash && !targetName) return { error: { message: "请填写目标昵称" } };
+  if (targetHash && !/^[a-f0-9]{64}$/i.test(targetHash)) return { error: { message: "目标账号标识不正确" } };
+  let query = supabase
+    .from("invite_codes")
+    .select("id, code_hash, display_name, role, is_active, last_seen_at, last_seen_action");
+  query = targetHash ? query.eq("code_hash", targetHash) : query.eq("display_name", targetName);
+  const { data, error } = targetHash
+    ? await query.maybeSingle()
+    : await query.limit(2);
+  if (error) return { error };
+  if (!targetHash && Array.isArray(data) && data.length > 1) return { error: { message: "这个昵称对应多个账号，请联系馆主处理重名" } };
+  const row = Array.isArray(data) ? data[0] : data;
+  if (!row) return { error: { message: "没有找到这个账号" } };
+  return { data: row as Record<string, unknown> };
+}
+
+async function deleteRowsByHash(
+  supabase: ReturnType<typeof createClient>,
+  table: string,
+  column: string,
+  codeHash: string,
+) {
+  const { error } = await supabase.from(table).delete().eq(column, codeHash);
+  if (error?.code === "42P01" || error?.code === "42703") return { skipped: true };
+  return { error: error || null };
+}
+
+async function cleanupMemberState(
+  supabase: ReturnType<typeof createClient>,
+  codeHash: string,
+  mode: "reset" | "delete",
+) {
+  const deleted: string[] = [];
+  const deleteTargets = [
+    ["ratings", "invite_code_hash"],
+    ["clear_records", "invite_code_hash"],
+    ["match_queue", "player_code_hash"],
+    ["match_room_players", "player_code_hash"],
+    ["match_muster_participants", "player_code_hash"],
+    ["match_musters", "creator_code_hash"],
+    ["score_messages", "player_code_hash"],
+    ["score_change_logs", "player_code_hash"],
+    ["score_settlement_entries", "player_code_hash"],
+    ["profile_titles", "invite_code_hash"],
+    ["profile_curses", "invite_code_hash"],
+    ["talent_overflow_choices", "invite_code_hash"],
+    ["talent_draw_logs", "invite_code_hash"],
+    ["talent_exchange_logs", "invite_code_hash"],
+    ["owned_talents", "invite_code_hash"],
+    ["talent_pool_counters", "invite_code_hash"],
+    ["talent_draw_state", "invite_code_hash"],
+    ["user_fragments", "invite_code_hash"],
+    ["player_profiles", "invite_code_hash"],
+  ];
+
+  const { error: commentError } = await supabase
+    .from("comments")
+    .update({ is_deleted: true, deleted_at: new Date().toISOString(), updated_at: new Date().toISOString(), content: "此用户数据已由馆主清理" })
+    .eq("invite_code_hash", codeHash);
+  if (commentError && commentError.code !== "42P01" && commentError.code !== "42703") return { error: commentError };
+  if (!commentError) deleted.push("comments");
+
+  const { error: grantedTitleError } = await supabase.from("profile_titles").delete().eq("granted_by_hash", codeHash);
+  if (grantedTitleError && grantedTitleError.code !== "42P01" && grantedTitleError.code !== "42703") return { error: grantedTitleError };
+  const { error: grantedCurseError } = await supabase.from("profile_curses").delete().eq("granted_by_hash", codeHash);
+  if (grantedCurseError && grantedCurseError.code !== "42P01" && grantedCurseError.code !== "42703") return { error: grantedCurseError };
+
+  for (const [table, column] of deleteTargets) {
+    const result = await deleteRowsByHash(supabase, table, column, codeHash);
+    if (result.error) return result;
+    if (!result.skipped) deleted.push(table);
+  }
+
+  const invitePatch: Record<string, unknown> = {
+    last_seen_at: null,
+    last_seen_action: mode,
+  };
+  if (mode === "delete") {
+    invitePatch.is_active = false;
+    invitePatch.display_name = `deleted-${codeHash.slice(0, 12)}`;
+  }
+  const { error: inviteError } = await supabase.from("invite_codes").update(invitePatch).eq("code_hash", codeHash);
+  if (inviteError) return { error: inviteError };
+  return { data: { deleted } };
+}
+
+async function listAdminMembers(supabase: ReturnType<typeof createClient>) {
+  const { data: invites, error: inviteError } = await supabase
+    .from("invite_codes")
+    .select("code_hash, display_name, role, is_active, last_seen_at, last_seen_action")
+    .order("last_seen_at", { ascending: false, nullsFirst: false })
+    .order("display_name", { ascending: true })
+    .limit(500);
+  if (inviteError?.code === "42703") return { error: { message: "请先运行 admin_member_talent_pool_migration_20260809.sql" } };
+  if (inviteError) return { error: inviteError };
+
+  const hashes = (invites || []).map((item: Record<string, unknown>) => cleanText(item.code_hash, 64)).filter(Boolean);
+  const profilesResult = hashes.length
+    ? await supabase
+        .from("player_profiles")
+        .select("invite_code_hash, faith_god, profession, ascension_score, audience_score, updated_at")
+        .in("invite_code_hash", hashes)
+    : { data: [], error: null };
+  if (profilesResult.error?.code !== "42P01" && profilesResult.error) return { error: profilesResult.error };
+  const profileMap = new Map<string, Record<string, unknown>>();
+  (profilesResult.data || []).forEach((profile: Record<string, unknown>) => profileMap.set(cleanText(profile.invite_code_hash, 64), profile));
+  const now = Date.now();
+  return {
+    data: (invites || []).map((invite: Record<string, unknown>) => {
+      const codeHash = cleanText(invite.code_hash, 64);
+      const seenAt = cleanText(invite.last_seen_at, 80);
+      const seenTime = seenAt ? Date.parse(seenAt) : 0;
+      const minutesAgo = seenTime ? Math.max(0, Math.floor((now - seenTime) / 60000)) : null;
+      const profile = profileMap.get(codeHash) || {};
+      return {
+        codeHash,
+        displayName: cleanText(invite.display_name, 40),
+        role: cleanText(invite.role, 20),
+        isActive: invite.is_active !== false,
+        lastSeenAt: seenAt,
+        lastSeenAction: cleanText(invite.last_seen_action, 80),
+        minutesAgo,
+        status: minutesAgo === null ? "never" : (minutesAgo <= 5 ? "online" : (minutesAgo <= 1440 ? "recent" : "inactive")),
+        faithGod: cleanText(profile.faith_god, 20),
+        profession: cleanText(profile.profession, 40),
+        ascensionScore: cleanScore(profile.ascension_score),
+        audienceScore: cleanScore(profile.audience_score),
+        profileUpdatedAt: cleanText(profile.updated_at, 80),
+      };
+    }),
+  };
+}
+
+async function listAdminTalentPoolItems(supabase: ReturnType<typeof createClient>) {
+  const { data, error } = await supabase
+    .from("talent_pool_items")
+    .select("pool_key, talent_id, talent_name, rank, effect, action_cost, is_enabled, admin_note, updated_at")
+    .order("pool_key", { ascending: true })
+    .order("rank", { ascending: true })
+    .order("talent_id", { ascending: true })
+    .limit(2000);
+  if (error?.code === "42703") return { error: { message: "请先运行 admin_member_talent_pool_migration_20260809.sql" } };
+  if (error) return { error };
+  const pools = new Map<string, Record<string, unknown>[]>();
+  (data || []).forEach((item: Record<string, unknown>) => {
+    const poolKey = cleanPoolKey(item.pool_key);
+    if (!pools.has(poolKey)) pools.set(poolKey, []);
+    pools.get(poolKey)?.push({
+      poolKey,
+      talentId: cleanTalentId(item.talent_id),
+      talentName: cleanText(item.talent_name, 80),
+      rank: cleanText(item.rank, 2),
+      effect: cleanText(item.effect, 600),
+      actionCost: Math.max(0, Math.min(99, Number(item.action_cost || 0))),
+      isEnabled: item.is_enabled !== false,
+      adminNote: cleanText(item.admin_note, 300),
+      updatedAt: cleanText(item.updated_at, 80),
+    });
+  });
+  return { data: { pools: [...pools.entries()].map(([poolKey, items]) => ({ poolKey, items })) } };
+}
+
+async function getNextTalentId(supabase: ReturnType<typeof createClient>, poolKey: string) {
+  const { data, error } = await supabase
+    .from("talent_pool_items")
+    .select("talent_id")
+    .eq("pool_key", poolKey)
+    .order("talent_id", { ascending: false })
+    .limit(1);
+  if (error) return { error };
+  return { data: Number(data?.[0]?.talent_id || 0) + 1 };
+}
+
 Deno.serve(async (req) => {
   // CORS preflight must be answered before origin authorization. Browsers send
   // OPTIONS without the final request body, and rejecting it blocks every call.
@@ -2649,10 +2864,11 @@ Deno.serve(async (req) => {
   const identity = await getInviteIdentity(supabase, body.inviteCode);
   if (!identity) return json({ error: "邀请码无效或已过期" }, 401);
   const role = identity.role;
+  await touchInviteActivity(supabase, identity, action);
 
   try {
     if (action === "verifyInvite") {
-      return json({ role, label: roleLabels[role], name: identity.displayName });
+      return json({ role, label: roleLabels[role], name: identity.displayName, permissions: identity.permissions });
     }
 
     if (action === "getMyProfile") {
@@ -2700,8 +2916,198 @@ Deno.serve(async (req) => {
       return json({ role, name: identity.displayName, data: { logs: result.data || [], unavailable: !!result.unavailable } });
     }
 
+    if (action === "adminListMembers") {
+      if (role !== "admin") return json({ error: "只有馆主可以查看成员状态" }, 403);
+      const result = await listAdminMembers(supabase);
+      if (result.error) return json({ error: result.error.message || "成员列表读取失败" }, 400);
+      return json({ role, name: identity.displayName, data: result.data });
+    }
+
+    if (action === "adminSetAccountRole") {
+      const delegatedRoleManager = hasPermission(identity, "account_role_manage");
+      if (role !== "admin" && !delegatedRoleManager) return json({ error: "没有账号权限调整权限" }, 403);
+      const targetResult = await getAdminTargetAccount(supabase, payload.targetHash, payload.targetName);
+      if (targetResult.error) return json({ error: targetResult.error.message || "目标账号读取失败" }, 400);
+      const targetAccount = targetResult.data as Record<string, unknown>;
+      const targetHash = cleanText(targetAccount.code_hash, 64);
+      const beforeRole = cleanText(targetAccount.role, 20);
+      const nextRole = cleanText(payload.role, 20);
+      const allowedRoles = new Set(["player", "author", "reviewer", "admin"]);
+      if (!allowedRoles.has(nextRole)) return json({ error: "只能设置为玩家、作者、审核员或馆主" }, 400);
+      if (targetHash === identity.codeHash) return json({ error: "不能调整当前正在使用的馆主账号权限" }, 400);
+      if (beforeRole === "god") return json({ error: "神明账号不能通过馆主管理面板改权" }, 403);
+      if (delegatedRoleManager && !(beforeRole === "player" && nextRole === "author")) {
+        return json({ error: "当前权限只允许将玩家升级为作者" }, 403);
+      }
+      if (beforeRole === nextRole) return json({ error: "目标账号已经是这个权限" }, 400);
+
+      const { error: inviteError } = await supabase
+        .from("invite_codes")
+        .update({ role: nextRole })
+        .eq("code_hash", targetHash);
+      if (inviteError) return json({ error: inviteError.message }, 400);
+      const { error: profileError } = await supabase
+        .from("player_profiles")
+        .update({ role: nextRole, updated_at: new Date().toISOString() })
+        .eq("invite_code_hash", targetHash);
+      if (profileError && profileError.code !== "42P01" && profileError.code !== "42703") return json({ error: profileError.message }, 400);
+
+      await writeAdminOperationLog(supabase, identity, {
+        action: "account.role",
+        targetCodeHash: targetHash,
+        targetName: cleanText(targetAccount.display_name, 40),
+        objectType: "invite_code",
+        summary: `馆主将 ${cleanText(targetAccount.display_name, 40)} 的权限从 ${beforeRole} 调整为 ${nextRole}`,
+        beforeState: { role: beforeRole },
+        afterState: { role: nextRole },
+      });
+      return json({ role, name: identity.displayName, data: { targetHash, role: nextRole } });
+    }
+
+    if (action === "adminRenameAccount") {
+      if (role !== "admin") return json({ error: "只有馆主可以改名" }, 403);
+      const targetResult = await getAdminTargetAccount(supabase, payload.targetHash);
+      if (targetResult.error) return json({ error: targetResult.error.message || "目标账号读取失败" }, 400);
+      const targetAccount = targetResult.data as Record<string, unknown>;
+      const display = cleanDisplayName(payload.displayName, "admin");
+      if (display.error || !display.name) return json({ error: display.error || "昵称不正确" }, 400);
+      const beforeName = cleanText(targetAccount.display_name, 40);
+      const codeHash = cleanText(targetAccount.code_hash, 64);
+      const { error: inviteError } = await supabase
+        .from("invite_codes")
+        .update({ display_name: display.name, last_seen_at: new Date().toISOString(), last_seen_action: "adminRenameAccount" })
+        .eq("code_hash", codeHash);
+      if (inviteError?.code === "23505") return json({ error: "这个昵称已经被使用了" }, 409);
+      if (inviteError) return json({ error: inviteError.message }, 400);
+      const [profileUpdate, titleUpdate, curseUpdate] = await Promise.all([
+        supabase.from("player_profiles").update({ display_name: display.name, updated_at: new Date().toISOString() }).eq("invite_code_hash", codeHash),
+        supabase.from("profile_titles").update({ display_name: display.name }).eq("invite_code_hash", codeHash),
+        supabase.from("profile_curses").update({ display_name: display.name }).eq("invite_code_hash", codeHash),
+      ]);
+      const renameError = [profileUpdate.error, titleUpdate.error, curseUpdate.error].find((error) => error && error.code !== "42P01" && error.code !== "42703");
+      if (renameError) return json({ error: renameError.message || "改名同步失败" }, 400);
+      await writeAdminOperationLog(supabase, identity, {
+        action: "account.rename",
+        targetCodeHash: codeHash,
+        targetName: beforeName,
+        objectType: "invite_code",
+        summary: `馆主将 ${beforeName} 改名为 ${display.name}`,
+        beforeState: { displayName: beforeName },
+        afterState: { displayName: display.name },
+      });
+      return json({ role, name: identity.displayName, data: { codeHash, displayName: display.name } });
+    }
+
+    if (action === "adminResetAccount" || action === "adminDeleteAccount") {
+      if (role !== "admin") return json({ error: "只有馆主可以管理账号" }, 403);
+      const mode = action === "adminDeleteAccount" ? "delete" : "reset";
+      const targetResult = await getAdminTargetAccount(supabase, payload.targetHash);
+      if (targetResult.error) return json({ error: targetResult.error.message || "目标账号读取失败" }, 400);
+      const targetAccount = targetResult.data as Record<string, unknown>;
+      const codeHash = cleanText(targetAccount.code_hash, 64);
+      const beforeName = cleanText(targetAccount.display_name, 40);
+      if (codeHash === identity.codeHash) return json({ error: "不能重置或删除当前正在使用的馆主账号" }, 400);
+      const cleanupResult = await cleanupMemberState(supabase, codeHash, mode);
+      if (cleanupResult.error) return json({ error: cleanupResult.error.message || "账号处理失败" }, 400);
+      await writeAdminOperationLog(supabase, identity, {
+        action: mode === "delete" ? "account.delete" : "account.reset",
+        targetCodeHash: codeHash,
+        targetName: beforeName,
+        objectType: "invite_code",
+        summary: mode === "delete" ? `馆主注销了 ${beforeName} 的账号` : `馆主重置了 ${beforeName} 的个人状态`,
+        beforeState: { displayName: beforeName, isActive: targetAccount.is_active },
+        afterState: { mode },
+      });
+      return json({ role, name: identity.displayName, data: { codeHash, displayName: beforeName, mode } });
+    }
+
+    if (action === "adminListTalentPoolItems") {
+      if (!hasPermission(identity, "talent_pool_manage")) return json({ error: "没有天赋池管理权限" }, 403);
+      const result = await listAdminTalentPoolItems(supabase);
+      if (result.error) return json({ error: result.error.message || "天赋仓库读取失败" }, 400);
+      return json({ role, name: identity.displayName, data: result.data });
+    }
+
+    if (action === "adminUpsertTalentPoolItem") {
+      if (!hasPermission(identity, "talent_pool_manage")) return json({ error: "没有天赋池管理权限" }, 403);
+      const poolKey = cleanPoolKey(payload.poolKey);
+      const talentName = cleanText(payload.talentName, 80);
+      const rank = cleanText(payload.rank, 2).toUpperCase();
+      const effect = cleanText(payload.effect, 600);
+      const adminNote = cleanText(payload.adminNote, 300);
+      const isEnabled = payload.isEnabled !== false;
+      const actionCost = Math.max(0, Math.min(99, Number(payload.actionCost || 0)));
+      const talentIdInput = cleanTalentId(payload.talentId);
+      if (!poolKey || !talentName || !["S", "A", "B", "C"].includes(rank)) return json({ error: "天赋池、名称、等级不能为空" }, 400);
+      const nextIdResult = talentIdInput ? { data: talentIdInput, error: null as LooseError } : await getNextTalentId(supabase, poolKey);
+      if (nextIdResult.error) return json({ error: nextIdResult.error.message || "天赋编号分配失败" }, 400);
+      const talentId = Number(nextIdResult.data || 1);
+      const beforeResult = await supabase
+        .from("talent_pool_items")
+        .select("pool_key, talent_id, talent_name, rank, effect, action_cost, is_enabled, admin_note")
+        .eq("pool_key", poolKey)
+        .eq("talent_id", talentId)
+        .maybeSingle();
+      if (beforeResult.error) return json({ error: beforeResult.error.message }, 400);
+      const { error } = await supabase.from("talent_pool_items").upsert({
+        pool_key: poolKey,
+        talent_id: talentId,
+        talent_name: talentName,
+        rank,
+        effect,
+        action_cost: actionCost,
+        is_enabled: isEnabled,
+        admin_note: adminNote,
+        created_by_hash: identity.codeHash,
+        updated_by_hash: identity.codeHash,
+        updated_at: new Date().toISOString(),
+      }, { onConflict: "pool_key,talent_id" });
+      if (error) return json({ error: error.message }, 400);
+      await writeAdminOperationLog(supabase, identity, {
+        action: "talent_pool.upsert",
+        objectType: "talent_pool_item",
+        objectId: `${poolKey}:${talentId}`,
+        summary: `${beforeResult.data ? "更新" : "新增"} ${poolKey} #${talentId} 天赋`,
+        beforeState: beforeResult.data || {},
+        afterState: { poolKey, talentId, talentName, rank, effect, actionCost, isEnabled, adminNote },
+      });
+      return json({ role, name: identity.displayName, data: { poolKey, talentId, talentName, rank, effect, actionCost, isEnabled, adminNote } });
+    }
+
+    if (action === "adminSetTalentPoolItemEnabled") {
+      if (!hasPermission(identity, "talent_pool_manage")) return json({ error: "没有天赋池管理权限" }, 403);
+      const poolKey = cleanPoolKey(payload.poolKey);
+      const talentId = cleanTalentId(payload.talentId);
+      const enabled = payload.enabled === true;
+      if (!poolKey || !talentId) return json({ error: "天赋项目不完整" }, 400);
+      const beforeResult = await supabase
+        .from("talent_pool_items")
+        .select("pool_key, talent_id, talent_name, rank, effect, action_cost, is_enabled, admin_note")
+        .eq("pool_key", poolKey)
+        .eq("talent_id", talentId)
+        .maybeSingle();
+      if (beforeResult.error) return json({ error: beforeResult.error.message }, 400);
+      if (!beforeResult.data) return json({ error: "没有找到这个天赋" }, 404);
+      const { error } = await supabase
+        .from("talent_pool_items")
+        .update({ is_enabled: enabled, updated_by_hash: identity.codeHash, updated_at: new Date().toISOString() })
+        .eq("pool_key", poolKey)
+        .eq("talent_id", talentId);
+      if (error) return json({ error: error.message }, 400);
+      await writeAdminOperationLog(supabase, identity, {
+        action: "talent_pool.toggle",
+        objectType: "talent_pool_item",
+        objectId: `${poolKey}:${talentId}`,
+        targetName: cleanText(beforeResult.data.talent_name, 80),
+        summary: `${enabled ? "启用" : "停用"} ${poolKey} #${talentId}`,
+        beforeState: beforeResult.data as Record<string, unknown>,
+        afterState: { ...(beforeResult.data as Record<string, unknown>), is_enabled: enabled },
+      });
+      return json({ role, name: identity.displayName, data: { poolKey, talentId, isEnabled: enabled } });
+    }
+
     if (action === "listHonorOperationLogs") {
-      if (!canGrantTitles(role)) return json({ error: "需要馆主或神明谕令" }, 403);
+      if (!canGrantTitles(identity)) return json({ error: "需要馆主或神明谕令" }, 403);
       const limit = Math.max(1, Math.min(50, Number(payload.limit || 30)));
       const result = await listHonorOperationLogs(supabase, identity, limit);
       if (result.error) return json({ error: result.error.message || "称号诅咒操作日志读取失败" }, 400);
@@ -3237,7 +3643,7 @@ Deno.serve(async (req) => {
     }
 
     if (action === "grantProfileTitle") {
-      if (!canGrantTitles(role)) return json({ error: "需要馆主或神明谕令" }, 403);
+      if (!canGrantTitles(identity)) return json({ error: "需要馆主或神明谕令" }, 403);
 
       const targetResult = await getProfileByDisplayName(supabase, payload.targetName);
       if (targetResult.error) {
@@ -3289,7 +3695,7 @@ Deno.serve(async (req) => {
     }
 
     if (action === "grantBetrayalCurse") {
-      if (!canGrantTitles(role)) return json({ error: "需要馆主或神明谕令" }, 403);
+      if (!canGrantTitles(identity)) return json({ error: "需要馆主或神明谕令" }, 403);
 
       const targetResult = await getProfileByDisplayName(supabase, payload.targetName);
       if (targetResult.error) {
@@ -3374,7 +3780,7 @@ Deno.serve(async (req) => {
     }
 
     if (action === "revokeProfileTitle") {
-      if (!canGrantTitles(role)) return json({ error: "需要馆主或神明谕令" }, 403);
+      if (!canGrantTitles(identity)) return json({ error: "需要馆主或神明谕令" }, 403);
 
       const targetResult = await getProfileByDisplayName(supabase, payload.targetName);
       if (targetResult.error) {
@@ -3489,7 +3895,7 @@ Deno.serve(async (req) => {
     }
 
     if (action === "revokeProfileCurse") {
-      if (!canGrantTitles(role)) return json({ error: "需要馆主或神明谕令" }, 403);
+      if (!canGrantTitles(identity)) return json({ error: "需要馆主或神明谕令" }, 403);
 
       const targetResult = await getProfileByDisplayName(supabase, payload.targetName);
       if (targetResult.error) {
@@ -3552,7 +3958,7 @@ Deno.serve(async (req) => {
     }
 
     if (action === "checkScorePreview") {
-      if (!canSettleScores(role)) return json({ error: "需要审核员权限" }, 403);
+      if (!canSettleScores(identity)) return json({ error: "需要审核员权限" }, 403);
       const { entries, invalidLines } = parseScoreSettlementText(payload.textContent);
       const preview = await buildScorePreview(supabase, entries, invalidLines);
       if (preview.error?.code === "42P01") return json({ error: "请先运行 score_system_migration.sql" }, 400);
@@ -3561,7 +3967,7 @@ Deno.serve(async (req) => {
     }
 
     if (action === "submitScoreBatch") {
-      if (!canSettleScores(role)) return json({ error: "需要审核员权限" }, 403);
+      if (!canSettleScores(identity)) return json({ error: "需要审核员权限" }, 403);
       const { entries, invalidLines } = parseScoreSettlementText(payload.textContent);
       if (invalidLines.length) return json({ error: "结算文本格式有误", data: { invalidLines } }, 400);
       const result = await commitScoreSettlement(
@@ -3585,7 +3991,7 @@ Deno.serve(async (req) => {
     }
 
     if (action === "submitScoreSingle") {
-      if (!canSettleScores(role)) return json({ error: "需要审核员权限" }, 403);
+      if (!canSettleScores(identity)) return json({ error: "需要审核员权限" }, 403);
       const nick = cleanText(payload.playerName, 40);
       const deng = cleanSettlementScore(payload.dengScore);
       const jin = cleanSettlementScore(payload.jinScore);
@@ -3611,7 +4017,7 @@ Deno.serve(async (req) => {
     }
 
     if (action === "listScoreSettlements") {
-      if (!canSettleScores(role)) return json({ error: "需要审核员权限" }, 403);
+      if (!canSettleScores(identity)) return json({ error: "需要审核员权限" }, 403);
       const limit = Math.max(1, Math.min(100, Number(payload.limit || 30)));
       const dungeonQuery = cleanText(payload.dungeonQuery, 80);
       const recentCutoff = new Date(Date.now() - 48 * 60 * 60 * 1000).toISOString();
@@ -3629,7 +4035,7 @@ Deno.serve(async (req) => {
     }
 
     if (action === "getScoreSettlementDetail") {
-      if (!canSettleScores(role)) return json({ error: "需要审核员权限" }, 403);
+      if (!canSettleScores(identity)) return json({ error: "需要审核员权限" }, 403);
       const settlementId = cleanText(payload.settlementId, 80);
       if (!isUuid(settlementId)) return json({ error: "结算 ID 不正确" }, 400);
       const { data: settlement, error: settlementError } = await supabase
@@ -3648,7 +4054,7 @@ Deno.serve(async (req) => {
     }
 
     if (action === "revokeScoreSettlement") {
-      if (!canSettleScores(role)) return json({ error: "需要审核员权限" }, 403);
+      if (!canSettleScores(identity)) return json({ error: "需要审核员权限" }, 403);
       const settlementId = cleanText(payload.settlementId, 80);
       const revokeRemark = cleanText(payload.revokeRemark, 500);
       if (!isUuid(settlementId)) return json({ error: "结算 ID 不正确" }, 400);
@@ -3811,13 +4217,15 @@ Deno.serve(async (req) => {
       const { data: poolItems, error: poolError } = await supabase
         .from("talent_pool_items")
         .select("pool_key, talent_id, talent_name, rank, effect, action_cost")
-        .eq("pool_key", poolKey);
+        .eq("pool_key", poolKey)
+        .eq("is_enabled", true);
       let poolRows = poolItems;
       if (isMissingTalentEffectColumn(poolError ?? null)) {
         const fallbackPoolResult = await supabase
           .from("talent_pool_items")
           .select("pool_key, talent_id, talent_name, rank")
-          .eq("pool_key", poolKey);
+          .eq("pool_key", poolKey)
+          .eq("is_enabled", true);
         if (fallbackPoolResult.error) return json({ error: fallbackPoolResult.error.message }, 400);
         poolRows = fallbackPoolResult.data || [];
       } else {
@@ -4006,6 +4414,7 @@ Deno.serve(async (req) => {
         .select("pool_key, talent_id, talent_name, rank, effect, action_cost")
         .eq("pool_key", poolKey)
         .eq("talent_id", targetTalentId)
+        .eq("is_enabled", true)
         .maybeSingle();
       let targetTalentRow = targetTalent;
       if (isMissingTalentEffectColumn(targetError ?? null)) {
@@ -4014,6 +4423,7 @@ Deno.serve(async (req) => {
           .select("pool_key, talent_id, talent_name, rank")
           .eq("pool_key", poolKey)
           .eq("talent_id", targetTalentId)
+          .eq("is_enabled", true)
           .maybeSingle();
         if (fallbackTargetResult.error) return json({ error: fallbackTargetResult.error.message }, 400);
         targetTalentRow = fallbackTargetResult.data;
@@ -4157,7 +4567,7 @@ Deno.serve(async (req) => {
             return json({ error: "S级天赋不可作为替换分解对象" }, 400);
           }
           replaced = replacedRow;
-          fragmentGainTotal += getTalentFragmentGain(replaced.rank);
+          fragmentGainTotal += getTalentFragmentGain(replacedRow.rank);
         }
       }
 
