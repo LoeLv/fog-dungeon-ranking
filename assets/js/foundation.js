@@ -7,6 +7,7 @@ const SUPABASE_ANON_KEY = 'sb_publishable_sZYKAIzDJJYQgzC2Buzhyw_art6KnAS';
 const DUNGEON_ACTION_URL = `${SUPABASE_URL}/functions/v1/fog-dungeon-action`;
 const supabaseClient = window.supabase?.createClient ? window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY) : null;
 const USE_LOCAL_FALLBACK = !supabaseClient || SUPABASE_URL.includes('your-project-id');
+const INVITE_DEVICE_SESSION_ENFORCEMENT = false;
 if (USE_LOCAL_FALLBACK) {
     console.warn('⚠️ Supabase 未配置，使用本地存储模式。替换 SUPABASE_URL 和 SUPABASE_ANON_KEY 以启用在线功能。');
 }

@@ -44,6 +44,7 @@ const delegatedPermissionKeys = new Set([
   "review_dungeons",
 ]);
 const inviteDeviceKinds = new Set(["desktop", "mobile"]);
+const inviteDeviceSessionEnforcement = false;
 
 // Keep malformed or oversized browser requests from consuming function memory.
 // The frontend only sends compact JSON action payloads, so 48 KB leaves ample room
@@ -2932,7 +2933,7 @@ Deno.serve(async (req) => {
   const identity = await getInviteIdentity(supabase, body.inviteCode);
   if (!identity) return json({ error: "邀请码无效或已过期" }, 401);
   const role = identity.role;
-  if (action !== "verifyInvite") {
+  if (inviteDeviceSessionEnforcement && action !== "verifyInvite") {
     const sessionResult = await validateInviteSession(supabase, identity, body.sessionId, body.deviceKind);
     if (sessionResult.error) return json({ error: sessionResult.error.message || "请重新登录", code: sessionResult.error.code || "session_invalid" }, 401);
   }
@@ -2940,6 +2941,16 @@ Deno.serve(async (req) => {
 
   try {
     if (action === "verifyInvite") {
+      if (!inviteDeviceSessionEnforcement) {
+        return json({
+          role,
+          label: roleLabels[role],
+          name: identity.displayName,
+          permissions: identity.permissions,
+          sessionId: "",
+          deviceKind: cleanDeviceKind(body.deviceKind),
+        });
+      }
       const sessionResult = await issueInviteSession(supabase, identity, body.deviceKind, req.headers.get("user-agent"));
       if (sessionResult.error) return json({ error: sessionResult.error.message || "登录会话签发失败" }, 400);
       return json({

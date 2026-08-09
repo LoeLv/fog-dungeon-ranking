@@ -1,5 +1,5 @@
 let inviteSession = getLocalData(INVITE_STORAGE_KEY, null);
-if (!USE_LOCAL_FALLBACK && inviteSession?.code && !inviteSession.sessionId) {
+if (INVITE_DEVICE_SESSION_ENFORCEMENT && !USE_LOCAL_FALLBACK && inviteSession?.code && !inviteSession.sessionId) {
     inviteSession = null;
     setLocalData(INVITE_STORAGE_KEY, null);
 }
