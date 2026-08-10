@@ -195,7 +195,6 @@ function renderAdminTalentRows() {
         <div class="profile-panel-title"><span>${group.rank} 级天赋</span><small>${group.items.length} 项</small></div>
         <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px;">
             ${group.items.map(item => {
-                const payload = escapeHtml(jsString(JSON.stringify(item)));
                 const cooldown = String(item.cooldown || '').trim() || '无';
                 return `<article class="profile-list-item" style="height:100%;display:flex;flex-direction:column;gap:8px;">
                     <div class="profile-list-title"><span>#${Number(item.talentId || 0)} ${escapeHtml(item.talentName || '未命名')}</span><small>${item.isEnabled ? '启用' : '停用'}</small></div>
@@ -203,7 +202,7 @@ function renderAdminTalentRows() {
                     <div class="profile-list-meta" style="white-space:pre-wrap;">${escapeHtml(item.effect || '未填写效果')}</div>
                     <div class="profile-list-meta">${escapeHtml(item.adminNote || '无备注')}</div>
                     <div class="profile-tools" style="margin-top:auto;">
-                        <button class="btn btn-outline btn-sm" onclick="adminEditTalentPoolItem(${payload})">编辑</button>
+                        <button class="btn btn-outline btn-sm" onclick="adminEditTalentPoolItemByKey(${escapeHtml(jsString(item.poolKey))}, ${Number(item.talentId || 0)})">编辑</button>
                         <button class="btn btn-outline btn-sm" onclick="adminToggleTalentPoolItem(${escapeHtml(jsString(item.poolKey))}, ${Number(item.talentId || 0)}, ${item.isEnabled ? 'false' : 'true'})">${item.isEnabled ? '停用' : '启用'}</button>
                     </div>
                 </article>`;
@@ -385,6 +384,19 @@ function adminInspectMember(_targetHash, displayName) {
     adminLookupPlayer(displayName || '');
 }
 
+function findAdminTalentPoolItem(poolKey, talentId) {
+    const cleanPool = String(poolKey || '');
+    const cleanId = Number(talentId || 0);
+    for (const pool of adminTalentPools || []) {
+        const item = (pool.items || []).find(candidate =>
+            String(candidate.poolKey || '') === cleanPool &&
+            Number(candidate.talentId || 0) === cleanId
+        );
+        if (item) return item;
+    }
+    return null;
+}
+
 async function adminSetMemberRole() {
     const targetHash = document.getElementById('adminRoleTarget')?.value || '';
     const nextRole = document.getElementById('adminRoleValue')?.value || '';
@@ -489,6 +501,10 @@ async function adminDeleteMember(targetHash, displayName) {
 
 function adminEditTalentPoolItem(rawItem) {
     const item = typeof rawItem === 'string' ? JSON.parse(rawItem) : rawItem;
+    if (!item) {
+        showToast('没有找到这个天赋，请刷新仓库后再试');
+        return;
+    }
     adminTalentPoolSelected = item.poolKey || adminTalentPoolSelected;
     const fields = {
         adminTalentPoolKey: item.poolKey || '',
@@ -506,6 +522,10 @@ function adminEditTalentPoolItem(rawItem) {
     });
     const enabled = document.getElementById('adminTalentEnabled');
     if (enabled) enabled.checked = item.isEnabled !== false;
+}
+
+function adminEditTalentPoolItemByKey(poolKey, talentId) {
+    adminEditTalentPoolItem(findAdminTalentPoolItem(poolKey, talentId));
 }
 
 function adminClearTalentPoolForm() {
