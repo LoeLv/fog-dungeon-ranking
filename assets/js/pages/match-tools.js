@@ -144,9 +144,36 @@ function getBattleActionLabel(type) {
     }[type] || type || '记录';
 }
 
-function renderBattleRoomPanel(state, error) {
+function renderBattleRoomSummaryCard(state, error) {
+    if (error) return `<section class="profile-panel battle-room-summary"><div class="profile-empty">${escapeHtml(error.message || '战场房间读取失败。')}</div></section>`;
+    if (!state?.room) return '';
+    const room = state.room;
+    const dungeon = state.dungeon || {};
+    const players = Array.isArray(state.players) ? state.players : [];
+    const round = Math.max(1, Number(room.current_round || 1));
+    return `
+        <section class="profile-panel battle-room-summary">
+            <div class="profile-panel-title">
+                <span>当前房间 · ${escapeHtml(dungeon.name || String(room.id || '').slice(0, 8))}</span>
+                <small>${escapeHtml(getBattleStatusLabel(room.room_status))} · 第 ${round} 回合</small>
+            </div>
+            <div class="match-state-grid">
+                <div class="match-state-tile"><span>主持</span><strong>${escapeHtml(room.host_name || '未知')}</strong></div>
+                <div class="match-state-tile"><span>入场人数</span><strong>${players.length}</strong></div>
+                <div class="match-state-tile"><span>房间号</span><strong>${escapeHtml(String(room.id || '').slice(0, 8))}</strong></div>
+            </div>
+            <div class="battle-room-entry">
+                <input class="battle-room-input" readonly value="${escapeHtml(room.id || '')}">
+                <button class="btn btn-primary btn-sm" onclick='openBattleRoomPage(${jsString(room.id)})'>进入独立房间</button>
+                <button class="btn btn-outline btn-sm" onclick='copyBattleRoomIdUI(${jsString(room.id)})'>复制房间号</button>
+            </div>
+        </section>`;
+}
+
+function renderBattleRoomPanel(state, error, options = {}) {
     if (error) return `<section class="profile-panel battle-room-panel"><div class="profile-empty">${escapeHtml(error.message || '战斗房间读取失败。')}</div></section>`;
     if (!state?.room) return '';
+    const standalone = options.embedded === false;
     const room = state.room;
     const dungeon = state.dungeon || {};
     const players = Array.isArray(state.players) ? state.players : [];
@@ -154,12 +181,12 @@ function renderBattleRoomPanel(state, error) {
     const canOperate = !!state.canOperate && room.room_status === 'active';
     const round = Math.max(1, Number(room.current_round || 1));
     return `
-        <section class="profile-panel battle-room-panel">
+        <section class="profile-panel battle-room-panel ${standalone ? 'battle-room-page-panel' : ''}">
             <div class="profile-panel-title">
                 <span>神域战场 · ${escapeHtml(dungeon.name || String(room.id || '').slice(0, 8))}</span>
                 <small>${escapeHtml(getBattleStatusLabel(room.room_status))} · 第 ${round} 回合 · 主持 ${escapeHtml(room.host_name || '未知')}</small>
             </div>
-            <div class="leaderboard-summary">把房间号发给其他入局者即可拉人入场。当前血量是本场战斗事实；伤害会先扣护盾，治疗可超过初始上限。</div>
+            <div class="leaderboard-summary">把房间号发给其他入局者即可拉人入场。当前血量是本场战斗事实；伤害会先扣护盾，治疗可超过初始上限。${standalone ? '这个页面只承载当前房间，适合正式打本时常驻。' : ''}</div>
             <div class="battle-room-topline">
                 <label>回合 <input class="battle-room-input" id="battleRoundInput" type="number" min="1" max="999" value="${round}" ${canOperate ? '' : 'disabled'}></label>
                 <label>房间号 <input class="battle-room-input" id="battleRoomIdDisplay" readonly value="${escapeHtml(room.id || '')}"></label>
@@ -270,12 +297,12 @@ function renderMatchStatePanel(state, error) {
                 <button class="btn btn-primary btn-sm" onclick="joinBattleRoomByInputUI()">加入房间</button>
             </div>
             <div class="match-inline-actions">
-                ${currentBattleRoom ? `<button class="btn btn-primary btn-sm" onclick='joinBattleRoomUI(${jsString(currentBattleRoom.id)})'>${inBattleRoom ? '回到战场' : '加入战场'}</button>` : `<button class="btn btn-primary btn-sm" onclick='createBattleRoomUI(${jsString(dungeon.id)})'>开房间</button>`}
+                ${currentBattleRoom ? `<button class="btn btn-primary btn-sm" onclick='${inBattleRoom ? `openBattleRoomPage(${jsString(currentBattleRoom.id)})` : `joinBattleRoomUI(${jsString(currentBattleRoom.id)})`}'>${inBattleRoom ? '进入房间' : '加入战场'}</button>` : `<button class="btn btn-primary btn-sm" onclick='createBattleRoomUI(${jsString(dungeon.id)})'>开房间</button>`}
                 <button class="btn btn-outline btn-sm" onclick='refreshMatchStateUI(${jsString(dungeon.id)})'>刷新状态</button>
                 <button class="btn btn-outline btn-sm" onclick='openDetailFromMatch(${jsString(dungeon.id)})'>查看详情</button>
             </div>
         </section>
-        ${renderBattleRoomPanel(battleRoomStateCache, battleRoomError)}
+        ${renderBattleRoomSummaryCard(battleRoomStateCache, battleRoomError)}
         ${rooms.length ? `<section class="profile-panel" style="margin-top:18px;"><div class="profile-panel-title"><span>历史组队房间</span><small>${rooms.length} 间</small></div>${renderMatchRooms(rooms)}</section>` : ''}
         <div class="trial-oracle ${godClass}" style="${getGodSkinStyle(dungeon.type)};margin-top:18px;">${escapeHtml(getGodOracle(dungeon.type))}</div>`;
 }

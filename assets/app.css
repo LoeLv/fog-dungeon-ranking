@@ -5237,9 +5237,26 @@ body.visual-effects-muted .profile-chronicle-card.is-rotating .profile-chronicle
     white-space: nowrap;
 }
 .battle-room-entry {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 10px;
     margin-top: 12px;
 }
+.battle-room-entry .battle-room-input {
+    flex: 1 1 260px;
+}
+.battle-room-shell .profile-content {
+    max-width: 1180px;
+    margin: 0 auto;
+}
 .battle-room-panel {
+    margin-top: 18px;
+}
+.battle-room-page-panel {
+    margin-top: 0;
+}
+.battle-room-summary {
     margin-top: 18px;
 }
 .battle-room-topline {

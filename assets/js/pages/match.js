@@ -95,7 +95,9 @@ async function openMatchPage(initialDungeonId = null) {
     if (scorePage) scorePage.style.display = 'none';
     const adminPage = document.getElementById('adminPage');
     if (adminPage) adminPage.style.display = 'none';
-    document.body.classList.remove('detail-view-open', 'profile-view-open', 'leaderboard-view-open', 'score-view-open');
+    const battleRoomPage = document.getElementById('battleRoomPage');
+    if (battleRoomPage) battleRoomPage.style.display = 'none';
+    document.body.classList.remove('detail-view-open', 'profile-view-open', 'leaderboard-view-open', 'score-view-open', 'battle-room-view-open');
     document.body.classList.add('match-view-open');
     document.getElementById('matchPage').style.display = 'block';
     window.scrollTo(0, 0);
@@ -115,6 +117,64 @@ async function openBattlePage(initialDungeonId = null) {
 
 function closeBattlePage(restoreScroll = true) {
     closeMatchPage(restoreScroll);
+}
+
+async function renderBattleRoomPage() {
+    const container = document.getElementById('battleRoomContent');
+    if (!container) return;
+    if (!selectedBattleRoomId) {
+        container.innerHTML = '<div class="profile-empty">还没有进入任何战场房间。</div>';
+        return;
+    }
+    container.innerHTML = '<div class="loading"><div class="spinner"></div><br>正在读取战场房间...</div>';
+    const { state, error } = await fetchBattleRoomState({ battleRoomId: selectedBattleRoomId });
+    battleRoomStateCache = state;
+    battleRoomError = error;
+    if (error) {
+        container.innerHTML = `<div class="profile-empty">${escapeHtml(error.message || '战场房间读取失败。')}</div>`;
+        return;
+    }
+    selectedBattleRoomId = state?.room?.id || selectedBattleRoomId;
+    setLocalData(BATTLE_ROOM_STORAGE_KEY, selectedBattleRoomId);
+    selectedMatchDungeonId = state?.dungeon?.id || selectedMatchDungeonId;
+    container.innerHTML = renderBattleRoomPanel(battleRoomStateCache, battleRoomError, { embedded: false });
+}
+
+function renderBattleRoomPageFromCache() {
+    const container = document.getElementById('battleRoomContent');
+    if (!container) return;
+    container.innerHTML = renderBattleRoomPanel(battleRoomStateCache, battleRoomError, { embedded: false });
+}
+
+async function openBattleRoomPage(battleRoomId = selectedBattleRoomId) {
+    if (!battleRoomId) return;
+    selectedBattleRoomId = String(battleRoomId);
+    setLocalData(BATTLE_ROOM_STORAGE_KEY, selectedBattleRoomId);
+    battleRoomScrollY = window.scrollY || document.documentElement.scrollTop || 0;
+    const detailOverlay = document.getElementById('detailOverlay');
+    if (detailOverlay) detailOverlay.style.display = 'none';
+    ['matchPage', 'profilePage', 'leaderboardPage', 'scorePage', 'adminPage', 'permissionPage'].forEach(id => {
+        const page = document.getElementById(id);
+        if (page) page.style.display = 'none';
+    });
+    document.body.classList.remove('detail-view-open', 'profile-view-open', 'leaderboard-view-open', 'score-view-open', 'match-view-open');
+    document.body.classList.add('battle-room-view-open');
+    const page = document.getElementById('battleRoomPage');
+    if (page) page.style.display = 'block';
+    window.scrollTo(0, 0);
+    await renderBattleRoomPage();
+}
+
+function closeBattleRoomPage(restoreScroll = true) {
+    const page = document.getElementById('battleRoomPage');
+    if (page) page.style.display = 'none';
+    document.body.classList.remove('battle-room-view-open');
+    if (restoreScroll !== false) requestAnimationFrame(() => window.scrollTo(0, battleRoomScrollY || 0));
+}
+
+async function backToBattleLobby() {
+    closeBattleRoomPage(false);
+    await openMatchPage(selectedMatchDungeonId);
 }
 
 async function openDetailFromMatch(id) {
@@ -142,7 +202,7 @@ async function openBattleRoomFromMatch(matchRoomId) {
     battleRoomError = null;
     selectedMatchDungeonId = data?.dungeon?.id || selectedMatchDungeonId;
     showToast('已进入神域战场');
-    await renderMatchPage();
+    await openBattleRoomPage(selectedBattleRoomId);
 }
 
 async function createBattleRoomUI(dungeonId = selectedMatchDungeonId) {
@@ -157,7 +217,7 @@ async function createBattleRoomUI(dungeonId = selectedMatchDungeonId) {
     battleRoomStateCache = data || null;
     battleRoomError = null;
     showToast('神域战场已开房');
-    await renderMatchPage();
+    await openBattleRoomPage(selectedBattleRoomId);
 }
 
 async function joinBattleRoomUI(battleRoomId = selectedBattleRoomId) {
@@ -172,7 +232,7 @@ async function joinBattleRoomUI(battleRoomId = selectedBattleRoomId) {
     battleRoomStateCache = data || null;
     battleRoomError = null;
     showToast('已加入神域战场');
-    await renderMatchPage();
+    await openBattleRoomPage(selectedBattleRoomId);
 }
 
 async function joinBattleRoomByInputUI() {
@@ -206,7 +266,8 @@ async function refreshBattleRoomUI(battleRoomId = selectedBattleRoomId) {
     selectedBattleRoomId = error ? null : state?.room?.id || battleRoomId;
     setLocalData(BATTLE_ROOM_STORAGE_KEY, selectedBattleRoomId);
     if (error) showToast(`❌ ${error.message || '神域战场刷新失败'}`);
-    await renderMatchPage();
+    if (document.getElementById('battleRoomPage')?.style.display === 'block') renderBattleRoomPageFromCache();
+    else await renderMatchPage();
 }
 
 async function updateBattleRoomRoundUI(battleRoomId = selectedBattleRoomId) {
@@ -220,7 +281,8 @@ async function updateBattleRoomRoundUI(battleRoomId = selectedBattleRoomId) {
     battleRoomStateCache = data || null;
     battleRoomError = null;
     showToast('战场回合已保存');
-    await renderMatchPage();
+    if (document.getElementById('battleRoomPage')?.style.display === 'block') renderBattleRoomPageFromCache();
+    else await renderMatchPage();
 }
 
 async function applyBattlePlayerActionUI(battleRoomId, playerId, actionType) {
@@ -234,7 +296,8 @@ async function applyBattlePlayerActionUI(battleRoomId, playerId, actionType) {
     battleRoomStateCache = data || null;
     battleRoomError = null;
     showToast('战斗操作已记录');
-    await renderMatchPage();
+    if (document.getElementById('battleRoomPage')?.style.display === 'block') renderBattleRoomPageFromCache();
+    else await renderMatchPage();
 }
 
 async function finishBattleRoomUI(battleRoomId, status = 'finished') {
@@ -247,7 +310,8 @@ async function finishBattleRoomUI(battleRoomId, status = 'finished') {
     battleRoomStateCache = data || null;
     battleRoomError = null;
     showToast(status === 'cancelled' ? '神域战场已取消' : '神域战场已结束');
-    await renderMatchPage();
+    if (document.getElementById('battleRoomPage')?.style.display === 'block') renderBattleRoomPageFromCache();
+    else await renderMatchPage();
 }
 
 async function joinMatchQueueUI(dungeonId) {

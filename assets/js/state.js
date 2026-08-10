@@ -13,6 +13,7 @@ let archiveScrollY = 0;
 let profileScrollY = 0;
 let leaderboardScrollY = 0;
 let matchScrollY = 0;
+let battleRoomScrollY = 0;
 let scoreScrollY = 0;
 let adminScrollY = 0;
 let adminLookupState = { targetName: '', snapshot: null };
