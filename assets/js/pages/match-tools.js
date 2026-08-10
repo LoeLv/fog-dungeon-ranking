@@ -63,7 +63,24 @@ async function fetchBattleRoomState({ battleRoomId = null, matchRoomId = null, d
 
 function renderMatchDungeonCards(dungeons) {
     if (!dungeons.length) return '<div class="profile-empty">暂无可开战场的试炼。</div>';
-    return `<div class="match-list">${dungeons.map(dungeon => {
+    const query = String(matchDungeonSearchQuery || '').trim().toLowerCase();
+    const filtered = query
+        ? dungeons.filter(dungeon => [
+            dungeon.name,
+            dungeon.type,
+            formatGodName(dungeon.type),
+            dungeon.difficulty,
+            formatDifficulty(dungeon.difficulty),
+            formatCreatorLine(dungeon)
+        ].some(value => String(value || '').toLowerCase().includes(query)))
+        : dungeons;
+    if (!filtered.length) return '<div class="profile-empty">没有找到匹配的副本。</div>';
+    const activeDungeon = filtered.find(dungeon => String(dungeon.id) === String(selectedMatchDungeonId));
+    const ordered = activeDungeon
+        ? [activeDungeon, ...filtered.filter(dungeon => String(dungeon.id) !== String(selectedMatchDungeonId))]
+        : filtered;
+    const visible = query ? ordered.slice(0, 20) : ordered.slice(0, 8);
+    return `<div class="match-list">${visible.map(dungeon => {
         const active = String(dungeon.id) === String(selectedMatchDungeonId);
         const queued = Number(dungeon.queuedCount || 0);
         const rooms = Number(dungeon.runningRoomCount || 0);
@@ -84,7 +101,7 @@ function renderMatchDungeonCards(dungeons) {
                     <span class="metric-pill">轮回 <strong>${escapeHtml(getTrialCycle(dungeon))}</strong></span>
                 </div>
             </article>`;
-    }).join('')}</div>`;
+    }).join('')}</div>${filtered.length > visible.length ? `<div class="match-list-count">显示 ${visible.length} / ${filtered.length}</div>` : ''}`;
 }
 
 function renderMatchQueue(queue) {

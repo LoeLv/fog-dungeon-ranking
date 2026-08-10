@@ -5140,6 +5140,45 @@ body.visual-effects-muted .profile-chronicle-card.is-rotating .profile-chronicle
     display: grid;
     gap: 10px;
 }
+.match-list-count {
+    margin-top: 10px;
+    color: var(--text-muted);
+    font-size: 0.74rem;
+    font-weight: 800;
+    text-align: right;
+}
+.match-dungeon-toolbar {
+    margin-bottom: 12px;
+}
+.match-dungeon-search {
+    position: relative;
+    display: flex;
+    align-items: center;
+    margin-bottom: 12px;
+}
+.match-dungeon-search > span {
+    position: absolute;
+    left: 13px;
+    z-index: 1;
+    color: var(--gold-light);
+    font-size: 1.25rem;
+    line-height: 1;
+    pointer-events: none;
+}
+.match-dungeon-search input {
+    width: 100%;
+    min-width: 0;
+    padding: 11px 13px 11px 36px;
+    border: 1px solid rgba(231,207,138,0.18);
+    border-radius: 10px;
+    background: rgba(0,0,0,0.22);
+    color: var(--text-bright);
+}
+.match-dungeon-search input:focus {
+    outline: none;
+    border-color: rgba(231,207,138,0.52);
+    box-shadow: 0 0 0 3px rgba(231,207,138,0.08);
+}
 .match-card {
     position: relative;
     display: grid;

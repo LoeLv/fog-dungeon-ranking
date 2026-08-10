@@ -19,37 +19,6 @@ async function renderMatchPage() {
     if (!selectedMatchDungeonId || !dungeons.some(dungeon => String(dungeon.id) === String(selectedMatchDungeonId))) {
         selectedMatchDungeonId = dungeons[0]?.id || null;
     }
-    matchStateCache = null;
-    matchStateError = null;
-    if (selectedMatchDungeonId) {
-        const stateResult = await fetchMatchState(selectedMatchDungeonId);
-        matchStateCache = stateResult.state;
-        matchStateError = stateResult.error;
-    }
-    if (selectedBattleRoomId) {
-        const battleResult = await fetchBattleRoomState({ battleRoomId: selectedBattleRoomId });
-        battleRoomStateCache = battleResult.state;
-        battleRoomError = battleResult.error;
-        if (battleResult.state?.dungeon?.id) selectedMatchDungeonId = battleResult.state.dungeon.id;
-        if (battleResult.error) {
-            selectedBattleRoomId = null;
-            setLocalData(BATTLE_ROOM_STORAGE_KEY, null);
-        } else if (battleResult.state?.room?.room_status !== 'active') {
-            selectedBattleRoomId = null;
-            setLocalData(BATTLE_ROOM_STORAGE_KEY, null);
-            battleRoomStateCache = null;
-            battleRoomError = null;
-        }
-    } else if (selectedMatchDungeonId) {
-        const battleResult = await fetchBattleRoomState({ dungeonId: selectedMatchDungeonId });
-        battleRoomError = battleResult.error;
-        battleRoomStateCache = battleResult.state?.room?.room_status === 'active' ? battleResult.state : null;
-        selectedBattleRoomId = battleRoomStateCache?.room?.id || null;
-        if (selectedBattleRoomId) setLocalData(BATTLE_ROOM_STORAGE_KEY, selectedBattleRoomId);
-    } else {
-        battleRoomStateCache = null;
-        battleRoomError = null;
-    }
     container.innerHTML = `
         <section class="profile-hero">
             <div class="profile-avatar path-void">${renderGodSigil('命运', 'lg')}</div>
@@ -65,13 +34,70 @@ async function renderMatchPage() {
         </section>
         <div class="match-layout">
             <section class="profile-panel">
-                <div class="profile-panel-title"><span>可开战场</span><small>选择副本开房间</small></div>
-                ${renderMatchDungeonCards(dungeons)}
+                <div class="profile-panel-title match-dungeon-toolbar">
+                    <span>可开战场</span>
+                    <small>共 ${dungeons.length} 个副本</small>
+                </div>
+                <label class="match-dungeon-search">
+                    <span aria-hidden="true">⌕</span>
+                    <input id="matchDungeonSearchInput" type="search" value="${escapeHtml(matchDungeonSearchQuery)}" placeholder="搜索副本名称、神祇或构筑者" oninput="filterMatchDungeonsUI(this.value)">
+                </label>
+                <div id="matchDungeonList">${renderMatchDungeonCards(dungeons)}</div>
             </section>
-            <div>
-                ${renderMatchStatePanel(matchStateCache, matchStateError)}
-            </div>
+            <div id="matchStatePanel"><div class="loading"><div class="spinner"></div><br>正在读取战场...</div></div>
         </div>`;
+    await refreshMatchDetailPanel(selectedMatchDungeonId);
+}
+
+function filterMatchDungeonsUI(value = '') {
+    matchDungeonSearchQuery = String(value || '');
+    const list = document.getElementById('matchDungeonList');
+    if (list) list.innerHTML = renderMatchDungeonCards(matchDungeonsCache);
+}
+
+async function refreshMatchDetailPanel(dungeonId = selectedMatchDungeonId) {
+    const panel = document.getElementById('matchStatePanel');
+    if (!panel) return;
+    const requestId = ++matchDetailRequestId;
+    if (!dungeonId) {
+        panel.innerHTML = renderMatchStatePanel(null, null);
+        return;
+    }
+    panel.innerHTML = '<div class="loading"><div class="spinner"></div><br>正在读取战场...</div>';
+    selectedMatchDungeonId = String(dungeonId);
+    const stateResult = await fetchMatchState(selectedMatchDungeonId);
+    if (requestId !== matchDetailRequestId) return;
+    matchStateCache = stateResult.state;
+    matchStateError = stateResult.error;
+    if (selectedBattleRoomId) {
+        const battleResult = await fetchBattleRoomState({ battleRoomId: selectedBattleRoomId });
+        if (requestId !== matchDetailRequestId) return;
+        battleRoomError = battleResult.error;
+        if (battleResult.state?.dungeon?.id) selectedMatchDungeonId = battleResult.state.dungeon.id;
+        if (battleResult.error || battleResult.state?.room?.room_status !== 'active') {
+            selectedBattleRoomId = null;
+            setLocalData(BATTLE_ROOM_STORAGE_KEY, null);
+            battleRoomStateCache = null;
+            battleRoomError = null;
+        } else {
+            battleRoomStateCache = battleResult.state;
+        }
+    }
+    if (selectedMatchDungeonId && String(matchStateCache?.dungeon?.id || '') !== String(selectedMatchDungeonId)) {
+        const stateRefresh = await fetchMatchState(selectedMatchDungeonId);
+        if (requestId !== matchDetailRequestId) return;
+        matchStateCache = stateRefresh.state;
+        matchStateError = stateRefresh.error;
+    }
+    if (!selectedBattleRoomId) {
+        const battleResult = await fetchBattleRoomState({ dungeonId: selectedMatchDungeonId });
+        if (requestId !== matchDetailRequestId) return;
+        battleRoomError = battleResult.error;
+        battleRoomStateCache = battleResult.state?.room?.room_status === 'active' ? battleResult.state : null;
+        selectedBattleRoomId = battleRoomStateCache?.room?.id || null;
+        if (selectedBattleRoomId) setLocalData(BATTLE_ROOM_STORAGE_KEY, selectedBattleRoomId);
+    }
+    panel.innerHTML = renderMatchStatePanel(matchStateCache, matchStateError);
 }
 
 async function openMatchDungeon(dungeonId) {
@@ -80,7 +106,9 @@ async function openMatchDungeon(dungeonId) {
     setLocalData(BATTLE_ROOM_STORAGE_KEY, null);
     battleRoomStateCache = null;
     battleRoomError = null;
-    await renderMatchPage();
+    const list = document.getElementById('matchDungeonList');
+    if (list) list.innerHTML = renderMatchDungeonCards(matchDungeonsCache);
+    await refreshMatchDetailPanel(selectedMatchDungeonId);
 }
 
 async function openMatchPage(initialDungeonId = null) {
@@ -199,11 +227,8 @@ async function openDetailFromMatch(id) {
 
 async function refreshMatchStateUI(dungeonId = selectedMatchDungeonId) {
     if (!dungeonId) return;
-    const { state, error } = await fetchMatchState(dungeonId);
-    matchStateCache = state;
-    matchStateError = error;
-    if (error) showToast(`❌ ${error.message || '刷新失败'}`);
-    await renderMatchPage();
+    await refreshMatchDetailPanel(dungeonId);
+    if (matchStateError) showToast(`❌ ${matchStateError.message || '刷新失败'}`);
 }
 
 async function openBattleRoomFromMatch(matchRoomId) {
