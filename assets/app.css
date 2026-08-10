@@ -142,6 +142,15 @@ body.match-view-open > #leaderboardPage,
 body.match-view-open > #scorePage {
     display: none;
 }
+body.battle-room-view-open > .header,
+body.battle-room-view-open > .container,
+body.battle-room-view-open > .detail-overlay,
+body.battle-room-view-open > #profilePage,
+body.battle-room-view-open > #leaderboardPage,
+body.battle-room-view-open > #scorePage,
+body.battle-room-view-open > #matchPage {
+    display: none;
+}
 body::before {
     content: "";
     position: fixed;

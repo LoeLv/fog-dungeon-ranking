@@ -166,6 +166,7 @@ function renderBattleRoomSummaryCard(state, error) {
                 <input class="battle-room-input" readonly value="${escapeHtml(room.id || '')}">
                 <button class="btn btn-primary btn-sm" onclick='openBattleRoomPage(${jsString(room.id)})'>进入独立房间</button>
                 <button class="btn btn-outline btn-sm" onclick='copyBattleRoomIdUI(${jsString(room.id)})'>复制房间号</button>
+                ${state.canOperate && room.room_status === 'active' ? `<button class="btn btn-outline btn-sm" onclick='closeBattleRoomUI(${jsString(room.id)})'>关闭房间</button>` : ''}
             </div>
         </section>`;
 }
@@ -210,7 +211,7 @@ function renderBattleRoomPanel(state, error, options = {}) {
                         <textarea class="profile-textarea battle-finish-note" id="battleFinishNote" maxlength="800" placeholder="结算备注、胜负摘要或异常说明"></textarea>
                         <div class="match-inline-actions">
                             <button class="btn btn-primary btn-sm" onclick='finishBattleRoomUI(${jsString(room.id)}, "finished")'>结束战斗</button>
-                            <button class="btn btn-outline btn-sm" onclick='finishBattleRoomUI(${jsString(room.id)}, "cancelled")'>取消房间</button>
+                            <button class="btn btn-outline btn-sm" onclick='closeBattleRoomUI(${jsString(room.id)})'>关闭房间</button>
                         </div>` : `<div class="profile-empty">${escapeHtml(room.note || '房间结束后会保留成员状态和日志。')}</div>`}
                 </section>
             </div>

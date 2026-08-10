@@ -302,8 +302,13 @@ async function applyBattlePlayerActionUI(battleRoomId, playerId, actionType) {
 
 async function finishBattleRoomUI(battleRoomId, status = 'finished') {
     if (!battleRoomId) return;
+    if (status === 'cancelled') {
+        const confirmed = window.confirm('关闭房间会结束本场战斗，并在战斗日志中提示 DM/主持人房间已关闭。确定关闭吗？');
+        if (!confirmed) return;
+    }
     const note = document.getElementById('battleFinishNote')?.value || '';
-    const { data, error } = await invokeDungeonAction('finishBattleRoom', { battleRoomId, status, note });
+    const finalNote = status === 'cancelled' ? (note || '房间已关闭，DM/主持人已收到关闭提示。') : note;
+    const { data, error } = await invokeDungeonAction('finishBattleRoom', { battleRoomId, status, note: finalNote });
     if (error) { showToast(`❌ ${error.message || '房间收束失败'}`); return; }
     selectedBattleRoomId = data?.room?.id || battleRoomId;
     setLocalData(BATTLE_ROOM_STORAGE_KEY, selectedBattleRoomId);
@@ -312,6 +317,10 @@ async function finishBattleRoomUI(battleRoomId, status = 'finished') {
     showToast(status === 'cancelled' ? '神域战场已取消' : '神域战场已结束');
     if (document.getElementById('battleRoomPage')?.style.display === 'block') renderBattleRoomPageFromCache();
     else await renderMatchPage();
+}
+
+async function closeBattleRoomUI(battleRoomId = selectedBattleRoomId) {
+    await finishBattleRoomUI(battleRoomId, 'cancelled');
 }
 
 async function joinMatchQueueUI(dungeonId) {
