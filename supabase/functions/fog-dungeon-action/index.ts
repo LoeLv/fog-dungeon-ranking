@@ -37,6 +37,7 @@ type TalentPoolItem = {
   talent_name: string;
   rank: string;
   effect?: string | null;
+  cooldown?: string | null;
   action_cost?: number | null;
   is_enabled?: boolean | null;
   admin_note?: string | null;
@@ -3190,12 +3191,12 @@ async function listAdminMembers(supabase: ReturnType<typeof createClient>) {
 async function listAdminTalentPoolItems(supabase: ReturnType<typeof createClient>) {
   const { data, error } = await supabase
     .from("talent_pool_items")
-    .select("pool_key, talent_id, talent_name, rank, effect, action_cost, is_enabled, admin_note, updated_at")
+    .select("pool_key, talent_id, talent_name, rank, effect, cooldown, action_cost, is_enabled, admin_note, updated_at")
     .order("pool_key", { ascending: true })
     .order("rank", { ascending: true })
     .order("talent_id", { ascending: true })
     .limit(2000);
-  if (error?.code === "42703") return { error: { message: "请先运行 admin_member_talent_pool_migration_20260809.sql" } };
+  if (error?.code === "42703") return { error: { message: "请先运行 talent_pool_cooldown_batch_20260810.sql" } };
   if (error) return { error };
   const pools = new Map<string, Record<string, unknown>[]>();
   (data || []).forEach((item: Record<string, unknown>) => {
@@ -3207,6 +3208,7 @@ async function listAdminTalentPoolItems(supabase: ReturnType<typeof createClient
       talentName: cleanText(item.talent_name, 80),
       rank: cleanText(item.rank, 2),
       effect: cleanText(item.effect, 600),
+      cooldown: cleanText(item.cooldown, 40),
       actionCost: Math.max(0, Math.min(99, Number(item.action_cost || 0))),
       isEnabled: item.is_enabled !== false,
       adminNote: cleanText(item.admin_note, 300),
@@ -3225,6 +3227,23 @@ async function getNextTalentId(supabase: ReturnType<typeof createClient>, poolKe
     .limit(1);
   if (error) return { error };
   return { data: Number(data?.[0]?.talent_id || 0) + 1 };
+}
+
+function cleanTalentPoolPayload(payload: Record<string, unknown>, requireTalentId = false) {
+  const poolKey = cleanPoolKey(payload.poolKey);
+  const talentName = cleanText(payload.talentName, 80);
+  const rank = cleanText(payload.rank, 2).toUpperCase();
+  const effect = cleanText(payload.effect, 600);
+  const cooldown = cleanText(payload.cooldown, 40);
+  const adminNote = cleanText(payload.adminNote, 300);
+  const isEnabled = payload.isEnabled !== false;
+  const actionCost = Math.max(0, Math.min(99, Number(payload.actionCost || 0)));
+  const talentIdInput = cleanTalentId(payload.talentId);
+  if (!poolKey || !talentName || !["S", "A", "B", "C"].includes(rank)) {
+    return { error: { message: "天赋池、名称、等级不能为空" } };
+  }
+  if (requireTalentId && !talentIdInput) return { error: { message: "批量导入必须填写编号" } };
+  return { data: { poolKey, talentName, rank, effect, cooldown, adminNote, isEnabled, actionCost, talentIdInput } };
 }
 
 Deno.serve(async (req) => {
@@ -3587,21 +3606,15 @@ Deno.serve(async (req) => {
 
     if (action === "adminUpsertTalentPoolItem") {
       if (!hasPermission(identity, "talent_pool_manage")) return json({ error: "没有天赋池管理权限" }, 403);
-      const poolKey = cleanPoolKey(payload.poolKey);
-      const talentName = cleanText(payload.talentName, 80);
-      const rank = cleanText(payload.rank, 2).toUpperCase();
-      const effect = cleanText(payload.effect, 600);
-      const adminNote = cleanText(payload.adminNote, 300);
-      const isEnabled = payload.isEnabled !== false;
-      const actionCost = Math.max(0, Math.min(99, Number(payload.actionCost || 0)));
-      const talentIdInput = cleanTalentId(payload.talentId);
-      if (!poolKey || !talentName || !["S", "A", "B", "C"].includes(rank)) return json({ error: "天赋池、名称、等级不能为空" }, 400);
+      const cleanResult = cleanTalentPoolPayload(payload);
+      if (cleanResult.error) return json({ error: cleanResult.error.message }, 400);
+      const { poolKey, talentName, rank, effect, cooldown, adminNote, isEnabled, actionCost, talentIdInput } = cleanResult.data;
       const nextIdResult = talentIdInput ? { data: talentIdInput, error: null as LooseError } : await getNextTalentId(supabase, poolKey);
       if (nextIdResult.error) return json({ error: nextIdResult.error.message || "天赋编号分配失败" }, 400);
       const talentId = Number(nextIdResult.data || 1);
       const beforeResult = await supabase
         .from("talent_pool_items")
-        .select("pool_key, talent_id, talent_name, rank, effect, action_cost, is_enabled, admin_note")
+        .select("pool_key, talent_id, talent_name, rank, effect, cooldown, action_cost, is_enabled, admin_note")
         .eq("pool_key", poolKey)
         .eq("talent_id", talentId)
         .maybeSingle();
@@ -3612,6 +3625,7 @@ Deno.serve(async (req) => {
         talent_name: talentName,
         rank,
         effect,
+        cooldown,
         action_cost: actionCost,
         is_enabled: isEnabled,
         admin_note: adminNote,
@@ -3626,9 +3640,48 @@ Deno.serve(async (req) => {
         objectId: `${poolKey}:${talentId}`,
         summary: `${beforeResult.data ? "更新" : "新增"} ${poolKey} #${talentId} 天赋`,
         beforeState: beforeResult.data || {},
-        afterState: { poolKey, talentId, talentName, rank, effect, actionCost, isEnabled, adminNote },
+        afterState: { poolKey, talentId, talentName, rank, effect, cooldown, actionCost, isEnabled, adminNote },
       });
-      return json({ role, name: identity.displayName, data: { poolKey, talentId, talentName, rank, effect, actionCost, isEnabled, adminNote } });
+      return json({ role, name: identity.displayName, data: { poolKey, talentId, talentName, rank, effect, cooldown, actionCost, isEnabled, adminNote } });
+    }
+
+    if (action === "adminBatchUpsertTalentPoolItems") {
+      if (!hasPermission(identity, "talent_pool_manage")) return json({ error: "没有天赋池管理权限" }, 403);
+      const poolKey = cleanPoolKey(payload.poolKey);
+      const rawItems = Array.isArray(payload.items) ? payload.items : [];
+      if (!poolKey || !rawItems.length) return json({ error: "请填写天赋池和批量天赋" }, 400);
+      if (rawItems.length > 100) return json({ error: "单次最多批量保存 100 个天赋" }, 400);
+      const rows = [];
+      for (const [index, rawItem] of rawItems.entries()) {
+        if (!isRecord(rawItem)) return json({ error: `第 ${index + 1} 行格式不正确` }, 400);
+        const cleanResult = cleanTalentPoolPayload({ ...rawItem, poolKey }, true);
+        if (cleanResult.error) return json({ error: `第 ${index + 1} 行：${cleanResult.error.message}` }, 400);
+        const item = cleanResult.data;
+        rows.push({
+          pool_key: poolKey,
+          talent_id: item.talentIdInput,
+          talent_name: item.talentName,
+          rank: item.rank,
+          effect: item.effect,
+          cooldown: item.cooldown,
+          action_cost: item.actionCost,
+          is_enabled: item.isEnabled,
+          admin_note: item.adminNote,
+          created_by_hash: identity.codeHash,
+          updated_by_hash: identity.codeHash,
+          updated_at: new Date().toISOString(),
+        });
+      }
+      const { error } = await supabase.from("talent_pool_items").upsert(rows, { onConflict: "pool_key,talent_id" });
+      if (error) return json({ error: error.message }, 400);
+      await writeAdminOperationLog(supabase, identity, {
+        action: "talent_pool.batch_upsert",
+        objectType: "talent_pool_item",
+        objectId: poolKey,
+        summary: `批量保存 ${poolKey} ${rows.length} 个天赋`,
+        afterState: { poolKey, count: rows.length, talentIds: rows.map((row) => row.talent_id) },
+      });
+      return json({ role, name: identity.displayName, data: { poolKey, count: rows.length } });
     }
 
     if (action === "adminSetTalentPoolItemEnabled") {

@@ -26,6 +26,15 @@ async function renderMatchPage() {
         matchStateCache = stateResult.state;
         matchStateError = stateResult.error;
     }
+    if (selectedBattleRoomId) {
+        const battleResult = await fetchBattleRoomState({ battleRoomId: selectedBattleRoomId });
+        battleRoomStateCache = battleResult.state;
+        battleRoomError = battleResult.error;
+        if (battleResult.error) selectedBattleRoomId = null;
+    } else {
+        battleRoomStateCache = null;
+        battleRoomError = null;
+    }
     container.innerHTML = `
         <section class="profile-hero">
             <div class="profile-avatar path-void">${renderGodSigil('命运', 'lg')}</div>
@@ -52,6 +61,9 @@ async function renderMatchPage() {
 
 async function openMatchDungeon(dungeonId) {
     selectedMatchDungeonId = String(dungeonId || '');
+    selectedBattleRoomId = null;
+    battleRoomStateCache = null;
+    battleRoomError = null;
     await renderMatchPage();
 }
 
@@ -97,6 +109,65 @@ async function refreshMatchStateUI(dungeonId = selectedMatchDungeonId) {
     matchStateCache = state;
     matchStateError = error;
     if (error) showToast(`❌ ${error.message || '刷新失败'}`);
+    await renderMatchPage();
+}
+
+async function openBattleRoomFromMatch(matchRoomId) {
+    if (!requireInvite(['player', 'author', 'reviewer', 'admin'], '验入局谕令后可进入战斗房间。')) return;
+    if (USE_LOCAL_FALLBACK) { showToast('本地模式暂不保存战斗房间'); return; }
+    const { data, error } = await invokeDungeonAction('createBattleRoomFromMatchRoom', { matchRoomId });
+    if (error) { showToast(`❌ ${error.message || '战斗房间开启失败'}`); return; }
+    selectedBattleRoomId = data?.room?.id || null;
+    battleRoomStateCache = data || null;
+    battleRoomError = null;
+    showToast('已进入战斗房间');
+    await renderMatchPage();
+}
+
+async function refreshBattleRoomUI(battleRoomId = selectedBattleRoomId) {
+    if (!battleRoomId) return;
+    const { state, error } = await fetchBattleRoomState({ battleRoomId });
+    battleRoomStateCache = state;
+    battleRoomError = error;
+    if (error) showToast(`❌ ${error.message || '战斗房间刷新失败'}`);
+    await renderMatchPage();
+}
+
+async function updateBattleRoomRoundUI(battleRoomId = selectedBattleRoomId) {
+    if (!battleRoomId) return;
+    const currentRound = Number(document.getElementById('battleRoundInput')?.value || 1);
+    const note = document.getElementById('battleRoomNoteInput')?.value || '';
+    const { data, error } = await invokeDungeonAction('updateBattleRoomRound', { battleRoomId, currentRound, note });
+    if (error) { showToast(`❌ ${error.message || '回合保存失败'}`); return; }
+    selectedBattleRoomId = data?.room?.id || battleRoomId;
+    battleRoomStateCache = data || null;
+    battleRoomError = null;
+    showToast('战斗回合已保存');
+    await renderMatchPage();
+}
+
+async function applyBattlePlayerActionUI(battleRoomId, playerId, actionType) {
+    if (!battleRoomId || !playerId) return;
+    const amount = Number(document.getElementById(`battleAmount-${playerId}`)?.value || 0);
+    const note = document.getElementById(`battleNote-${playerId}`)?.value || '';
+    const { data, error } = await invokeDungeonAction('applyBattlePlayerAction', { battleRoomId, playerId, actionType, amount, note });
+    if (error) { showToast(`❌ ${error.message || '战斗操作失败'}`); return; }
+    selectedBattleRoomId = data?.room?.id || battleRoomId;
+    battleRoomStateCache = data || null;
+    battleRoomError = null;
+    showToast('战斗操作已记录');
+    await renderMatchPage();
+}
+
+async function finishBattleRoomUI(battleRoomId, status = 'finished') {
+    if (!battleRoomId) return;
+    const note = document.getElementById('battleFinishNote')?.value || '';
+    const { data, error } = await invokeDungeonAction('finishBattleRoom', { battleRoomId, status, note });
+    if (error) { showToast(`❌ ${error.message || '房间收束失败'}`); return; }
+    selectedBattleRoomId = data?.room?.id || battleRoomId;
+    battleRoomStateCache = data || null;
+    battleRoomError = null;
+    showToast(status === 'cancelled' ? '战斗房间已取消' : '战斗房间已结束');
     await renderMatchPage();
 }
 

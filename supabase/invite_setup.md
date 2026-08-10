@@ -27,6 +27,7 @@ supabase/talent_slot_rules_support_20260712.sql
 supabase/talent_pool_refresh_20260712.sql
 supabase/match_system_migration.sql
 supabase/match_muster_migration.sql
+supabase/battle_room_system_20260810.sql
 ```
 
 说明：
@@ -47,6 +48,7 @@ supabase/match_muster_migration.sql
 - `talent_event_all_players_10_draws_20260802.sql`：2026-08-02「庆祝腐朽登神活动」，全体有效入局邀请码获得 10 抽；登神之路 1500 以下为基础 B/C 抽，1500 及以上为进阶 S/A/B/C 抽，重复执行不会叠加。
 - `talent_pool_refresh_20260712.sql`：按新版天赋池表刷新 22 个天赋池内容。
 - `match_system_migration.sql`：试炼匹配排队、自动成房、房间成员记录，供网站和微信小程序共用。
+- `battle_room_system_20260810.sql`：网站端战斗房间、成员血量快照和战斗日志；运行房间可以在网站里进入战斗结算。
 
 不要在正式数据上执行 `second_beta_reset.sql`，除非你明确要重置第二轮测试数据。
 
@@ -119,4 +121,4 @@ supabase/dungeon_invite_lockdown.sql
 6. 个人档案保存信仰神明和职业后，天赋池会显示可选池子。
 7. 审核员结算后，玩家档案能收到结算信封。
 
-如果页面提示「请先运行 score_system_migration.sql」或「请先运行 talent_pool_migration.sql」，说明对应 SQL 还没有在当前 Supabase 项目里执行。
+如果页面提示「请先运行 score_system_migration.sql」「请先运行 talent_pool_migration.sql」或「请先运行 battle_room_system_20260810.sql」，说明对应 SQL 还没有在当前 Supabase 项目里执行。
