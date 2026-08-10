@@ -1,5 +1,7 @@
 import { createClient } from "jsr:@supabase/supabase-js@2";
 
+type SupabaseClientAny = ReturnType<typeof createClient<any, "public", any>>;
+
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
@@ -26,6 +28,7 @@ type InviteIdentity = {
 };
 
 type LooseError = { code?: string; message?: string } | null | undefined;
+type BattleActionResult = { data?: any; error?: any };
 
 const staffAdminNames = new Set(["羔羊", "槐柏", "南河书淮", "慕辞", "棺材板", "我不想死", "情忆浮生", "知更", "变态", "墨染流年"]);
 const talentManagerNames = new Set(["羔羊"]);
@@ -472,7 +475,7 @@ function toPublicCurse(curse: Record<string, unknown> | null | undefined) {
 }
 
 async function getActiveTitlesByHashes(
-  supabase: ReturnType<typeof createClient>,
+  supabase: SupabaseClientAny,
   inviteCodeHashes: string[],
 ) {
   const hashes = [...new Set(inviteCodeHashes.map((hash) => cleanText(hash, 64)).filter(Boolean))];
@@ -495,7 +498,7 @@ async function getActiveTitlesByHashes(
 }
 
 async function getActiveTitleForHash(
-  supabase: ReturnType<typeof createClient>,
+  supabase: SupabaseClientAny,
   inviteCodeHash: string,
 ) {
   const result = await getActiveTitlesByHashes(supabase, [inviteCodeHash]);
@@ -505,7 +508,7 @@ async function getActiveTitleForHash(
 }
 
 async function getActiveCursesByHashes(
-  supabase: ReturnType<typeof createClient>,
+  supabase: SupabaseClientAny,
   inviteCodeHashes: string[],
 ) {
   const hashes = [...new Set(inviteCodeHashes.map((hash) => cleanText(hash, 64)).filter(Boolean))];
@@ -528,7 +531,7 @@ async function getActiveCursesByHashes(
 }
 
 async function getActiveCurseForHash(
-  supabase: ReturnType<typeof createClient>,
+  supabase: SupabaseClientAny,
   inviteCodeHash: string,
 ) {
   const result = await getActiveCursesByHashes(supabase, [inviteCodeHash]);
@@ -538,7 +541,7 @@ async function getActiveCurseForHash(
 }
 
 async function getCommentHonorBuckets(
-  supabase: ReturnType<typeof createClient>,
+  supabase: SupabaseClientAny,
   rawCommentIds: unknown,
 ) {
   const commentIds = Array.isArray(rawCommentIds)
@@ -590,7 +593,7 @@ async function getCommentHonorBuckets(
 }
 
 async function getProfileByDisplayName(
-  supabase: ReturnType<typeof createClient>,
+  supabase: SupabaseClientAny,
   displayNameInput: unknown,
 ): Promise<{ data?: Record<string, unknown>; error?: LooseError }> {
   const displayName = cleanText(displayNameInput, 40);
@@ -608,7 +611,7 @@ async function getProfileByDisplayName(
 const godBelieverProfileSelect = "invite_code_hash, display_name, role, faith_god, faith_path, original_faith_god, original_faith_path, trickery_display_faith_god, trickery_display_faith_path, trickery_display_profession, profession, ascension_score, audience_score, items, talents, show_titles, scores_locked_at, updated_at";
 
 async function listGodBelievers(
-  supabase: ReturnType<typeof createClient>,
+  supabase: SupabaseClientAny,
   godName: string,
 ) {
   const { data, error } = await supabase
@@ -761,7 +764,7 @@ function toPublicProfile(profile: Record<string, unknown>, profileKey: string, i
 }
 
 async function getInviteIdentity(
-  supabase: ReturnType<typeof createClient>,
+  supabase: SupabaseClientAny,
   inviteCode: unknown,
 ): Promise<InviteIdentity | null> {
   const code = cleanText(inviteCode, 200);
@@ -808,7 +811,7 @@ async function getInviteIdentity(
 }
 
 async function issueInviteSession(
-  supabase: ReturnType<typeof createClient>,
+  supabase: SupabaseClientAny,
   identity: InviteIdentity,
   deviceKindInput: unknown,
   userAgentInput: unknown,
@@ -831,7 +834,7 @@ async function issueInviteSession(
 }
 
 async function validateInviteSession(
-  supabase: ReturnType<typeof createClient>,
+  supabase: SupabaseClientAny,
   identity: InviteIdentity,
   sessionIdInput: unknown,
   deviceKindInput: unknown,
@@ -958,7 +961,7 @@ function isMissingAdminOperationLogTable(error: LooseError) {
 }
 
 async function writeAdminOperationLog(
-  supabase: ReturnType<typeof createClient>,
+  supabase: SupabaseClientAny,
   identity: InviteIdentity,
   input: {
     action: string;
@@ -991,7 +994,7 @@ async function writeAdminOperationLog(
 }
 
 async function listAdminOperationLogs(
-  supabase: ReturnType<typeof createClient>,
+  supabase: SupabaseClientAny,
   targetCodeHash: string | null = null,
   limit = 50,
 ) {
@@ -1008,7 +1011,7 @@ async function listAdminOperationLogs(
 }
 
 async function listHonorOperationLogs(
-  supabase: ReturnType<typeof createClient>,
+  supabase: SupabaseClientAny,
   identity: InviteIdentity,
   limit = 30,
 ) {
@@ -1186,7 +1189,7 @@ function talentPoolRebalanceError(error: LooseError): TalentPoolRebalanceResult 
 }
 
 async function rebalanceTalentPoolsAfterProfileChange(
-  supabase: ReturnType<typeof createClient>,
+  supabase: SupabaseClientAny,
   codeHash: string,
   previousProfile: Record<string, unknown> | null | undefined,
   nextProfile: Record<string, unknown> | null | undefined,
@@ -1363,7 +1366,7 @@ function parseScoreSettlementText(textContent: unknown) {
 }
 
 async function getProfilesByNames(
-  supabase: ReturnType<typeof createClient>,
+  supabase: SupabaseClientAny,
   names: string[],
 ) {
   const uniqueNames = [...new Set(names.map((name) => cleanText(name, 40)).filter(Boolean))];
@@ -1412,7 +1415,7 @@ async function getProfilesByNames(
 }
 
 async function buildScorePreview(
-  supabase: ReturnType<typeof createClient>,
+  supabase: SupabaseClientAny,
   entries: { nick: string; deng: number; jin: number; total: number; line: number; raw: string }[],
   invalidLines: { line: number; raw: string; msg: string }[],
 ) {
@@ -1513,7 +1516,7 @@ function pickDrawTalentWithGuarantee(
 }
 
 async function rebuildTalentPoolCounterFromLogs(
-  supabase: ReturnType<typeof createClient>,
+  supabase: SupabaseClientAny,
   codeHash: string,
   poolKey: string,
 ) {
@@ -1565,7 +1568,7 @@ function weightedPickTalent<T extends { talent_id: number }>(items: T[]): T {
 }
 
 async function getTalentProfile(
-  supabase: ReturnType<typeof createClient>,
+  supabase: SupabaseClientAny,
   identity: InviteIdentity,
 ) {
   const { data, error } = await supabase
@@ -1591,7 +1594,7 @@ async function getTalentProfile(
 }
 
 async function getTalentDrawState(
-  supabase: ReturnType<typeof createClient>,
+  supabase: SupabaseClientAny,
   codeHash: string,
 ) {
   const { data, error } = await supabase
@@ -1634,7 +1637,7 @@ async function getTalentDrawState(
 }
 
 async function getFragmentTotal(
-  supabase: ReturnType<typeof createClient>,
+  supabase: SupabaseClientAny,
   codeHash: string,
 ) {
   const { data, error } = await supabase
@@ -1647,7 +1650,7 @@ async function getFragmentTotal(
 }
 
 async function addUserFragments(
-  supabase: ReturnType<typeof createClient>,
+  supabase: SupabaseClientAny,
   codeHash: string,
   amount: number,
 ) {
@@ -1668,7 +1671,7 @@ async function addUserFragments(
 }
 
 async function updateProfileTalentText(
-  supabase: ReturnType<typeof createClient>,
+  supabase: SupabaseClientAny,
   codeHash: string,
 ) {
   const { data: owned, error } = await supabase
@@ -1690,7 +1693,7 @@ async function updateProfileTalentText(
 }
 
 async function getAvailableStorageSlot(
-  supabase: ReturnType<typeof createClient>,
+  supabase: SupabaseClientAny,
   codeHash: string,
 ) {
   const { data, error } = await supabase
@@ -1707,7 +1710,7 @@ async function getAvailableStorageSlot(
 }
 
 async function addOwnedTalentToStorage(
-  supabase: ReturnType<typeof createClient>,
+  supabase: SupabaseClientAny,
   codeHash: string,
   talent: { pool_key: string; talent_id: number; talent_name: string; rank: string },
   source: "draw" | "exchange",
@@ -1761,7 +1764,7 @@ async function addOwnedTalentToStorage(
 }
 
 async function settleDuplicateOverflowChoices(
-  supabase: ReturnType<typeof createClient>,
+  supabase: SupabaseClientAny,
   codeHash: string,
   ownedTalents: { pool_key: string; talent_id: number }[],
   overflowChoices: {
@@ -1793,7 +1796,7 @@ async function settleDuplicateOverflowChoices(
 }
 
 async function settleOpenSlotOverflowChoices(
-  supabase: ReturnType<typeof createClient>,
+  supabase: SupabaseClientAny,
   codeHash: string,
   ownedTalents: {
     id: number;
@@ -1876,7 +1879,7 @@ async function settleOpenSlotOverflowChoices(
 }
 
 async function buildTalentState(
-  supabase: ReturnType<typeof createClient>,
+  supabase: SupabaseClientAny,
   identity: InviteIdentity,
 ): Promise<{ data?: Record<string, unknown>; error?: LooseError }> {
   const profileResult = await getTalentProfile(supabase, identity);
@@ -2117,7 +2120,7 @@ async function buildTalentState(
 }
 
 async function recalculateClearStats(
-  supabase: ReturnType<typeof createClient>,
+  supabase: SupabaseClientAny,
   dungeonId: string,
 ) {
   const { data: dungeon, error: dungeonError } = await supabase
@@ -2150,7 +2153,7 @@ async function recalculateClearStats(
 }
 
 async function confirmClearRecordsFromSettlement(
-  supabase: ReturnType<typeof createClient>,
+  supabase: SupabaseClientAny,
   dungeon: { id: unknown; name: unknown; run_count: unknown },
   entries: { nick: string; deng: number; jin: number; total: number; line: number; raw: string }[],
   profiles: Map<string, Record<string, unknown>>,
@@ -2198,7 +2201,7 @@ async function confirmClearRecordsFromSettlement(
 }
 
 async function resolveSettlementDungeon(
-  supabase: ReturnType<typeof createClient>,
+  supabase: SupabaseClientAny,
   dungeonIdInput: unknown,
   dungeonNameInput: unknown,
 ) {
@@ -2221,7 +2224,7 @@ async function resolveSettlementDungeon(
 }
 
 async function getMatchState(
-  supabase: ReturnType<typeof createClient>,
+  supabase: SupabaseClientAny,
   dungeonId: string,
 ) {
   const { data: dungeon, error: dungeonError } = await supabase
@@ -2273,7 +2276,7 @@ async function getMatchState(
 }
 
 async function getMatchMusterState(
-  supabase: ReturnType<typeof createClient>,
+  supabase: SupabaseClientAny,
   musterId: string,
   identity: InviteIdentity,
 ) {
@@ -2285,6 +2288,7 @@ async function getMatchMusterState(
 
   let { data: muster, error: musterError } = await readMuster();
   if (musterError) return { error: musterError };
+  if (!muster) return { error: { message: "召集不存在" } };
 
   const closesAt = new Date(String(muster.closes_at || "")).getTime();
   if (muster.status === "open" && Number.isFinite(closesAt) && closesAt <= Date.now()) {
@@ -2297,6 +2301,7 @@ async function getMatchMusterState(
     muster = reread.data;
     musterError = reread.error;
     if (musterError) return { error: musterError };
+    if (!muster) return { error: { message: "召集不存在" } };
   }
 
   const dungeonId = String(muster.dungeon_id || "");
@@ -2392,11 +2397,47 @@ function cleanBattleAmount(value: unknown, fallback = 0) {
   return Math.max(-9999, Math.min(9999, amount));
 }
 
-async function getBattleRoomState(
-  supabase: ReturnType<typeof createClient>,
+async function buildBattlePlayerSnapshot(
+  supabase: SupabaseClientAny,
   battleRoomId: string,
   identity: InviteIdentity,
+  seatOrder = 1,
 ) {
+  const { data: profile, error: profileError } = await supabase
+    .from("player_profiles")
+    .select("invite_code_hash, display_name, faith_god, profession, ascension_score")
+    .eq("invite_code_hash", identity.codeHash)
+    .maybeSingle();
+  if (profileError && profileError.code !== "42P01") return { error: profileError };
+
+  const playerName = cleanText(profile?.display_name || identity.displayName, 40) || "未命名信徒";
+  const faithGod = cleanText(profile?.faith_god, 20);
+  const profession = cleanText(profile?.profession, 40);
+  const ascensionScore = cleanScore(profile?.ascension_score) || defaultAscensionScore;
+  const maxHp = getBattleMaxHp(faithGod, profession, ascensionScore);
+  return {
+    data: {
+      battle_room_id: battleRoomId,
+      player_code_hash: identity.codeHash,
+      player_name: playerName,
+      faith_god: faithGod,
+      profession,
+      class_name: getBattleClassName(profession),
+      ascension_score: ascensionScore,
+      max_hp: maxHp,
+      current_hp: maxHp,
+      shield: 0,
+      is_defeated: false,
+      seat_order: seatOrder,
+    },
+  };
+}
+
+async function getBattleRoomState(
+  supabase: SupabaseClientAny,
+  battleRoomId: string,
+  identity: InviteIdentity,
+): Promise<BattleActionResult> {
   const { data: room, error: roomError } = await supabase
     .from("battle_rooms")
     .select("id, source_match_room_id, dungeon_id, host_code_hash, host_name, room_status, current_round, note, created_at, updated_at, finished_at")
@@ -2447,10 +2488,10 @@ async function getBattleRoomState(
 }
 
 async function getBattleRoomByMatchRoom(
-  supabase: ReturnType<typeof createClient>,
+  supabase: SupabaseClientAny,
   matchRoomId: string,
   identity: InviteIdentity,
-) {
+): Promise<BattleActionResult> {
   const { data: existing, error: existingError } = await supabase
     .from("battle_rooms")
     .select("id")
@@ -2462,10 +2503,10 @@ async function getBattleRoomByMatchRoom(
 }
 
 async function createBattleRoomFromMatchRoom(
-  supabase: ReturnType<typeof createClient>,
+  supabase: SupabaseClientAny,
   matchRoomId: string,
   identity: InviteIdentity,
-) {
+): Promise<BattleActionResult> {
   const existing = await getBattleRoomByMatchRoom(supabase, matchRoomId, identity);
   if (existing.error || existing.data) return existing;
 
@@ -2485,10 +2526,10 @@ async function createBattleRoomFromMatchRoom(
     .eq("id", matchRoomId)
     .maybeSingle();
   if (roomError) return { error: roomError };
-  if (!matchRoom) return { error: { message: "召集房间不存在" } };
+  if (!matchRoom) return { error: { message: "组队房间不存在" } };
 
   const matchPlayers = Array.isArray(matchRoom.match_room_players) ? matchRoom.match_room_players : [];
-  if (!matchPlayers.length) return { error: { message: "召集房间没有成员" } };
+  if (!matchPlayers.length) return { error: { message: "组队房间没有成员" } };
   const isParticipant = matchPlayers.some((player) => String(player.player_code_hash || "") === identity.codeHash);
   if (!isParticipant && !hasRole(identity.role, ["reviewer", "admin"])) return { error: { message: "只有本房间成员、审核员或馆主可以开启战斗房间" } };
 
@@ -2549,20 +2590,106 @@ async function createBattleRoomFromMatchRoom(
     actor_code_hash: identity.codeHash,
     actor_name: identity.displayName,
     action_type: "create",
-    note: "从试炼召集房间开启战斗房间",
+    note: "从网站组队房间开启神域战场",
     round_no: 1,
   });
 
   return getBattleRoomState(supabase, String(battleRoom.id), identity);
 }
 
+async function createBattleRoomFromDungeon(
+  supabase: SupabaseClientAny,
+  dungeonId: string,
+  identity: InviteIdentity,
+): Promise<BattleActionResult> {
+  const { data: existing, error: existingError } = await supabase
+    .from("battle_rooms")
+    .select("id")
+    .eq("dungeon_id", dungeonId)
+    .eq("host_code_hash", identity.codeHash)
+    .eq("room_status", "active")
+    .order("created_at", { ascending: false })
+    .maybeSingle();
+  if (existingError) return { error: existingError };
+  if (existing?.id) return getBattleRoomState(supabase, String(existing.id), identity);
+
+  const { data: dungeon, error: dungeonError } = await supabase
+    .from("dungeons")
+    .select("id, name, participant_count")
+    .eq("id", dungeonId)
+    .maybeSingle();
+  if (dungeonError) return { error: dungeonError };
+  if (!dungeon) return { error: { message: "副本不存在" } };
+
+  const { data: battleRoom, error: createError } = await supabase
+    .from("battle_rooms")
+    .insert({
+      source_match_room_id: null,
+      dungeon_id: dungeonId,
+      host_code_hash: identity.codeHash,
+      host_name: identity.displayName,
+      room_status: "active",
+      current_round: 1,
+    })
+    .select("id")
+    .single();
+  if (createError) return { error: createError };
+
+  const battlePlayer = await buildBattlePlayerSnapshot(supabase, String(battleRoom.id), identity, 1);
+  if (battlePlayer.error) return { error: battlePlayer.error };
+  const { error: playerInsertError } = await supabase.from("battle_room_players").insert(battlePlayer.data);
+  if (playerInsertError) return { error: playerInsertError };
+
+  await supabase.from("battle_room_logs").insert({
+    battle_room_id: battleRoom.id,
+    actor_code_hash: identity.codeHash,
+    actor_name: identity.displayName,
+    action_type: "create",
+    note: `从网站进入神域战场：${cleanText(dungeon.name, 40) || "未命名试炼"}`,
+    round_no: 1,
+  });
+
+  return getBattleRoomState(supabase, String(battleRoom.id), identity);
+}
+
+async function joinBattleRoom(
+  supabase: SupabaseClientAny,
+  battleRoomId: string,
+  identity: InviteIdentity,
+): Promise<BattleActionResult> {
+  const state = await getBattleRoomState(supabase, battleRoomId, identity);
+  if (state.error) return state;
+  if (!state.data?.room || state.data.room.room_status !== "active") {
+    return { error: { message: "战场已结束，不能再加入" } };
+  }
+
+  const existing = (state.data.players as Record<string, unknown>[]).find((player) => String(player.player_code_hash || "") === identity.codeHash);
+  if (existing) return state;
+
+  const seatOrder = (state.data.players as Record<string, unknown>[]).length + 1;
+  const battlePlayer = await buildBattlePlayerSnapshot(supabase, battleRoomId, identity, seatOrder);
+  if (battlePlayer.error) return { error: battlePlayer.error };
+  const { error: playerInsertError } = await supabase.from("battle_room_players").insert(battlePlayer.data);
+  if (playerInsertError) return { error: playerInsertError };
+
+  await supabase.from("battle_room_logs").insert({
+    battle_room_id: battleRoomId,
+    actor_code_hash: identity.codeHash,
+    actor_name: identity.displayName,
+    action_type: "note",
+    note: "进入神域战场",
+    round_no: Number((state.data.room as Record<string, unknown>).current_round || 1),
+  });
+  return getBattleRoomState(supabase, battleRoomId, identity);
+}
+
 async function updateBattleRoomRound(
-  supabase: ReturnType<typeof createClient>,
+  supabase: SupabaseClientAny,
   battleRoomId: string,
   identity: InviteIdentity,
   nextRoundInput: unknown,
   noteInput: unknown,
-) {
+): Promise<BattleActionResult> {
   const state = await getBattleRoomState(supabase, battleRoomId, identity);
   if (state.error) return state;
   if (!state.data?.canOperate) return { error: { message: "只有主持人、审核员或馆主可以调整战斗房间" } };
@@ -2588,14 +2715,14 @@ async function updateBattleRoomRound(
 }
 
 async function applyBattlePlayerAction(
-  supabase: ReturnType<typeof createClient>,
+  supabase: SupabaseClientAny,
   battleRoomId: string,
   playerId: number,
   identity: InviteIdentity,
   actionType: string,
   amountInput: unknown,
   noteInput: unknown,
-) {
+): Promise<BattleActionResult> {
   const state = await getBattleRoomState(supabase, battleRoomId, identity);
   if (state.error) return state;
   if (!state.data?.canOperate) return { error: { message: "只有主持人、审核员或馆主可以操作战斗房间" } };
@@ -2668,12 +2795,12 @@ async function applyBattlePlayerAction(
 }
 
 async function finishBattleRoom(
-  supabase: ReturnType<typeof createClient>,
+  supabase: SupabaseClientAny,
   battleRoomId: string,
   identity: InviteIdentity,
   statusInput: unknown,
   noteInput: unknown,
-) {
+): Promise<BattleActionResult> {
   const state = await getBattleRoomState(supabase, battleRoomId, identity);
   if (state.error) return state;
   if (!state.data?.canOperate) return { error: { message: "只有主持人、审核员或馆主可以结束战斗房间" } };
@@ -2697,7 +2824,7 @@ async function finishBattleRoom(
 }
 
 async function commitScoreSettlement(
-  supabase: ReturnType<typeof createClient>,
+  supabase: SupabaseClientAny,
   identity: InviteIdentity,
   sourceType: "batch" | "single",
   dungeonNameInput: unknown,
@@ -2802,7 +2929,7 @@ async function commitScoreSettlement(
   const clearResult = confirmClear
     ? await confirmClearRecordsFromSettlement(supabase, dungeon, settlementEntries, profiles, identity.displayName, clearStatuses)
     : { confirmed: 0 };
-  if (clearResult.error) return { error: clearResult.error };
+  if ((clearResult as any).error) return { error: (clearResult as any).error };
 
   const messageRows = settlementEntries.map((entry) => {
     const profile = profiles.get(entry.nick) || {};
@@ -2825,7 +2952,7 @@ async function commitScoreSettlement(
 }
 
 async function getScoreSettlementResultByRequestId(
-  supabase: ReturnType<typeof createClient>,
+  supabase: SupabaseClientAny,
   identity: InviteIdentity,
   clientRequestId: string,
 ) {
@@ -2917,7 +3044,7 @@ function summarizeAdminTalentAnomalies(
 }
 
 async function buildAdminPlayerSnapshot(
-  supabase: ReturnType<typeof createClient>,
+  supabase: SupabaseClientAny,
   targetNameInput: unknown,
 ) {
   const targetName = cleanText(targetNameInput, 40);
@@ -2963,7 +3090,7 @@ async function buildAdminPlayerSnapshot(
 }
 
 async function repairAdminTalentState(
-  supabase: ReturnType<typeof createClient>,
+  supabase: SupabaseClientAny,
   targetNameInput: unknown,
 ) {
   const snapshot = await buildAdminPlayerSnapshot(supabase, targetNameInput);
@@ -3026,7 +3153,7 @@ async function repairAdminTalentState(
 }
 
 async function touchInviteActivity(
-  supabase: ReturnType<typeof createClient>,
+  supabase: SupabaseClientAny,
   identity: InviteIdentity,
   action: string,
 ) {
@@ -3038,7 +3165,7 @@ async function touchInviteActivity(
 }
 
 async function getAdminTargetAccount(
-  supabase: ReturnType<typeof createClient>,
+  supabase: SupabaseClientAny,
   targetHashInput: unknown,
   targetNameInput: unknown = "",
 ) {
@@ -3061,7 +3188,7 @@ async function getAdminTargetAccount(
 }
 
 async function deleteRowsByHash(
-  supabase: ReturnType<typeof createClient>,
+  supabase: SupabaseClientAny,
   table: string,
   column: string,
   codeHash: string,
@@ -3072,7 +3199,7 @@ async function deleteRowsByHash(
 }
 
 async function cleanupMemberState(
-  supabase: ReturnType<typeof createClient>,
+  supabase: SupabaseClientAny,
   codeHash: string,
   mode: "reset" | "delete",
 ) {
@@ -3130,7 +3257,7 @@ async function cleanupMemberState(
   return { data: { deleted } };
 }
 
-async function listAdminMembers(supabase: ReturnType<typeof createClient>) {
+async function listAdminMembers(supabase: SupabaseClientAny) {
   const { data: invites, error: inviteError } = await supabase
     .from("invite_codes")
     .select("code_hash, display_name, role, is_active, last_seen_at, last_seen_action")
@@ -3188,7 +3315,7 @@ async function listAdminMembers(supabase: ReturnType<typeof createClient>) {
   };
 }
 
-async function listAdminTalentPoolItems(supabase: ReturnType<typeof createClient>) {
+async function listAdminTalentPoolItems(supabase: SupabaseClientAny) {
   const { data, error } = await supabase
     .from("talent_pool_items")
     .select("pool_key, talent_id, talent_name, rank, effect, cooldown, action_cost, is_enabled, admin_note, updated_at")
@@ -3218,7 +3345,7 @@ async function listAdminTalentPoolItems(supabase: ReturnType<typeof createClient
   return { data: { pools: [...pools.entries()].map(([poolKey, items]) => ({ poolKey, items })) } };
 }
 
-async function getNextTalentId(supabase: ReturnType<typeof createClient>, poolKey: string) {
+async function getNextTalentId(supabase: SupabaseClientAny, poolKey: string) {
   const { data, error } = await supabase
     .from("talent_pool_items")
     .select("talent_id")
@@ -3496,7 +3623,7 @@ Deno.serve(async (req) => {
       if (role !== "admin") return json({ error: "只有馆主可以查看成员状态" }, 403);
       const result = await listAdminMembers(supabase);
       if (result.error) return json({ error: result.error.message || "成员列表读取失败" }, 400);
-      return json({ role, name: identity.displayName, data: result.data });
+      return json({ role, name: identity.displayName, data: (result as any).data });
     }
 
     if (action === "adminSetAccountRole") {
@@ -3584,7 +3711,7 @@ Deno.serve(async (req) => {
       const beforeName = cleanText(targetAccount.display_name, 40);
       if (codeHash === identity.codeHash) return json({ error: "不能重置或删除当前正在使用的馆主账号" }, 400);
       const cleanupResult = await cleanupMemberState(supabase, codeHash, mode);
-      if (cleanupResult.error) return json({ error: cleanupResult.error.message || "账号处理失败" }, 400);
+      if ((cleanupResult as any).error) return json({ error: (cleanupResult as any).error.message || "账号处理失败" }, 400);
       await writeAdminOperationLog(supabase, identity, {
         action: mode === "delete" ? "account.delete" : "account.reset",
         targetCodeHash: codeHash,
@@ -3881,14 +4008,14 @@ Deno.serve(async (req) => {
     if (action === "adminRepairTalentState") {
       if (role !== "admin") return json({ error: "只有神谕馆主可以修复天赋状态" }, 403);
       const result = await repairAdminTalentState(supabase, payload.targetName);
-      if (result.error) return json({ error: result.error.message || "天赋状态修复失败" }, 400);
+      if ((result as any).error) return json({ error: (result as any).error.message || "天赋状态修复失败" }, 400);
       const targetResult = await getProfileByDisplayName(supabase, payload.targetName);
       await writeAdminOperationLog(supabase, identity, {
         action: "talent.repair", targetCodeHash: targetResult.data?.invite_code_hash, targetName: result.data?.snapshot?.profile?.displayName, objectType: "talent_state",
         summary: `完成 ${Array.isArray(result.data?.repaired) ? result.data.repaired.length : 0} 项天赋状态修复`,
         afterState: { repaired: result.data?.repaired || [], unresolved: result.data?.unresolved || [] },
       });
-      return json({ role, name: identity.displayName, data: result.data });
+      return json({ role, name: identity.displayName, data: (result as any).data });
     }
 
     if (action === "updateDisplayName") {
@@ -4597,7 +4724,7 @@ Deno.serve(async (req) => {
       );
       if (result.error?.code === "42P01") return json({ error: "请先运行 score_system_migration.sql" }, 400);
       if (result.error) return json({ error: result.error.message || "结算失败", data: result.error.preview || null }, 400);
-      return json({ role, name: identity.displayName, data: result.data });
+      return json({ role, name: identity.displayName, data: (result as any).data });
     }
 
     if (action === "submitScoreSingle") {
@@ -4623,7 +4750,7 @@ Deno.serve(async (req) => {
       );
       if (result.error?.code === "42P01") return json({ error: "请先运行 score_system_migration.sql" }, 400);
       if (result.error) return json({ error: result.error.message || "补分失败", data: result.error.preview || null }, 400);
-      return json({ role, name: identity.displayName, data: result.data });
+      return json({ role, name: identity.displayName, data: (result as any).data });
     }
 
     if (action === "listScoreSettlements") {
@@ -4837,7 +4964,7 @@ Deno.serve(async (req) => {
           .eq("pool_key", poolKey)
           .eq("is_enabled", true);
         if (fallbackPoolResult.error) return json({ error: fallbackPoolResult.error.message }, 400);
-        poolRows = fallbackPoolResult.data || [];
+        poolRows = (fallbackPoolResult.data || []) as any[];
       } else {
         if (isMissingTalentTable(poolError)) return json({ error: "请先运行 talent_pool_migration.sql" }, 400);
         if (poolError) return json({ error: poolError.message }, 400);
@@ -5044,7 +5171,7 @@ Deno.serve(async (req) => {
           .eq("is_enabled", true)
           .maybeSingle();
         if (fallbackTargetResult.error) return json({ error: fallbackTargetResult.error.message }, 400);
-        targetTalentRow = fallbackTargetResult.data;
+        targetTalentRow = fallbackTargetResult.data as any;
       } else {
         if (isMissingTalentTable(targetError)) return json({ error: "请先运行 talent_pool_migration.sql" }, 400);
         if (targetError) return json({ error: targetError.message }, 400);
@@ -5391,7 +5518,7 @@ Deno.serve(async (req) => {
           const fallback = await fallbackQuery
             .order("created_at", { ascending: false })
             .limit(limit);
-          dungeons = fallback.data;
+          dungeons = (fallback.data || []) as typeof dungeons;
           dungeonError = fallback.error;
         }
       if (isMissingMatchMusterSystem(dungeonError)) return json({ error: "请先运行 match_muster_migration.sql" }, 400);
@@ -5498,9 +5625,33 @@ Deno.serve(async (req) => {
       if (!hasRole(role, ["player", "author", "reviewer", "admin"])) return json({ error: "需要入局谕令" }, 403);
 
       const matchRoomId = cleanText(payload.matchRoomId, 80);
-      if (!isUuid(matchRoomId)) return json({ error: "召集房间 ID 不正确" }, 400);
+      if (!isUuid(matchRoomId)) return json({ error: "组队房间 ID 不正确" }, 400);
 
       const state = await createBattleRoomFromMatchRoom(supabase, matchRoomId, identity);
+      if (isMissingBattleSystem(state.error)) return json({ error: "请先运行 battle_room_system_20260810.sql" }, 400);
+      if (state.error) return json({ error: state.error.message }, 400);
+      return json({ role, name: identity.displayName, data: state.data });
+    }
+
+    if (action === "createBattleRoom") {
+      if (!hasRole(role, ["player", "author", "reviewer", "admin"])) return json({ error: "需要入局谕令" }, 403);
+
+      const dungeonId = cleanText(payload.dungeonId, 80);
+      if (!isUuid(dungeonId)) return json({ error: "副本 ID 不正确" }, 400);
+
+      const state = await createBattleRoomFromDungeon(supabase, dungeonId, identity);
+      if (isMissingBattleSystem(state.error)) return json({ error: "请先运行 battle_room_system_20260810.sql" }, 400);
+      if (state.error) return json({ error: state.error.message }, 400);
+      return json({ role, name: identity.displayName, data: state.data });
+    }
+
+    if (action === "joinBattleRoom") {
+      if (!hasRole(role, ["player", "author", "reviewer", "admin"])) return json({ error: "需要入局谕令" }, 403);
+
+      const battleRoomId = cleanText(payload.battleRoomId, 80);
+      if (!isUuid(battleRoomId)) return json({ error: "战斗房间 ID 不正确" }, 400);
+
+      const state = await joinBattleRoom(supabase, battleRoomId, identity);
       if (isMissingBattleSystem(state.error)) return json({ error: "请先运行 battle_room_system_20260810.sql" }, 400);
       if (state.error) return json({ error: state.error.message }, 400);
       return json({ role, name: identity.displayName, data: state.data });
@@ -5511,13 +5662,30 @@ Deno.serve(async (req) => {
 
       const battleRoomId = cleanText(payload.battleRoomId, 80);
       const matchRoomId = cleanText(payload.matchRoomId, 80);
+      const dungeonId = cleanText(payload.dungeonId, 80);
       if (battleRoomId && !isUuid(battleRoomId)) return json({ error: "战斗房间 ID 不正确" }, 400);
-      if (matchRoomId && !isUuid(matchRoomId)) return json({ error: "召集房间 ID 不正确" }, 400);
-      if (!battleRoomId && !matchRoomId) return json({ error: "缺少战斗房间 ID" }, 400);
+      if (matchRoomId && !isUuid(matchRoomId)) return json({ error: "组队房间 ID 不正确" }, 400);
+      if (dungeonId && !isUuid(dungeonId)) return json({ error: "副本 ID 不正确" }, 400);
+      if (!battleRoomId && !matchRoomId && !dungeonId) return json({ error: "缺少战斗房间 ID" }, 400);
 
-      const state = battleRoomId
+      let state = battleRoomId
         ? await getBattleRoomState(supabase, battleRoomId, identity)
-        : await getBattleRoomByMatchRoom(supabase, matchRoomId, identity);
+        : matchRoomId
+          ? await getBattleRoomByMatchRoom(supabase, matchRoomId, identity)
+          : { data: null };
+      if (!battleRoomId && !matchRoomId && dungeonId) {
+        const { data: room, error: roomError } = await supabase
+          .from("battle_rooms")
+          .select("id")
+          .eq("dungeon_id", dungeonId)
+          .eq("host_code_hash", identity.codeHash)
+          .eq("room_status", "active")
+          .order("created_at", { ascending: false })
+          .limit(1)
+          .maybeSingle();
+        if (roomError) state = { error: roomError };
+        else state = room?.id ? await getBattleRoomState(supabase, String(room.id), identity) : { data: null };
+      }
       if (isMissingBattleSystem(state.error)) return json({ error: "请先运行 battle_room_system_20260810.sql" }, 400);
       if (state.error) return json({ error: state.error.message }, 400);
       return json({ role, name: identity.displayName, data: state.data });

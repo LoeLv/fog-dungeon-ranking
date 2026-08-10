@@ -1,4 +1,4 @@
-// Match page helpers for dungeon loading, queue rendering, and room state panels.
+// Battlefield page helpers for dungeon loading and battle room panels.
 
 function getMatchTargetCount(dungeon) {
     const count = Number(dungeon?.participant_count ?? dungeon?.participantCount ?? dungeon?.target_player_count ?? dungeon?.targetPlayerCount);
@@ -27,7 +27,7 @@ async function fetchMatchDungeons(limit = 80) {
             error: null
         };
     }
-    if (!canInteract()) return { dungeons: [], error: { message: '需要入局谕令后才能查看试炼召集。' } };
+    if (!canInteract()) return { dungeons: [], error: { message: '需要入局谕令后才能查看神域战场。' } };
     const { data, error } = await invokeDungeonAction('listMatchDungeons', { limit });
     return { dungeons: Array.isArray(data) ? data : [], error };
 }
@@ -51,17 +51,18 @@ async function fetchMatchState(dungeonId) {
     return { state: data || null, error };
 }
 
-async function fetchBattleRoomState({ battleRoomId = null, matchRoomId = null } = {}) {
+async function fetchBattleRoomState({ battleRoomId = null, matchRoomId = null, dungeonId = null } = {}) {
     if (USE_LOCAL_FALLBACK) return { state: null, error: { message: '本地模式暂不保存战斗房间。' } };
     const payload = {};
     if (battleRoomId) payload.battleRoomId = battleRoomId;
     if (matchRoomId) payload.matchRoomId = matchRoomId;
+    if (dungeonId) payload.dungeonId = dungeonId;
     const { data, error } = await invokeDungeonAction('getBattleRoom', payload);
     return { state: data || null, error };
 }
 
 function renderMatchDungeonCards(dungeons) {
-    if (!dungeons.length) return '<div class="profile-empty">暂无可召集的试炼。</div>';
+    if (!dungeons.length) return '<div class="profile-empty">暂无可开战场的试炼。</div>';
     return `<div class="match-list">${dungeons.map(dungeon => {
         const active = String(dungeon.id) === String(selectedMatchDungeonId);
         const queued = Number(dungeon.queuedCount || 0);
@@ -74,11 +75,12 @@ function renderMatchDungeonCards(dungeons) {
                         <div class="match-card-title">${renderGodSigil(dungeon.type, 'xs')} ${escapeHtml(dungeon.name || '未命名试炼')}</div>
                         <div class="match-card-meta">${escapeHtml(formatGodName(dungeon.type))} · ${escapeHtml(formatDifficulty(dungeon.difficulty))} · ${escapeHtml(formatCreatorLine(dungeon) || '匿名构筑者')}</div>
                     </div>
-                    <button class="btn btn-outline btn-xs match-card-button" onclick='event.stopPropagation(); openMatchDungeon(${jsString(dungeon.id)})'>查看召集</button>
+                    <button class="btn btn-outline btn-xs match-card-button" onclick='event.stopPropagation(); openMatchDungeon(${jsString(dungeon.id)})'>查看战场</button>
                 </div>
                 <div class="metric-strip">
-                    <span class="metric-pill">队列 <strong>${queued}/${target}</strong></span>
-                    <span class="metric-pill">房间 <strong>${rooms}</strong></span>
+                    <span class="metric-pill">建议人数 <strong>${target}</strong></span>
+                    <span class="metric-pill">候场记录 <strong>${queued}</strong></span>
+                    <span class="metric-pill">历史组队 <strong>${rooms}</strong></span>
                     <span class="metric-pill">轮回 <strong>${escapeHtml(getTrialCycle(dungeon))}</strong></span>
                 </div>
             </article>`;
@@ -86,7 +88,7 @@ function renderMatchDungeonCards(dungeons) {
 }
 
 function renderMatchQueue(queue) {
-    if (!queue.length) return '<div class="profile-empty">当前无人排队。成为第一个召集者吧。</div>';
+    if (!queue.length) return '<div class="profile-empty">当前无人候场。可直接开一个神域战场房间。</div>';
     return `<div class="match-player-list">${queue.map((player, index) => `
         <div class="match-player-row ${isCurrentMatchPlayer(player.player_name) ? 'profile-notice' : ''}">
             <strong>${index + 1}. ${escapeHtml(player.player_name || '未命名信徒')}</strong>
@@ -95,7 +97,7 @@ function renderMatchQueue(queue) {
 }
 
 function renderMatchRooms(rooms, canOpenBattle = true) {
-    if (!rooms.length) return '<div class="profile-empty">暂无已成房队伍；队列满员后会自动生成房间。</div>';
+    if (!rooms.length) return '<div class="profile-empty">暂无历史组队房间；可直接在神域战场开房。</div>';
     return `<div class="match-room-list">${rooms.map((room, index) => {
         const players = room.match_room_players || room.players || [];
         const roomId = String(room.id || '');
@@ -114,7 +116,7 @@ function renderMatchRooms(rooms, canOpenBattle = true) {
                 </div>
                 ${canOpenBattle ? `
                 <div class="match-inline-actions battle-room-entry">
-                    <button class="btn btn-primary btn-sm" onclick='openBattleRoomFromMatch(${jsString(roomId)})'>进入战斗房间</button>
+                    <button class="btn btn-primary btn-sm" onclick='openBattleRoomFromMatch(${jsString(roomId)})'>转入神域战场</button>
                 </div>` : ''}
             </article>`;
     }).join('')}</div>`;
@@ -154,14 +156,17 @@ function renderBattleRoomPanel(state, error) {
     return `
         <section class="profile-panel battle-room-panel">
             <div class="profile-panel-title">
-                <span>战斗房间 · ${escapeHtml(dungeon.name || String(room.id || '').slice(0, 8))}</span>
+                <span>神域战场 · ${escapeHtml(dungeon.name || String(room.id || '').slice(0, 8))}</span>
                 <small>${escapeHtml(getBattleStatusLabel(room.room_status))} · 第 ${round} 回合 · 主持 ${escapeHtml(room.host_name || '未知')}</small>
             </div>
-            <div class="leaderboard-summary">当前血量是本场战斗事实；伤害会先扣护盾，治疗可超过初始上限，击倒后需要复活操作重新行动。</div>
+            <div class="leaderboard-summary">把房间号发给其他入局者即可拉人入场。当前血量是本场战斗事实；伤害会先扣护盾，治疗可超过初始上限。</div>
             <div class="battle-room-topline">
                 <label>回合 <input class="battle-room-input" id="battleRoundInput" type="number" min="1" max="999" value="${round}" ${canOperate ? '' : 'disabled'}></label>
+                <label>房间号 <input class="battle-room-input" id="battleRoomIdDisplay" readonly value="${escapeHtml(room.id || '')}"></label>
                 <label>房间备注 <input class="battle-room-input" id="battleRoomNoteInput" maxlength="800" value="${escapeHtml(room.note || '')}" ${canOperate ? '' : 'disabled'}></label>
                 ${canOperate ? `<button class="btn btn-outline btn-sm" onclick='updateBattleRoomRoundUI(${jsString(room.id)})'>保存回合</button>` : '<span class="metric-pill">仅主持人可操作</span>'}
+                ${room.room_status === 'active' && !state.isParticipant ? `<button class="btn btn-primary btn-sm" onclick='joinBattleRoomUI(${jsString(room.id)})'>加入战场</button>` : ''}
+                <button class="btn btn-outline btn-sm" onclick='copyBattleRoomIdUI(${jsString(room.id)})'>复制房间号</button>
                 <button class="btn btn-outline btn-sm" onclick='refreshBattleRoomUI(${jsString(room.id)})'>刷新战斗</button>
             </div>
             <div class="battle-roster">
@@ -240,15 +245,13 @@ function renderBattleLogs(logs) {
 }
 
 function renderMatchStatePanel(state, error) {
-    if (error) return `<div class="profile-empty">${escapeHtml(error.message || '试炼召集暂不可用。')}</div>`;
+    if (error) return `<div class="profile-empty">${escapeHtml(error.message || '神域战场暂不可用。')}</div>`;
     const dungeon = state?.dungeon || matchDungeonsCache.find(item => String(item.id) === String(selectedMatchDungeonId));
-    if (!dungeon) return '<div class="profile-empty">从左侧选择一个试炼，查看当前召集状态。</div>';
-    const queue = Array.isArray(state?.queue) ? state.queue : [];
+    if (!dungeon) return '<div class="profile-empty">从左侧选择一个试炼，开一个神域战场房间。</div>';
     const rooms = Array.isArray(state?.rooms) ? state.rooms : [];
     const target = getMatchTargetCount(dungeon);
-    const queuedCount = Number(state?.queuedCount ?? queue.length ?? 0);
-    const currentQueued = queue.some(player => isCurrentMatchPlayer(player.player_name));
-    const currentInRoom = rooms.some(room => (room.match_room_players || room.players || []).some(player => isCurrentMatchPlayer(player.player_name)));
+    const currentBattleRoom = battleRoomStateCache?.room || null;
+    const inBattleRoom = !!battleRoomStateCache?.isParticipant;
     const godClass = getGodClass(dungeon.type);
     return `
         <section class="profile-panel">
@@ -256,29 +259,23 @@ function renderMatchStatePanel(state, error) {
                 <span>${renderGodSigil(dungeon.type, 'sm')} ${escapeHtml(dungeon.name || '未命名试炼')}</span>
                 <small>${escapeHtml(formatGodName(dungeon.type))} · ${escapeHtml(formatDifficulty(dungeon.difficulty))}</small>
             </div>
-            <div class="leaderboard-summary">召集按副本固定人数自动成房；已成房成员会留在房间记录里，方便后续网页或小程序继续接入。</div>
+            <div class="leaderboard-summary">在网站端直接开一个神域战场房间，把房间号发给其他入局者，他们输入房间号即可加入。</div>
             <div class="match-state-grid">
-                <div class="match-state-tile"><span>排队人数</span><strong>${queuedCount}/${target}</strong></div>
-                <div class="match-state-tile"><span>运行房间</span><strong>${rooms.length}</strong></div>
-                <div class="match-state-tile"><span>我的状态</span><strong>${currentInRoom ? '已成房' : currentQueued ? '排队中' : '未加入'}</strong></div>
+                <div class="match-state-tile"><span>建议人数</span><strong>${target}</strong></div>
+                <div class="match-state-tile"><span>历史组队</span><strong>${rooms.length}</strong></div>
+                <div class="match-state-tile"><span>我的状态</span><strong>${inBattleRoom ? '已入场' : currentBattleRoom ? '可加入' : '未开房'}</strong></div>
+            </div>
+            <div class="battle-room-entry">
+                <input class="battle-room-input" id="battleRoomJoinInput" placeholder="输入房间号加入别人开的战场">
+                <button class="btn btn-primary btn-sm" onclick="joinBattleRoomByInputUI()">加入房间</button>
             </div>
             <div class="match-inline-actions">
-                ${currentInRoom ? '<span class="metric-pill">你已在运行房间中</span>' : `<button class="btn btn-primary btn-sm" onclick='joinMatchQueueUI(${jsString(dungeon.id)})'>${currentQueued ? '更新排队' : '加入排队'}</button>`}
-                ${currentQueued ? `<button class="btn btn-outline btn-sm" onclick='cancelMatchQueueUI(${jsString(dungeon.id)})'>取消排队</button>` : ''}
+                ${currentBattleRoom ? `<button class="btn btn-primary btn-sm" onclick='joinBattleRoomUI(${jsString(currentBattleRoom.id)})'>${inBattleRoom ? '回到战场' : '加入战场'}</button>` : `<button class="btn btn-primary btn-sm" onclick='createBattleRoomUI(${jsString(dungeon.id)})'>开房间</button>`}
                 <button class="btn btn-outline btn-sm" onclick='refreshMatchStateUI(${jsString(dungeon.id)})'>刷新状态</button>
                 <button class="btn btn-outline btn-sm" onclick='openDetailFromMatch(${jsString(dungeon.id)})'>查看详情</button>
             </div>
         </section>
-        <div class="profile-grid" style="margin-top:18px;">
-            <section class="profile-panel">
-                <div class="profile-panel-title"><span>当前队列</span><small>${queuedCount}/${target}</small></div>
-                ${renderMatchQueue(queue)}
-            </section>
-            <section class="profile-panel">
-                <div class="profile-panel-title"><span>运行房间</span><small>${rooms.length} 间</small></div>
-                ${renderMatchRooms(rooms)}
-            </section>
-        </div>
         ${renderBattleRoomPanel(battleRoomStateCache, battleRoomError)}
+        ${rooms.length ? `<section class="profile-panel" style="margin-top:18px;"><div class="profile-panel-title"><span>历史组队房间</span><small>${rooms.length} 间</small></div>${renderMatchRooms(rooms)}</section>` : ''}
         <div class="trial-oracle ${godClass}" style="${getGodSkinStyle(dungeon.type)};margin-top:18px;">${escapeHtml(getGodOracle(dungeon.type))}</div>`;
 }

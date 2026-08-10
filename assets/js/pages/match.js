@@ -4,16 +4,16 @@ async function renderMatchPage() {
     if (!USE_LOCAL_FALLBACK && !canInteract()) {
         container.innerHTML = `
             <section class="profile-panel">
-                <div class="profile-empty">需要入局谕令后才能进入试炼召集。</div>
-                <div class="profile-tools"><button class="btn btn-primary btn-sm" onclick="openInviteModal('验入局谕令后可进入试炼召集。')">掷骰入局</button></div>
+                <div class="profile-empty">需要入局谕令后才能进入神域战场。</div>
+                <div class="profile-tools"><button class="btn btn-primary btn-sm" onclick="openInviteModal('验入局谕令后可进入神域战场。')">掷骰入局</button></div>
             </section>`;
         return;
     }
-    container.innerHTML = '<div class="loading"><div class="spinner"></div><br>正在监听试炼召集...</div>';
+    container.innerHTML = '<div class="loading"><div class="spinner"></div><br>正在开启神域战场...</div>';
     const { dungeons, error } = await fetchMatchDungeons(80);
     matchDungeonsCache = dungeons;
     if (error) {
-        container.innerHTML = `<div class="profile-empty">${escapeHtml(error.message || '试炼召集读取失败。')}</div>`;
+        container.innerHTML = `<div class="profile-empty">${escapeHtml(error.message || '神域战场读取失败。')}</div>`;
         return;
     }
     if (!selectedMatchDungeonId || !dungeons.some(dungeon => String(dungeon.id) === String(selectedMatchDungeonId))) {
@@ -30,7 +30,17 @@ async function renderMatchPage() {
         const battleResult = await fetchBattleRoomState({ battleRoomId: selectedBattleRoomId });
         battleRoomStateCache = battleResult.state;
         battleRoomError = battleResult.error;
-        if (battleResult.error) selectedBattleRoomId = null;
+        if (battleResult.state?.dungeon?.id) selectedMatchDungeonId = battleResult.state.dungeon.id;
+        if (battleResult.error) {
+            selectedBattleRoomId = null;
+            setLocalData(BATTLE_ROOM_STORAGE_KEY, null);
+        }
+    } else if (selectedMatchDungeonId) {
+        const battleResult = await fetchBattleRoomState({ dungeonId: selectedMatchDungeonId });
+        battleRoomStateCache = battleResult.state;
+        battleRoomError = battleResult.error;
+        selectedBattleRoomId = battleResult.state?.room?.id || null;
+        if (selectedBattleRoomId) setLocalData(BATTLE_ROOM_STORAGE_KEY, selectedBattleRoomId);
     } else {
         battleRoomStateCache = null;
         battleRoomError = null;
@@ -39,18 +49,18 @@ async function renderMatchPage() {
         <section class="profile-hero">
             <div class="profile-avatar path-void">${renderGodSigil('命运', 'lg')}</div>
             <div>
-                <div class="profile-kicker">TRIAL MUSTER</div>
-                <h1 class="profile-name">试炼召集厅</h1>
+                <div class="profile-kicker">BATTLEFIELD</div>
+                <h1 class="profile-name">神域战场</h1>
                 <div class="profile-subline">
                     <span class="metric-pill">当前身份 <strong>${escapeHtml(inviteSession?.name || ROLE_LABELS[getInviteRole()] || '本地入局者')}</strong></span>
-                    <span class="metric-pill">可召集试炼 <strong>${dungeons.length}</strong></span>
-                    <span class="metric-pill">自动成房 <strong>满员触发</strong></span>
+                    <span class="metric-pill">可开战场 <strong>${dungeons.length}</strong></span>
+                    <span class="metric-pill">入场方式 <strong>房间号</strong></span>
                 </div>
             </div>
         </section>
         <div class="match-layout">
             <section class="profile-panel">
-                <div class="profile-panel-title"><span>可召集试炼</span><small>选择副本查看队列</small></div>
+                <div class="profile-panel-title"><span>可开战场</span><small>选择副本开房间</small></div>
                 ${renderMatchDungeonCards(dungeons)}
             </section>
             <div>
@@ -62,6 +72,7 @@ async function renderMatchPage() {
 async function openMatchDungeon(dungeonId) {
     selectedMatchDungeonId = String(dungeonId || '');
     selectedBattleRoomId = null;
+    setLocalData(BATTLE_ROOM_STORAGE_KEY, null);
     battleRoomStateCache = null;
     battleRoomError = null;
     await renderMatchPage();
@@ -69,7 +80,7 @@ async function openMatchDungeon(dungeonId) {
 
 async function openMatchPage(initialDungeonId = null) {
     if (!USE_LOCAL_FALLBACK && !canInteract()) {
-        openInviteModal('验入局谕令后可进入试炼召集。');
+        openInviteModal('验入局谕令后可进入神域战场。');
         return;
     }
     if (initialDungeonId) selectedMatchDungeonId = String(initialDungeonId);
@@ -98,6 +109,14 @@ function closeMatchPage(restoreScroll = true) {
     if (restoreScroll !== false) requestAnimationFrame(() => window.scrollTo(0, matchScrollY || 0));
 }
 
+async function openBattlePage(initialDungeonId = null) {
+    await openMatchPage(initialDungeonId);
+}
+
+function closeBattlePage(restoreScroll = true) {
+    closeMatchPage(restoreScroll);
+}
+
 async function openDetailFromMatch(id) {
     closeMatchPage(false);
     await openDetail(id);
@@ -113,15 +132,70 @@ async function refreshMatchStateUI(dungeonId = selectedMatchDungeonId) {
 }
 
 async function openBattleRoomFromMatch(matchRoomId) {
-    if (!requireInvite(['player', 'author', 'reviewer', 'admin'], '验入局谕令后可进入战斗房间。')) return;
+    if (!requireInvite(['player', 'author', 'reviewer', 'admin'], '验入局谕令后可进入神域战场。')) return;
     if (USE_LOCAL_FALLBACK) { showToast('本地模式暂不保存战斗房间'); return; }
     const { data, error } = await invokeDungeonAction('createBattleRoomFromMatchRoom', { matchRoomId });
-    if (error) { showToast(`❌ ${error.message || '战斗房间开启失败'}`); return; }
+    if (error) { showToast(`❌ ${error.message || '神域战场开启失败'}`); return; }
     selectedBattleRoomId = data?.room?.id || null;
+    setLocalData(BATTLE_ROOM_STORAGE_KEY, selectedBattleRoomId);
     battleRoomStateCache = data || null;
     battleRoomError = null;
-    showToast('已进入战斗房间');
+    selectedMatchDungeonId = data?.dungeon?.id || selectedMatchDungeonId;
+    showToast('已进入神域战场');
     await renderMatchPage();
+}
+
+async function createBattleRoomUI(dungeonId = selectedMatchDungeonId) {
+    if (!dungeonId) return;
+    if (!requireInvite(['player', 'author', 'reviewer', 'admin'], '验入局谕令后可开神域战场。')) return;
+    if (USE_LOCAL_FALLBACK) { showToast('本地模式暂不保存神域战场房间'); return; }
+    const { data, error } = await invokeDungeonAction('createBattleRoom', { dungeonId });
+    if (error) { showToast(`❌ ${error.message || '开房失败'}`); return; }
+    selectedMatchDungeonId = data?.dungeon?.id || dungeonId;
+    selectedBattleRoomId = data?.room?.id || null;
+    setLocalData(BATTLE_ROOM_STORAGE_KEY, selectedBattleRoomId);
+    battleRoomStateCache = data || null;
+    battleRoomError = null;
+    showToast('神域战场已开房');
+    await renderMatchPage();
+}
+
+async function joinBattleRoomUI(battleRoomId = selectedBattleRoomId) {
+    if (!battleRoomId) return;
+    if (!requireInvite(['player', 'author', 'reviewer', 'admin'], '验入局谕令后可加入神域战场。')) return;
+    if (USE_LOCAL_FALLBACK) { showToast('本地模式暂不保存神域战场房间'); return; }
+    const { data, error } = await invokeDungeonAction('joinBattleRoom', { battleRoomId });
+    if (error) { showToast(`❌ ${error.message || '加入战场失败'}`); return; }
+    selectedMatchDungeonId = data?.dungeon?.id || selectedMatchDungeonId;
+    selectedBattleRoomId = data?.room?.id || battleRoomId;
+    setLocalData(BATTLE_ROOM_STORAGE_KEY, selectedBattleRoomId);
+    battleRoomStateCache = data || null;
+    battleRoomError = null;
+    showToast('已加入神域战场');
+    await renderMatchPage();
+}
+
+async function joinBattleRoomByInputUI() {
+    const input = document.getElementById('battleRoomJoinInput');
+    const battleRoomId = String(input?.value || '').trim();
+    if (!battleRoomId) { showToast('请输入房间号'); return; }
+    await joinBattleRoomUI(battleRoomId);
+}
+
+async function copyBattleRoomIdUI(battleRoomId = selectedBattleRoomId) {
+    const text = String(battleRoomId || document.getElementById('battleRoomIdDisplay')?.value || '').trim();
+    if (!text) { showToast('暂无房间号可复制'); return; }
+    try {
+        await navigator.clipboard.writeText(text);
+        showToast('房间号已复制');
+    } catch (_) {
+        const input = document.getElementById('battleRoomIdDisplay');
+        if (input) {
+            input.focus();
+            input.select();
+        }
+        showToast('已选中房间号，可手动复制');
+    }
 }
 
 async function refreshBattleRoomUI(battleRoomId = selectedBattleRoomId) {
@@ -129,7 +203,9 @@ async function refreshBattleRoomUI(battleRoomId = selectedBattleRoomId) {
     const { state, error } = await fetchBattleRoomState({ battleRoomId });
     battleRoomStateCache = state;
     battleRoomError = error;
-    if (error) showToast(`❌ ${error.message || '战斗房间刷新失败'}`);
+    selectedBattleRoomId = error ? null : state?.room?.id || battleRoomId;
+    setLocalData(BATTLE_ROOM_STORAGE_KEY, selectedBattleRoomId);
+    if (error) showToast(`❌ ${error.message || '神域战场刷新失败'}`);
     await renderMatchPage();
 }
 
@@ -140,9 +216,10 @@ async function updateBattleRoomRoundUI(battleRoomId = selectedBattleRoomId) {
     const { data, error } = await invokeDungeonAction('updateBattleRoomRound', { battleRoomId, currentRound, note });
     if (error) { showToast(`❌ ${error.message || '回合保存失败'}`); return; }
     selectedBattleRoomId = data?.room?.id || battleRoomId;
+    setLocalData(BATTLE_ROOM_STORAGE_KEY, selectedBattleRoomId);
     battleRoomStateCache = data || null;
     battleRoomError = null;
-    showToast('战斗回合已保存');
+    showToast('战场回合已保存');
     await renderMatchPage();
 }
 
@@ -153,6 +230,7 @@ async function applyBattlePlayerActionUI(battleRoomId, playerId, actionType) {
     const { data, error } = await invokeDungeonAction('applyBattlePlayerAction', { battleRoomId, playerId, actionType, amount, note });
     if (error) { showToast(`❌ ${error.message || '战斗操作失败'}`); return; }
     selectedBattleRoomId = data?.room?.id || battleRoomId;
+    setLocalData(BATTLE_ROOM_STORAGE_KEY, selectedBattleRoomId);
     battleRoomStateCache = data || null;
     battleRoomError = null;
     showToast('战斗操作已记录');
@@ -165,21 +243,22 @@ async function finishBattleRoomUI(battleRoomId, status = 'finished') {
     const { data, error } = await invokeDungeonAction('finishBattleRoom', { battleRoomId, status, note });
     if (error) { showToast(`❌ ${error.message || '房间收束失败'}`); return; }
     selectedBattleRoomId = data?.room?.id || battleRoomId;
+    setLocalData(BATTLE_ROOM_STORAGE_KEY, selectedBattleRoomId);
     battleRoomStateCache = data || null;
     battleRoomError = null;
-    showToast(status === 'cancelled' ? '战斗房间已取消' : '战斗房间已结束');
+    showToast(status === 'cancelled' ? '神域战场已取消' : '神域战场已结束');
     await renderMatchPage();
 }
 
 async function joinMatchQueueUI(dungeonId) {
-    if (!requireInvite(['player', 'author', 'reviewer', 'admin'], '验入局谕令后可加入试炼召集。')) return;
+    if (!requireInvite(['player', 'author', 'reviewer', 'admin'], '验入局谕令后可加入神域战场。')) return;
     if (USE_LOCAL_FALLBACK) {
         const queueByDungeon = getLocalData('match_queue_v1', {});
         const list = (queueByDungeon[dungeonId] || []).filter(player => !isCurrentMatchPlayer(player.player_name));
         list.push({ player_name: getCurrentMatchName(), created_at: new Date().toISOString() });
         queueByDungeon[dungeonId] = list;
         setLocalData('match_queue_v1', queueByDungeon);
-        showToast('已加入本地试炼召集');
+        showToast('已加入本地候场');
         await renderMatchPage();
         return;
     }
@@ -188,12 +267,12 @@ async function joinMatchQueueUI(dungeonId) {
     matchStateCache = data?.state || null;
     matchStateError = null;
     const status = data?.result?.status;
-    showToast(status === 'matched' || status === 'already_matched' ? '试炼召集已成房' : '已加入试炼召集队列');
+    showToast(status === 'matched' || status === 'already_matched' ? '已成房' : '已加入候场队列');
     await renderMatchPage();
 }
 
 async function cancelMatchQueueUI(dungeonId) {
-    if (!requireInvite(['player', 'author', 'reviewer', 'admin'], '验入局谕令后可取消试炼召集。')) return;
+    if (!requireInvite(['player', 'author', 'reviewer', 'admin'], '验入局谕令后可取消候场。')) return;
     if (USE_LOCAL_FALLBACK) {
         const queueByDungeon = getLocalData('match_queue_v1', {});
         queueByDungeon[dungeonId] = (queueByDungeon[dungeonId] || []).filter(player => !isCurrentMatchPlayer(player.player_name));
@@ -206,6 +285,6 @@ async function cancelMatchQueueUI(dungeonId) {
     if (error) { showToast(`❌ ${error.message || '取消失败'}`); return; }
     matchStateCache = data?.state || null;
     matchStateError = null;
-    showToast(data?.result?.cancelled ? '已取消试炼召集排队' : '当前没有排队记录');
+    showToast(data?.result?.cancelled ? '已取消候场排队' : '当前没有排队记录');
     await renderMatchPage();
 }
