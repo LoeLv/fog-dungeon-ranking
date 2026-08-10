@@ -146,7 +146,7 @@ function getBattleActionLabel(type) {
 
 function renderBattleRoomSummaryCard(state, error) {
     if (error) return `<section class="profile-panel battle-room-summary"><div class="profile-empty">${escapeHtml(error.message || '战场房间读取失败。')}</div></section>`;
-    if (!state?.room) return '';
+    if (!state?.room || state.room.room_status !== 'active') return '';
     const room = state.room;
     const dungeon = state.dungeon || {};
     const players = Array.isArray(state.players) ? state.players : [];

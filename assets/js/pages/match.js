@@ -34,12 +34,17 @@ async function renderMatchPage() {
         if (battleResult.error) {
             selectedBattleRoomId = null;
             setLocalData(BATTLE_ROOM_STORAGE_KEY, null);
+        } else if (battleResult.state?.room?.room_status !== 'active') {
+            selectedBattleRoomId = null;
+            setLocalData(BATTLE_ROOM_STORAGE_KEY, null);
+            battleRoomStateCache = null;
+            battleRoomError = null;
         }
     } else if (selectedMatchDungeonId) {
         const battleResult = await fetchBattleRoomState({ dungeonId: selectedMatchDungeonId });
-        battleRoomStateCache = battleResult.state;
         battleRoomError = battleResult.error;
-        selectedBattleRoomId = battleResult.state?.room?.id || null;
+        battleRoomStateCache = battleResult.state?.room?.room_status === 'active' ? battleResult.state : null;
+        selectedBattleRoomId = battleRoomStateCache?.room?.id || null;
         if (selectedBattleRoomId) setLocalData(BATTLE_ROOM_STORAGE_KEY, selectedBattleRoomId);
     } else {
         battleRoomStateCache = null;
@@ -132,6 +137,16 @@ async function renderBattleRoomPage() {
     battleRoomError = error;
     if (error) {
         container.innerHTML = `<div class="profile-empty">${escapeHtml(error.message || '战场房间读取失败。')}</div>`;
+        return;
+    }
+    if (state?.room?.room_status !== 'active') {
+        selectedMatchDungeonId = state?.dungeon?.id || selectedMatchDungeonId;
+        selectedBattleRoomId = null;
+        setLocalData(BATTLE_ROOM_STORAGE_KEY, null);
+        battleRoomStateCache = null;
+        battleRoomError = null;
+        showToast('这个房间已经关闭，已返回神域战场入口');
+        await backToBattleLobby();
         return;
     }
     selectedBattleRoomId = state?.room?.id || selectedBattleRoomId;
@@ -261,12 +276,16 @@ async function copyBattleRoomIdUI(battleRoomId = selectedBattleRoomId) {
 async function refreshBattleRoomUI(battleRoomId = selectedBattleRoomId) {
     if (!battleRoomId) return;
     const { state, error } = await fetchBattleRoomState({ battleRoomId });
-    battleRoomStateCache = state;
     battleRoomError = error;
-    selectedBattleRoomId = error ? null : state?.room?.id || battleRoomId;
+    battleRoomStateCache = !error && state?.room?.room_status === 'active' ? state : null;
+    selectedBattleRoomId = battleRoomStateCache?.room?.id || null;
     setLocalData(BATTLE_ROOM_STORAGE_KEY, selectedBattleRoomId);
     if (error) showToast(`❌ ${error.message || '神域战场刷新失败'}`);
-    if (document.getElementById('battleRoomPage')?.style.display === 'block') renderBattleRoomPageFromCache();
+    if (!error && state?.room?.room_status !== 'active') showToast('这个房间已经关闭，不再显示为当前房间');
+    if (document.getElementById('battleRoomPage')?.style.display === 'block') {
+        if (selectedBattleRoomId) renderBattleRoomPageFromCache();
+        else await backToBattleLobby();
+    }
     else await renderMatchPage();
 }
 
@@ -310,12 +329,15 @@ async function finishBattleRoomUI(battleRoomId, status = 'finished') {
     const finalNote = status === 'cancelled' ? (note || '房间已关闭，DM/主持人已收到关闭提示。') : note;
     const { data, error } = await invokeDungeonAction('finishBattleRoom', { battleRoomId, status, note: finalNote });
     if (error) { showToast(`❌ ${error.message || '房间收束失败'}`); return; }
-    selectedBattleRoomId = data?.room?.id || battleRoomId;
+    selectedBattleRoomId = data?.room?.room_status === 'active' ? (data?.room?.id || battleRoomId) : null;
     setLocalData(BATTLE_ROOM_STORAGE_KEY, selectedBattleRoomId);
     battleRoomStateCache = data || null;
     battleRoomError = null;
     showToast(status === 'cancelled' ? '神域战场已取消' : '神域战场已结束');
-    if (document.getElementById('battleRoomPage')?.style.display === 'block') renderBattleRoomPageFromCache();
+    if (status === 'cancelled' || status === 'finished') {
+        if (document.getElementById('battleRoomPage')?.style.display === 'block') await backToBattleLobby();
+        else await renderMatchPage();
+    } else if (document.getElementById('battleRoomPage')?.style.display === 'block') renderBattleRoomPageFromCache();
     else await renderMatchPage();
 }
 
