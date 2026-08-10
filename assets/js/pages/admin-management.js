@@ -5,6 +5,11 @@ let adminTalentPools = [];
 let adminTalentPoolSelected = '';
 let adminManagementLoading = false;
 let adminTalentWarehouseLoading = false;
+let adminManagementView = 'overview';
+let adminMemberSearchQuery = '';
+let adminMemberSortMode = 'oldest';
+let adminMemberPage = 1;
+const adminMemberPageSize = 18;
 
 function formatAdminMemberStatus(member) {
     if (!member?.isActive) return '已禁用';
@@ -14,19 +19,89 @@ function formatAdminMemberStatus(member) {
     return '未记录';
 }
 
+function isAdminMemberBound(member) {
+    return !!member?.hasProfile || !!member?.faithGod || !!member?.profession || Number(member?.ascensionScore || 0) > 0 || Number(member?.audienceScore || 0) > 0;
+}
+
+function getAdminMemberLastSeenTime(member) {
+    const timestamp = Date.parse(member?.lastSeenAt || '');
+    return Number.isNaN(timestamp) ? 0 : timestamp;
+}
+
+function getAdminFilteredMembers() {
+    const query = adminMemberSearchQuery.trim().toLowerCase();
+    const filtered = adminMembers.filter(member => {
+        if (!query) return true;
+        return [
+            member.displayName,
+            member.role,
+            member.faithGod,
+            member.profession,
+            member.lastSeenAction,
+            formatAdminMemberStatus(member),
+            isAdminMemberBound(member) ? '已绑定' : '未绑定'
+        ].some(value => String(value || '').toLowerCase().includes(query));
+    });
+    return filtered.sort((a, b) => {
+        const boundDelta = Number(!isAdminMemberBound(a)) - Number(!isAdminMemberBound(b));
+        if (boundDelta) return boundDelta;
+        const timeA = getAdminMemberLastSeenTime(a);
+        const timeB = getAdminMemberLastSeenTime(b);
+        const timeDelta = adminMemberSortMode === 'newest' ? timeB - timeA : timeA - timeB;
+        if (timeDelta) return timeDelta;
+        return String(a.displayName || '').localeCompare(String(b.displayName || ''), 'zh-CN');
+    });
+}
+
+function clampAdminMemberPage(totalPages) {
+    adminMemberPage = Math.max(1, Math.min(adminMemberPage, Math.max(1, totalPages)));
+}
+
+function renderAdminMemberToolbar(filteredCount = adminMembers.length) {
+    const totalPages = Math.max(1, Math.ceil(filteredCount / adminMemberPageSize));
+    return `<div class="profile-form-grid" style="margin-bottom:12px;">
+        <div class="form-group full">
+            <label>搜索成员</label>
+            <input id="adminMemberSearchInput" maxlength="40" value="${escapeHtml(adminMemberSearchQuery)}" placeholder="输入昵称、身份、信仰、职业或状态" oninput="adminSetMemberSearch(this.value)">
+        </div>
+        <div class="form-group">
+            <label>最后登录排序</label>
+            <select id="adminMemberSortSelect" onchange="adminSetMemberSort(this.value)">
+                <option value="oldest" ${adminMemberSortMode === 'oldest' ? 'selected' : ''}>最早登录优先</option>
+                <option value="newest" ${adminMemberSortMode === 'newest' ? 'selected' : ''}>最近登录优先</option>
+            </select>
+        </div>
+        <div class="form-group">
+            <label>分页</label>
+            <div class="profile-tools">
+                <button class="btn btn-outline btn-sm" onclick="adminSetMemberPage(${adminMemberPage - 1})" ${adminMemberPage <= 1 ? 'disabled' : ''}>上一页</button>
+                <button class="btn btn-outline btn-sm" onclick="adminSetMemberPage(${adminMemberPage + 1})" ${adminMemberPage >= totalPages ? 'disabled' : ''}>下一页</button>
+            </div>
+        </div>
+    </div>
+    <div class="identity-help">共 ${filteredCount} / ${adminMembers.length} 位成员，第 ${adminMemberPage} / ${totalPages} 页。未绑定成员固定排在最后。</div>`;
+}
+
 function renderAdminMemberRows() {
     if (adminManagementLoading) return '<div class="profile-empty">正在读取成员状态...</div>';
     if (!adminMembers.length) return renderRitualEmpty('暂无成员记录。', '真理', '名单为空');
-    return adminMembers.map(member => {
+    const filtered = getAdminFilteredMembers();
+    const totalPages = Math.max(1, Math.ceil(filtered.length / adminMemberPageSize));
+    clampAdminMemberPage(totalPages);
+    const start = (adminMemberPage - 1) * adminMemberPageSize;
+    const pageItems = filtered.slice(start, start + adminMemberPageSize);
+    if (!pageItems.length) return renderAdminMemberToolbar(filtered.length) + renderRitualEmpty('没有匹配的成员。', '真理', '查询为空');
+    return renderAdminMemberToolbar(filtered.length) + pageItems.map(member => {
         const status = formatAdminMemberStatus(member);
         const seen = member.lastSeenAt ? formatAdminTime(member.lastSeenAt) : '从未记录';
+        const boundLabel = isAdminMemberBound(member) ? '已绑定' : '未绑定';
         const hash = escapeHtml(jsString(member.codeHash || ''));
         const name = escapeHtml(member.displayName || '未命名');
         const roleLabel = typeof ROLE_LABELS !== 'undefined' ? (ROLE_LABELS[member.role] || member.role || '未知身份') : (member.role || '未知身份');
         return `<article class="profile-list-item">
-            <div class="profile-list-title"><span>${name}</span><small>${escapeHtml(status)}</small></div>
+            <div class="profile-list-title"><span>${name}</span><small>${escapeHtml(boundLabel)} · ${escapeHtml(status)}</small></div>
             <div class="profile-list-meta">${escapeHtml(roleLabel)} · ${escapeHtml(member.faithGod || '未定信仰')} · ${escapeHtml(member.profession || '未定职业')}</div>
-            <div class="profile-list-meta">登神 ${Number(member.ascensionScore || 0)} / 觐见 ${Number(member.audienceScore || 0)} · 最近活动：${escapeHtml(seen)} · ${escapeHtml(member.lastSeenAction || '无动作')}</div>
+            <div class="profile-list-meta">登神 ${Number(member.ascensionScore || 0)} / 觐见 ${Number(member.audienceScore || 0)} · 最后登录网站：${escapeHtml(seen)} · ${escapeHtml(member.lastSeenAction || '无动作')}</div>
             <div class="profile-tools">
                 <button class="btn btn-outline btn-sm" onclick="adminInspectMember(${hash}, ${escapeHtml(jsString(member.displayName || ''))})">查看档案</button>
                 <button class="btn btn-outline btn-sm" onclick="adminRenameMember(${hash}, ${escapeHtml(jsString(member.displayName || ''))})">改名</button>
@@ -35,6 +110,46 @@ function renderAdminMemberRows() {
             </div>
         </article>`;
     }).join('');
+}
+
+function adminSetMemberSearch(value) {
+    adminMemberSearchQuery = String(value || '');
+    adminMemberPage = 1;
+    const rows = document.getElementById('adminMemberRows');
+    if (rows) rows.innerHTML = renderAdminMemberRows();
+}
+
+function adminSetMemberSort(value) {
+    adminMemberSortMode = value === 'newest' ? 'newest' : 'oldest';
+    adminMemberPage = 1;
+    const rows = document.getElementById('adminMemberRows');
+    if (rows) rows.innerHTML = renderAdminMemberRows();
+}
+
+function adminSetMemberPage(page) {
+    adminMemberPage = Number(page) || 1;
+    const rows = document.getElementById('adminMemberRows');
+    if (rows) rows.innerHTML = renderAdminMemberRows();
+}
+
+async function adminSetManagementView(view) {
+    adminManagementView = ['overview', 'members', 'talents'].includes(view) ? view : 'overview';
+    if (adminManagementView !== 'members') adminMemberPage = 1;
+    await renderAdminPage();
+}
+
+function renderAdminManagementNav() {
+    const items = [
+        ['overview', '后台总览', '玩家查询 / 操作日志'],
+        ['members', '成员管理', '活跃状态 / 改名 / 重置 / 删除'],
+        ['talents', '天赋池维护', '天赋仓库 / 新增 / 启停']
+    ];
+    return `<section class="profile-panel" data-god="真理" style="${getGodSkinStyle('真理')}">
+        <div class="profile-panel-title"><span>馆主工作台</span><small>独立页面</small></div>
+        <div class="profile-tools">
+            ${items.map(([key, label, note]) => `<button class="btn ${adminManagementView === key ? 'btn-primary' : 'btn-outline'} btn-sm" onclick="adminSetManagementView('${key}')" title="${escapeHtml(note)}">${escapeHtml(label)}</button>`).join('')}
+        </div>
+    </section>`;
 }
 
 function getAdminTalentSelectedPool() {
@@ -122,7 +237,15 @@ function renderAdminManagementPanels() {
             <button class="btn btn-primary btn-sm" data-admin-members-refresh onclick="adminLoadMembers(true)">刷新成员</button>
         </div>
         <div id="adminMemberRows" class="profile-list">${renderAdminMemberRows()}</div>
-    </section>${renderAdminTalentWarehousePanel()}`;
+    </section>`;
+}
+
+function renderAdminMembersPage() {
+    return `${renderAdminManagementPanels()}${renderAdminRolePanel()}`;
+}
+
+function renderAdminTalentPoolPage() {
+    return renderAdminTalentWarehousePanel();
 }
 
 function renderAdminRolePanel() {
@@ -332,11 +455,22 @@ async function adminToggleTalentPoolItem(poolKey, talentId, enabled) {
 if (typeof renderAdminPage === 'function') {
     const renderAdminPageBase = renderAdminPage;
     renderAdminPage = async function renderAdminPageWithManagement() {
-        await renderAdminPageBase();
-        injectAdminManagementPanels();
-        if (isAdmin()) {
-            if (!adminMembers.length && !adminManagementLoading) await adminLoadMembers(false);
-            if (!adminTalentPools.length && !adminTalentWarehouseLoading) await adminLoadTalentWarehouse(false);
+        const container = document.getElementById('adminContent');
+        if (!container || !isAdmin()) {
+            await renderAdminPageBase();
+            return;
         }
+        if (adminManagementView === 'members') {
+            container.innerHTML = `${renderAdminManagementNav()}${renderAdminMembersPage()}`;
+            if (!adminMembers.length && !adminManagementLoading) await adminLoadMembers(false);
+            return;
+        }
+        if (adminManagementView === 'talents') {
+            container.innerHTML = `${renderAdminManagementNav()}${renderAdminTalentPoolPage()}`;
+            if (!adminTalentPools.length && !adminTalentWarehouseLoading) await adminLoadTalentWarehouse(false);
+            return;
+        }
+        await renderAdminPageBase();
+        container.insertAdjacentHTML('afterbegin', renderAdminManagementNav());
     };
 }

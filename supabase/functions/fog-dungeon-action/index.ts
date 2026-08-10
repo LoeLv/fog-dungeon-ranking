@@ -2712,11 +2712,13 @@ async function listAdminMembers(supabase: ReturnType<typeof createClient>) {
       const seenTime = seenAt ? Date.parse(seenAt) : 0;
       const minutesAgo = seenTime ? Math.max(0, Math.floor((now - seenTime) / 60000)) : null;
       const profile = profileMap.get(codeHash) || {};
+      const hasProfile = profileMap.has(codeHash);
       return {
         codeHash,
         displayName: cleanText(invite.display_name, 40),
         role: cleanText(invite.role, 20),
         isActive: invite.is_active !== false,
+        hasProfile,
         lastSeenAt: seenAt,
         lastSeenAction: cleanText(invite.last_seen_action, 80),
         minutesAgo,
