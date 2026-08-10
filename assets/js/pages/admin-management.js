@@ -184,18 +184,32 @@ function renderAdminTalentRows() {
     if (adminTalentWarehouseLoading) return '<div class="profile-empty">正在读取天赋仓库...</div>';
     const pool = getAdminTalentSelectedPool();
     if (!pool) return renderRitualEmpty('暂无天赋池记录。', '真理', '仓库为空');
-    return (pool.items || []).map(item => {
-        const payload = escapeHtml(jsString(JSON.stringify(item)));
-        return `<article class="profile-list-item">
-            <div class="profile-list-title"><span>#${Number(item.talentId || 0)} ${escapeHtml(item.talentName || '未命名')}</span><small>${escapeHtml(item.rank || 'C')} · ${item.isEnabled ? '启用' : '停用'}</small></div>
-            <div class="profile-list-meta">${escapeHtml(item.effect || '未填写效果')}</div>
-            <div class="profile-list-meta">行动点 ${Number(item.actionCost || 0)} · ${escapeHtml(item.adminNote || '无备注')}</div>
-            <div class="profile-tools">
-                <button class="btn btn-outline btn-sm" onclick="adminEditTalentPoolItem(${payload})">编辑</button>
-                <button class="btn btn-outline btn-sm" onclick="adminToggleTalentPoolItem(${escapeHtml(jsString(item.poolKey))}, ${Number(item.talentId || 0)}, ${item.isEnabled ? 'false' : 'true'})">${item.isEnabled ? '停用' : '启用'}</button>
-            </div>
-        </article>`;
-    }).join('');
+    const groups = ['S', 'A', 'B', 'C'].map(rank => {
+        const items = (pool.items || [])
+            .filter(item => String(item.rank || 'C').toUpperCase() === rank)
+            .sort((a, b) => Number(a.talentId || 0) - Number(b.talentId || 0));
+        return { rank, items };
+    }).filter(group => group.items.length);
+    if (!groups.length) return renderRitualEmpty('这个天赋池暂时没有记录。', '真理', '仓库为空');
+    return groups.map(group => `<section class="profile-panel" data-god="真理" style="margin-top:12px;${getGodSkinStyle('真理')}">
+        <div class="profile-panel-title"><span>${group.rank} 级天赋</span><small>${group.items.length} 项</small></div>
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px;">
+            ${group.items.map(item => {
+                const payload = escapeHtml(jsString(JSON.stringify(item)));
+                const cooldown = String(item.cooldown || '').trim() || '无';
+                return `<article class="profile-list-item" style="height:100%;display:flex;flex-direction:column;gap:8px;">
+                    <div class="profile-list-title"><span>#${Number(item.talentId || 0)} ${escapeHtml(item.talentName || '未命名')}</span><small>${item.isEnabled ? '启用' : '停用'}</small></div>
+                    <div class="profile-list-meta">冷却 ${escapeHtml(cooldown)} · 行动点 ${Number(item.actionCost || 0)}</div>
+                    <div class="profile-list-meta" style="white-space:pre-wrap;">${escapeHtml(item.effect || '未填写效果')}</div>
+                    <div class="profile-list-meta">${escapeHtml(item.adminNote || '无备注')}</div>
+                    <div class="profile-tools" style="margin-top:auto;">
+                        <button class="btn btn-outline btn-sm" onclick="adminEditTalentPoolItem(${payload})">编辑</button>
+                        <button class="btn btn-outline btn-sm" onclick="adminToggleTalentPoolItem(${escapeHtml(jsString(item.poolKey))}, ${Number(item.talentId || 0)}, ${item.isEnabled ? 'false' : 'true'})">${item.isEnabled ? '停用' : '启用'}</button>
+                    </div>
+                </article>`;
+            }).join('')}
+        </div>
+    </section>`).join('');
 }
 
 function renderAdminTalentWarehousePanel() {
@@ -228,6 +242,10 @@ function renderAdminTalentWarehousePanel() {
                 <textarea id="adminTalentEffect" maxlength="600" rows="3" placeholder="填写天赋效果"></textarea>
             </div>
             <div class="form-group">
+                <label>冷却</label>
+                <input id="adminTalentCooldown" maxlength="40" placeholder="例如 5回合 / 一局一次 / 无">
+            </div>
+            <div class="form-group">
                 <label>行动点</label>
                 <input id="adminTalentActionCost" type="number" min="0" max="99" value="0">
             </div>
@@ -243,6 +261,15 @@ function renderAdminTalentWarehousePanel() {
             <button class="btn btn-primary btn-sm" data-admin-talent-save onclick="adminSaveTalentPoolItem()">保存天赋</button>
             <button class="btn btn-outline btn-sm" data-admin-talent-refresh onclick="adminLoadTalentWarehouse(true)">刷新仓库</button>
             <button class="btn btn-outline btn-sm" onclick="adminClearTalentPoolForm()">清空表单</button>
+        </div>
+        <div class="profile-form-grid" style="margin-top:14px;">
+            <div class="form-group full">
+                <label>批量导入</label>
+                <textarea id="adminTalentBatchInput" rows="6" maxlength="20000" placeholder="一行一个天赋：编号｜名字｜等级｜效果｜冷却｜行动点&#10;也可以从表格复制：编号<Tab>名字<Tab>等级<Tab>效果<Tab>冷却<Tab>行动点"></textarea>
+            </div>
+        </div>
+        <div class="profile-tools">
+            <button class="btn btn-primary btn-sm" data-admin-talent-batch onclick="adminBatchSaveTalentPoolItems()">批量保存到当前池</button>
         </div>
         <div id="adminTalentPoolRows" class="profile-list" style="margin-top:14px;">${renderAdminTalentRows()}</div>
     </section>`;
@@ -469,6 +496,7 @@ function adminEditTalentPoolItem(rawItem) {
         adminTalentName: item.talentName || '',
         adminTalentRank: item.rank || 'C',
         adminTalentEffect: item.effect || '',
+        adminTalentCooldown: item.cooldown || '',
         adminTalentActionCost: item.actionCost || 0,
         adminTalentNote: item.adminNote || ''
     };
@@ -481,7 +509,7 @@ function adminEditTalentPoolItem(rawItem) {
 }
 
 function adminClearTalentPoolForm() {
-    ['adminTalentId', 'adminTalentName', 'adminTalentEffect', 'adminTalentNote'].forEach(id => {
+    ['adminTalentId', 'adminTalentName', 'adminTalentEffect', 'adminTalentCooldown', 'adminTalentNote'].forEach(id => {
         const el = document.getElementById(id);
         if (el) el.value = '';
     });
@@ -500,6 +528,7 @@ async function adminSaveTalentPoolItem() {
         talentName: document.getElementById('adminTalentName')?.value || '',
         rank: document.getElementById('adminTalentRank')?.value || 'C',
         effect: document.getElementById('adminTalentEffect')?.value || '',
+        cooldown: document.getElementById('adminTalentCooldown')?.value || '',
         actionCost: document.getElementById('adminTalentActionCost')?.value || 0,
         isEnabled: !!document.getElementById('adminTalentEnabled')?.checked,
         adminNote: document.getElementById('adminTalentNote')?.value || ''
@@ -522,6 +551,56 @@ async function adminSaveTalentPoolItem() {
         const message = `保存失败：${error?.message || error || '未知错误'}`;
         setAdminManagementStatus(message, 'error');
         showToast(`失败：${error?.message || '保存失败'}`);
+    }
+}
+
+function parseAdminTalentBatchLine(line, index) {
+    const raw = String(line || '').trim();
+    if (!raw) return null;
+    const parts = raw.includes('\t') ? raw.split('\t') : raw.split(/[|｜]/);
+    if (parts.length < 6) throw new Error(`第 ${index + 1} 行格式不足：需要 编号｜名字｜等级｜效果｜冷却｜行动点`);
+    const [talentId, talentName, rank, effect, cooldown, actionCost] = parts.map(part => String(part || '').trim());
+    const cleanRank = String(rank || '').toUpperCase();
+    if (!Number(talentId) || !talentName || !['S', 'A', 'B', 'C'].includes(cleanRank)) {
+        throw new Error(`第 ${index + 1} 行格式错误：编号、名字、等级不能为空，等级只能是 S/A/B/C`);
+    }
+    return { talentId, talentName, rank: cleanRank, effect, cooldown, actionCost, isEnabled: true, adminNote: '批量导入' };
+}
+
+async function adminBatchSaveTalentPoolItems() {
+    const poolKey = document.getElementById('adminTalentPoolKey')?.value || adminTalentPoolSelected;
+    const text = document.getElementById('adminTalentBatchInput')?.value || '';
+    if (!poolKey) { showToast('请先选择或填写天赋池'); return; }
+    let items = [];
+    try {
+        items = text.split(/\r?\n/).map(parseAdminTalentBatchLine).filter(Boolean);
+    } catch (error) {
+        setAdminManagementStatus(error.message || '批量格式错误', 'error');
+        showToast(error.message || '批量格式错误');
+        return;
+    }
+    if (!items.length) { showToast('请粘贴至少一行天赋'); return; }
+    if (!window.confirm(`确认批量保存 ${items.length} 个天赋到 ${poolKey}？同编号会覆盖。`)) return;
+    setAdminManagementStatus(`正在批量保存 ${items.length} 个天赋...`, 'pending');
+    try {
+        const { data, error } = await invokeDungeonAction('adminBatchUpsertTalentPoolItems', { poolKey, items });
+        if (error) {
+            const message = `批量保存失败：${error.message || '后端未返回原因'}`;
+            setAdminManagementStatus(message, 'error');
+            showToast(message);
+            return;
+        }
+        adminTalentPoolSelected = String(poolKey || '');
+        setAdminManagementStatus(`批量保存完成：${Number(data?.count || items.length)} 个天赋`, 'success');
+        showToast('批量保存完成');
+        const input = document.getElementById('adminTalentBatchInput');
+        if (input) input.value = '';
+        await Promise.all([adminLoadTalentWarehouse(false), refreshAdminOperationLogs()]);
+        await renderAdminPage();
+    } catch (error) {
+        const message = `批量保存失败：${error?.message || error || '未知错误'}`;
+        setAdminManagementStatus(message, 'error');
+        showToast(message);
     }
 }
 

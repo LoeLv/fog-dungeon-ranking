@@ -43,12 +43,13 @@ set permissions = array(
 with roster(display_name, permissions) as (
   values
     ('羔羊', array['talent_pool_manage', 'account_role_manage', 'review_dungeons']::text[]),
-    ('慕辞', array['settle_scores', 'account_role_manage', 'review_dungeons']::text[]),
     ('槐柏', array['account_role_manage', 'review_dungeons']::text[]),
     ('南河书淮', array['account_role_manage', 'review_dungeons']::text[]),
+    ('慕辞', array['settle_scores', 'account_role_manage', 'review_dungeons']::text[]),
     ('棺材板', array['account_role_manage', 'review_dungeons']::text[]),
     ('我不想死', array['account_role_manage', 'review_dungeons']::text[]),
-    ('情忆浮生', array['account_role_manage', 'review_dungeons']::text[]),
+    ('情忆浮生', array['settle_scores', 'account_role_manage', 'review_dungeons']::text[]),
+    ('知更', array['settle_scores', 'account_role_manage', 'review_dungeons']::text[]),
     ('变态', array['account_role_manage', 'review_dungeons']::text[]),
     ('墨染流年', array['account_role_manage', 'review_dungeons']::text[])
 ),
@@ -78,10 +79,42 @@ where display_name in (
   '慕辞',
   '槐柏',
   '南河书淮',
+  '慕辞',
   '棺材板',
   '我不想死',
   '情忆浮生',
+  '知更',
   '变态',
   '墨染流年'
 )
 order by display_name;
+
+with roster(display_name) as (
+  values
+    ('羔羊'),
+    ('槐柏'),
+    ('南河书淮'),
+    ('慕辞'),
+    ('棺材板'),
+    ('我不想死'),
+    ('情忆浮生'),
+    ('知更'),
+    ('变态'),
+    ('墨染流年')
+),
+matched as (
+  select distinct target.display_name
+  from roster r
+  join (
+    select display_name
+    from public.invite_codes
+    union
+    select display_name
+    from public.player_profiles
+  ) target on target.display_name = r.display_name
+)
+select r.display_name as missing_staff_name
+from roster r
+left join matched m on m.display_name = r.display_name
+where m.display_name is null
+order by r.display_name;
