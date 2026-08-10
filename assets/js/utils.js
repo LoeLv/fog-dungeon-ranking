@@ -32,7 +32,8 @@ function normalizeIdentityText(value) {
 
 function normalizeProfession(value) {
     const clean = String(value || '').trim();
-    return PROFESSION_NAMES.has(clean) ? clean : '';
+    const normalized = PROFESSION_ALIASES?.[clean] || clean;
+    return PROFESSION_NAMES.has(normalized) ? normalized : '';
 }
 
 function getProfessionInfo(value) {

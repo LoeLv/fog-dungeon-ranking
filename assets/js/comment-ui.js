@@ -1,6 +1,6 @@
 function formatParticipants(d) {
     const count = Number(d.participant_count || d.participantCount);
-    return Number.isFinite(count) && count > 0 ? `?????${count} ??` : '???????';
+    return Number.isFinite(count) && count > 0 ? `同契人数：${count} 人组队` : '同契人数：未定';
 }
 function getParticipantCount(d) {
     const count = Number(d.participant_count || d.participantCount);
@@ -18,7 +18,7 @@ function getTotalSlots(d) {
     return getParticipantCount(d) * getRunCount(d);
 }
 function formatRunCount(d) {
-    return `?????${getTrialCycle(d)}`;
+    return `试炼轮回：${getTrialCycle(d)}`;
 }
 function formatClearRate(d) {
     const stored = Number(d.clear_rate ?? d.clearRate);
@@ -28,7 +28,7 @@ function formatClearRate(d) {
 }
 function formatClearSlots(d) {
     const slots = getTotalSlots(d);
-    return `${getClearCount(d)} / ${slots || '??'}`;
+    return `${getClearCount(d)} / ${slots || '未定'}`;
 }
 function getDungeonReviewStatus(d) {
     return String(d?.review_status || 'approved');
@@ -38,13 +38,13 @@ function isDungeonApproved(d) {
 }
 function formatDungeonReviewStatus(d) {
     const status = getDungeonReviewStatus(d);
-    if (status === 'pending') return '???';
-    if (status === 'rejected') return '???';
-    return '???';
+    if (status === 'pending') return '待审核';
+    if (status === 'rejected') return '已退回';
+    return '已发布';
 }
 function truncateText(value, length = 80) {
     const text = String(value || '').replace(/\s+/g, ' ').trim();
-    return text.length > length ? `${text.slice(0, length)}?` : text;
+    return text.length > length ? `${text.slice(0, length)}…` : text;
 }
 
 function canEditPinned(d) {
@@ -89,19 +89,19 @@ function renderCommentHonorBadges(comment) {
     const titles = normalizeProfileTitleList(comment.active_titles || comment.activeTitles, comment.active_title || comment.activeTitle);
     const curses = normalizeProfileCurseList(comment.active_curses || comment.activeCurses, comment.active_curse || comment.activeCurse);
     const titleBadges = titles.slice(0, 3).map(title => {
-        const god = title.titleGod || '鍛借繍';
-        return `<span class="comment-honor-badge title" style="${getGodSkinStyle(god)}" title="${escapeHtml(`${god}锝?{title.titleText}${title.titleNote ? `锝?{title.titleNote}` : ''}`)}">绁炶癁 路 ${escapeHtml(title.titleText)}</span>`;
+        const god = title.titleGod || '命运';
+        return `<span class="comment-honor-badge title" style="${getGodSkinStyle(god)}" title="${escapeHtml(`${god}｜${title.titleText}${title.titleNote ? `｜${title.titleNote}` : ''}`)}">神诞 · ${escapeHtml(title.titleText)}</span>`;
     });
     const curseBadges = curses.slice(0, 2).map(curse => {
-        const god = curse.curseGod || '鍛借繍';
+        const god = curse.curseGod || '命运';
         const typeLabel = getProfileCurseBadgeLabel(curse.curseType);
         const visibleText = curse.curseNote
-            ? `${curse.curseText}锝?{truncateText(curse.curseNote, 14)}`
+            ? `${curse.curseText}｜${truncateText(curse.curseNote, 14)}`
             : curse.curseText;
-        return `<span class="comment-honor-badge curse" style="${getGodSkinStyle(god)}" title="${escapeHtml(`${god}锝?{getProfileCurseTypeLabel(curse.curseType)}锝?{curse.curseText}${curse.curseNote ? `锝?{curse.curseNote}` : ''}`)}">${escapeHtml(typeLabel)} 路 ${escapeHtml(visibleText)}</span>`;
+        return `<span class="comment-honor-badge curse" style="${getGodSkinStyle(god)}" title="${escapeHtml(`${god}｜${getProfileCurseTypeLabel(curse.curseType)}｜${curse.curseText}${curse.curseNote ? `｜${curse.curseNote}` : ''}`)}">${escapeHtml(typeLabel)} · ${escapeHtml(visibleText)}</span>`;
     });
     const extra = Math.max(0, titles.length - 3) + Math.max(0, curses.length - 2);
-    const extraBadge = extra ? [`<span class="comment-honor-badge" title="杩樻湁 ${extra} 鏉＄О鍙锋垨璇呭拻">+${extra}</span>`] : [];
+    const extraBadge = extra ? [`<span class="comment-honor-badge" title="还有 ${extra} 条称号或诅咒">+${extra}</span>`] : [];
     const badges = [...titleBadges, ...curseBadges, ...extraBadge];
     return badges.length ? `<span class="comment-honor-stack">${badges.join('')}</span>` : '';
 }
@@ -111,20 +111,20 @@ function renderCommentNode(comment, depth = 0, floorNumber = '', creator = '') {
     const canReply = canInteract() && !deleted;
     const isReply = depth > 0;
     const isArchitect = !!creator && (comment.author === creator || comment.invite_name === creator);
-    const roleLabel = isReply ? '鍓瘉瑷€' : '涓昏瘉瑷€';
-    const floorLabel = isReply ? '妤间腑璇佽█' : `绗?${floorNumber} 鍒欒瘉瑷€`;
-    const replyLabel = isReply ? '鍥炲簲鍓瘉' : '鍥炲簲涓昏瘉';
+    const roleLabel = isReply ? '副证言' : '主证言';
+    const floorLabel = isReply ? '楼中证言' : `第 ${floorNumber} 则证言`;
+    const replyLabel = isReply ? '回应副证' : '回应主证';
     const deleteButton = canDeleteComment(comment) && !deleted
-        ? `<button type="button" class="text-action" data-delete-comment-id="${escapeHtml(comment.id)}">鎶瑰幓璇佽█</button>`
+        ? `<button type="button" class="text-action" data-delete-comment-id="${escapeHtml(comment.id)}">抹去证言</button>`
         : '';
-    const replyAuthor = comment.author || comment.invite_name || '鍖垮悕';
+    const replyAuthor = comment.author || comment.invite_name || '匿名';
     const honorBadges = renderCommentHonorBadges(comment);
     return `
         <div class="comment-item ${isReply ? 'reply' : 'root'} ${isArchitect ? 'architect' : ''}">
             <div class="comment-head">
                 <div class="comment-author-line">
                     <span class="comment-role ${isReply ? 'reply' : 'root'}">${roleLabel}</span>
-                    <span class="comment-author">${escapeHtml(comment.author || comment.invite_name || '鍖垮悕')}</span>
+                    <span class="comment-author">${escapeHtml(comment.author || comment.invite_name || '匿名')}</span>
                     ${honorBadges}
                     <span class="comment-floor">${escapeHtml(floorLabel)}</span>
                 </div>
@@ -141,7 +141,7 @@ function renderCommentNode(comment, depth = 0, floorNumber = '', creator = '') {
 
 function renderComments(comments, creator = '') {
     const roots = buildCommentTree(comments);
-    if (!roots.length) return '<div class="no-comments">灏氭棤璇佽█锛屾垚涓虹涓€浣嶅悜璇曠偧璇佽█娈块€掍氦瑙侀椈鐨勫叆灞€鑰呫€?/div>';
+    if (!roots.length) return '<div class="no-comments">尚无证言，成为第一位向试炼证言殿递交见闻的入局者。</div>';
     return roots.map((comment, index) => renderCommentNode(comment, 0, index + 1, creator)).join('');
 }
 
@@ -150,11 +150,11 @@ function renderFeedbackTags(disabled) {
 }
 
 function renderFeedbackSummary(summary) {
-    if (!summary.length) return '<div class="feedback-summary-title">鏆傛棤閫氬叧鍙嶉鏍囩</div>';
+    if (!summary.length) return '<div class="feedback-summary-title">暂无通关反馈标签</div>';
     return `
-        <div class="feedback-summary-title">鍏ュ眬鑰呴€氬叧鍙嶉</div>
+        <div class="feedback-summary-title">入局者通关反馈</div>
         <div class="feedback-summary-list">
-            ${summary.map(item => `<span class="feedback-summary-pill">${escapeHtml(item.tag)} 脳 ${Number(item.tag_count || 0)}</span>`).join('')}
+            ${summary.map(item => `<span class="feedback-summary-pill">${escapeHtml(item.tag)} × ${Number(item.tag_count || 0)}</span>`).join('')}
         </div>`;
 }
 
@@ -163,29 +163,29 @@ async function renderLatestComments() {
     if (!feed) return;
     const comments = await fetchLatestComments(3);
     if (!comments.length) {
-        feed.innerHTML = '<div class="feed-empty"><strong>????????</strong><span>???????????????????????</span></div>';
+        feed.innerHTML = '<div class="feed-empty"><strong>神谕石壁暂时无声</strong><span>等第一位入局者递交证言，新的神谕会出现在这里。</span></div>';
         return;
     }
-    const feedGlyphs = ['?', '?', '?', '?', '?', '?', '?', '?'];
-    const feedMarks = ['01', '02', '03', '04', '05', '06', '07', '08'];
+    const feedGlyphs = ['♟', '✦', '◈', '◇', '✧', '✷', '✹', '✺'];
+    const feedMarks = ['Ⅰ', 'Ⅱ', 'Ⅲ', 'Ⅳ', 'Ⅴ', 'Ⅵ', 'Ⅶ', 'Ⅷ'];
     feed.innerHTML = comments.map((comment, index) => {
         const dungeon = comment.dungeon || {};
-        const title = dungeon.name || '?????';
-        const action = comment.parent_comment_id ? '????' : '????';
-        const godLabel = dungeon.type ? formatGodName(dungeon.type) : '?????';
-        const godPath = dungeon.type ? `${formatGodPath(dungeon.type)}??` : '?????';
+        const title = dungeon.name || '未知试炼';
+        const action = comment.parent_comment_id ? '楼中副证' : '递交证言';
+        const godLabel = dungeon.type ? formatGodName(dungeon.type) : '未归档神明';
+        const godPath = dungeon.type ? `${formatGodPath(dungeon.type)}命途` : '未知命途';
         const godClass = dungeon.type ? getGodClass(dungeon.type) : 'path-unknown';
-        const difficultyLabel = dungeon.difficulty ? formatDifficulty(dungeon.difficulty) : '????';
+        const difficultyLabel = dungeon.difficulty ? formatDifficulty(dungeon.difficulty) : '难度未定';
         const difficultyClass = dungeon.difficulty ? getDiffClass(dungeon.difficulty) : 'path-unknown';
         return `
             <article class="feed-item" onclick='openDetail(${jsString(comment.dungeon_id)})'>
                 <div class="feed-sigil"><span>${feedGlyphs[index % feedGlyphs.length]}</span><small>${feedMarks[index] || index + 1}</small></div>
                 <div class="feed-main">
                     <div class="feed-row">
-                        <span class="feed-author">${escapeHtml(comment.author || '?????')}</span>
+                        <span class="feed-author">${escapeHtml(comment.author || '匿名探索者')}</span>
                         ${renderCommentHonorBadges(comment)}
                         <span class="feed-action">${escapeHtml(action)}</span>
-                        <span class="feed-dungeon">?${escapeHtml(title)}?</span>
+                        <span class="feed-dungeon">《${escapeHtml(title)}》</span>
                     </div>
                     <div class="feed-lore">${escapeHtml(truncateText(comment.content, 120))}</div>
                     <div class="feed-meta">

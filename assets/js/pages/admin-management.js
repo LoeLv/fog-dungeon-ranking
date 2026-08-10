@@ -10,6 +10,21 @@ let adminMemberSearchQuery = '';
 let adminMemberSortMode = 'oldest';
 let adminMemberPage = 1;
 const adminMemberPageSize = 18;
+let adminManagementStatus = null;
+
+function setAdminManagementStatus(message, type = 'success') {
+    adminManagementStatus = message ? { message, type } : null;
+    const el = document.getElementById('adminManagementStatus');
+    if (!el) return;
+    if (!adminManagementStatus) {
+        el.hidden = true;
+        el.textContent = '';
+        return;
+    }
+    el.hidden = false;
+    el.className = `profile-action-status ${type === 'error' ? 'error' : (type === 'pending' ? 'pending' : 'success')}`;
+    el.textContent = message;
+}
 
 function formatAdminMemberStatus(member) {
     if (!member?.isActive) return '已禁用';
@@ -146,6 +161,7 @@ function renderAdminManagementNav() {
     ];
     return `<section class="profile-panel" data-god="真理" style="${getGodSkinStyle('真理')}">
         <div class="profile-panel-title"><span>馆主工作台</span><small>独立页面</small></div>
+        <div id="adminManagementStatus" class="profile-action-status ${adminManagementStatus?.type === 'error' ? 'error' : (adminManagementStatus?.type === 'pending' ? 'pending' : 'success')}" ${adminManagementStatus ? '' : 'hidden'}>${escapeHtml(adminManagementStatus?.message || '')}</div>
         <div class="profile-tools">
             ${items.map(([key, label, note]) => `<button class="btn ${adminManagementView === key ? 'btn-primary' : 'btn-outline'} btn-sm" onclick="adminSetManagementView('${key}')" title="${escapeHtml(note)}">${escapeHtml(label)}</button>`).join('')}
         </div>
@@ -352,44 +368,93 @@ async function adminSetMemberRole() {
         return;
     }
     if (!window.confirm(`确认将 ${target.displayName || '该成员'} 的权限调整为 ${nextRole}？`)) return;
-    const { error } = await invokeDungeonAction('adminSetAccountRole', { targetHash, role: nextRole });
-    if (error) {
-        showToast(`失败：${error.message || '权限调整失败'}`);
-        return;
+    setAdminManagementStatus('权限调整处理中...', 'pending');
+    try {
+        const { error } = await invokeDungeonAction('adminSetAccountRole', { targetHash, role: nextRole });
+        if (error) {
+            const message = `权限调整失败：${error.message || '后端未返回原因'}`;
+            setAdminManagementStatus(message, 'error');
+            showToast(`失败：${error.message || '权限调整失败'}`);
+            return;
+        }
+        setAdminManagementStatus('权限调整完成', 'success');
+        showToast('权限调整完成');
+        await refreshAdminOperationLogs();
+        await adminLoadMembers(false);
+        await renderAdminPage();
+    } catch (error) {
+        const message = `权限调整失败：${error?.message || error || '未知错误'}`;
+        setAdminManagementStatus(message, 'error');
+        showToast(`失败：${error?.message || '权限调整失败'}`);
     }
-    showToast('权限调整完成');
-    await refreshAdminOperationLogs();
-    await adminLoadMembers(false);
-    await renderAdminPage();
 }
 
 async function adminRenameMember(targetHash, currentName) {
     const nextName = window.prompt(`给 ${currentName || '该玩家'} 改成什么名字？`, currentName || '');
     if (!nextName) return;
-    const { error } = await invokeDungeonAction('adminRenameAccount', { targetHash, displayName: nextName });
-    if (error) { showToast(`失败：${error.message || '改名失败'}`); return; }
-    showToast('改名完成');
-    await Promise.all([adminLoadMembers(false), refreshAdminOperationLogs()]);
-    await renderAdminPage();
+    setAdminManagementStatus('改名处理中...', 'pending');
+    try {
+        const { error } = await invokeDungeonAction('adminRenameAccount', { targetHash, displayName: nextName });
+        if (error) {
+            const message = `改名失败：${error.message || '后端未返回原因'}`;
+            setAdminManagementStatus(message, 'error');
+            showToast(`失败：${error.message || '改名失败'}`);
+            return;
+        }
+        setAdminManagementStatus('改名完成', 'success');
+        showToast('改名完成');
+        await Promise.all([adminLoadMembers(false), refreshAdminOperationLogs()]);
+        await renderAdminPage();
+    } catch (error) {
+        const message = `改名失败：${error?.message || error || '未知错误'}`;
+        setAdminManagementStatus(message, 'error');
+        showToast(`失败：${error?.message || '改名失败'}`);
+    }
 }
 
 async function adminResetMember(targetHash, displayName) {
     if (!window.confirm(`确认重置 ${displayName || '该玩家'} 的个人状态？这会清空档案、分数、天赋、称号诅咒等个人数据，但保留账号。`)) return;
-    const { error } = await invokeDungeonAction('adminResetAccount', { targetHash });
-    if (error) { showToast(`失败：${error.message || '重置失败'}`); return; }
-    showToast('账号已重置');
-    await Promise.all([adminLoadMembers(false), refreshAdminOperationLogs()]);
-    await renderAdminPage();
+    setAdminManagementStatus('账号重置处理中...', 'pending');
+    try {
+        const { error } = await invokeDungeonAction('adminResetAccount', { targetHash });
+        if (error) {
+            const message = `重置失败：${error.message || '后端未返回原因'}`;
+            setAdminManagementStatus(message, 'error');
+            showToast(`失败：${error.message || '重置失败'}`);
+            return;
+        }
+        setAdminManagementStatus('账号已重置', 'success');
+        showToast('账号已重置');
+        await Promise.all([adminLoadMembers(false), refreshAdminOperationLogs()]);
+        await renderAdminPage();
+    } catch (error) {
+        const message = `重置失败：${error?.message || error || '未知错误'}`;
+        setAdminManagementStatus(message, 'error');
+        showToast(`失败：${error?.message || '重置失败'}`);
+    }
 }
 
 async function adminDeleteMember(targetHash, displayName) {
     const typed = window.prompt(`删除会禁用 ${displayName || '该账号'} 并清空个人状态。请输入玩家昵称确认。`);
     if (typed !== displayName) { showToast('昵称不一致，已取消删除'); return; }
-    const { error } = await invokeDungeonAction('adminDeleteAccount', { targetHash });
-    if (error) { showToast(`失败：${error.message || '删除失败'}`); return; }
-    showToast('账号已禁用并清理');
-    await Promise.all([adminLoadMembers(false), refreshAdminOperationLogs()]);
-    await renderAdminPage();
+    setAdminManagementStatus('账号删除处理中...', 'pending');
+    try {
+        const { error } = await invokeDungeonAction('adminDeleteAccount', { targetHash });
+        if (error) {
+            const message = `删除失败：${error.message || '后端未返回原因'}`;
+            setAdminManagementStatus(message, 'error');
+            showToast(`失败：${error.message || '删除失败'}`);
+            return;
+        }
+        setAdminManagementStatus('账号已禁用并清理', 'success');
+        showToast('账号已禁用并清理');
+        await Promise.all([adminLoadMembers(false), refreshAdminOperationLogs()]);
+        await renderAdminPage();
+    } catch (error) {
+        const message = `删除失败：${error?.message || error || '未知错误'}`;
+        setAdminManagementStatus(message, 'error');
+        showToast(`失败：${error?.message || '删除失败'}`);
+    }
 }
 
 function adminEditTalentPoolItem(rawItem) {
@@ -436,20 +501,47 @@ async function adminSaveTalentPoolItem() {
         isEnabled: !!document.getElementById('adminTalentEnabled')?.checked,
         adminNote: document.getElementById('adminTalentNote')?.value || ''
     };
-    const { error } = await invokeDungeonAction('adminUpsertTalentPoolItem', payload);
-    if (error) { showToast(`失败：${error.message || '保存失败'}`); return; }
-    adminTalentPoolSelected = String(payload.poolKey || '');
-    showToast('天赋已保存');
-    await Promise.all([adminLoadTalentWarehouse(false), refreshAdminOperationLogs()]);
-    await renderAdminPage();
+    setAdminManagementStatus('天赋保存处理中...', 'pending');
+    try {
+        const { error } = await invokeDungeonAction('adminUpsertTalentPoolItem', payload);
+        if (error) {
+            const message = `保存失败：${error.message || '后端未返回原因'}`;
+            setAdminManagementStatus(message, 'error');
+            showToast(`失败：${error.message || '保存失败'}`);
+            return;
+        }
+        adminTalentPoolSelected = String(payload.poolKey || '');
+        setAdminManagementStatus('天赋已保存', 'success');
+        showToast('天赋已保存');
+        await Promise.all([adminLoadTalentWarehouse(false), refreshAdminOperationLogs()]);
+        await renderAdminPage();
+    } catch (error) {
+        const message = `保存失败：${error?.message || error || '未知错误'}`;
+        setAdminManagementStatus(message, 'error');
+        showToast(`失败：${error?.message || '保存失败'}`);
+    }
 }
 
 async function adminToggleTalentPoolItem(poolKey, talentId, enabled) {
-    const { error } = await invokeDungeonAction('adminSetTalentPoolItemEnabled', { poolKey, talentId, enabled });
-    if (error) { showToast(`失败：${error.message || '启停失败'}`); return; }
-    showToast(enabled ? '天赋已启用' : '天赋已停用');
-    await Promise.all([adminLoadTalentWarehouse(false), refreshAdminOperationLogs()]);
-    await renderAdminPage();
+    setAdminManagementStatus('天赋状态更新中...', 'pending');
+    try {
+        const { error } = await invokeDungeonAction('adminSetTalentPoolItemEnabled', { poolKey, talentId, enabled });
+        if (error) {
+            const message = `启停失败：${error.message || '后端未返回原因'}`;
+            setAdminManagementStatus(message, 'error');
+            showToast(`失败：${error.message || '启停失败'}`);
+            return;
+        }
+        const message = enabled ? '天赋已启用' : '天赋已停用';
+        setAdminManagementStatus(message, 'success');
+        showToast(message);
+        await Promise.all([adminLoadTalentWarehouse(false), refreshAdminOperationLogs()]);
+        await renderAdminPage();
+    } catch (error) {
+        const message = `启停失败：${error?.message || error || '未知错误'}`;
+        setAdminManagementStatus(message, 'error');
+        showToast(`失败：${error?.message || '启停失败'}`);
+    }
 }
 
 if (typeof renderAdminPage === 'function') {

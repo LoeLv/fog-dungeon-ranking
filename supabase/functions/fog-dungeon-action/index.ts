@@ -195,22 +195,38 @@ const knownTalentPools = [
 
 const professionGroups = [
   { path: "文明", god: "秩序", careers: { "战士": "秩序骑士", "法师": "元素法官", "牧师": "公正官", "刺客": "行刑官", "猎人": "搜查官", "歌者": "律者" } },
-  { path: "文明", god: "真理", careers: { "战士": "格斗专家", "法师": "博士学者", "牧师": "外科医生", "刺客": "暗杀博士", "猎人": "陷阱大师", "歌者": "博闻诗人" } },
+  { path: "文明", god: "真理", careers: { "战士": "格斗专家", "法师": "博识学者", "牧师": "外科医生", "刺客": "暗杀博士", "猎人": "陷阱大师", "歌者": "博闻诗人" } },
   { path: "文明", god: "战争", careers: { "战士": "陷阵勇士", "法师": "炼狱主教", "牧师": "督战官", "刺客": "隙光铁刺", "猎人": "鹰眼斥候", "歌者": "风暴之嗓" } },
-  { path: "混沌", god: "混乱", careers: { "战士": "异血同袍", "法师": "灾祸之源", "牧师": "理智蚀者", "刺客": "折光诡影", "猎人": "渔夫", "歌者": "失律琴师" } },
-  { path: "混沌", god: "痴愚", careers: { "战士": "坚壁骑士", "法师": "幕后戏师", "牧师": "祛愚专家", "刺客": "解构之眼", "猎人": "猎愚人", "歌者": "独奏家" } },
-  { path: "混沌", god: "沉默", careers: { "战士": "苦行僧", "法师": "默剧大师", "牧师": "守夜人", "刺客": "偃偶师", "猎人": "变色龙", "歌者": "囚徒" } },
-  { path: "生命", god: "诞育", careers: { "战士": "酋长", "法师": "生命贤者", "牧师": "子嗣牧", "刺客": "借诞之婴", "猎人": "创生猎人", "歌者": "生灵吟者" } },
-  { path: "生命", god: "繁荣", careers: { "战士": "德鲁伊", "法师": "木精灵", "牧师": "园丁", "刺客": "荆棘之冠", "猎人": "美食家", "歌者": "不朽乐章" } },
+  { path: "混沌", god: "混乱", careers: { "战士": "异血同袍", "法师": "灾祸之源", "牧师": "理智蚀者", "刺客": "折光扰影", "猎人": "渔夫", "歌者": "失律琴师" } },
+  { path: "混沌", god: "痴愚", careers: { "战士": "坚壁战士", "法师": "幕后戏师", "牧师": "祛愚专家", "刺客": "解构之眼", "猎人": "猎愚人", "歌者": "独奏家" } },
+  { path: "混沌", god: "沉默", careers: { "战士": "苦行僧", "法师": "默剧大师", "牧师": "守夜人", "刺客": "傀儡师", "猎人": "变色龙", "歌者": "囚徒" } },
+  { path: "生命", god: "诞育", careers: { "战士": "酋长", "法师": "生命贤者", "牧师": "子嗣牧师", "刺客": "借诞之婴", "猎人": "创生猎人", "歌者": "唱夜之喉" } },
+  { path: "生命", god: "繁荣", careers: { "战士": "德鲁伊", "法师": "木精灵", "牧师": "园丁", "刺客": "荆棘之冠", "猎人": "美食家", "歌者": "万籁谐音" } },
   { path: "生命", god: "死亡", careers: { "战士": "剔骨工", "法师": "死灵法师", "牧师": "守墓人", "刺客": "死亡编织者", "猎人": "猩红猎手", "歌者": "撞钟人" } },
   { path: "沉沦", god: "污堕", careers: { "战士": "尖啸伯爵", "法师": "欲望主宰", "牧师": "悲悯领主", "刺客": "恶孽", "猎人": "感官追猎者", "歌者": "塞王" } },
-  { path: "沉沦", god: "腐朽", careers: { "战士": "木乃伊", "法师": "瘟疫枢机", "牧师": "凋零祭司", "刺客": "疮瘢之目", "猎人": "黄昏猎人", "歌者": "腐烂颂唱者" } },
-  { path: "沉沦", god: "湮灭", careers: { "战士": "环卫工", "法师": "炬灭者", "牧师": "焚化工", "刺客": "寂灭使徒", "猎人": "终焉行者", "歌者": "毁灭宣誓" } },
+  { path: "沉沦", god: "腐朽", careers: { "战士": "木乃伊", "法师": "瘟疫枢机", "牧师": "凋零祭司", "刺客": "疮痍之目", "猎人": "黄昏猎人", "歌者": "腐烂颂唱者" } },
+  { path: "沉沦", god: "湮灭", careers: { "战士": "清道夫", "法师": "烬灭者", "牧师": "焚化工", "刺客": "寂灭使徒", "猎人": "终焉行者", "歌者": "毁灭宣告" } },
   { path: "存在", god: "时间", careers: { "战士": "指针骑士", "法师": "时间行者", "牧师": "遗忘医生", "刺客": "另日刺客", "猎人": "驯风游侠", "歌者": "吟游诗人" } },
-  { path: "存在", god: "记忆", careers: { "战士": "镜中人", "法师": "回忆旅者", "牧师": "见证者", "刺客": "旧日追猎者", "猎人": "痴梦游侠", "歌者": "史学家" } },
+  { path: "存在", god: "记忆", careers: { "战士": "镜中人", "法师": "回忆旅者", "牧师": "见证者", "刺客": "旧日追猎者", "猎人": "窥梦游侠", "歌者": "史学家" } },
   { path: "虚无", god: "命运", careers: { "战士": "今日勇者", "法师": "编剧", "牧师": "织命师", "刺客": "窃命之贼", "猎人": "终末之笔", "歌者": "预言家" } },
-  { path: "虚无", god: "欺诈", careers: { "战士": "杂技演员", "法师": "诡术大师", "牧师": "小丑", "刺客": "受害者", "猎人": "驭兽师", "歌者": "魔术师" } },
+  { path: "虚无", god: "欺诈", careers: { "战士": "杂技演员", "法师": "诡术大师", "牧师": "小丑", "刺客": "受害者", "猎人": "驯兽师", "歌者": "魔术师" } },
 ];
+
+const professionAliases = new Map<string, string>([
+  ["博士学者", "博识学者"],
+  ["折光诡影", "折光扰影"],
+  ["坚壁骑士", "坚壁战士"],
+  ["偃偶师", "傀儡师"],
+  ["子嗣牧", "子嗣牧师"],
+  ["生灵吟者", "唱夜之喉"],
+  ["不朽乐章", "万籁谐音"],
+  ["疮瘢之目", "疮痍之目"],
+  ["环卫工", "清道夫"],
+  ["炬灭者", "烬灭者"],
+  ["毁灭宣誓", "毁灭宣告"],
+  ["痴梦游侠", "窥梦游侠"],
+  ["驭兽师", "驯兽师"],
+]);
 
 const professionClassByName = new Map(
   professionGroups.flatMap((group) =>
@@ -222,7 +238,41 @@ const professionGodByName = new Map(
     Object.values(group.careers).map((professionName) => [professionName, group.god]),
   ),
 );
+for (const [alias, professionName] of professionAliases.entries()) {
+  const className = professionClassByName.get(professionName);
+  const godName = professionGodByName.get(professionName);
+  if (className) professionClassByName.set(alias, className);
+  if (godName) professionGodByName.set(alias, godName);
+}
 const godPathByName = new Map(professionGroups.map((group) => [group.god, group.path]));
+const battleHealthTable = [
+  { score: 1000, "战士": 120, "牧师": 105, "歌者": 100, "法师": 80, "刺客": 80, "猎人": 80 },
+  { score: 1100, "战士": 126, "牧师": 110, "歌者": 105, "法师": 84, "刺客": 84, "猎人": 84 },
+  { score: 1200, "战士": 132, "牧师": 115, "歌者": 110, "法师": 88, "刺客": 88, "猎人": 88 },
+  { score: 1300, "战士": 138, "牧师": 120, "歌者": 115, "法师": 92, "刺客": 92, "猎人": 92 },
+  { score: 1400, "战士": 150, "牧师": 130, "歌者": 125, "法师": 100, "刺客": 100, "猎人": 100 },
+  { score: 1500, "战士": 162, "牧师": 140, "歌者": 135, "法师": 108, "刺客": 108, "猎人": 108 },
+  { score: 1600, "战士": 174, "牧师": 150, "歌者": 145, "法师": 116, "刺客": 116, "猎人": 116 },
+  { score: 1700, "战士": 186, "牧师": 160, "歌者": 155, "法师": 124, "刺客": 124, "猎人": 124 },
+  { score: 1800, "战士": 198, "牧师": 180, "歌者": 175, "法师": 132, "刺客": 132, "猎人": 132 },
+  { score: 1900, "战士": 222, "牧师": 200, "歌者": 195, "法师": 148, "刺客": 148, "猎人": 148 },
+  { score: 2000, "战士": 246, "牧师": 220, "歌者": 215, "法师": 164, "刺客": 164, "猎人": 164 },
+  { score: 2100, "战士": 270, "牧师": 240, "歌者": 235, "法师": 180, "刺客": 180, "猎人": 180 },
+  { score: 2200, "战士": 294, "牧师": 260, "歌者": 255, "法师": 196, "刺客": 196, "猎人": 196 },
+  { score: 2300, "战士": 318, "牧师": 280, "歌者": 275, "法师": 212, "刺客": 212, "猎人": 212 },
+  { score: 2400, "战士": 342, "牧师": 300, "歌者": 295, "法师": 228, "刺客": 228, "猎人": 228 },
+];
+const battleHealthByScore = new Map(battleHealthTable.map((row) => [row.score, row]));
+const battleClassHealthMin = battleHealthTable[0].score;
+const battleClassHealthMax = battleHealthTable[battleHealthTable.length - 1].score;
+const prosperityBattleHealthBonus: Record<string, number> = {
+  "战士": 24,
+  "牧师": 20,
+  "歌者": 18,
+  "刺客": 16,
+  "猎人": 16,
+  "法师": 16,
+};
 
 const feedbackTagAllowlist = new Set([
   "机制清楚",
@@ -817,9 +867,9 @@ function canGrantTitles(identity: InviteIdentity) {
 }
 
 function canReviewDungeons(identity: InviteIdentity) {
-  if (hasRole(identity.role, ["admin", "god"])) return true;
+  if (hasRole(identity.role, ["reviewer", "admin", "god"])) return true;
   if (hasPermission(identity, "review_dungeons")) return true;
-  return identity.role === "reviewer" && dungeonReviewerNames.has(identity.displayName);
+  return false;
 }
 
 function getTitleGrantGod(identity: InviteIdentity, requestedGod: unknown) {
@@ -987,6 +1037,10 @@ function isMissingMatchMusterSystem(error: LooseError) {
       error.message?.includes("match_muster_participants")
     ))
   );
+}
+
+function isMissingBattleSystem(error: LooseError) {
+  return error?.code === "42P01" || error?.code === "42703";
 }
 
 function getEarnedDraws(ascensionScore: unknown) {
@@ -1443,6 +1497,44 @@ function pickDrawTalentWithGuarantee(
   return { talent: pickDrawTalent(items, advancedDraw), isGuarantee: false };
 }
 
+async function rebuildTalentPoolCounterFromLogs(
+  supabase: ReturnType<typeof createClient>,
+  codeHash: string,
+  poolKey: string,
+) {
+  const { data, error } = await supabase
+    .from("talent_draw_logs")
+    .select("rank")
+    .eq("invite_code_hash", codeHash)
+    .eq("pool_key", poolKey)
+    .order("draw_time", { ascending: false })
+    .limit(Math.max(bTalentGuaranteeDraws, sTalentGuaranteeDraws) + starterTalentDrawGrant);
+  if (error) return { continueDraw: 0, sContinueDraw: 0, rebuilt: false, error };
+
+  let continueDraw = 0;
+  let sContinueDraw = 0;
+  let foundB = false;
+  let foundS = false;
+  for (const row of data || []) {
+    const rank = String(row.rank || "").toUpperCase();
+    if (!foundB) {
+      if (rank === "B") foundB = true;
+      else continueDraw += 1;
+    }
+    if (!foundS) {
+      if (rank === "S") foundS = true;
+      else sContinueDraw += 1;
+    }
+    if (foundB && foundS) break;
+  }
+
+  return {
+    continueDraw: Math.min(Math.max(0, continueDraw), bTalentGuaranteeDraws - 1),
+    sContinueDraw: Math.min(Math.max(0, sContinueDraw), sTalentGuaranteeDraws - 1),
+    rebuilt: (data || []).length > 0,
+  };
+}
+
 function getTalentKey(poolKey: unknown, talentId: unknown) {
   return `${String(poolKey || "")}::${Number(talentId) || 0}`;
 }
@@ -1845,6 +1937,27 @@ async function buildTalentState(
       .in("pool_key", allowedPoolKeys);
     if (countersResult.error) return { error: countersResult.error };
     counters = countersResult.data || [];
+    const counterKeys = new Set(counters.map((counter) => String(counter.pool_key || "")));
+    const missingCounterKeys = allowedPoolKeys.filter((poolKey) => !counterKeys.has(poolKey));
+    if (missingCounterKeys.length) {
+      const rebuiltCounters = await Promise.all(missingCounterKeys.map(async (poolKey) => {
+        const rebuilt = await rebuildTalentPoolCounterFromLogs(supabase, identity.codeHash, poolKey);
+        if (rebuilt.error) return { error: rebuilt.error };
+        if (!rebuilt.rebuilt) return null;
+        return {
+          pool_key: poolKey,
+          continue_draw: rebuilt.continueDraw,
+          s_continue_draw: rebuilt.sContinueDraw,
+        };
+      }));
+      for (const item of rebuiltCounters) {
+        if (item && "error" in item) return { error: item.error };
+      }
+      counters = [
+        ...counters,
+        ...rebuiltCounters.filter((item): item is { pool_key: string; continue_draw: number; s_continue_draw: number } => !!item && !("error" in item)),
+      ];
+    }
   }
 
   let ownedTalents: {
@@ -2239,6 +2352,333 @@ async function getMatchMusterState(
       secondsRemaining,
     },
   };
+}
+
+function getBattleClassName(profession: unknown) {
+  return professionClassByName.get(cleanText(profession, 40)) || "";
+}
+
+function getBattleHealthBand(ascensionScore: unknown) {
+  const score = cleanScore(ascensionScore) || defaultAscensionScore;
+  return Math.max(battleClassHealthMin, Math.min(battleClassHealthMax, Math.floor(score / 100) * 100));
+}
+
+function getBattleMaxHp(faithGod: unknown, profession: unknown, ascensionScore: unknown) {
+  const className = getBattleClassName(profession);
+  const band = getBattleHealthBand(ascensionScore);
+  const tableHp = Number((battleHealthByScore.get(band) as Record<string, unknown> | undefined)?.[className] || 80);
+  const faithBonus = cleanText(faithGod, 20) === "繁荣" ? Number(prosperityBattleHealthBonus[className] || 0) : 0;
+  return Math.max(1, Math.min(9999, tableHp + faithBonus));
+}
+
+function cleanBattleAmount(value: unknown, fallback = 0) {
+  const amount = Math.round(Number(value));
+  if (!Number.isFinite(amount)) return fallback;
+  return Math.max(-9999, Math.min(9999, amount));
+}
+
+async function getBattleRoomState(
+  supabase: ReturnType<typeof createClient>,
+  battleRoomId: string,
+  identity: InviteIdentity,
+) {
+  const { data: room, error: roomError } = await supabase
+    .from("battle_rooms")
+    .select("id, source_match_room_id, dungeon_id, host_code_hash, host_name, room_status, current_round, note, created_at, updated_at, finished_at")
+    .eq("id", battleRoomId)
+    .maybeSingle();
+  if (roomError) return { error: roomError };
+  if (!room) return { error: { message: "战斗房间不存在" } };
+
+  const { data: dungeon, error: dungeonError } = await supabase
+    .from("dungeons")
+    .select("id, name, creator, difficulty, type, participant_count")
+    .eq("id", String(room.dungeon_id))
+    .maybeSingle();
+  if (dungeonError) return { error: dungeonError };
+
+  const { data: players, error: playerError } = await supabase
+    .from("battle_room_players")
+    .select("id, player_code_hash, player_name, faith_god, profession, class_name, ascension_score, max_hp, current_hp, shield, is_defeated, seat_order, note, updated_at")
+    .eq("battle_room_id", battleRoomId)
+    .order("seat_order", { ascending: true })
+    .order("id", { ascending: true });
+  if (playerError) return { error: playerError };
+
+  const { data: logs, error: logError } = await supabase
+    .from("battle_room_logs")
+    .select("id, actor_name, action_type, target_player_id, target_player_name, amount, note, round_no, created_at")
+    .eq("battle_room_id", battleRoomId)
+    .order("created_at", { ascending: false })
+    .order("id", { ascending: false })
+    .limit(30);
+  if (logError) return { error: logError };
+
+  const playerRows = players || [];
+  const isHost = String(room.host_code_hash || "") === identity.codeHash;
+  const isParticipant = playerRows.some((player) => String(player.player_code_hash || "") === identity.codeHash);
+  const canOperate = isHost || hasRole(identity.role, ["reviewer", "admin"]);
+  return {
+    data: {
+      room,
+      dungeon,
+      players: playerRows,
+      logs: logs || [],
+      isHost,
+      isParticipant,
+      canOperate,
+    },
+  };
+}
+
+async function getBattleRoomByMatchRoom(
+  supabase: ReturnType<typeof createClient>,
+  matchRoomId: string,
+  identity: InviteIdentity,
+) {
+  const { data: existing, error: existingError } = await supabase
+    .from("battle_rooms")
+    .select("id")
+    .eq("source_match_room_id", matchRoomId)
+    .maybeSingle();
+  if (existingError) return { error: existingError };
+  if (existing?.id) return getBattleRoomState(supabase, String(existing.id), identity);
+  return { data: null };
+}
+
+async function createBattleRoomFromMatchRoom(
+  supabase: ReturnType<typeof createClient>,
+  matchRoomId: string,
+  identity: InviteIdentity,
+) {
+  const existing = await getBattleRoomByMatchRoom(supabase, matchRoomId, identity);
+  if (existing.error || existing.data) return existing;
+
+  const { data: matchRoom, error: roomError } = await supabase
+    .from("match_rooms")
+    .select(`
+      id,
+      dungeon_id,
+      room_status,
+      match_room_players (
+        id,
+        player_code_hash,
+        player_name,
+        joined_at
+      )
+    `)
+    .eq("id", matchRoomId)
+    .maybeSingle();
+  if (roomError) return { error: roomError };
+  if (!matchRoom) return { error: { message: "召集房间不存在" } };
+
+  const matchPlayers = Array.isArray(matchRoom.match_room_players) ? matchRoom.match_room_players : [];
+  if (!matchPlayers.length) return { error: { message: "召集房间没有成员" } };
+  const isParticipant = matchPlayers.some((player) => String(player.player_code_hash || "") === identity.codeHash);
+  if (!isParticipant && !hasRole(identity.role, ["reviewer", "admin"])) return { error: { message: "只有本房间成员、审核员或馆主可以开启战斗房间" } };
+
+  const { data: battleRoom, error: createError } = await supabase
+    .from("battle_rooms")
+    .insert({
+      source_match_room_id: matchRoomId,
+      dungeon_id: matchRoom.dungeon_id,
+      host_code_hash: identity.codeHash,
+      host_name: identity.displayName,
+      room_status: "active",
+      current_round: 1,
+    })
+    .select("id")
+    .single();
+  if (createError?.code === "23505") return getBattleRoomByMatchRoom(supabase, matchRoomId, identity);
+  if (createError) return { error: createError };
+
+  const playerHashes = matchPlayers.map((player) => String(player.player_code_hash || "")).filter(Boolean);
+  const { data: profiles, error: profileError } = playerHashes.length
+    ? await supabase
+      .from("player_profiles")
+      .select("invite_code_hash, display_name, faith_god, profession, ascension_score")
+      .in("invite_code_hash", playerHashes)
+    : { data: [], error: null };
+  if (profileError) return { error: profileError };
+
+  const profileByHash = new Map((profiles || []).map((profile) => [String(profile.invite_code_hash || ""), profile]));
+  const battlePlayers = matchPlayers.map((player, index) => {
+    const hash = String(player.player_code_hash || "");
+    const profile = profileByHash.get(hash) as Record<string, unknown> | undefined;
+    const playerName = cleanText(profile?.display_name || player.player_name, 40) || "未命名信徒";
+    const faithGod = cleanText(profile?.faith_god, 20);
+    const profession = cleanText(profile?.profession, 40);
+    const ascensionScore = cleanScore(profile?.ascension_score) || defaultAscensionScore;
+    const maxHp = getBattleMaxHp(faithGod, profession, ascensionScore);
+    return {
+      battle_room_id: battleRoom.id,
+      player_code_hash: hash,
+      player_name: playerName,
+      faith_god: faithGod,
+      profession,
+      class_name: getBattleClassName(profession),
+      ascension_score: ascensionScore,
+      max_hp: maxHp,
+      current_hp: maxHp,
+      shield: 0,
+      is_defeated: false,
+      seat_order: index + 1,
+    };
+  });
+
+  const { error: playerInsertError } = await supabase.from("battle_room_players").insert(battlePlayers);
+  if (playerInsertError) return { error: playerInsertError };
+
+  await supabase.from("battle_room_logs").insert({
+    battle_room_id: battleRoom.id,
+    actor_code_hash: identity.codeHash,
+    actor_name: identity.displayName,
+    action_type: "create",
+    note: "从试炼召集房间开启战斗房间",
+    round_no: 1,
+  });
+
+  return getBattleRoomState(supabase, String(battleRoom.id), identity);
+}
+
+async function updateBattleRoomRound(
+  supabase: ReturnType<typeof createClient>,
+  battleRoomId: string,
+  identity: InviteIdentity,
+  nextRoundInput: unknown,
+  noteInput: unknown,
+) {
+  const state = await getBattleRoomState(supabase, battleRoomId, identity);
+  if (state.error) return state;
+  if (!state.data?.canOperate) return { error: { message: "只有主持人、审核员或馆主可以调整战斗房间" } };
+
+  const currentRound = Number((state.data.room as Record<string, unknown>).current_round || 1);
+  const nextRound = Math.max(1, Math.min(999, Math.round(Number(nextRoundInput) || currentRound)));
+  const note = cleanText(noteInput, 800);
+  const { error: updateError } = await supabase
+    .from("battle_rooms")
+    .update({ current_round: nextRound, note, updated_at: new Date().toISOString() })
+    .eq("id", battleRoomId);
+  if (updateError) return { error: updateError };
+
+  await supabase.from("battle_room_logs").insert({
+    battle_room_id: battleRoomId,
+    actor_code_hash: identity.codeHash,
+    actor_name: identity.displayName,
+    action_type: "round",
+    note: `调整至第 ${nextRound} 回合${note ? `：${note}` : ""}`,
+    round_no: nextRound,
+  });
+  return getBattleRoomState(supabase, battleRoomId, identity);
+}
+
+async function applyBattlePlayerAction(
+  supabase: ReturnType<typeof createClient>,
+  battleRoomId: string,
+  playerId: number,
+  identity: InviteIdentity,
+  actionType: string,
+  amountInput: unknown,
+  noteInput: unknown,
+) {
+  const state = await getBattleRoomState(supabase, battleRoomId, identity);
+  if (state.error) return state;
+  if (!state.data?.canOperate) return { error: { message: "只有主持人、审核员或馆主可以操作战斗房间" } };
+
+  const player = (state.data.players as Record<string, unknown>[]).find((item) => Number(item.id) === playerId);
+  if (!player) return { error: { message: "战斗成员不存在" } };
+
+  const amount = cleanBattleAmount(amountInput);
+  const note = cleanText(noteInput, 500);
+  const currentHp = Math.max(0, Math.round(Number(player.current_hp || 0)));
+  const maxHp = Math.max(1, Math.round(Number(player.max_hp || 1)));
+  const shield = Math.max(0, Math.round(Number(player.shield || 0)));
+  const update: Record<string, unknown> = { updated_at: new Date().toISOString() };
+  let logAmount: number | null = amount;
+  let logType = actionType;
+  let logNote = note;
+
+  if (actionType === "damage") {
+    const damage = Math.max(0, amount);
+    const absorbed = Math.min(shield, damage);
+    const hpDamage = Math.max(0, damage - absorbed);
+    const nextHp = Math.max(0, currentHp - hpDamage);
+    update.shield = shield - absorbed;
+    update.current_hp = nextHp;
+    update.is_defeated = nextHp <= 0;
+    logNote = `${note || "伤害结算"}${absorbed ? `；护盾抵消 ${absorbed}` : ""}`;
+  } else if (actionType === "heal") {
+    const heal = Math.max(0, amount);
+    update.current_hp = Math.min(9999, currentHp + heal);
+    update.is_defeated = false;
+  } else if (actionType === "shield") {
+    const shieldGain = Math.max(0, amount);
+    update.shield = Math.min(9999, shield + shieldGain);
+  } else if (actionType === "set_hp") {
+    update.current_hp = Math.max(0, Math.min(9999, amount));
+    update.is_defeated = Number(update.current_hp) <= 0;
+  } else if (actionType === "revive") {
+    update.current_hp = Math.max(1, Math.min(9999, amount || 1));
+    update.is_defeated = false;
+  } else if (actionType === "defeat") {
+    update.current_hp = 0;
+    update.is_defeated = true;
+    logAmount = null;
+  } else if (actionType === "note") {
+    update.note = note;
+    logAmount = null;
+  } else {
+    return { error: { message: "战斗操作不正确" } };
+  }
+
+  const { error: updateError } = await supabase
+    .from("battle_room_players")
+    .update(update)
+    .eq("id", playerId)
+    .eq("battle_room_id", battleRoomId);
+  if (updateError) return { error: updateError };
+
+  await supabase.from("battle_room_logs").insert({
+    battle_room_id: battleRoomId,
+    actor_code_hash: identity.codeHash,
+    actor_name: identity.displayName,
+    action_type: logType,
+    target_player_id: playerId,
+    target_player_name: cleanText(player.player_name, 40),
+    amount: logAmount,
+    note: logNote,
+    round_no: Number((state.data.room as Record<string, unknown>).current_round || 1),
+  });
+  return getBattleRoomState(supabase, battleRoomId, identity);
+}
+
+async function finishBattleRoom(
+  supabase: ReturnType<typeof createClient>,
+  battleRoomId: string,
+  identity: InviteIdentity,
+  statusInput: unknown,
+  noteInput: unknown,
+) {
+  const state = await getBattleRoomState(supabase, battleRoomId, identity);
+  if (state.error) return state;
+  if (!state.data?.canOperate) return { error: { message: "只有主持人、审核员或馆主可以结束战斗房间" } };
+  const nextStatus = cleanText(statusInput, 20) === "cancelled" ? "cancelled" : "finished";
+  const note = cleanText(noteInput, 800);
+  const { error: updateError } = await supabase
+    .from("battle_rooms")
+    .update({ room_status: nextStatus, note, finished_at: new Date().toISOString(), updated_at: new Date().toISOString() })
+    .eq("id", battleRoomId);
+  if (updateError) return { error: updateError };
+
+  await supabase.from("battle_room_logs").insert({
+    battle_room_id: battleRoomId,
+    actor_code_hash: identity.codeHash,
+    actor_name: identity.displayName,
+    action_type: nextStatus === "cancelled" ? "cancel" : "finish",
+    note: note || (nextStatus === "cancelled" ? "取消战斗房间" : "结束战斗房间"),
+    round_no: Number((state.data.room as Record<string, unknown>).current_round || 1),
+  });
+  return getBattleRoomState(supabase, battleRoomId, identity);
 }
 
 async function commitScoreSettlement(
@@ -4347,6 +4787,14 @@ Deno.serve(async (req) => {
       if (counterError) return json({ error: counterError.message }, 400);
       let continueDraw = Number(counterRow?.continue_draw || 0);
       let sContinueDraw = Number(counterRow?.s_continue_draw || 0);
+      if (!counterRow) {
+        const rebuiltCounter = await rebuildTalentPoolCounterFromLogs(supabase, identity.codeHash, poolKey);
+        if (rebuiltCounter.error) return json({ error: rebuiltCounter.error.message }, 400);
+        if (rebuiltCounter.rebuilt) {
+          continueDraw = rebuiltCounter.continueDraw;
+          sContinueDraw = rebuiltCounter.sContinueDraw;
+        }
+      }
       const basicDrawsToUse = Math.min(drawCount, basicAvailableDraws);
       const advancedDrawsToUse = drawCount - basicDrawsToUse;
       const results: Record<string, unknown>[] = [];
@@ -4856,24 +5304,29 @@ Deno.serve(async (req) => {
       return json({ role, name: identity.displayName, data: { fragmentGain, state: state.data } });
     }
 
-    if (action === "listMatchDungeons") {
-      if (!hasRole(role, ["player", "author", "reviewer", "admin"])) return json({ error: "需要入局谕令" }, 403);
+      if (action === "listMatchDungeons") {
+        if (!hasRole(role, ["player", "author", "reviewer", "admin"])) return json({ error: "需要入局谕令" }, 403);
 
-      const limit = Math.max(1, Math.min(Number(payload.limit) || 80, 200));
-      let { data: dungeons, error: dungeonError } = await supabase
-        .from("dungeons")
-        .select("id, name, creator, co_creators, difficulty, type, participant_count, run_count, clear_rate, avg_rating, rating_count, comment_count, created_at, is_one_shot")
-        .order("created_at", { ascending: false })
-        .limit(limit);
-      if (isMissingCoCreatorsColumn(dungeonError)) {
-        const fallback = await supabase
+        const keyword = cleanText(payload.keyword, 120);
+        const limit = Math.max(1, Math.min(Number(payload.limit) || (keyword ? 30 : 80), 200));
+        let dungeonQuery = supabase
           .from("dungeons")
-          .select("id, name, creator, difficulty, type, participant_count, run_count, clear_rate, avg_rating, rating_count, comment_count, created_at, is_one_shot")
+          .select("id, name, creator, co_creators, difficulty, type, participant_count, run_count, clear_rate, avg_rating, rating_count, comment_count, created_at, is_one_shot");
+        if (keyword) dungeonQuery = dungeonQuery.ilike("name", `%${keyword}%`);
+        let { data: dungeons, error: dungeonError } = await dungeonQuery
           .order("created_at", { ascending: false })
           .limit(limit);
-        dungeons = fallback.data;
-        dungeonError = fallback.error;
-      }
+        if (isMissingCoCreatorsColumn(dungeonError)) {
+          let fallbackQuery = supabase
+            .from("dungeons")
+            .select("id, name, creator, difficulty, type, participant_count, run_count, clear_rate, avg_rating, rating_count, comment_count, created_at, is_one_shot");
+          if (keyword) fallbackQuery = fallbackQuery.ilike("name", `%${keyword}%`);
+          const fallback = await fallbackQuery
+            .order("created_at", { ascending: false })
+            .limit(limit);
+          dungeons = fallback.data;
+          dungeonError = fallback.error;
+        }
       if (isMissingMatchMusterSystem(dungeonError)) return json({ error: "请先运行 match_muster_migration.sql" }, 400);
       if (dungeonError) return json({ error: dungeonError.message }, 400);
 
@@ -4972,6 +5425,74 @@ Deno.serve(async (req) => {
       if (isMissingMatchSystem(state.error)) return json({ error: "请先运行 match_system_migration.sql" }, 400);
       if (state.error) return json({ error: state.error.message }, 400);
       return json({ role, name: identity.displayName, data: { result, state: state.data } });
+    }
+
+    if (action === "createBattleRoomFromMatchRoom") {
+      if (!hasRole(role, ["player", "author", "reviewer", "admin"])) return json({ error: "需要入局谕令" }, 403);
+
+      const matchRoomId = cleanText(payload.matchRoomId, 80);
+      if (!isUuid(matchRoomId)) return json({ error: "召集房间 ID 不正确" }, 400);
+
+      const state = await createBattleRoomFromMatchRoom(supabase, matchRoomId, identity);
+      if (isMissingBattleSystem(state.error)) return json({ error: "请先运行 battle_room_system_20260810.sql" }, 400);
+      if (state.error) return json({ error: state.error.message }, 400);
+      return json({ role, name: identity.displayName, data: state.data });
+    }
+
+    if (action === "getBattleRoom") {
+      if (!hasRole(role, ["player", "author", "reviewer", "admin"])) return json({ error: "需要入局谕令" }, 403);
+
+      const battleRoomId = cleanText(payload.battleRoomId, 80);
+      const matchRoomId = cleanText(payload.matchRoomId, 80);
+      if (battleRoomId && !isUuid(battleRoomId)) return json({ error: "战斗房间 ID 不正确" }, 400);
+      if (matchRoomId && !isUuid(matchRoomId)) return json({ error: "召集房间 ID 不正确" }, 400);
+      if (!battleRoomId && !matchRoomId) return json({ error: "缺少战斗房间 ID" }, 400);
+
+      const state = battleRoomId
+        ? await getBattleRoomState(supabase, battleRoomId, identity)
+        : await getBattleRoomByMatchRoom(supabase, matchRoomId, identity);
+      if (isMissingBattleSystem(state.error)) return json({ error: "请先运行 battle_room_system_20260810.sql" }, 400);
+      if (state.error) return json({ error: state.error.message }, 400);
+      return json({ role, name: identity.displayName, data: state.data });
+    }
+
+    if (action === "updateBattleRoomRound") {
+      if (!hasRole(role, ["player", "author", "reviewer", "admin"])) return json({ error: "需要入局谕令" }, 403);
+
+      const battleRoomId = cleanText(payload.battleRoomId, 80);
+      if (!isUuid(battleRoomId)) return json({ error: "战斗房间 ID 不正确" }, 400);
+
+      const state = await updateBattleRoomRound(supabase, battleRoomId, identity, payload.currentRound, payload.note);
+      if (isMissingBattleSystem(state.error)) return json({ error: "请先运行 battle_room_system_20260810.sql" }, 400);
+      if (state.error) return json({ error: state.error.message }, 400);
+      return json({ role, name: identity.displayName, data: state.data });
+    }
+
+    if (action === "applyBattlePlayerAction") {
+      if (!hasRole(role, ["player", "author", "reviewer", "admin"])) return json({ error: "需要入局谕令" }, 403);
+
+      const battleRoomId = cleanText(payload.battleRoomId, 80);
+      const playerId = cleanBigIntId(payload.playerId);
+      const battleActionType = cleanText(payload.actionType, 20);
+      if (!isUuid(battleRoomId)) return json({ error: "战斗房间 ID 不正确" }, 400);
+      if (!playerId) return json({ error: "战斗成员 ID 不正确" }, 400);
+
+      const state = await applyBattlePlayerAction(supabase, battleRoomId, playerId, identity, battleActionType, payload.amount, payload.note);
+      if (isMissingBattleSystem(state.error)) return json({ error: "请先运行 battle_room_system_20260810.sql" }, 400);
+      if (state.error) return json({ error: state.error.message }, 400);
+      return json({ role, name: identity.displayName, data: state.data });
+    }
+
+    if (action === "finishBattleRoom") {
+      if (!hasRole(role, ["player", "author", "reviewer", "admin"])) return json({ error: "需要入局谕令" }, 403);
+
+      const battleRoomId = cleanText(payload.battleRoomId, 80);
+      if (!isUuid(battleRoomId)) return json({ error: "战斗房间 ID 不正确" }, 400);
+
+      const state = await finishBattleRoom(supabase, battleRoomId, identity, payload.status, payload.note);
+      if (isMissingBattleSystem(state.error)) return json({ error: "请先运行 battle_room_system_20260810.sql" }, 400);
+      if (state.error) return json({ error: state.error.message }, 400);
+      return json({ role, name: identity.displayName, data: state.data });
     }
 
     if (action === "startMatchMuster") {
@@ -5297,7 +5818,7 @@ Deno.serve(async (req) => {
     }
 
     if (action === "reviewDungeon") {
-      if (!canReviewDungeons(identity)) return json({ error: "需要羔羊、槐柏、神明或馆主权限" }, 403);
+      if (!canReviewDungeons(identity)) return json({ error: "需要审核员、神明或馆主权限" }, 403);
 
       const dungeonId = cleanText(payload.dungeonId, 80);
       const decision = cleanText(payload.decision, 20);

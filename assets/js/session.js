@@ -31,7 +31,7 @@ function canGrantTitlesUI() { return canUseRole(['admin', 'god']); }
 function canSettleScores() { return canUseRole(['reviewer', 'admin']) || hasInvitePermission('settle_scores'); }
 
 function canReviewDungeonsUI() {
-    return canUseRole(['admin', 'god']) || hasInvitePermission('review_dungeons') || (getInviteRole() === 'reviewer' && ['羔羊', '槐柏'].includes(inviteSession?.name || ''));
+    return canUseRole(['reviewer', 'admin', 'god']) || hasInvitePermission('review_dungeons');
 }
 
 function isInitialDisplayNameBinding() {
