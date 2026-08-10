@@ -9,14 +9,47 @@ function canUsePermissionDesk() {
         hasInvitePermission('settle_scores');
 }
 
-function renderPermissionDesk() {
-    const container = document.getElementById('permissionContent');
-    if (!container) return;
-    if (!canUsePermissionDesk()) {
-        container.innerHTML = renderRitualEmpty('当前账号没有额外管理权限。', '真理', '权限不足');
-        return;
+function openReviewQueueFromWorkbench() {
+    closePermissionDesk(false);
+    closeAdminPage(false);
+    setSort('newest');
+    if (reviewFilter !== 'pending') toggleReviewFilter();
+    window.scrollTo(0, 0);
+}
+
+async function openTalentManagementFromWorkbench() {
+    adminManagementView = 'talents';
+    await openAdminPage();
+}
+
+function renderPermissionShortcutCards() {
+    const cards = [];
+    if (hasInvitePermission('review_dungeons')) {
+        cards.push(['副本审核', '查看待审核副本并通过或退回', 'openReviewQueueFromWorkbench()']);
     }
-    const panels = [];
+    if (hasInvitePermission('account_role_manage')) {
+        cards.push(['玩家升作者', '按昵称把玩家升级为作者', "document.getElementById('permissionUpgradeName')?.focus()"]);
+    }
+    if (hasInvitePermission('settle_scores')) {
+        cards.push(['分数结算', '进入独立结算页提交加分', 'openScorePage()']);
+    }
+    if (hasInvitePermission('talent_pool_manage')) {
+        cards.push(['天赋池维护', '新增、修改、启停抽池天赋', 'openTalentManagementFromWorkbench()']);
+        cards.push(['天赋池仓库', '查看当前天赋池仓库', 'openTalentManagementFromWorkbench()']);
+    }
+    return `<section class="profile-panel" data-god="真理" style="${getGodSkinStyle('真理')}">
+        <div class="profile-panel-title"><span>权限工作台</span><small>按职责显示可用功能</small></div>
+        <div class="profile-tools">
+            ${cards.map(([label, note, action]) => `<button class="btn btn-outline btn-sm" onclick="${escapeHtml(action)}" title="${escapeHtml(note)}">${escapeHtml(label)}</button>`).join('')}
+        </div>
+    </section>`;
+}
+
+function renderPermissionDeskContent() {
+    if (!canUsePermissionDesk()) {
+        return renderRitualEmpty('当前账号没有额外管理权限。', '真理', '权限不足');
+    }
+    const panels = [renderPermissionShortcutCards()];
     if (hasInvitePermission('settle_scores')) {
         panels.push(`<section class="profile-panel" data-god="真理" style="${getGodSkinStyle('真理')}">
             <div class="profile-panel-title"><span>分数权限</span><small>进入分数结算工作台</small></div>
@@ -26,7 +59,7 @@ function renderPermissionDesk() {
     if (hasInvitePermission('review_dungeons')) {
         panels.push(`<section class="profile-panel" data-god="真理" style="${getGodSkinStyle('真理')}">
             <div class="profile-panel-title"><span>副本审核</span><small>待审核副本会显示通过按钮</small></div>
-            <div class="profile-tools"><button class="btn btn-primary btn-sm" onclick="closePermissionDesk(false); setSort('newest'); toggleReviewFilter();">查看待审核副本</button></div>
+            <div class="profile-tools"><button class="btn btn-primary btn-sm" onclick="openReviewQueueFromWorkbench()">查看待审核副本</button></div>
         </section>`);
     }
     if (hasInvitePermission('account_role_manage')) {
@@ -44,9 +77,18 @@ function renderPermissionDesk() {
         </section>`);
     }
     if (hasInvitePermission('talent_pool_manage')) {
-        panels.push(renderPermissionTalentPoolPanel());
+        panels.push(`<section class="profile-panel" data-god="真理" style="${getGodSkinStyle('真理')}">
+            <div class="profile-panel-title"><span>天赋池仓库</span><small>打开独立维护页</small></div>
+            <div class="profile-tools"><button class="btn btn-primary btn-sm" onclick="openTalentManagementFromWorkbench()">打开天赋池维护</button></div>
+        </section>`);
     }
-    container.innerHTML = panels.join('');
+    return panels.join('');
+}
+
+function renderPermissionDesk() {
+    const container = document.getElementById('permissionContent');
+    if (!container) return;
+    container.innerHTML = renderPermissionDeskContent();
 }
 
 function renderPermissionTalentPoolPanel() {

@@ -66,10 +66,17 @@ function renderAdminSnapshot(snapshot) {
 async function renderAdminPage() {
     const container = document.getElementById('adminContent');
     if (!container) return;
-    if (!isAdmin()) { container.innerHTML = renderRitualEmpty('此处只对神谕馆主开放。', '真理', '权限不足'); return; }
+    if (!canUseAdminConsole()) { container.innerHTML = renderRitualEmpty('此处只对神谕馆主与管理席开放。', '真理', '权限不足'); return; }
+    if (!isAdmin()) {
+        container.innerHTML = typeof renderPermissionDeskContent === 'function'
+            ? renderPermissionDeskContent()
+            : renderRitualEmpty('权限工作台尚未载入。', '真理', '等待载入');
+        return;
+    }
     const lookup = adminLookupState.snapshot ? `<div class="admin-snapshot">${renderAdminSnapshot(adminLookupState.snapshot)}</div>` : renderRitualEmpty('输入已绑定的玩家昵称，读取其后台档案、称号诅咒与天赋状态。', '真理', '等待查询');
     const globalOperations = `<section class="profile-panel" data-god="真理" style="${getGodSkinStyle('真理')}"><div class="profile-panel-title"><span>全站最近操作</span><small>最近 50 条</small></div>${renderAdminOperationRows(adminRecentOperations, adminOperationsUnavailable)}</section>`;
-    container.innerHTML = `<section class="profile-panel" data-god="真理" style="${getGodSkinStyle('真理')}"><div class="profile-panel-title"><span>玩家查询</span><small>仅馆主可见</small></div><div class="profile-form-grid"><div class="form-group full"><label>玩家昵称</label><input id="adminTargetName" maxlength="40" value="${escapeHtml(adminLookupState.targetName || '')}" placeholder="输入已保存个人档案的昵称" onkeydown="if(event.key==='Enter') adminLookupPlayer()"></div></div><div class="profile-tools"><button class="btn btn-primary btn-sm" data-admin-lookup onclick="adminLookupPlayer()">查询档案</button></div></section>${globalOperations}${lookup}`;
+    const workbench = typeof renderPermissionDeskContent === 'function' ? renderPermissionDeskContent() : '';
+    container.innerHTML = `${workbench}<section class="profile-panel" data-god="真理" style="${getGodSkinStyle('真理')}"><div class="profile-panel-title"><span>玩家查询</span><small>仅馆主可见</small></div><div class="profile-form-grid"><div class="form-group full"><label>玩家昵称</label><input id="adminTargetName" maxlength="40" value="${escapeHtml(adminLookupState.targetName || '')}" placeholder="输入已保存个人档案的昵称" onkeydown="if(event.key==='Enter') adminLookupPlayer()"></div></div><div class="profile-tools"><button class="btn btn-primary btn-sm" data-admin-lookup onclick="adminLookupPlayer()">查询档案</button></div></section>${globalOperations}${lookup}`;
 }
 
 async function refreshAdminOperationLogs() {
@@ -161,14 +168,14 @@ async function adminRestoreHonor(type, id, targetName, label) {
 }
 
 async function openAdminPage() {
-    if (!isAdmin()) { showToast('只有神谕馆主可以进入后台'); return; }
+    if (!canUseAdminConsole()) { showToast('只有馆主或管理席可以进入后台'); return; }
     adminScrollY = window.scrollY || document.documentElement.scrollTop || 0;
-    ['profilePage', 'leaderboardPage', 'scorePage', 'matchPage'].forEach(id => { const page = document.getElementById(id); if (page) page.style.display = 'none'; });
+    ['profilePage', 'leaderboardPage', 'scorePage', 'matchPage', 'permissionPage'].forEach(id => { const page = document.getElementById(id); if (page) page.style.display = 'none'; });
     document.body.classList.remove('profile-view-open', 'leaderboard-view-open', 'score-view-open', 'match-view-open');
     document.body.classList.add('profile-view-open');
     document.getElementById('adminPage').style.display = 'block';
     window.scrollTo(0, 0);
-    await refreshAdminOperationLogs();
+    if (isAdmin()) await refreshAdminOperationLogs();
     await renderAdminPage();
 }
 

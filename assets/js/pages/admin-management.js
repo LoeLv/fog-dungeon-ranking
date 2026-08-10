@@ -148,19 +148,22 @@ function adminSetMemberPage(page) {
 }
 
 async function adminSetManagementView(view) {
-    adminManagementView = ['overview', 'members', 'talents'].includes(view) ? view : 'overview';
+    const allowedViews = ['overview'];
+    if (isAdmin()) allowedViews.push('members');
+    if (canManageTalentPoolUI()) allowedViews.push('talents');
+    adminManagementView = allowedViews.includes(view) ? view : 'overview';
     if (adminManagementView !== 'members') adminMemberPage = 1;
     await renderAdminPage();
 }
 
 function renderAdminManagementNav() {
     const items = [
-        ['overview', '后台总览', '玩家查询 / 操作日志'],
-        ['members', '成员管理', '活跃状态 / 改名 / 重置 / 删除'],
-        ['talents', '天赋池维护', '天赋仓库 / 新增 / 启停']
+        ['overview', '权限工作台', isAdmin() ? '馆主总览 / 管理入口' : '按职责显示可用入口']
     ];
+    if (isAdmin()) items.push(['members', '成员管理', '活跃状态 / 改名 / 重置 / 删除']);
+    if (canManageTalentPoolUI()) items.push(['talents', '天赋池维护', '天赋池仓库 / 新增 / 启停']);
     return `<section class="profile-panel" data-god="真理" style="${getGodSkinStyle('真理')}">
-        <div class="profile-panel-title"><span>馆主工作台</span><small>独立页面</small></div>
+        <div class="profile-panel-title"><span>馆主后台</span><small>统一管理入口</small></div>
         <div id="adminManagementStatus" class="profile-action-status ${adminManagementStatus?.type === 'error' ? 'error' : (adminManagementStatus?.type === 'pending' ? 'pending' : 'success')}" ${adminManagementStatus ? '' : 'hidden'}>${escapeHtml(adminManagementStatus?.message || '')}</div>
         <div class="profile-tools">
             ${items.map(([key, label, note]) => `<button class="btn ${adminManagementView === key ? 'btn-primary' : 'btn-outline'} btn-sm" onclick="adminSetManagementView('${key}')" title="${escapeHtml(note)}">${escapeHtml(label)}</button>`).join('')}
@@ -324,7 +327,7 @@ async function adminLoadMembers(showResult = false) {
 }
 
 async function adminLoadTalentWarehouse(showResult = false) {
-    if (!isAdmin()) return;
+    if (!canManageTalentPoolUI()) return;
     adminTalentWarehouseLoading = true;
     const rows = document.getElementById('adminTalentPoolRows');
     if (rows) rows.innerHTML = '<div class="profile-empty">正在读取天赋仓库...</div>';
@@ -548,10 +551,12 @@ if (typeof renderAdminPage === 'function') {
     const renderAdminPageBase = renderAdminPage;
     renderAdminPage = async function renderAdminPageWithManagement() {
         const container = document.getElementById('adminContent');
-        if (!container || !isAdmin()) {
+        if (!container || !canUseAdminConsole()) {
             await renderAdminPageBase();
             return;
         }
+        if (!isAdmin() && adminManagementView === 'members') adminManagementView = 'overview';
+        if (!canManageTalentPoolUI() && adminManagementView === 'talents') adminManagementView = 'overview';
         if (adminManagementView === 'members') {
             container.innerHTML = `${renderAdminManagementNav()}${renderAdminMembersPage()}`;
             if (!adminMembers.length && !adminManagementLoading) await adminLoadMembers(false);

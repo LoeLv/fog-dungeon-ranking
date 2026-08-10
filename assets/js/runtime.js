@@ -242,31 +242,30 @@ function updateInviteUI() {
     }
     if (inviteButton) inviteButton.textContent = '🎲 同契召引';
     if (scoreButton) {
-        scoreButton.style.display = (canSettleScores() || isGodRole()) ? '' : 'none';
-        scoreButton.textContent = isGodRole() ? '✦ 称号敕令' : '⚖ 分数结算';
-        scoreButton.title = isGodRole() ? '神明称号敕令台' : (canSettleScores() ? '审核员分数结算工作台' : '仅审核员可见');
+        scoreButton.style.display = isGodRole() ? '' : 'none';
+        scoreButton.textContent = '✦ 称号敕令';
+        scoreButton.title = '神明称号敕令台';
     }
     if (mobileScoreButton) {
-        const showMobileScore = canSettleScores() || isGodRole();
-        mobileScoreButton.hidden = !showMobileScore;
-        mobileScoreButton.textContent = isGodRole() ? '称号敕令' : '分数结算';
-        mobileScoreButton.title = isGodRole() ? '神明称号敕令台' : '审核员分数结算工作台';
+        mobileScoreButton.hidden = !isGodRole();
+        mobileScoreButton.textContent = '称号敕令';
+        mobileScoreButton.title = '神明称号敕令台';
     }
     if (permissionButton) {
-        permissionButton.style.display = canUsePermissionDesk() ? '' : 'none';
+        permissionButton.style.display = 'none';
         permissionButton.title = '按已分配职责处理权限事务';
     }
     if (mobilePermissionButton) {
-        mobilePermissionButton.hidden = !canUsePermissionDesk();
+        mobilePermissionButton.hidden = true;
         mobilePermissionButton.title = '按已分配职责处理权限事务';
     }
     if (adminButton) {
-        adminButton.style.display = isAdmin() ? '' : 'none';
-        adminButton.title = '馆主玩家档案与天赋维护后台';
+        adminButton.style.display = canUseAdminConsole() ? '' : 'none';
+        adminButton.title = '馆主后台与权限工作台';
     }
     if (mobileAdminButton) {
-        mobileAdminButton.hidden = !isAdmin();
-        mobileAdminButton.title = '馆主玩家档案与天赋维护后台';
+        mobileAdminButton.hidden = !canUseAdminConsole();
+        mobileAdminButton.title = '馆主后台与权限工作台';
     }
     if (mobileActionStrip) {
         const actionCount = [...mobileActionStrip.querySelectorAll('button:not([hidden])')].length;

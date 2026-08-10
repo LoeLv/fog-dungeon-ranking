@@ -26,6 +26,11 @@ type InviteIdentity = {
 };
 
 type LooseError = { code?: string; message?: string } | null | undefined;
+
+const staffAdminNames = new Set(["羔羊", "槐柏", "南河书淮", "慕辞", "棺材板", "我不想死", "情忆浮生", "知更", "变态", "墨染流年"]);
+const talentManagerNames = new Set(["羔羊"]);
+const scoreSettlerNames = new Set(["慕辞", "情忆浮生", "知更"]);
+
 type TalentPoolItem = {
   pool_key: string;
   talent_id: number;
@@ -858,8 +863,17 @@ function hasRole(role: InviteRole, allowed: InviteRole[]) {
   return allowed.includes(role);
 }
 
+function hasNamedDuty(identity: InviteIdentity, names: Set<string>) {
+  const displayName = cleanText(identity.displayName, 40);
+  return !!displayName && names.has(displayName);
+}
+
 function hasPermission(identity: InviteIdentity, permission: string) {
-  return identity.role === "admin" || identity.permissions.includes(permission);
+  if (identity.role === "admin") return true;
+  if ((permission === "review_dungeons" || permission === "account_role_manage") && hasNamedDuty(identity, staffAdminNames)) return true;
+  if (permission === "talent_pool_manage" && hasNamedDuty(identity, talentManagerNames)) return true;
+  if (permission === "settle_scores" && hasNamedDuty(identity, scoreSettlerNames)) return true;
+  return identity.permissions.includes(permission);
 }
 
 function canGrantTitles(identity: InviteIdentity) {
@@ -867,7 +881,7 @@ function canGrantTitles(identity: InviteIdentity) {
 }
 
 function canReviewDungeons(identity: InviteIdentity) {
-  if (hasRole(identity.role, ["reviewer", "admin", "god"])) return true;
+  if (hasRole(identity.role, ["admin", "god"])) return true;
   if (hasPermission(identity, "review_dungeons")) return true;
   return false;
 }
@@ -1270,7 +1284,7 @@ async function rebalanceTalentPoolsAfterProfileChange(
 }
 
 function canSettleScores(identity: InviteIdentity) {
-  return hasRole(identity.role, ["reviewer", "admin"]) || hasPermission(identity, "settle_scores");
+  return identity.role === "admin" || hasPermission(identity, "settle_scores");
 }
 
 function cleanSettlementScore(value: unknown) {
