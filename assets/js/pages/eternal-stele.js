@@ -36,6 +36,7 @@ function renderEternalStelePage() {
                 <span class="stele-sanctum-arch"></span>
             </div>
             <div class="stele-monolith">
+                <div class="stele-monolith-crown" aria-hidden="true"></div>
                 <div class="stele-monolith-head">
                     <span class="stele-rank">${escapeHtml(record.rank)}</span>
                     <div class="stele-monolith-heading">
@@ -50,6 +51,7 @@ function renderEternalStelePage() {
                     <span>${escapeHtml(record.note)}</span>
                     <span>\u53ea\u7559\u4e0b\u4e00\u4e2a\u540d\u5b57\uff0c\u5176\u4f59\u4ea4\u7ed9\u65f6\u95f4\u3002</span>
                 </div>
+                <div class="stele-monolith-base" aria-hidden="true"></div>
             </div>
         </section>
     `;
