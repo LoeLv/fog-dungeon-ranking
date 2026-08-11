@@ -4002,24 +4002,48 @@ button.is-action-ack {
 }
 .stele-monolith {
     position: relative;
-    padding: 28px 28px 22px;
-    border: 1px solid rgba(255,255,255,0.11);
-    border-radius: 20px;
+    width: min(100%, 860px);
+    margin: 0 auto;
+    padding: 34px 30px 26px;
+    border: 1px solid rgba(255,255,255,0.13);
+    border-radius: 30px 30px 34px 34px;
     background:
-        linear-gradient(180deg, rgba(255,255,255,0.18), rgba(255,255,255,0.03)),
-        linear-gradient(135deg, rgba(28,31,40,0.98), rgba(15,18,24,0.93));
+        linear-gradient(180deg, rgba(255,255,255,0.2), rgba(255,255,255,0.04)),
+        linear-gradient(135deg, rgba(36,39,48,0.98), rgba(18,20,27,0.94));
     box-shadow:
-        0 18px 48px rgba(0,0,0,0.24),
-        inset 0 1px 0 rgba(255,255,255,0.07);
+        0 22px 54px rgba(0,0,0,0.28),
+        inset 0 1px 0 rgba(255,255,255,0.08),
+        inset 0 -1px 0 rgba(0,0,0,0.24);
+    justify-self: center;
+    overflow: hidden;
+    clip-path: polygon(11% 0, 89% 0, 93% 4%, 100% 11%, 100% 86%, 92% 92%, 89% 100%, 11% 100%, 8% 92%, 0 86%, 0 11%, 7% 4%);
 }
 .stele-monolith::before {
     content: "";
     position: absolute;
-    inset: 10px;
-    border: 1px solid rgba(243,222,160,0.1);
-    border-radius: 14px;
+    inset: 12px;
+    border: 1px solid rgba(243,222,160,0.12);
+    border-radius: 22px 22px 26px 26px;
     pointer-events: none;
-    box-shadow: inset 0 0 0 1px rgba(255,255,255,0.02);
+    box-shadow:
+        inset 0 0 0 1px rgba(255,255,255,0.02),
+        inset 0 0 0 10px rgba(255,255,255,0.01);
+    background:
+        linear-gradient(180deg, transparent 0 17%, rgba(255,255,255,0.03) 17% 18%, transparent 18% 100%),
+        radial-gradient(circle at 50% 0, rgba(255,240,193,0.12), transparent 34%);
+}
+.stele-monolith::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    background:
+        linear-gradient(180deg, rgba(255,255,255,0.08), transparent 22%),
+        radial-gradient(circle at 50% 0, rgba(255,240,193,0.16), transparent 30%),
+        repeating-linear-gradient(105deg, transparent 0 18px, rgba(255,255,255,0.018) 18px 19px, transparent 19px 54px),
+        repeating-linear-gradient(15deg, transparent 0 20px, rgba(243,222,160,0.016) 20px 21px, transparent 21px 60px);
+    opacity: 0.72;
+    mix-blend-mode: screen;
 }
 .stele-monolith-head {
     display: grid;
@@ -4032,20 +4056,21 @@ button.is-action-ack {
 .stele-rank {
     display: grid;
     place-items: center;
-    width: 68px;
-    height: 68px;
-    border-radius: 20px;
-    border: 1px solid rgba(243,222,160,0.42);
+    width: 76px;
+    height: 92px;
+    border-radius: 26px 26px 22px 22px;
+    border: 1px solid rgba(243,222,160,0.45);
     background:
-        linear-gradient(180deg, rgba(243,222,160,0.34), rgba(243,222,160,0.12)),
-        rgba(243,222,160,0.1);
+        linear-gradient(180deg, rgba(243,222,160,0.38), rgba(243,222,160,0.14)),
+        linear-gradient(135deg, rgba(255,248,220,0.18), rgba(243,222,160,0.06));
     color: #fff3c8;
     font-family: var(--font-display);
     font-size: 1.3rem;
     font-weight: 900;
     box-shadow:
         0 0 0 1px rgba(255,255,255,0.03) inset,
-        0 12px 28px rgba(0,0,0,0.2);
+        0 12px 28px rgba(0,0,0,0.24);
+    clip-path: polygon(10% 0, 90% 0, 100% 12%, 100% 88%, 90% 100%, 10% 100%, 0 88%, 0 12%);
 }
 .stele-monolith-title {
     color: #fffaf2;
@@ -4061,7 +4086,7 @@ button.is-action-ack {
 }
 .stele-monolith-body {
     margin: 18px 0 0;
-    padding: 18px 0 0;
+    padding: 20px 0 0;
     border-top: 1px solid rgba(255,255,255,0.1);
     position: relative;
     z-index: 1;
@@ -4102,6 +4127,10 @@ body.eternal-stele-view-open .profile-toolbar {
     .stele-meta {
         grid-template-columns: repeat(3, minmax(0, 1fr));
     }
+    .stele-monolith {
+        width: min(100%, 820px);
+        clip-path: polygon(9% 0, 91% 0, 95% 4%, 100% 10%, 100% 86%, 93% 92%, 91% 100%, 9% 100%, 6% 92%, 0 86%, 0 10%, 5% 4%);
+    }
 }
 @media (max-width: 640px) {
     .eternal-stele-page .profile-content {
@@ -4119,8 +4148,11 @@ body.eternal-stele-view-open .profile-toolbar {
         grid-template-columns: 1fr;
     }
     .stele-rank {
-        width: 52px;
-        height: 52px;
+        width: 56px;
+        height: 70px;
+    }
+    .stele-monolith {
+        clip-path: polygon(7% 0, 93% 0, 96% 4%, 100% 10%, 100% 86%, 95% 92%, 93% 100%, 7% 100%, 4% 92%, 0 86%, 0 10%, 4% 4%);
     }
     .stele-monolith-foot {
         flex-direction: column;
