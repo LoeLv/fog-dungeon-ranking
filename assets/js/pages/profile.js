@@ -162,10 +162,9 @@ async function renderProfilePage() {
                         <div class="form-group full">
                             <label for="promoCodeInput">兑换码</label>
                             <div class="profile-tools">
-                                <input id="promoCodeInput" maxlength="80" placeholder="输入今日口令" style="flex:1;min-width:220px;">
+                                <input id="promoCodeInput" maxlength="80" placeholder="输入兑换码" style="flex:1;min-width:220px;">
                                 <button class="btn btn-outline btn-sm" data-promo-redeem-button onclick="redeemPromoCode()">立即兑换</button>
                             </div>
-                            <div class="identity-help">今日口令：灵魂安眠，生命终焉</div>
                         </div>
                     </div>
                 </section>
