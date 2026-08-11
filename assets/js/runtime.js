@@ -232,7 +232,7 @@ function updateInviteUI() {
     const showDisplayNameBinding = !role || canEditDisplayName();
     const initialDisplayNameBinding = isInitialDisplayNameBinding();
     if (roleBadge) {
-        const registry = role === 'god' ? '神明席' : role === 'admin' ? '神谕馆册' : role === 'reviewer' ? '审核席' : role === 'author' ? '构筑者名录' : '信徒名录';
+        const registry = role === 'star' ? '永恒星途' : role === 'god' ? '神明席' : role === 'admin' ? '神谕馆册' : role === 'reviewer' ? '审核席' : role === 'author' ? '构筑者名录' : '信徒名录';
         roleBadge.textContent = role ? `${registry} · ${inviteSession?.name || ROLE_LABELS[role]}` : '旁观者只读';
         roleBadge.classList.toggle('active', !!role);
         roleBadge.dataset.role = role || 'guest';

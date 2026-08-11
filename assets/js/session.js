@@ -49,6 +49,10 @@ function isAdmin() { return getInviteRole() === 'admin'; }
 
 function isGodRole() { return getInviteRole() === 'god'; }
 
+function isStarRole() { return getInviteRole() === 'star'; }
+
+function isSpecialAccountRole() { return ['god', 'star'].includes(getInviteRole()); }
+
 function canGrantTitlesUI() { return canUseRole(['admin', 'god']); }
 
 function canSettleScores() { return isAdmin() || hasInvitePermission('settle_scores'); }
@@ -64,7 +68,7 @@ function canManageAccountRolesUI() { return isAdmin() || hasInvitePermission('ac
 function canUseAdminConsole() { return isAdmin() || canUsePermissionDesk(); }
 
 function isInitialDisplayNameBinding() {
-    if (!inviteSession?.code || !inviteSession?.name || isGodRole()) return false;
+    if (!inviteSession?.code || !inviteSession?.name || isSpecialAccountRole()) return false;
     return String(inviteSession.name).trim().toLowerCase() === String(inviteSession.code).trim().toLowerCase();
 }
 

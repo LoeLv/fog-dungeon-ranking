@@ -151,6 +151,18 @@ body.battle-room-view-open > #scorePage,
 body.battle-room-view-open > #matchPage {
     display: none;
 }
+body.eternal-stele-view-open > .header,
+body.eternal-stele-view-open > .container,
+body.eternal-stele-view-open > .detail-overlay,
+body.eternal-stele-view-open > #profilePage,
+body.eternal-stele-view-open > #leaderboardPage,
+body.eternal-stele-view-open > #scorePage,
+body.eternal-stele-view-open > #matchPage,
+body.eternal-stele-view-open > #battleRoomPage,
+body.eternal-stele-view-open > #adminPage,
+body.eternal-stele-view-open > #permissionPage {
+    display: none;
+}
 body::before {
     content: "";
     position: fixed;
@@ -734,6 +746,12 @@ body.visual-effects-muted .edge-current-label { opacity: 0.54; }
     border-color: rgba(231,207,138,0.54);
     background: rgba(231,207,138,0.14);
     box-shadow: 0 0 18px rgba(231,207,138,0.12);
+}
+.role-badge[data-role="star"] {
+    color: #f6e7ad;
+    border-color: rgba(246,231,173,0.56);
+    background: linear-gradient(135deg, rgba(246,231,173,0.16), rgba(117,189,208,0.08));
+    box-shadow: 0 0 22px rgba(246,231,173,0.14);
 }
 .btn {
     padding: 10px 22px;
@@ -5792,6 +5810,155 @@ body.visual-effects-muted .profile-chronicle-card.is-rotating .profile-chronicle
     font-size: 0.8rem;
     line-height: 1.65;
 }
+.eternal-stele-page {
+    background:
+        radial-gradient(circle at 20% 12%, rgba(246,231,173,0.08), transparent 24%),
+        radial-gradient(circle at 78% 16%, rgba(117,189,208,0.10), transparent 28%),
+        linear-gradient(180deg, rgba(8,9,14,0.92), rgba(11,12,18,0.98));
+}
+.eternal-stele-hero {
+    display: grid;
+    grid-template-columns: minmax(0, 1.2fr) minmax(280px, 0.8fr);
+    gap: 18px;
+    margin-bottom: 18px;
+    padding: 24px;
+    border: 1px solid rgba(246,231,173,0.14);
+    border-radius: 18px;
+    background:
+        linear-gradient(145deg, rgba(255,255,255,0.04), rgba(255,255,255,0.02)),
+        rgba(5,6,10,0.76);
+    box-shadow: inset 0 1px 0 rgba(255,255,255,0.04);
+}
+.eternal-stele-title {
+    margin: 4px 0 12px;
+    color: var(--text-bright);
+    font-family: var(--font-display);
+    font-size: clamp(2rem, 4vw, 3.2rem);
+    line-height: 1;
+    letter-spacing: 0;
+}
+.eternal-stele-lead {
+    margin: 0;
+    max-width: 52ch;
+    color: var(--text-muted);
+    font-size: 0.92rem;
+    line-height: 1.8;
+}
+.eternal-stele-hero-meta {
+    display: grid;
+    gap: 10px;
+    align-content: center;
+}
+.eternal-stele-stat {
+    padding: 14px 16px;
+    border: 1px solid rgba(255,255,255,0.06);
+    border-radius: 14px;
+    background: rgba(0,0,0,0.18);
+}
+.eternal-stele-stat span {
+    display: block;
+    color: var(--text-muted);
+    font-size: 0.74rem;
+    margin-bottom: 6px;
+}
+.eternal-stele-stat strong {
+    color: var(--gold-light);
+    font-family: var(--font-display);
+    font-size: 1.2rem;
+    line-height: 1.1;
+}
+.eternal-stele-layout {
+    display: grid;
+    grid-template-columns: minmax(0, 1.15fr) minmax(280px, 0.85fr);
+    gap: 18px;
+}
+.eternal-stele-monolith,
+.eternal-stele-panel {
+    border: 1px solid rgba(255,255,255,0.075);
+    border-radius: 16px;
+    background:
+        linear-gradient(180deg, rgba(255,255,255,0.04), rgba(255,255,255,0.015)),
+        rgba(7,8,12,0.74);
+    box-shadow: inset 0 1px 0 rgba(255,255,255,0.03);
+}
+.eternal-stele-monolith {
+    padding: 22px;
+    min-height: 380px;
+    position: relative;
+    overflow: hidden;
+}
+.eternal-stele-monolith::before {
+    content: '';
+    position: absolute;
+    inset: 18px;
+    border: 1px solid rgba(246,231,173,0.08);
+    border-radius: 12px;
+    pointer-events: none;
+}
+.eternal-stele-monolith-head {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    gap: 16px;
+    align-items: center;
+    margin-bottom: 18px;
+}
+.eternal-stele-rank {
+    display: grid;
+    place-items: center;
+    width: 58px;
+    height: 58px;
+    border-radius: 16px;
+    border: 1px solid rgba(246,231,173,0.22);
+    background: rgba(246,231,173,0.07);
+    color: var(--gold-light);
+    font-family: var(--font-display);
+    font-size: 1.3rem;
+    font-weight: 900;
+}
+.eternal-stele-monolith-title {
+    color: var(--text-bright);
+    font-family: var(--font-display);
+    font-size: clamp(1.5rem, 3vw, 2.2rem);
+    line-height: 1.1;
+}
+.eternal-stele-monolith-subtitle {
+    margin-top: 6px;
+    color: var(--text-muted);
+    font-size: 0.8rem;
+}
+.eternal-stele-monolith-body {
+    padding: 14px 0 18px;
+    border-top: 1px solid rgba(255,255,255,0.05);
+    border-bottom: 1px solid rgba(255,255,255,0.05);
+}
+.eternal-stele-monolith-body p {
+    margin: 0;
+    color: var(--text);
+    font-size: 0.95rem;
+    line-height: 1.95;
+    max-width: 58ch;
+}
+.eternal-stele-monolith-foot {
+    display: flex;
+    justify-content: flex-end;
+    margin-top: 16px;
+}
+.eternal-stele-sidebar {
+    display: grid;
+    gap: 14px;
+}
+.eternal-stele-panel {
+    padding: 18px;
+}
+.eternal-stele-copy {
+    margin: 0;
+    color: var(--text-muted);
+    font-size: 0.84rem;
+    line-height: 1.8;
+}
+.eternal-stele-copy + .eternal-stele-copy {
+    margin-top: 10px;
+}
 .score-rule-grid {
     display: grid;
     grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -7077,6 +7244,23 @@ body.visual-effects-muted .profile-chronicle-card.is-rotating .profile-chronicle
     }
     .leaderboard-page-status {
         font-size: 0.72rem;
+    }
+    .eternal-stele-hero,
+    .eternal-stele-layout {
+        grid-template-columns: 1fr;
+    }
+    .eternal-stele-monolith {
+        min-height: 0;
+        padding: 18px;
+    }
+    .eternal-stele-monolith-head {
+        grid-template-columns: 1fr;
+        gap: 10px;
+    }
+    .eternal-stele-rank {
+        width: 46px;
+        height: 46px;
+        font-size: 1rem;
     }
     .leaderboard-lookup-controls {
         grid-template-columns: minmax(0, 1fr) auto;

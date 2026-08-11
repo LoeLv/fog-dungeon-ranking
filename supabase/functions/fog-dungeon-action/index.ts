@@ -8,7 +8,7 @@ const corsHeaders = {
   "Access-Control-Allow-Methods": "POST, OPTIONS",
 };
 
-type InviteRole = "player" | "author" | "reviewer" | "admin" | "god";
+type InviteRole = "player" | "author" | "reviewer" | "admin" | "god" | "star";
 
 type RequestBody = {
   action?: string;
@@ -30,9 +30,9 @@ type InviteIdentity = {
 type LooseError = { code?: string; message?: string } | null | undefined;
 type BattleActionResult = { data?: any; error?: any };
 
-const staffAdminNames = new Set(["羔羊", "槐柏", "南河书淮", "慕辞", "棺材板", "我不想死", "情忆浮生", "知更", "变态", "墨染流年"]);
-const talentManagerNames = new Set(["羔羊"]);
-const scoreSettlerNames = new Set(["慕辞", "情忆浮生", "知更"]);
+const staffAdminNames = new Set(["缇旂緤", "妲愭煆", "鍗楁渤涔︽樊", "鎱曡緸", "妫烘潗鏉?, "鎴戜笉鎯虫", "鎯呭繂娴敓", "鐭ユ洿", "鍙樻€?, "澧ㄦ煋娴佸勾"]);
+const talentManagerNames = new Set(["缇旂緤"]);
+const scoreSettlerNames = new Set(["鎱曡緸", "鎯呭繂娴敓", "鐭ユ洿"]);
 
 type TalentPoolItem = {
   pool_key: string;
@@ -113,31 +113,32 @@ function isPublicReadRateLimited(req: Request, action: string) {
 }
 
 const roleLabels: Record<InviteRole, string> = {
-  player: "玩家",
-  author: "作者",
-  reviewer: "审核员",
-  admin: "馆主",
-  god: "神明",
+  player: "鐜╁",
+  author: "浣滆€?",
+  reviewer: "瀹℃牳鍛?",
+  admin: "棣嗕富",
+  god: "绁炴槑",
+  star: "星途",
 };
-const dungeonReviewerNames = new Set(["羔羊", "槐柏"]);
+const dungeonReviewerNames = new Set(["缇旂緤", "妲愭煆"]);
 
 const godNames = new Set([
-  "诞育",
-  "繁荣",
-  "死亡",
-  "记忆",
-  "时间",
-  "秩序",
-  "真理",
-  "战争",
-  "欺诈",
-  "命运",
-  "混乱",
-  "沉默",
-  "痴愚",
-  "污堕",
-  "腐朽",
-  "湮灭",
+  "璇炶偛",
+  "绻佽崳",
+  "姝讳骸",
+  "璁板繂",
+  "鏃堕棿",
+  "绉╁簭",
+  "鐪熺悊",
+  "鎴樹簤",
+  "娆鸿瘓",
+  "鍛借繍",
+  "娣蜂贡",
+  "娌夐粯",
+  "鐥存剼",
+  "姹″爼",
+  "鑵愭溄",
+  "婀伃",
 ]);
 
 const defaultAscensionScore = 1000;
@@ -178,63 +179,63 @@ const scoreDengMax = 30;
 const scoreJinMin = -3;
 const scoreJinMax = 3;
 const knownTalentPools = [
-  "Pool战士",
-  "Pool法师",
-  "Pool牧师",
-  "Pool猎人",
-  "Pool刺客",
-  "Pool歌者",
-  "Pool诞育",
-  "Pool繁荣",
-  "Pool死亡",
-  "Pool污堕",
-  "Pool腐朽",
-  "Pool湮灭",
-  "Pool秩序",
-  "Pool真理",
-  "Pool战争",
-  "Pool痴愚",
-  "Pool沉默",
-  "Pool记忆",
-  "Pool时间",
-  "Pool欺诈",
-  "Pool命运",
-  "Pool混乱",
+  "Pool鎴樺＋",
+  "Pool娉曞笀",
+  "Pool鐗у笀",
+  "Pool鐚庝汉",
+  "Pool鍒哄",
+  "Pool姝岃€?,
+  "Pool璇炶偛",
+  "Pool绻佽崳",
+  "Pool姝讳骸",
+  "Pool姹″爼",
+  "Pool鑵愭溄",
+  "Pool婀伃",
+  "Pool绉╁簭",
+  "Pool鐪熺悊",
+  "Pool鎴樹簤",
+  "Pool鐥存剼",
+  "Pool娌夐粯",
+  "Pool璁板繂",
+  "Pool鏃堕棿",
+  "Pool娆鸿瘓",
+  "Pool鍛借繍",
+  "Pool娣蜂贡",
 ];
 
 const professionGroups = [
-  { path: "文明", god: "秩序", careers: { "战士": "秩序骑士", "法师": "元素法官", "牧师": "公正官", "刺客": "行刑官", "猎人": "搜查官", "歌者": "律者" } },
-  { path: "文明", god: "真理", careers: { "战士": "格斗专家", "法师": "博识学者", "牧师": "外科医生", "刺客": "暗杀博士", "猎人": "陷阱大师", "歌者": "博闻诗人" } },
-  { path: "文明", god: "战争", careers: { "战士": "陷阵勇士", "法师": "炼狱主教", "牧师": "督战官", "刺客": "隙光铁刺", "猎人": "鹰眼斥候", "歌者": "风暴之嗓" } },
-  { path: "混沌", god: "混乱", careers: { "战士": "异血同袍", "法师": "灾祸之源", "牧师": "理智蚀者", "刺客": "折光扰影", "猎人": "渔夫", "歌者": "失律琴师" } },
-  { path: "混沌", god: "痴愚", careers: { "战士": "坚壁战士", "法师": "幕后戏师", "牧师": "祛愚专家", "刺客": "解构之眼", "猎人": "猎愚人", "歌者": "独奏家" } },
-  { path: "混沌", god: "沉默", careers: { "战士": "苦行僧", "法师": "默剧大师", "牧师": "守夜人", "刺客": "傀儡师", "猎人": "变色龙", "歌者": "囚徒" } },
-  { path: "生命", god: "诞育", careers: { "战士": "酋长", "法师": "生命贤者", "牧师": "子嗣牧师", "刺客": "借诞之婴", "猎人": "创生猎人", "歌者": "唱夜之喉" } },
-  { path: "生命", god: "繁荣", careers: { "战士": "德鲁伊", "法师": "木精灵", "牧师": "园丁", "刺客": "荆棘之冠", "猎人": "美食家", "歌者": "万籁谐音" } },
-  { path: "生命", god: "死亡", careers: { "战士": "剔骨工", "法师": "死灵法师", "牧师": "守墓人", "刺客": "死亡编织者", "猎人": "猩红猎手", "歌者": "撞钟人" } },
-  { path: "沉沦", god: "污堕", careers: { "战士": "尖啸伯爵", "法师": "欲望主宰", "牧师": "悲悯领主", "刺客": "恶孽", "猎人": "感官追猎者", "歌者": "塞王" } },
-  { path: "沉沦", god: "腐朽", careers: { "战士": "木乃伊", "法师": "瘟疫枢机", "牧师": "凋零祭司", "刺客": "疮痍之目", "猎人": "黄昏猎人", "歌者": "腐烂颂唱者" } },
-  { path: "沉沦", god: "湮灭", careers: { "战士": "清道夫", "法师": "烬灭者", "牧师": "焚化工", "刺客": "寂灭使徒", "猎人": "终焉行者", "歌者": "毁灭宣告" } },
-  { path: "存在", god: "时间", careers: { "战士": "指针骑士", "法师": "时间行者", "牧师": "遗忘医生", "刺客": "另日刺客", "猎人": "驯风游侠", "歌者": "吟游诗人" } },
-  { path: "存在", god: "记忆", careers: { "战士": "镜中人", "法师": "回忆旅者", "牧师": "见证者", "刺客": "旧日追猎者", "猎人": "窥梦游侠", "歌者": "史学家" } },
-  { path: "虚无", god: "命运", careers: { "战士": "今日勇者", "法师": "编剧", "牧师": "织命师", "刺客": "窃命之贼", "猎人": "终末之笔", "歌者": "预言家" } },
-  { path: "虚无", god: "欺诈", careers: { "战士": "杂技演员", "法师": "诡术大师", "牧师": "小丑", "刺客": "受害者", "猎人": "驯兽师", "歌者": "魔术师" } },
+  { path: "鏂囨槑", god: "绉╁簭", careers: { "鎴樺＋": "绉╁簭楠戝＋", "娉曞笀": "鍏冪礌娉曞畼", "鐗у笀": "鍏瀹?, "鍒哄": "琛屽垜瀹?, "鐚庝汉": "鎼滄煡瀹?, "姝岃€?: "寰嬭€? } },
+  { path: "鏂囨槑", god: "鐪熺悊", careers: { "鎴樺＋": "鏍兼枟涓撳", "娉曞笀": "鍗氳瘑瀛﹁€?, "鐗у笀": "澶栫鍖荤敓", "鍒哄": "鏆楁潃鍗氬＋", "鐚庝汉": "闄烽槺澶у笀", "姝岃€?: "鍗氶椈璇椾汉" } },
+  { path: "鏂囨槑", god: "鎴樹簤", careers: { "鎴樺＋": "闄烽樀鍕囧＋", "娉曞笀": "鐐肩嫳涓绘暀", "鐗у笀": "鐫ｆ垬瀹?, "鍒哄": "闅欏厜閾佸埡", "鐚庝汉": "楣扮溂鏂ュ€?, "姝岃€?: "椋庢毚涔嬪棑" } },
+  { path: "娣锋矊", god: "娣蜂贡", careers: { "鎴樺＋": "寮傝鍚岃", "娉曞笀": "鐏剧ジ涔嬫簮", "鐗у笀": "鐞嗘櫤铓€鑰?, "鍒哄": "鎶樺厜鎵板奖", "鐚庝汉": "娓斿か", "姝岃€?: "澶卞緥鐞村笀" } },
+  { path: "娣锋矊", god: "鐥存剼", careers: { "鎴樺＋": "鍧氬鎴樺＋", "娉曞笀": "骞曞悗鎴忓笀", "鐗у笀": "绁涙剼涓撳", "鍒哄": "瑙ｆ瀯涔嬬溂", "鐚庝汉": "鐚庢剼浜?, "姝岃€?: "鐙瀹? } },
+  { path: "娣锋矊", god: "娌夐粯", careers: { "鎴樺＋": "鑻﹁鍍?, "娉曞笀": "榛樺墽澶у笀", "鐗у笀": "瀹堝浜?, "鍒哄": "鍌€鍎″笀", "鐚庝汉": "鍙樿壊榫?, "姝岃€?: "鍥氬緬" } },
+  { path: "鐢熷懡", god: "璇炶偛", careers: { "鎴樺＋": "閰嬮暱", "娉曞笀": "鐢熷懡璐よ€?, "鐗у笀": "瀛愬棧鐗у笀", "鍒哄": "鍊熻癁涔嬪┐", "鐚庝汉": "鍒涚敓鐚庝汉", "姝岃€?: "鍞卞涔嬪枆" } },
+  { path: "鐢熷懡", god: "绻佽崳", careers: { "鎴樺＋": "寰烽瞾浼?, "娉曞笀": "鏈ㄧ簿鐏?, "鐗у笀": "鍥竵", "鍒哄": "鑽嗘涔嬪啝", "鐚庝汉": "缇庨瀹?, "姝岃€?: "涓囩眮璋愰煶" } },
+  { path: "鐢熷懡", god: "姝讳骸", careers: { "鎴樺＋": "鍓旈宸?, "娉曞笀": "姝荤伒娉曞笀", "鐗у笀": "瀹堝浜?, "鍒哄": "姝讳骸缂栫粐鑰?, "鐚庝汉": "鐚╃孩鐚庢墜", "姝岃€?: "鎾為挓浜? } },
+  { path: "娌夋拨", god: "姹″爼", careers: { "鎴樺＋": "灏栧暩浼埖", "娉曞笀": "娆叉湜涓诲", "鐗у笀": "鎮叉偗棰嗕富", "鍒哄": "鎭跺", "鐚庝汉": "鎰熷畼杩界寧鑰?, "姝岃€?: "濉炵帇" } },
+  { path: "娌夋拨", god: "鑵愭溄", careers: { "鎴樺＋": "鏈ㄤ箖浼?, "娉曞笀": "鐦熺柅鏋㈡満", "鐗у笀": "鍑嬮浂绁徃", "鍒哄": "鐤棈涔嬬洰", "鐚庝汉": "榛勬槒鐚庝汉", "姝岃€?: "鑵愮儌棰傚敱鑰? } },
+  { path: "娌夋拨", god: "婀伃", careers: { "鎴樺＋": "娓呴亾澶?, "娉曞笀": "鐑伃鑰?, "鐗у笀": "鐒氬寲宸?, "鍒哄": "瀵傜伃浣垮緬", "鐚庝汉": "缁堢剦琛岃€?, "姝岃€?: "姣佺伃瀹ｅ憡" } },
+  { path: "瀛樺湪", god: "鏃堕棿", careers: { "鎴樺＋": "鎸囬拡楠戝＋", "娉曞笀": "鏃堕棿琛岃€?, "鐗у笀": "閬楀繕鍖荤敓", "鍒哄": "鍙︽棩鍒哄", "鐚庝汉": "椹娓镐緺", "姝岃€?: "鍚熸父璇椾汉" } },
+  { path: "瀛樺湪", god: "璁板繂", careers: { "鎴樺＋": "闀滀腑浜?, "娉曞笀": "鍥炲繂鏃呰€?, "鐗у笀": "瑙佽瘉鑰?, "鍒哄": "鏃ф棩杩界寧鑰?, "鐚庝汉": "绐ユⅵ娓镐緺", "姝岃€?: "鍙插瀹? } },
+  { path: "铏氭棤", god: "鍛借繍", careers: { "鎴樺＋": "浠婃棩鍕囪€?, "娉曞笀": "缂栧墽", "鐗у笀": "缁囧懡甯?, "鍒哄": "绐冨懡涔嬭醇", "鐚庝汉": "缁堟湯涔嬬瑪", "姝岃€?: "棰勮█瀹? } },
+  { path: "铏氭棤", god: "娆鸿瘓", careers: { "鎴樺＋": "鏉傛妧婕斿憳", "娉曞笀": "璇℃湳澶у笀", "鐗у笀": "灏忎笐", "鍒哄": "鍙楀鑰?, "鐚庝汉": "椹吔甯?, "姝岃€?: "榄旀湳甯? } },
 ];
 
 const professionAliases = new Map<string, string>([
-  ["博士学者", "博识学者"],
-  ["折光诡影", "折光扰影"],
-  ["坚壁骑士", "坚壁战士"],
-  ["偃偶师", "傀儡师"],
-  ["子嗣牧", "子嗣牧师"],
-  ["生灵吟者", "唱夜之喉"],
-  ["不朽乐章", "万籁谐音"],
-  ["疮瘢之目", "疮痍之目"],
-  ["环卫工", "清道夫"],
-  ["炬灭者", "烬灭者"],
-  ["毁灭宣誓", "毁灭宣告"],
-  ["痴梦游侠", "窥梦游侠"],
-  ["驭兽师", "驯兽师"],
+  ["鍗氬＋瀛﹁€?, "鍗氳瘑瀛﹁€?],
+  ["鎶樺厜璇″奖", "鎶樺厜鎵板奖"],
+  ["鍧氬楠戝＋", "鍧氬鎴樺＋"],
+  ["鍋冨伓甯?, "鍌€鍎″笀"],
+  ["瀛愬棧鐗?, "瀛愬棧鐗у笀"],
+  ["鐢熺伒鍚熻€?, "鍞卞涔嬪枆"],
+  ["涓嶆溄涔愮珷", "涓囩眮璋愰煶"],
+  ["鐤槩涔嬬洰", "鐤棈涔嬬洰"],
+  ["鐜崼宸?, "娓呴亾澶?],
+  ["鐐伃鑰?, "鐑伃鑰?],
+  ["姣佺伃瀹ｈ獡", "姣佺伃瀹ｅ憡"],
+  ["鐥存ⅵ娓镐緺", "绐ユⅵ娓镐緺"],
+  ["椹吔甯?, "椹吔甯?],
 ]);
 
 const professionClassByName = new Map(
@@ -255,42 +256,42 @@ for (const [alias, professionName] of professionAliases.entries()) {
 }
 const godPathByName = new Map(professionGroups.map((group) => [group.god, group.path]));
 const battleHealthTable = [
-  { score: 1000, "战士": 120, "牧师": 105, "歌者": 100, "法师": 80, "刺客": 80, "猎人": 80 },
-  { score: 1100, "战士": 126, "牧师": 110, "歌者": 105, "法师": 84, "刺客": 84, "猎人": 84 },
-  { score: 1200, "战士": 132, "牧师": 115, "歌者": 110, "法师": 88, "刺客": 88, "猎人": 88 },
-  { score: 1300, "战士": 138, "牧师": 120, "歌者": 115, "法师": 92, "刺客": 92, "猎人": 92 },
-  { score: 1400, "战士": 150, "牧师": 130, "歌者": 125, "法师": 100, "刺客": 100, "猎人": 100 },
-  { score: 1500, "战士": 162, "牧师": 140, "歌者": 135, "法师": 108, "刺客": 108, "猎人": 108 },
-  { score: 1600, "战士": 174, "牧师": 150, "歌者": 145, "法师": 116, "刺客": 116, "猎人": 116 },
-  { score: 1700, "战士": 186, "牧师": 160, "歌者": 155, "法师": 124, "刺客": 124, "猎人": 124 },
-  { score: 1800, "战士": 198, "牧师": 180, "歌者": 175, "法师": 132, "刺客": 132, "猎人": 132 },
-  { score: 1900, "战士": 222, "牧师": 200, "歌者": 195, "法师": 148, "刺客": 148, "猎人": 148 },
-  { score: 2000, "战士": 246, "牧师": 220, "歌者": 215, "法师": 164, "刺客": 164, "猎人": 164 },
-  { score: 2100, "战士": 270, "牧师": 240, "歌者": 235, "法师": 180, "刺客": 180, "猎人": 180 },
-  { score: 2200, "战士": 294, "牧师": 260, "歌者": 255, "法师": 196, "刺客": 196, "猎人": 196 },
-  { score: 2300, "战士": 318, "牧师": 280, "歌者": 275, "法师": 212, "刺客": 212, "猎人": 212 },
-  { score: 2400, "战士": 342, "牧师": 300, "歌者": 295, "法师": 228, "刺客": 228, "猎人": 228 },
+  { score: 1000, "鎴樺＋": 120, "鐗у笀": 105, "姝岃€?: 100, "娉曞笀": 80, "鍒哄": 80, "鐚庝汉": 80 },
+  { score: 1100, "鎴樺＋": 126, "鐗у笀": 110, "姝岃€?: 105, "娉曞笀": 84, "鍒哄": 84, "鐚庝汉": 84 },
+  { score: 1200, "鎴樺＋": 132, "鐗у笀": 115, "姝岃€?: 110, "娉曞笀": 88, "鍒哄": 88, "鐚庝汉": 88 },
+  { score: 1300, "鎴樺＋": 138, "鐗у笀": 120, "姝岃€?: 115, "娉曞笀": 92, "鍒哄": 92, "鐚庝汉": 92 },
+  { score: 1400, "鎴樺＋": 150, "鐗у笀": 130, "姝岃€?: 125, "娉曞笀": 100, "鍒哄": 100, "鐚庝汉": 100 },
+  { score: 1500, "鎴樺＋": 162, "鐗у笀": 140, "姝岃€?: 135, "娉曞笀": 108, "鍒哄": 108, "鐚庝汉": 108 },
+  { score: 1600, "鎴樺＋": 174, "鐗у笀": 150, "姝岃€?: 145, "娉曞笀": 116, "鍒哄": 116, "鐚庝汉": 116 },
+  { score: 1700, "鎴樺＋": 186, "鐗у笀": 160, "姝岃€?: 155, "娉曞笀": 124, "鍒哄": 124, "鐚庝汉": 124 },
+  { score: 1800, "鎴樺＋": 198, "鐗у笀": 180, "姝岃€?: 175, "娉曞笀": 132, "鍒哄": 132, "鐚庝汉": 132 },
+  { score: 1900, "鎴樺＋": 222, "鐗у笀": 200, "姝岃€?: 195, "娉曞笀": 148, "鍒哄": 148, "鐚庝汉": 148 },
+  { score: 2000, "鎴樺＋": 246, "鐗у笀": 220, "姝岃€?: 215, "娉曞笀": 164, "鍒哄": 164, "鐚庝汉": 164 },
+  { score: 2100, "鎴樺＋": 270, "鐗у笀": 240, "姝岃€?: 235, "娉曞笀": 180, "鍒哄": 180, "鐚庝汉": 180 },
+  { score: 2200, "鎴樺＋": 294, "鐗у笀": 260, "姝岃€?: 255, "娉曞笀": 196, "鍒哄": 196, "鐚庝汉": 196 },
+  { score: 2300, "鎴樺＋": 318, "鐗у笀": 280, "姝岃€?: 275, "娉曞笀": 212, "鍒哄": 212, "鐚庝汉": 212 },
+  { score: 2400, "鎴樺＋": 342, "鐗у笀": 300, "姝岃€?: 295, "娉曞笀": 228, "鍒哄": 228, "鐚庝汉": 228 },
 ];
 const battleHealthByScore = new Map(battleHealthTable.map((row) => [row.score, row]));
 const battleClassHealthMin = battleHealthTable[0].score;
 const battleClassHealthMax = battleHealthTable[battleHealthTable.length - 1].score;
 const prosperityBattleHealthBonus: Record<string, number> = {
-  "战士": 24,
-  "牧师": 20,
-  "歌者": 18,
-  "刺客": 16,
-  "猎人": 16,
-  "法师": 16,
+  "鎴樺＋": 24,
+  "鐗у笀": 20,
+  "姝岃€?: 18,
+  "鍒哄": 16,
+  "鐚庝汉": 16,
+  "娉曞笀": 16,
 };
 
 const feedbackTagAllowlist = new Set([
-  "机制清楚",
-  "剧情好",
-  "氛围强",
-  "有挑战",
-  "偏难",
-  "想再跑",
-  "需要修订",
+  "鏈哄埗娓呮",
+  "鍓ф儏濂?,
+  "姘涘洿寮?,
+  "鏈夋寫鎴?,
+  "鍋忛毦",
+  "鎯冲啀璺?,
+  "闇€瑕佷慨璁?,
 ]);
 
 function json(body: Record<string, unknown>, status = 200) {
@@ -326,9 +327,9 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 async function readRequestBody(req: Request): Promise<{ body?: RequestBody; error?: string }> {
   const contentLength = Number(req.headers.get("content-length") || 0);
   if (Number.isFinite(contentLength) && contentLength > MAX_REQUEST_BODY_BYTES) {
-    return { error: "请求内容过大" };
+    return { error: "璇锋眰鍐呭杩囧ぇ" };
   }
-  if (!req.body) return { error: "请求内容不能为空" };
+  if (!req.body) return { error: "璇锋眰鍐呭涓嶈兘涓虹┖" };
 
   const reader = req.body.getReader();
   const chunks: Uint8Array[] = [];
@@ -341,12 +342,12 @@ async function readRequestBody(req: Request): Promise<{ body?: RequestBody; erro
       totalBytes += value.byteLength;
       if (totalBytes > MAX_REQUEST_BODY_BYTES) {
         await reader.cancel();
-        return { error: "请求内容过大" };
+        return { error: "璇锋眰鍐呭杩囧ぇ" };
       }
       chunks.push(value);
     }
   } catch {
-    return { error: "请求读取失败" };
+    return { error: "璇锋眰璇诲彇澶辫触" };
   }
 
   const bytes = new Uint8Array(totalBytes);
@@ -357,10 +358,10 @@ async function readRequestBody(req: Request): Promise<{ body?: RequestBody; erro
   }
   try {
     const parsed = JSON.parse(new TextDecoder().decode(bytes));
-    if (!isRecord(parsed)) return { error: "请求格式不正确" };
+    if (!isRecord(parsed)) return { error: "璇锋眰鏍煎紡涓嶆纭? };
     return { body: parsed as RequestBody };
   } catch {
-    return { error: "请求格式不正确" };
+    return { error: "璇锋眰鏍煎紡涓嶆纭? };
   }
 }
 
@@ -371,11 +372,11 @@ function cleanRequestKey(value: unknown, maxLength = 96) {
 
 function cleanDisplayName(value: unknown, role: InviteRole) {
   const name = cleanText(value, 16).replace(/\s+/g, " ");
-  if (!name || name.length < 1) return { error: "昵称不能为空" };
-  if (/[<>@#]/.test(name)) return { error: "昵称不能包含特殊符号" };
-  const reserved = ["馆主", "官方", "管理员", "系统"];
+  if (!name || name.length < 1) return { error: "鏄电О涓嶈兘涓虹┖" };
+  if (/[<>@#]/.test(name)) return { error: "鏄电О涓嶈兘鍖呭惈鐗规畩绗﹀彿" };
+  const reserved = ["棣嗕富", "瀹樻柟", "绠＄悊鍛?, "绯荤粺"];
   if (role !== "admin" && reserved.some((word) => name.includes(word))) {
-    return { error: "这个昵称像管理身份，换一个吧" };
+    return { error: "杩欎釜鏄电О鍍忕鐞嗚韩浠斤紝鎹竴涓惂" };
   }
   return { name };
 }
@@ -399,7 +400,7 @@ function cleanTalentId(value: unknown) {
 function cleanCoCreators(value: unknown) {
   const rawItems = Array.isArray(value)
     ? value
-    : String(value || "").split(/[、,，;；\n\r]+/u);
+    : String(value || "").split(/[銆?锛?锛沑n\r]+/u);
   const seen = new Set<string>();
   const names: string[] = [];
   for (const item of rawItems) {
@@ -597,14 +598,14 @@ async function getProfileByDisplayName(
   displayNameInput: unknown,
 ): Promise<{ data?: Record<string, unknown>; error?: LooseError }> {
   const displayName = cleanText(displayNameInput, 40);
-  if (!displayName) return { error: { message: "请填写玩家昵称" } };
+  if (!displayName) return { error: { message: "璇峰～鍐欑帺瀹舵樀绉? } };
   const { data, error } = await supabase
     .from("player_profiles")
     .select("invite_code_hash, display_name, role, faith_god")
     .eq("display_name", displayName)
     .maybeSingle();
   if (error) return { error };
-  if (!data) return { error: { message: "没有找到这个玩家档案，请确认昵称已保存" } };
+  if (!data) return { error: { message: "娌℃湁鎵惧埌杩欎釜鐜╁妗ｆ锛岃纭鏄电О宸蹭繚瀛? } };
   return { data };
 }
 
@@ -618,7 +619,7 @@ async function listGodBelievers(
     .from("player_profiles")
     .select(godBelieverProfileSelect)
     .eq("faith_god", godName)
-    .neq("role", "god")
+    .neq("role", "god").neq("role", "star")
     .order("updated_at", { ascending: false })
     .limit(200);
   if (error) return { error };
@@ -697,7 +698,7 @@ function toDungeonArchiveCard(dungeon: Record<string, unknown>, identity: Invite
 function getDungeonGodNames(type: unknown) {
   const source = cleanText(type, 160);
   const matches = [...godNames].filter((god) => source.includes(god));
-  return matches.length ? matches : ["未归档"];
+  return matches.length ? matches : ["鏈綊妗?];
 }
 
 function buildDungeonArchiveSidebar(dungeons: Record<string, unknown>[]) {
@@ -706,7 +707,7 @@ function buildDungeonArchiveSidebar(dungeons: Record<string, unknown>[]) {
   for (const dungeon of dungeons) {
     for (const god of getDungeonGodNames(dungeon.type)) {
       godCounts[god] = (godCounts[god] || 0) + 1;
-      const path = godPathByName.get(god) || "旧档案";
+      const path = godPathByName.get(god) || "鏃ф。妗?;
       pathCounts[path] = (pathCounts[path] || 0) + 1;
     }
   }
@@ -720,7 +721,7 @@ function buildDungeonArchiveSidebar(dungeons: Record<string, unknown>[]) {
   const architects = [...dungeons]
     .sort((a, b) => String(b.created_at || "").localeCompare(String(a.created_at || "")))
     .filter((dungeon) => {
-      const creator = cleanText(dungeon.creator, 40) || "匿名";
+      const creator = cleanText(dungeon.creator, 40) || "鍖垮悕";
       if (architectNames.has(creator)) return false;
       architectNames.add(creator);
       return true;
@@ -779,7 +780,7 @@ async function getInviteIdentity(
   if (error) return null;
 
   const roleFromTable = data?.role as InviteRole | undefined;
-  if (data?.is_active && roleFromTable && ["player", "author", "reviewer", "admin", "god"].includes(roleFromTable)) {
+  if (data?.is_active && roleFromTable && ["player", "author", "reviewer", "admin", "god", "star"].includes(roleFromTable)) {
     let profileDisplayName = "";
     const profileResult = await supabase
       .from("player_profiles")
@@ -841,17 +842,17 @@ async function validateInviteSession(
 ) {
   const sessionId = cleanSessionId(sessionIdInput);
   const deviceKind = cleanDeviceKind(deviceKindInput);
-  if (!sessionId) return { error: { message: "登录状态已更新，请重新输入邀请码", code: "session_invalid" } };
+  if (!sessionId) return { error: { message: "鐧诲綍鐘舵€佸凡鏇存柊锛岃閲嶆柊杈撳叆閭€璇风爜", code: "session_invalid" } };
   const { data, error } = await supabase
     .from("invite_sessions")
     .select("session_id, session_generation")
     .eq("invite_code_hash", identity.codeHash)
     .eq("device_kind", deviceKind)
     .maybeSingle();
-  if (error?.code === "42P01" || error?.code === "42703") return { error: { message: "请先运行 invite_device_sessions_20260809.sql", code: "session_invalid" } };
+  if (error?.code === "42P01" || error?.code === "42703") return { error: { message: "璇峰厛杩愯 invite_device_sessions_20260809.sql", code: "session_invalid" } };
   if (error) return { error };
   if (!data || data.session_id !== sessionId || Number(data.session_generation || 0) !== identity.sessionGeneration) {
-    return { error: { message: "此设备的登录已被新登录顶下，请重新输入邀请码", code: "session_invalid" } };
+    return { error: { message: "姝よ澶囩殑鐧诲綍宸茶鏂扮櫥褰曢《涓嬶紝璇烽噸鏂拌緭鍏ラ個璇风爜", code: "session_invalid" } };
   }
   const { error: touchError } = await supabase
     .from("invite_sessions")
@@ -1099,8 +1100,8 @@ function canEquipTalentRanks(ranks: unknown[], allowance: string[]) {
 }
 
 function getFaithTalentPoolKey(profile: Record<string, unknown>) {
-  const faithGod = cleanText(profile.original_faith_god, 20) === "欺诈"
-    ? "欺诈"
+  const faithGod = cleanText(profile.original_faith_god, 20) === "娆鸿瘓"
+    ? "娆鸿瘓"
     : cleanText(profile.faith_god, 20);
   const poolKey = faithGod ? `Pool${faithGod}` : "";
   return knownTalentPools.includes(poolKey) ? poolKey : "";
@@ -1108,7 +1109,7 @@ function getFaithTalentPoolKey(profile: Record<string, unknown>) {
 
 function getProfessionTalentPoolKey(profile: Record<string, unknown>) {
   const profession = cleanText(profile.profession, 40);
-  if (cleanText(profile.original_faith_god, 20) === "欺诈" && getProfessionGod(profession) !== "欺诈") return "";
+  if (cleanText(profile.original_faith_god, 20) === "娆鸿瘓" && getProfessionGod(profession) !== "娆鸿瘓") return "";
   const professionClass = professionClassByName.get(profession);
   const poolKey = professionClass ? `Pool${professionClass}` : "";
   return knownTalentPools.includes(poolKey) ? poolKey : "";
@@ -1136,9 +1137,9 @@ function isProfileBindingMismatched(profile: Record<string, unknown> | null | un
 
 function hasTrickeryFaithPrivilege(profile: Record<string, unknown> | null | undefined) {
   if (!profile) return false;
-  if (cleanText(profile.original_faith_god, 20) === "欺诈") return true;
-  if (cleanText(profile.faith_god, 20) === "欺诈") return true;
-  return getProfessionGod(profile.profession) === "欺诈";
+  if (cleanText(profile.original_faith_god, 20) === "娆鸿瘓") return true;
+  if (cleanText(profile.faith_god, 20) === "娆鸿瘓") return true;
+  return getProfessionGod(profile.profession) === "娆鸿瘓";
 }
 
 function getTalentSlotKind(slot: number) {
@@ -1147,9 +1148,9 @@ function getTalentSlotKind(slot: number) {
 
 function getTalentSlotRequirement(profile: Record<string, unknown>, slot: number) {
   const kind = getTalentSlotKind(slot);
-  if (kind === "faith") return { kind, poolKey: getFaithTalentPoolKey(profile), label: "信仰" };
-  if (kind === "profession") return { kind, poolKey: getProfessionTalentPoolKey(profile), label: "职业" };
-  return { kind, poolKey: "", label: "任意" };
+  if (kind === "faith") return { kind, poolKey: getFaithTalentPoolKey(profile), label: "淇′话" };
+  if (kind === "profession") return { kind, poolKey: getProfessionTalentPoolKey(profile), label: "鑱屼笟" };
+  return { kind, poolKey: "", label: "浠绘剰" };
 }
 
 function canEquipTalentPool(poolKey: unknown, requirement: { kind: string; poolKey: string }) {
@@ -1298,16 +1299,16 @@ function cleanSettlementScore(value: unknown) {
 }
 
 function checkSettlementScoreRange(deng: number, jin: number) {
-  if (!Number.isFinite(deng) || !Number.isFinite(jin)) return "分数格式不正确";
-  if (deng < scoreDengMin || deng > scoreDengMax) return `登神之路分数必须在 ${scoreDengMin}~${scoreDengMax} 之间`;
-  if (jin < scoreJinMin || jin > scoreJinMax) return `觐见之梯分数必须在 ${scoreJinMin}~${scoreJinMax} 之间`;
+  if (!Number.isFinite(deng) || !Number.isFinite(jin)) return "鍒嗘暟鏍煎紡涓嶆纭?;
+  if (deng < scoreDengMin || deng > scoreDengMax) return `鐧荤涔嬭矾鍒嗘暟蹇呴』鍦?${scoreDengMin}~${scoreDengMax} 涔嬮棿`;
+  if (jin < scoreJinMin || jin > scoreJinMax) return `瑙愯涔嬫鍒嗘暟蹇呴』鍦?${scoreJinMin}~${scoreJinMax} 涔嬮棿`;
   return "";
 }
 
 function cleanClearStatus(value: unknown) {
   const status = cleanText(value, 20).toLowerCase();
-  if (["passed", "clear", "success", "逢生"].includes(status)) return "passed";
-  if (["lost", "failed", "fail", "迷失"].includes(status)) return "lost";
+  if (["passed", "clear", "success", "閫㈢敓"].includes(status)) return "passed";
+  if (["lost", "failed", "fail", "杩峰け"].includes(status)) return "lost";
   return "unknown";
 }
 
@@ -1328,9 +1329,9 @@ function buildSettlementClearStatusMap(
 }
 
 function getClearStatusLabel(status: string) {
-  if (status === "passed") return "逢生";
-  if (status === "lost") return "迷失";
-  return "未标注";
+  if (status === "passed") return "閫㈢敓";
+  if (status === "lost") return "杩峰け";
+  return "鏈爣娉?;
 }
 
 function normalizeProfileMatchKey(value: unknown) {
@@ -1346,18 +1347,18 @@ function parseScoreSettlementText(textContent: unknown) {
   text.split(/\r?\n/u).forEach((lineText, index) => {
     const raw = lineText.trim();
     if (!raw) return;
-    const normalized = raw.replace(/^\s*\d+\s*[.．、)]\s*/u, "");
+    const normalized = raw.replace(/^\s*\d+\s*[.锛庛€?]\s*/u, "");
     const match = normalized.match(/^(.+?)\s*([+-]?\d+(?:\.\d+)?)\s*\+\s*([+-]?\d+(?:\.\d+)?)\s*$/u);
     if (!match) {
       if (!entries.length) return;
-      invalidLines.push({ line: index + 1, raw, msg: "格式应为 昵称+登神+觐见，可带编号，如 2. 祂+2+2" });
+      invalidLines.push({ line: index + 1, raw, msg: "鏍煎紡搴斾负 鏄电О+鐧荤+瑙愯锛屽彲甯︾紪鍙凤紝濡?2. 绁?2+2" });
       return;
     }
-    const nick = cleanText(String(match[1] || "").replace(/[：:：；;,，、\s]+$/u, ""), 40);
+    const nick = cleanText(String(match[1] || "").replace(/[锛?锛氾紱;,锛屻€乗s]+$/u, ""), 40);
     const deng = cleanSettlementScore(match[2]);
     const jin = cleanSettlementScore(match[3]);
     if (!nick) {
-      invalidLines.push({ line: index + 1, raw, msg: "昵称不能为空" });
+      invalidLines.push({ line: index + 1, raw, msg: "鏄电О涓嶈兘涓虹┖" });
       return;
     }
     entries.push({ nick, deng, jin, total: Math.round((deng + jin) * 10) / 10, line: index + 1, raw });
@@ -1577,7 +1578,7 @@ async function getTalentProfile(
     .eq("invite_code_hash", identity.codeHash)
     .maybeSingle();
   if (error) return { error };
-  if (!data) return { error: { message: "请先保存个人档案，再开启天赋池" } };
+  if (!data) return { error: { message: "璇峰厛淇濆瓨涓汉妗ｆ锛屽啀寮€鍚ぉ璧嬫睜" } };
   const titleResult = await getActiveTitleForHash(supabase, identity.codeHash);
   if (titleResult.error) return { error: titleResult.error };
   const curseResult = await getActiveCurseForHash(supabase, identity.codeHash);
@@ -1612,7 +1613,7 @@ async function getTalentDrawState(
       .eq("invite_code_hash", codeHash)
       .maybeSingle();
     if (fallback.error?.code === "42703") {
-      return { error: { ...fallback.error, message: "请先运行 talent_draw_tier_1500_20260727.sql" }, spentDraws: 0, basicSpentDraws: 0, advancedSpentDraws: 0, eventBasicDraws: 0, eventAdvancedDraws: 0 };
+      return { error: { ...fallback.error, message: "璇峰厛杩愯 talent_draw_tier_1500_20260727.sql" }, spentDraws: 0, basicSpentDraws: 0, advancedSpentDraws: 0, eventBasicDraws: 0, eventAdvancedDraws: 0 };
     }
     if (fallback.error) return { error: fallback.error, spentDraws: 0, basicSpentDraws: 0, advancedSpentDraws: 0, eventBasicDraws: 0, eventAdvancedDraws: 0 };
     return {
@@ -1624,7 +1625,7 @@ async function getTalentDrawState(
     };
   }
   if (error?.code === "42703") {
-    return { error: { ...error, message: "请先运行 talent_draw_tier_1500_20260727.sql" }, spentDraws: 0, basicSpentDraws: 0, advancedSpentDraws: 0, eventBasicDraws: 0, eventAdvancedDraws: 0 };
+    return { error: { ...error, message: "璇峰厛杩愯 talent_draw_tier_1500_20260727.sql" }, spentDraws: 0, basicSpentDraws: 0, advancedSpentDraws: 0, eventBasicDraws: 0, eventAdvancedDraws: 0 };
   }
   if (error) return { error, spentDraws: 0, basicSpentDraws: 0, advancedSpentDraws: 0, eventBasicDraws: 0, eventAdvancedDraws: 0 };
   return {
@@ -1682,7 +1683,7 @@ async function updateProfileTalentText(
     .order("equipped_slot", { ascending: true });
   if (error) return { error };
   const talentText = (owned || [])
-    .map((item) => `槽位${item.equipped_slot}：${item.talent_name}（${item.rank}）`)
+    .map((item) => `妲戒綅${item.equipped_slot}锛?{item.talent_name}锛?{item.rank}锛塦)
     .join("\n")
     .slice(0, 800);
   const { error: updateError } = await supabase
@@ -2174,8 +2175,8 @@ async function confirmClearRecordsFromSettlement(
         run_number: runNumber,
         invite_code_hash: codeHash,
         invite_name: entry.nick,
-        feedback_tags: ["审核确认"],
-        feedback_note: `由审核员 ${operatorName} 在分数结算时确认通关`,
+        feedback_tags: ["瀹℃牳纭"],
+        feedback_note: `鐢卞鏍稿憳 ${operatorName} 鍦ㄥ垎鏁扮粨绠楁椂纭閫氬叧`,
       });
     if (error?.code === "23505") continue;
     if (isMissingForumColumn(error)) {
@@ -2215,11 +2216,11 @@ async function resolveSettlementDungeon(
   } else if (dungeonName) {
     query = query.eq("name", dungeonName);
   } else {
-    return { error: { message: "请选择副本" } };
+    return { error: { message: "璇烽€夋嫨鍓湰" } };
   }
   const { data, error } = await query.maybeSingle();
   if (error) return { error };
-  if (!data) return { error: { message: "未找到所选副本，请从副本列表中选择" } };
+  if (!data) return { error: { message: "鏈壘鍒版墍閫夊壇鏈紝璇蜂粠鍓湰鍒楄〃涓€夋嫨" } };
   return { data };
 }
 
@@ -2288,20 +2289,20 @@ async function getMatchMusterState(
 
   let { data: muster, error: musterError } = await readMuster();
   if (musterError) return { error: musterError };
-  if (!muster) return { error: { message: "召集不存在" } };
+  if (!muster) return { error: { message: "鍙泦涓嶅瓨鍦? } };
 
   const closesAt = new Date(String(muster.closes_at || "")).getTime();
   if (muster.status === "open" && Number.isFinite(closesAt) && closesAt <= Date.now()) {
     const { error: drawError } = await supabase.rpc("draw_match_muster", {
       p_muster_id: musterId,
     });
-    if (drawError && !String(drawError.message || "").includes("召集尚未截止")) return { error: drawError };
+    if (drawError && !String(drawError.message || "").includes("鍙泦灏氭湭鎴")) return { error: drawError };
 
     const reread = await readMuster();
     muster = reread.data;
     musterError = reread.error;
     if (musterError) return { error: musterError };
-    if (!muster) return { error: { message: "召集不存在" } };
+    if (!muster) return { error: { message: "鍙泦涓嶅瓨鍦? } };
   }
 
   const dungeonId = String(muster.dungeon_id || "");
@@ -2387,7 +2388,7 @@ function getBattleMaxHp(faithGod: unknown, profession: unknown, ascensionScore: 
   const className = getBattleClassName(profession);
   const band = getBattleHealthBand(ascensionScore);
   const tableHp = Number((battleHealthByScore.get(band) as Record<string, unknown> | undefined)?.[className] || 80);
-  const faithBonus = cleanText(faithGod, 20) === "繁荣" ? Number(prosperityBattleHealthBonus[className] || 0) : 0;
+  const faithBonus = cleanText(faithGod, 20) === "绻佽崳" ? Number(prosperityBattleHealthBonus[className] || 0) : 0;
   return Math.max(1, Math.min(9999, tableHp + faithBonus));
 }
 
@@ -2410,7 +2411,7 @@ async function buildBattlePlayerSnapshot(
     .maybeSingle();
   if (profileError && profileError.code !== "42P01") return { error: profileError };
 
-  const playerName = cleanText(profile?.display_name || identity.displayName, 40) || "未命名信徒";
+  const playerName = cleanText(profile?.display_name || identity.displayName, 40) || "鏈懡鍚嶄俊寰?;
   const faithGod = cleanText(profile?.faith_god, 20);
   const profession = cleanText(profile?.profession, 40);
   const ascensionScore = cleanScore(profile?.ascension_score) || defaultAscensionScore;
@@ -2444,7 +2445,7 @@ async function getBattleRoomState(
     .eq("id", battleRoomId)
     .maybeSingle();
   if (roomError) return { error: roomError };
-  if (!room) return { error: { message: "战斗房间不存在" } };
+  if (!room) return { error: { message: "鎴樻枟鎴块棿涓嶅瓨鍦? } };
 
   const { data: dungeon, error: dungeonError } = await supabase
     .from("dungeons")
@@ -2526,12 +2527,12 @@ async function createBattleRoomFromMatchRoom(
     .eq("id", matchRoomId)
     .maybeSingle();
   if (roomError) return { error: roomError };
-  if (!matchRoom) return { error: { message: "组队房间不存在" } };
+  if (!matchRoom) return { error: { message: "缁勯槦鎴块棿涓嶅瓨鍦? } };
 
   const matchPlayers = Array.isArray(matchRoom.match_room_players) ? matchRoom.match_room_players : [];
-  if (!matchPlayers.length) return { error: { message: "组队房间没有成员" } };
+  if (!matchPlayers.length) return { error: { message: "缁勯槦鎴块棿娌℃湁鎴愬憳" } };
   const isParticipant = matchPlayers.some((player) => String(player.player_code_hash || "") === identity.codeHash);
-  if (!isParticipant && !hasRole(identity.role, ["reviewer", "admin"])) return { error: { message: "只有本房间成员、审核员或馆主可以开启战斗房间" } };
+  if (!isParticipant && !hasRole(identity.role, ["reviewer", "admin"])) return { error: { message: "鍙湁鏈埧闂存垚鍛樸€佸鏍稿憳鎴栭涓诲彲浠ュ紑鍚垬鏂楁埧闂? } };
 
   const { data: battleRoom, error: createError } = await supabase
     .from("battle_rooms")
@@ -2561,7 +2562,7 @@ async function createBattleRoomFromMatchRoom(
   const battlePlayers = matchPlayers.map((player, index) => {
     const hash = String(player.player_code_hash || "");
     const profile = profileByHash.get(hash) as Record<string, unknown> | undefined;
-    const playerName = cleanText(profile?.display_name || player.player_name, 40) || "未命名信徒";
+    const playerName = cleanText(profile?.display_name || player.player_name, 40) || "鏈懡鍚嶄俊寰?;
     const faithGod = cleanText(profile?.faith_god, 20);
     const profession = cleanText(profile?.profession, 40);
     const ascensionScore = cleanScore(profile?.ascension_score) || defaultAscensionScore;
@@ -2590,7 +2591,7 @@ async function createBattleRoomFromMatchRoom(
     actor_code_hash: identity.codeHash,
     actor_name: identity.displayName,
     action_type: "create",
-    note: "从网站组队房间开启神域战场",
+    note: "浠庣綉绔欑粍闃熸埧闂村紑鍚鍩熸垬鍦?,
     round_no: 1,
   });
 
@@ -2619,7 +2620,7 @@ async function createBattleRoomFromDungeon(
     .eq("id", dungeonId)
     .maybeSingle();
   if (dungeonError) return { error: dungeonError };
-  if (!dungeon) return { error: { message: "副本不存在" } };
+  if (!dungeon) return { error: { message: "鍓湰涓嶅瓨鍦? } };
 
   const { data: battleRoom, error: createError } = await supabase
     .from("battle_rooms")
@@ -2645,7 +2646,7 @@ async function createBattleRoomFromDungeon(
     actor_code_hash: identity.codeHash,
     actor_name: identity.displayName,
     action_type: "create",
-    note: `从网站进入神域战场：${cleanText(dungeon.name, 40) || "未命名试炼"}`,
+    note: `浠庣綉绔欒繘鍏ョ鍩熸垬鍦猴細${cleanText(dungeon.name, 40) || "鏈懡鍚嶈瘯鐐?}`,
     round_no: 1,
   });
 
@@ -2660,7 +2661,7 @@ async function joinBattleRoom(
   const state = await getBattleRoomState(supabase, battleRoomId, identity);
   if (state.error) return state;
   if (!state.data?.room || state.data.room.room_status !== "active") {
-    return { error: { message: "战场已结束，不能再加入" } };
+    return { error: { message: "鎴樺満宸茬粨鏉燂紝涓嶈兘鍐嶅姞鍏? } };
   }
 
   const existing = (state.data.players as Record<string, unknown>[]).find((player) => String(player.player_code_hash || "") === identity.codeHash);
@@ -2677,7 +2678,7 @@ async function joinBattleRoom(
     actor_code_hash: identity.codeHash,
     actor_name: identity.displayName,
     action_type: "note",
-    note: "进入神域战场",
+    note: "杩涘叆绁炲煙鎴樺満",
     round_no: Number((state.data.room as Record<string, unknown>).current_round || 1),
   });
   return getBattleRoomState(supabase, battleRoomId, identity);
@@ -2692,7 +2693,7 @@ async function updateBattleRoomRound(
 ): Promise<BattleActionResult> {
   const state = await getBattleRoomState(supabase, battleRoomId, identity);
   if (state.error) return state;
-  if (!state.data?.canOperate) return { error: { message: "只有主持人、审核员或馆主可以调整战斗房间" } };
+  if (!state.data?.canOperate) return { error: { message: "鍙湁涓绘寔浜恒€佸鏍稿憳鎴栭涓诲彲浠ヨ皟鏁存垬鏂楁埧闂? } };
 
   const currentRound = Number((state.data.room as Record<string, unknown>).current_round || 1);
   const nextRound = Math.max(1, Math.min(999, Math.round(Number(nextRoundInput) || currentRound)));
@@ -2708,7 +2709,7 @@ async function updateBattleRoomRound(
     actor_code_hash: identity.codeHash,
     actor_name: identity.displayName,
     action_type: "round",
-    note: `调整至第 ${nextRound} 回合${note ? `：${note}` : ""}`,
+    note: `璋冩暣鑷崇 ${nextRound} 鍥炲悎${note ? `锛?{note}` : ""}`,
     round_no: nextRound,
   });
   return getBattleRoomState(supabase, battleRoomId, identity);
@@ -2725,10 +2726,10 @@ async function applyBattlePlayerAction(
 ): Promise<BattleActionResult> {
   const state = await getBattleRoomState(supabase, battleRoomId, identity);
   if (state.error) return state;
-  if (!state.data?.canOperate) return { error: { message: "只有主持人、审核员或馆主可以操作战斗房间" } };
+  if (!state.data?.canOperate) return { error: { message: "鍙湁涓绘寔浜恒€佸鏍稿憳鎴栭涓诲彲浠ユ搷浣滄垬鏂楁埧闂? } };
 
   const player = (state.data.players as Record<string, unknown>[]).find((item) => Number(item.id) === playerId);
-  if (!player) return { error: { message: "战斗成员不存在" } };
+  if (!player) return { error: { message: "鎴樻枟鎴愬憳涓嶅瓨鍦? } };
 
   const amount = cleanBattleAmount(amountInput);
   const note = cleanText(noteInput, 500);
@@ -2748,7 +2749,7 @@ async function applyBattlePlayerAction(
     update.shield = shield - absorbed;
     update.current_hp = nextHp;
     update.is_defeated = nextHp <= 0;
-    logNote = `${note || "伤害结算"}${absorbed ? `；护盾抵消 ${absorbed}` : ""}`;
+    logNote = `${note || "浼ゅ缁撶畻"}${absorbed ? `锛涙姢鐩炬姷娑?${absorbed}` : ""}`;
   } else if (actionType === "heal") {
     const heal = Math.max(0, amount);
     update.current_hp = Math.min(9999, currentHp + heal);
@@ -2770,7 +2771,7 @@ async function applyBattlePlayerAction(
     update.note = note;
     logAmount = null;
   } else {
-    return { error: { message: "战斗操作不正确" } };
+    return { error: { message: "鎴樻枟鎿嶄綔涓嶆纭? } };
   }
 
   const { error: updateError } = await supabase
@@ -2803,7 +2804,7 @@ async function finishBattleRoom(
 ): Promise<BattleActionResult> {
   const state = await getBattleRoomState(supabase, battleRoomId, identity);
   if (state.error) return state;
-  if (!state.data?.canOperate) return { error: { message: "只有主持人、审核员或馆主可以结束战斗房间" } };
+  if (!state.data?.canOperate) return { error: { message: "鍙湁涓绘寔浜恒€佸鏍稿憳鎴栭涓诲彲浠ョ粨鏉熸垬鏂楁埧闂? } };
   const nextStatus = cleanText(statusInput, 20) === "cancelled" ? "cancelled" : "finished";
   const note = cleanText(noteInput, 800);
   const { error: updateError } = await supabase
@@ -2817,7 +2818,7 @@ async function finishBattleRoom(
     actor_code_hash: identity.codeHash,
     actor_name: identity.displayName,
     action_type: nextStatus === "cancelled" ? "cancel" : "finish",
-    note: note || (nextStatus === "cancelled" ? "取消战斗房间" : "结束战斗房间"),
+    note: note || (nextStatus === "cancelled" ? "鍙栨秷鎴樻枟鎴块棿" : "缁撴潫鎴樻枟鎴块棿"),
     round_no: Number((state.data.room as Record<string, unknown>).current_round || 1),
   });
   return getBattleRoomState(supabase, battleRoomId, identity);
@@ -2842,7 +2843,7 @@ async function commitScoreSettlement(
 
   const preview = await buildScorePreview(supabase, entries, []);
   if (preview.error) return { error: preview.error };
-  if (!preview.data?.valid) return { error: { message: "预校验未通过", preview: preview.data } };
+  if (!preview.data?.valid) return { error: { message: "棰勬牎楠屾湭閫氳繃", preview: preview.data } };
   const settlementEntries = Array.isArray(preview.data?.allList)
     ? preview.data.allList as { nick: string; deng: number; jin: number; total: number; line: number; raw: string }[]
     : entries;
@@ -2875,7 +2876,7 @@ async function commitScoreSettlement(
   if (settlementError?.code === "23505" && clientRequestId) {
     const existing = await getScoreSettlementResultByRequestId(supabase, identity, clientRequestId);
     if (existing.data) return existing;
-    return { error: { message: "这次结算正在处理，请刷新最近结算后确认结果" } };
+    return { error: { message: "杩欐缁撶畻姝ｅ湪澶勭悊锛岃鍒锋柊鏈€杩戠粨绠楀悗纭缁撴灉" } };
   }
   if (settlementError) return { error: settlementError };
 
@@ -2933,10 +2934,10 @@ async function commitScoreSettlement(
 
   const messageRows = settlementEntries.map((entry) => {
     const profile = profiles.get(entry.nick) || {};
-    const typeName = sourceType === "single" ? "漏分补发" : "批量结算";
+    const typeName = sourceType === "single" ? "婕忓垎琛ュ彂" : "鎵归噺缁撶畻";
     const clearStatus = clearStatuses.get(entry.nick) || "unknown";
-    const clearText = confirmClear ? `\n本车结果：${getClearStatusLabel(clearStatus)}${clearStatus === "passed" ? "（已登记通关）" : ""}` : "";
-    const content = `【${typeName}｜副本：${dungeonName}】\n审核员：${identity.displayName}\n登神之路：${entry.deng >= 0 ? "+" : ""}${entry.deng}\n觐见之梯：${entry.jin >= 0 ? "+" : ""}${entry.jin}\n本次总变化：${entry.total >= 0 ? "+" : ""}${entry.total}${clearText}${remark ? `\n备注：${remark}` : ""}`;
+    const clearText = confirmClear ? `\n鏈溅缁撴灉锛?{getClearStatusLabel(clearStatus)}${clearStatus === "passed" ? "锛堝凡鐧昏閫氬叧锛? : ""}` : "";
+    const content = `銆?{typeName}锝滃壇鏈細${dungeonName}銆慭n瀹℃牳鍛橈細${identity.displayName}\n鐧荤涔嬭矾锛?{entry.deng >= 0 ? "+" : ""}${entry.deng}\n瑙愯涔嬫锛?{entry.jin >= 0 ? "+" : ""}${entry.jin}\n鏈鎬诲彉鍖栵細${entry.total >= 0 ? "+" : ""}${entry.total}${clearText}${remark ? `\n澶囨敞锛?{remark}` : ""}`;
     return {
       player_code_hash: String(profile.invite_code_hash || ""),
       player_name: entry.nick,
@@ -3022,15 +3023,15 @@ function summarizeAdminTalentAnomalies(
   const equippedTalents = talents.filter((item) => item.equipped_slot !== null);
   const equippedRanksValid = canEquipTalentRanks(equippedTalents.map((item) => item.rank), getTalentRankAllowance(profile.ascension_score));
   const messages: string[] = [];
-  if (unplaced.length) messages.push(`${unplaced.length} 个孤立天赋未分配仓库或携带槽`);
-  if (dualPlaced.length) messages.push(`${dualPlaced.length} 个天赋同时占用仓库和携带槽`);
-  if (invalidStorage.length || invalidEquipped.length) messages.push(`${invalidStorage.length + invalidEquipped.length} 个天赋槽位超出规则范围`);
-  if ([...storageSlots.values()].some((count) => count > 1) || [...equippedSlots.values()].some((count) => count > 1)) messages.push("存在重复占用的槽位");
-  if (duplicateOwnedIds.length) messages.push(`${duplicateOwnedIds.length} 个重复拥有天赋，需人工确认`);
-  if (duplicateOverflowIds.length) messages.push(`${duplicateOverflowIds.length} 个溢出项已在仓库中拥有，可自动清理`);
-  if (overflowChoices.length && findTalentOpenStorageSlots(talents).length) messages.push(`${overflowChoices.length} 个溢出项可尝试回填仓库`);
-  if (equippedTalents.some((item) => Number(item.equipped_slot) > activeEquippedLimit)) messages.push("存在尚未开启的携带槽");
-  if (!equippedRanksValid) messages.push("当前携带品阶超过分数允许范围");
+  if (unplaced.length) messages.push(`${unplaced.length} 涓绔嬪ぉ璧嬫湭鍒嗛厤浠撳簱鎴栨惡甯︽Ы`);
+  if (dualPlaced.length) messages.push(`${dualPlaced.length} 涓ぉ璧嬪悓鏃跺崰鐢ㄤ粨搴撳拰鎼哄甫妲絗);
+  if (invalidStorage.length || invalidEquipped.length) messages.push(`${invalidStorage.length + invalidEquipped.length} 涓ぉ璧嬫Ы浣嶈秴鍑鸿鍒欒寖鍥碻);
+  if ([...storageSlots.values()].some((count) => count > 1) || [...equippedSlots.values()].some((count) => count > 1)) messages.push("瀛樺湪閲嶅鍗犵敤鐨勬Ы浣?);
+  if (duplicateOwnedIds.length) messages.push(`${duplicateOwnedIds.length} 涓噸澶嶆嫢鏈夊ぉ璧嬶紝闇€浜哄伐纭`);
+  if (duplicateOverflowIds.length) messages.push(`${duplicateOverflowIds.length} 涓孩鍑洪」宸插湪浠撳簱涓嫢鏈夛紝鍙嚜鍔ㄦ竻鐞哷);
+  if (overflowChoices.length && findTalentOpenStorageSlots(talents).length) messages.push(`${overflowChoices.length} 涓孩鍑洪」鍙皾璇曞洖濉粨搴揱);
+  if (equippedTalents.some((item) => Number(item.equipped_slot) > activeEquippedLimit)) messages.push("瀛樺湪灏氭湭寮€鍚殑鎼哄甫妲?);
+  if (!equippedRanksValid) messages.push("褰撳墠鎼哄甫鍝侀樁瓒呰繃鍒嗘暟鍏佽鑼冨洿");
   return {
     hasIssues: messages.length > 0,
     messages,
@@ -3048,14 +3049,14 @@ async function buildAdminPlayerSnapshot(
   targetNameInput: unknown,
 ) {
   const targetName = cleanText(targetNameInput, 40);
-  if (!targetName) return { error: { message: "请填写玩家昵称" } };
+  if (!targetName) return { error: { message: "璇峰～鍐欑帺瀹舵樀绉? } };
   const { data: profile, error: profileError } = await supabase
     .from("player_profiles")
     .select("invite_code_hash, display_name, role, faith_god, faith_path, original_faith_god, original_faith_path, profession, ascension_score, audience_score, items, talents, updated_at")
     .eq("display_name", targetName)
     .maybeSingle();
   if (profileError) return { error: profileError };
-  if (!profile) return { error: { message: "没有找到这个玩家档案，请确认昵称已保存" } };
+  if (!profile) return { error: { message: "娌℃湁鎵惧埌杩欎釜鐜╁妗ｆ锛岃纭鏄电О宸蹭繚瀛? } };
 
   const codeHash = cleanText(profile.invite_code_hash, 64);
   const [titlesResult, cursesResult, talentsResult, overflowResult, fragmentsResult, scoreLogsResult, messagesResult] = await Promise.all([
@@ -3097,7 +3098,7 @@ async function repairAdminTalentState(
   if (snapshot.error || !snapshot.data) return snapshot;
   const targetName = snapshot.data.profile.displayName;
   const { data: profile, error: profileError } = await supabase.from("player_profiles").select("invite_code_hash").eq("display_name", targetName).maybeSingle();
-  if (profileError || !profile) return { error: profileError || { message: "玩家档案已不存在" } };
+  if (profileError || !profile) return { error: profileError || { message: "鐜╁妗ｆ宸蹭笉瀛樺湪" } };
   const codeHash = cleanText(profile.invite_code_hash, 64);
   let talents = [...(snapshot.data.talents as AdminTalentRow[])];
   let overflowChoices = [...(snapshot.data.overflowChoices as Record<string, unknown>[])];
@@ -3108,7 +3109,7 @@ async function repairAdminTalentState(
     const { error } = await supabase.from("owned_talents").update({ storage_slot: null }).eq("id", talent.id).eq("invite_code_hash", codeHash);
     if (error) return { error };
     talent.storage_slot = null;
-    repaired.push(`已修正「${talent.talent_name}」的双重槽位占用`);
+    repaired.push(`宸蹭慨姝ｃ€?{talent.talent_name}銆嶇殑鍙岄噸妲戒綅鍗犵敤`);
   }
 
   const duplicateOverflowIds = snapshot.data.anomalies.autoFixable.duplicateOverflowIds;
@@ -3116,16 +3117,16 @@ async function repairAdminTalentState(
     const { error } = await supabase.from("talent_overflow_choices").delete().eq("invite_code_hash", codeHash).in("id", duplicateOverflowIds);
     if (error) return { error };
     overflowChoices = overflowChoices.filter((choice) => !duplicateOverflowIds.includes(Number(choice.id)));
-    repaired.push(`已清理 ${duplicateOverflowIds.length} 个重复溢出项`);
+    repaired.push(`宸叉竻鐞?${duplicateOverflowIds.length} 涓噸澶嶆孩鍑洪」`);
   }
 
   for (const talent of talents.filter((item) => item.storage_slot === null && item.equipped_slot === null)) {
     const slot = findTalentOpenStorageSlots(talents)[0];
-    if (!slot) { unresolved.push(`「${talent.talent_name}」无可用仓库槽位，未自动移动`); continue; }
+    if (!slot) { unresolved.push(`銆?{talent.talent_name}銆嶆棤鍙敤浠撳簱妲戒綅锛屾湭鑷姩绉诲姩`); continue; }
     const { error } = await supabase.from("owned_talents").update({ storage_slot: slot, equipped_slot: null }).eq("id", talent.id).eq("invite_code_hash", codeHash);
     if (error) return { error };
     talent.storage_slot = slot;
-    repaired.push(`已将孤立天赋「${talent.talent_name}」放入仓库 ${slot} 号位`);
+    repaired.push(`宸插皢瀛ょ珛澶╄祴銆?{talent.talent_name}銆嶆斁鍏ヤ粨搴?${slot} 鍙蜂綅`);
   }
 
   const ownedKeys = new Set(talents.map((item) => getTalentKey(item.pool_key, item.talent_id)));
@@ -3142,7 +3143,7 @@ async function repairAdminTalentState(
     if (insertError) return { error: insertError };
     talents.push(inserted as AdminTalentRow);
     ownedKeys.add(choiceKey);
-    repaired.push(`已将溢出天赋「${cleanText(choice.talent_name, 80)}」回填至仓库 ${slot} 号位`);
+    repaired.push(`宸插皢婧㈠嚭澶╄祴銆?{cleanText(choice.talent_name, 80)}銆嶅洖濉嚦浠撳簱 ${slot} 鍙蜂綅`);
   }
 
   const textResult = await updateProfileTalentText(supabase, codeHash);
@@ -3171,8 +3172,8 @@ async function getAdminTargetAccount(
 ) {
   const targetHash = cleanText(targetHashInput, 64);
   const targetName = cleanText(targetNameInput, 40);
-  if (!targetHash && !targetName) return { error: { message: "请填写目标昵称" } };
-  if (targetHash && !/^[a-f0-9]{64}$/i.test(targetHash)) return { error: { message: "目标账号标识不正确" } };
+  if (!targetHash && !targetName) return { error: { message: "璇峰～鍐欑洰鏍囨樀绉? } };
+  if (targetHash && !/^[a-f0-9]{64}$/i.test(targetHash)) return { error: { message: "鐩爣璐﹀彿鏍囪瘑涓嶆纭? } };
   let query = supabase
     .from("invite_codes")
     .select("id, code_hash, display_name, role, is_active, last_seen_at, last_seen_action");
@@ -3181,9 +3182,9 @@ async function getAdminTargetAccount(
     ? await query.maybeSingle()
     : await query.limit(2);
   if (error) return { error };
-  if (!targetHash && Array.isArray(data) && data.length > 1) return { error: { message: "这个昵称对应多个账号，请联系馆主处理重名" } };
+  if (!targetHash && Array.isArray(data) && data.length > 1) return { error: { message: "杩欎釜鏄电О瀵瑰簲澶氫釜璐﹀彿锛岃鑱旂郴棣嗕富澶勭悊閲嶅悕" } };
   const row = Array.isArray(data) ? data[0] : data;
-  if (!row) return { error: { message: "没有找到这个账号" } };
+  if (!row) return { error: { message: "娌℃湁鎵惧埌杩欎釜璐﹀彿" } };
   return { data: row as Record<string, unknown> };
 }
 
@@ -3228,7 +3229,7 @@ async function cleanupMemberState(
 
   const { error: commentError } = await supabase
     .from("comments")
-    .update({ is_deleted: true, deleted_at: new Date().toISOString(), updated_at: new Date().toISOString(), content: "此用户数据已由馆主清理" })
+    .update({ is_deleted: true, deleted_at: new Date().toISOString(), updated_at: new Date().toISOString(), content: "姝ょ敤鎴锋暟鎹凡鐢遍涓绘竻鐞? })
     .eq("invite_code_hash", codeHash);
   if (commentError && commentError.code !== "42P01" && commentError.code !== "42703") return { error: commentError };
   if (!commentError) deleted.push("comments");
@@ -3264,7 +3265,7 @@ async function listAdminMembers(supabase: SupabaseClientAny) {
     .order("last_seen_at", { ascending: false, nullsFirst: false })
     .order("display_name", { ascending: true })
     .limit(500);
-  if (inviteError?.code === "42703") return { error: { message: "请先运行 admin_member_talent_pool_migration_20260809.sql" } };
+  if (inviteError?.code === "42703") return { error: { message: "璇峰厛杩愯 admin_member_talent_pool_migration_20260809.sql" } };
   if (inviteError) return { error: inviteError };
 
   const hashes = (invites || []).map((item: Record<string, unknown>) => cleanText(item.code_hash, 64)).filter(Boolean);
@@ -3323,7 +3324,7 @@ async function listAdminTalentPoolItems(supabase: SupabaseClientAny) {
     .order("rank", { ascending: true })
     .order("talent_id", { ascending: true })
     .limit(2000);
-  if (error?.code === "42703") return { error: { message: "请先运行 talent_pool_cooldown_batch_20260810.sql" } };
+  if (error?.code === "42703") return { error: { message: "璇峰厛杩愯 talent_pool_cooldown_batch_20260810.sql" } };
   if (error) return { error };
   const pools = new Map<string, Record<string, unknown>[]>();
   (data || []).forEach((item: Record<string, unknown>) => {
@@ -3367,9 +3368,9 @@ function cleanTalentPoolPayload(payload: Record<string, unknown>, requireTalentI
   const actionCost = Math.max(0, Math.min(99, Number(payload.actionCost || 0)));
   const talentIdInput = cleanTalentId(payload.talentId);
   if (!poolKey || !talentName || !["S", "A", "B", "C"].includes(rank)) {
-    return { error: { message: "天赋池、名称、等级不能为空" } };
+    return { error: { message: "澶╄祴姹犮€佸悕绉般€佺瓑绾т笉鑳戒负绌? } };
   }
-  if (requireTalentId && !talentIdInput) return { error: { message: "批量导入必须填写编号" } };
+  if (requireTalentId && !talentIdInput) return { error: { message: "鎵归噺瀵煎叆蹇呴』濉啓缂栧彿" } };
   return { data: { poolKey, talentName, rank, effect, cooldown, adminNote, isEnabled, actionCost, talentIdInput } };
 }
 
@@ -3380,23 +3381,23 @@ Deno.serve(async (req) => {
 
   const requestOrigin = cleanText(req.headers.get("origin"), 240);
   if (requestOrigin && !allowedBrowserOrigins.has(requestOrigin)) {
-    return json({ error: "未授权的网站来源" }, 403);
+    return json({ error: "鏈巿鏉冪殑缃戠珯鏉ユ簮" }, 403);
   }
-  if (req.method !== "POST") return json({ error: "只接受 POST 请求" }, 405);
+  if (req.method !== "POST") return json({ error: "鍙帴鍙?POST 璇锋眰" }, 405);
 
   const supabaseUrl = Deno.env.get("SUPABASE_URL");
   const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
-  if (!supabaseUrl || !serviceRoleKey) return json({ error: "后端环境变量缺失" }, 500);
+  if (!supabaseUrl || !serviceRoleKey) return json({ error: "鍚庣鐜鍙橀噺缂哄け" }, 500);
 
   const requestResult = await readRequestBody(req);
-  if (!requestResult.body) return json({ error: requestResult.error || "请求格式不正确" }, 400);
+  if (!requestResult.body) return json({ error: requestResult.error || "璇锋眰鏍煎紡涓嶆纭? }, 400);
   const body = requestResult.body;
 
   const action = cleanText(body.action, 40);
-  if (!action) return json({ error: "缺少操作类型" }, 400);
-  if (body.payload !== undefined && !isRecord(body.payload)) return json({ error: "请求参数格式不正确" }, 400);
+  if (!action) return json({ error: "缂哄皯鎿嶄綔绫诲瀷" }, 400);
+  if (body.payload !== undefined && !isRecord(body.payload)) return json({ error: "璇锋眰鍙傛暟鏍煎紡涓嶆纭? }, 400);
   if (isPublicReadRateLimited(req, action)) {
-    return json({ error: "请求过于频繁，请稍后再试" }, 429);
+    return json({ error: "璇锋眰杩囦簬棰戠箒锛岃绋嶅悗鍐嶈瘯" }, 429);
   }
   const payload = body.payload ?? {};
   const supabase = createClient(supabaseUrl, serviceRoleKey, {
@@ -3412,7 +3413,7 @@ Deno.serve(async (req) => {
       .order("avg_rating", { ascending: false })
       .order("created_at", { ascending: false })
       .limit(limit);
-    if (error?.code === "42703") return json({ error: "请先运行 dungeon review migration" }, 400);
+    if (error?.code === "42703") return json({ error: "璇峰厛杩愯 dungeon review migration" }, 400);
     if (error) return json({ error: error.message }, 400);
     const rows = (data || [])
       .filter((dungeon) => canViewDungeonRecord(dungeon as Record<string, unknown>, identity))
@@ -3453,7 +3454,7 @@ Deno.serve(async (req) => {
         .order("created_at", { ascending: false })
         .limit(dungeonArchiveAggregateLimit),
     ]);
-    if (visibleResult.error?.code === "42703" || aggregateResult.error?.code === "42703") return json({ error: "请先运行 dungeon review migration" }, 400);
+    if (visibleResult.error?.code === "42703" || aggregateResult.error?.code === "42703") return json({ error: "璇峰厛杩愯 dungeon review migration" }, 400);
     if (visibleResult.error) return json({ error: visibleResult.error.message }, 400);
     if (aggregateResult.error) return json({ error: aggregateResult.error.message }, 400);
     const total = Number(visibleResult.count || 0);
@@ -3473,7 +3474,7 @@ Deno.serve(async (req) => {
   if (action === "getDungeonDetail") {
     const identity = body.inviteCode ? await getInviteIdentity(supabase, body.inviteCode) : null;
     const dungeonId = cleanText(payload.dungeonId, 80);
-    if (!isUuid(dungeonId)) return json({ error: "副本 ID 不正确" }, 400);
+    if (!isUuid(dungeonId)) return json({ error: "鍓湰 ID 涓嶆纭? }, 400);
 
     const selectFields = "id, name, creator, co_creators, difficulty, type, description, pinned_note, participant_count, run_count, clear_count, clear_rate, invite_code_hash, invite_name, avg_rating, rating_count, comment_count, created_at, is_one_shot, review_status, reviewed_at, reviewed_by_name, review_note";
     const { data, error } = await supabase
@@ -3481,9 +3482,9 @@ Deno.serve(async (req) => {
       .select(selectFields)
       .eq("id", dungeonId)
       .maybeSingle();
-    if (error?.code === "42703") return json({ error: "请先运行 dungeon review migration" }, 400);
+    if (error?.code === "42703") return json({ error: "璇峰厛杩愯 dungeon review migration" }, 400);
     if (error) return json({ error: error.message }, 400);
-    if (!data || !canViewDungeonRecord(data as Record<string, unknown>, identity)) return json({ error: "试炼未找到" }, 404);
+    if (!data || !canViewDungeonRecord(data as Record<string, unknown>, identity)) return json({ error: "璇曠偧鏈壘鍒? }, 404);
 
     const record = data as Record<string, unknown>;
     const reviewStatus = getDungeonReviewStatus(record);
@@ -3510,21 +3511,22 @@ Deno.serve(async (req) => {
       .select("invite_code_hash, display_name, role, faith_god, faith_path, original_faith_god, original_faith_path, trickery_display_faith_god, trickery_display_faith_path, trickery_display_profession, profession, ascension_score, audience_score, show_titles, updated_at")
       .order("ascension_score", { ascending: false })
       .limit(300);
-    if (error?.code === "42P01") return json({ error: "请先运行 player_profiles_migration.sql" }, 400);
+    if (error?.code === "42P01") return json({ error: "璇峰厛杩愯 player_profiles_migration.sql" }, 400);
     if (error) return json({ error: error.message }, 400);
 
+    const profiles = (data || []).filter((profile: Record<string, unknown>) => !["god", "star"].includes(cleanText(profile.role, 20)));
     const titleResult = await getActiveTitlesByHashes(
       supabase,
-      (data || []).map((profile: Record<string, unknown>) => cleanText(profile.invite_code_hash, 64)),
+      profiles.map((profile: Record<string, unknown>) => cleanText(profile.invite_code_hash, 64)),
     );
     if (titleResult.error) return json({ error: titleResult.error.message }, 400);
     const curseResult = await getActiveCursesByHashes(
       supabase,
-      (data || []).map((profile: Record<string, unknown>) => cleanText(profile.invite_code_hash, 64)),
+      profiles.map((profile: Record<string, unknown>) => cleanText(profile.invite_code_hash, 64)),
     );
     if (curseResult.error) return json({ error: curseResult.error.message }, 400);
 
-    const publicProfiles = await Promise.all((data || []).map(async (profile: Record<string, unknown>) => {
+    const publicProfiles = await Promise.all(profiles.map(async (profile: Record<string, unknown>) => {
       const inviteCodeHash = cleanText(profile.invite_code_hash, 64);
       const { invite_code_hash: _hiddenInviteHash, ...rest } = profile;
       return {
@@ -3542,11 +3544,11 @@ Deno.serve(async (req) => {
   }
 
   const identity = await getInviteIdentity(supabase, body.inviteCode);
-  if (!identity) return json({ error: "邀请码无效或已过期" }, 401);
+  if (!identity) return json({ error: "閭€璇风爜鏃犳晥鎴栧凡杩囨湡" }, 401);
   const role = identity.role;
   if (inviteDeviceSessionEnforcement && action !== "verifyInvite") {
     const sessionResult = await validateInviteSession(supabase, identity, body.sessionId, body.deviceKind);
-    if (sessionResult.error) return json({ error: sessionResult.error.message || "请重新登录", code: sessionResult.error.code || "session_invalid" }, 401);
+    if (sessionResult.error) return json({ error: sessionResult.error.message || "璇烽噸鏂扮櫥褰?, code: sessionResult.error.code || "session_invalid" }, 401);
   }
   await touchInviteActivity(supabase, identity, action);
 
@@ -3563,7 +3565,7 @@ Deno.serve(async (req) => {
         });
       }
       const sessionResult = await issueInviteSession(supabase, identity, body.deviceKind, req.headers.get("user-agent"));
-      if (sessionResult.error) return json({ error: sessionResult.error.message || "登录会话签发失败" }, 400);
+      if (sessionResult.error) return json({ error: sessionResult.error.message || "鐧诲綍浼氳瘽绛惧彂澶辫触" }, 400);
       return json({
         role,
         label: roleLabels[role],
@@ -3575,15 +3577,15 @@ Deno.serve(async (req) => {
     }
 
     if (action === "getMyProfile") {
-      if (role === "god") return json({ role, name: identity.displayName, data: null });
-      if (!hasRole(role, ["player", "author", "reviewer", "admin"])) return json({ error: "需要入局谕令" }, 403);
+      if (["god", "star"].includes(role)) return json({ role, name: identity.displayName, data: null });
+      if (!hasRole(role, ["player", "author", "reviewer", "admin"])) return json({ error: "闇€瑕佸叆灞€璋曚护" }, 403);
 
       const { data: profile, error: profileError } = await supabase
         .from("player_profiles")
         .select("invite_code_hash, display_name, role, faith_god, faith_path, original_faith_god, original_faith_path, trickery_display_faith_god, trickery_display_faith_path, trickery_display_profession, profession, ascension_score, audience_score, items, talents, show_titles, scores_locked_at, updated_at")
         .eq("invite_code_hash", identity.codeHash)
         .maybeSingle();
-      if (profileError?.code === "42P01") return json({ error: "请先运行 player_profiles_migration.sql" }, 400);
+      if (profileError?.code === "42P01") return json({ error: "璇峰厛杩愯 player_profiles_migration.sql" }, 400);
       if (profileError) return json({ error: profileError.message }, 400);
       if (!profile) return json({ role, name: identity.displayName, data: null });
 
@@ -3606,43 +3608,43 @@ Deno.serve(async (req) => {
     }
 
     if (action === "adminLookupPlayer") {
-      if (role !== "admin") return json({ error: "只有神谕馆主可以查询后台档案" }, 403);
+      if (role !== "admin") return json({ error: "鍙湁绁炶皶棣嗕富鍙互鏌ヨ鍚庡彴妗ｆ" }, 403);
       const result = await buildAdminPlayerSnapshot(supabase, payload.targetName);
-      if (result.error) return json({ error: result.error.message || "玩家后台档案读取失败" }, 400);
+      if (result.error) return json({ error: result.error.message || "鐜╁鍚庡彴妗ｆ璇诲彇澶辫触" }, 400);
       return json({ role, name: identity.displayName, data: result.data });
     }
 
     if (action === "adminListOperationLogs") {
-      if (role !== "admin") return json({ error: "只有神谕馆主可以查看管理操作日志" }, 403);
+      if (role !== "admin") return json({ error: "鍙湁绁炶皶棣嗕富鍙互鏌ョ湅绠＄悊鎿嶄綔鏃ュ織" }, 403);
       const result = await listAdminOperationLogs(supabase, null, 50);
-      if (result.error) return json({ error: result.error.message || "管理操作日志读取失败" }, 400);
+      if (result.error) return json({ error: result.error.message || "绠＄悊鎿嶄綔鏃ュ織璇诲彇澶辫触" }, 400);
       return json({ role, name: identity.displayName, data: { logs: result.data || [], unavailable: !!result.unavailable } });
     }
 
     if (action === "adminListMembers") {
-      if (role !== "admin") return json({ error: "只有馆主可以查看成员状态" }, 403);
+      if (role !== "admin") return json({ error: "鍙湁棣嗕富鍙互鏌ョ湅鎴愬憳鐘舵€? }, 403);
       const result = await listAdminMembers(supabase);
-      if (result.error) return json({ error: result.error.message || "成员列表读取失败" }, 400);
+      if (result.error) return json({ error: result.error.message || "鎴愬憳鍒楄〃璇诲彇澶辫触" }, 400);
       return json({ role, name: identity.displayName, data: (result as any).data });
     }
 
     if (action === "adminSetAccountRole") {
       const delegatedRoleManager = hasPermission(identity, "account_role_manage");
-      if (role !== "admin" && !delegatedRoleManager) return json({ error: "没有账号权限调整权限" }, 403);
+      if (role !== "admin" && !delegatedRoleManager) return json({ error: "娌℃湁璐﹀彿鏉冮檺璋冩暣鏉冮檺" }, 403);
       const targetResult = await getAdminTargetAccount(supabase, payload.targetHash, payload.targetName);
-      if (targetResult.error) return json({ error: targetResult.error.message || "目标账号读取失败" }, 400);
+      if (targetResult.error) return json({ error: targetResult.error.message || "鐩爣璐﹀彿璇诲彇澶辫触" }, 400);
       const targetAccount = targetResult.data as Record<string, unknown>;
       const targetHash = cleanText(targetAccount.code_hash, 64);
       const beforeRole = cleanText(targetAccount.role, 20);
       const nextRole = cleanText(payload.role, 20);
-      const allowedRoles = new Set(["player", "author", "reviewer", "admin"]);
-      if (!allowedRoles.has(nextRole)) return json({ error: "只能设置为玩家、作者、审核员或馆主" }, 400);
-      if (targetHash === identity.codeHash) return json({ error: "不能调整当前正在使用的馆主账号权限" }, 400);
-      if (beforeRole === "god") return json({ error: "神明账号不能通过馆主管理面板改权" }, 403);
+      const allowedRoles = new Set(["player", "author", "reviewer", "admin", "star"]);
+      if (!allowedRoles.has(nextRole)) return json({ error: "鍙兘璁剧疆涓虹帺瀹躲€佷綔鑰呫€佸鏍稿憳鎴栭涓? }, 400);
+      if (targetHash === identity.codeHash) return json({ error: "涓嶈兘璋冩暣褰撳墠姝ｅ湪浣跨敤鐨勯涓昏处鍙锋潈闄? }, 400);
+      if (["god", "star"].includes(beforeRole)) return json({ error: "绁炴槑璐﹀彿涓嶈兘閫氳繃棣嗕富绠＄悊闈㈡澘鏀规潈" }, 403);
       if (delegatedRoleManager && !(beforeRole === "player" && nextRole === "author")) {
-        return json({ error: "当前权限只允许将玩家升级为作者" }, 403);
+        return json({ error: "褰撳墠鏉冮檺鍙厑璁稿皢鐜╁鍗囩骇涓轰綔鑰? }, 403);
       }
-      if (beforeRole === nextRole) return json({ error: "目标账号已经是这个权限" }, 400);
+      if (beforeRole === nextRole) return json({ error: "鐩爣璐﹀彿宸茬粡鏄繖涓潈闄? }, 400);
 
       const { error: inviteError } = await supabase
         .from("invite_codes")
@@ -3660,7 +3662,7 @@ Deno.serve(async (req) => {
         targetCodeHash: targetHash,
         targetName: cleanText(targetAccount.display_name, 40),
         objectType: "invite_code",
-        summary: `馆主将 ${cleanText(targetAccount.display_name, 40)} 的权限从 ${beforeRole} 调整为 ${nextRole}`,
+        summary: `棣嗕富灏?${cleanText(targetAccount.display_name, 40)} 鐨勬潈闄愪粠 ${beforeRole} 璋冩暣涓?${nextRole}`,
         beforeState: { role: beforeRole },
         afterState: { role: nextRole },
       });
@@ -3668,19 +3670,19 @@ Deno.serve(async (req) => {
     }
 
     if (action === "adminRenameAccount") {
-      if (role !== "admin") return json({ error: "只有馆主可以改名" }, 403);
+      if (role !== "admin") return json({ error: "鍙湁棣嗕富鍙互鏀瑰悕" }, 403);
       const targetResult = await getAdminTargetAccount(supabase, payload.targetHash);
-      if (targetResult.error) return json({ error: targetResult.error.message || "目标账号读取失败" }, 400);
+      if (targetResult.error) return json({ error: targetResult.error.message || "鐩爣璐﹀彿璇诲彇澶辫触" }, 400);
       const targetAccount = targetResult.data as Record<string, unknown>;
       const display = cleanDisplayName(payload.displayName, "admin");
-      if (display.error || !display.name) return json({ error: display.error || "昵称不正确" }, 400);
+      if (display.error || !display.name) return json({ error: display.error || "鏄电О涓嶆纭? }, 400);
       const beforeName = cleanText(targetAccount.display_name, 40);
       const codeHash = cleanText(targetAccount.code_hash, 64);
       const { error: inviteError } = await supabase
         .from("invite_codes")
         .update({ display_name: display.name, last_seen_at: new Date().toISOString(), last_seen_action: "adminRenameAccount" })
         .eq("code_hash", codeHash);
-      if (inviteError?.code === "23505") return json({ error: "这个昵称已经被使用了" }, 409);
+      if (inviteError?.code === "23505") return json({ error: "杩欎釜鏄电О宸茬粡琚娇鐢ㄤ簡" }, 409);
       if (inviteError) return json({ error: inviteError.message }, 400);
       const [profileUpdate, titleUpdate, curseUpdate] = await Promise.all([
         supabase.from("player_profiles").update({ display_name: display.name, updated_at: new Date().toISOString() }).eq("invite_code_hash", codeHash),
@@ -3688,13 +3690,13 @@ Deno.serve(async (req) => {
         supabase.from("profile_curses").update({ display_name: display.name }).eq("invite_code_hash", codeHash),
       ]);
       const renameError = [profileUpdate.error, titleUpdate.error, curseUpdate.error].find((error) => error && error.code !== "42P01" && error.code !== "42703");
-      if (renameError) return json({ error: renameError.message || "改名同步失败" }, 400);
+      if (renameError) return json({ error: renameError.message || "鏀瑰悕鍚屾澶辫触" }, 400);
       await writeAdminOperationLog(supabase, identity, {
         action: "account.rename",
         targetCodeHash: codeHash,
         targetName: beforeName,
         objectType: "invite_code",
-        summary: `馆主将 ${beforeName} 改名为 ${display.name}`,
+        summary: `棣嗕富灏?${beforeName} 鏀瑰悕涓?${display.name}`,
         beforeState: { displayName: beforeName },
         afterState: { displayName: display.name },
       });
@@ -3702,22 +3704,22 @@ Deno.serve(async (req) => {
     }
 
     if (action === "adminResetAccount" || action === "adminDeleteAccount") {
-      if (role !== "admin") return json({ error: "只有馆主可以管理账号" }, 403);
+      if (role !== "admin") return json({ error: "鍙湁棣嗕富鍙互绠＄悊璐﹀彿" }, 403);
       const mode = action === "adminDeleteAccount" ? "delete" : "reset";
       const targetResult = await getAdminTargetAccount(supabase, payload.targetHash);
-      if (targetResult.error) return json({ error: targetResult.error.message || "目标账号读取失败" }, 400);
+      if (targetResult.error) return json({ error: targetResult.error.message || "鐩爣璐﹀彿璇诲彇澶辫触" }, 400);
       const targetAccount = targetResult.data as Record<string, unknown>;
       const codeHash = cleanText(targetAccount.code_hash, 64);
       const beforeName = cleanText(targetAccount.display_name, 40);
-      if (codeHash === identity.codeHash) return json({ error: "不能重置或删除当前正在使用的馆主账号" }, 400);
+      if (codeHash === identity.codeHash) return json({ error: "涓嶈兘閲嶇疆鎴栧垹闄ゅ綋鍓嶆鍦ㄤ娇鐢ㄧ殑棣嗕富璐﹀彿" }, 400);
       const cleanupResult = await cleanupMemberState(supabase, codeHash, mode);
-      if ((cleanupResult as any).error) return json({ error: (cleanupResult as any).error.message || "账号处理失败" }, 400);
+      if ((cleanupResult as any).error) return json({ error: (cleanupResult as any).error.message || "璐﹀彿澶勭悊澶辫触" }, 400);
       await writeAdminOperationLog(supabase, identity, {
         action: mode === "delete" ? "account.delete" : "account.reset",
         targetCodeHash: codeHash,
         targetName: beforeName,
         objectType: "invite_code",
-        summary: mode === "delete" ? `馆主注销了 ${beforeName} 的账号` : `馆主重置了 ${beforeName} 的个人状态`,
+        summary: mode === "delete" ? `棣嗕富娉ㄩ攢浜?${beforeName} 鐨勮处鍙穈 : `棣嗕富閲嶇疆浜?${beforeName} 鐨勪釜浜虹姸鎬乣,
         beforeState: { displayName: beforeName, isActive: targetAccount.is_active },
         afterState: { mode },
       });
@@ -3725,19 +3727,19 @@ Deno.serve(async (req) => {
     }
 
     if (action === "adminListTalentPoolItems") {
-      if (!hasPermission(identity, "talent_pool_manage")) return json({ error: "没有天赋池管理权限" }, 403);
+      if (!hasPermission(identity, "talent_pool_manage")) return json({ error: "娌℃湁澶╄祴姹犵鐞嗘潈闄? }, 403);
       const result = await listAdminTalentPoolItems(supabase);
-      if (result.error) return json({ error: result.error.message || "天赋仓库读取失败" }, 400);
+      if (result.error) return json({ error: result.error.message || "澶╄祴浠撳簱璇诲彇澶辫触" }, 400);
       return json({ role, name: identity.displayName, data: result.data });
     }
 
     if (action === "adminUpsertTalentPoolItem") {
-      if (!hasPermission(identity, "talent_pool_manage")) return json({ error: "没有天赋池管理权限" }, 403);
+      if (!hasPermission(identity, "talent_pool_manage")) return json({ error: "娌℃湁澶╄祴姹犵鐞嗘潈闄? }, 403);
       const cleanResult = cleanTalentPoolPayload(payload);
       if (cleanResult.error) return json({ error: cleanResult.error.message }, 400);
       const { poolKey, talentName, rank, effect, cooldown, adminNote, isEnabled, actionCost, talentIdInput } = cleanResult.data;
       const nextIdResult = talentIdInput ? { data: talentIdInput, error: null as LooseError } : await getNextTalentId(supabase, poolKey);
-      if (nextIdResult.error) return json({ error: nextIdResult.error.message || "天赋编号分配失败" }, 400);
+      if (nextIdResult.error) return json({ error: nextIdResult.error.message || "澶╄祴缂栧彿鍒嗛厤澶辫触" }, 400);
       const talentId = Number(nextIdResult.data || 1);
       const beforeResult = await supabase
         .from("talent_pool_items")
@@ -3765,7 +3767,7 @@ Deno.serve(async (req) => {
         action: "talent_pool.upsert",
         objectType: "talent_pool_item",
         objectId: `${poolKey}:${talentId}`,
-        summary: `${beforeResult.data ? "更新" : "新增"} ${poolKey} #${talentId} 天赋`,
+        summary: `${beforeResult.data ? "鏇存柊" : "鏂板"} ${poolKey} #${talentId} 澶╄祴`,
         beforeState: beforeResult.data || {},
         afterState: { poolKey, talentId, talentName, rank, effect, cooldown, actionCost, isEnabled, adminNote },
       });
@@ -3773,16 +3775,16 @@ Deno.serve(async (req) => {
     }
 
     if (action === "adminBatchUpsertTalentPoolItems") {
-      if (!hasPermission(identity, "talent_pool_manage")) return json({ error: "没有天赋池管理权限" }, 403);
+      if (!hasPermission(identity, "talent_pool_manage")) return json({ error: "娌℃湁澶╄祴姹犵鐞嗘潈闄? }, 403);
       const poolKey = cleanPoolKey(payload.poolKey);
       const rawItems = Array.isArray(payload.items) ? payload.items : [];
-      if (!poolKey || !rawItems.length) return json({ error: "请填写天赋池和批量天赋" }, 400);
-      if (rawItems.length > 100) return json({ error: "单次最多批量保存 100 个天赋" }, 400);
+      if (!poolKey || !rawItems.length) return json({ error: "璇峰～鍐欏ぉ璧嬫睜鍜屾壒閲忓ぉ璧? }, 400);
+      if (rawItems.length > 100) return json({ error: "鍗曟鏈€澶氭壒閲忎繚瀛?100 涓ぉ璧? }, 400);
       const rows = [];
       for (const [index, rawItem] of rawItems.entries()) {
-        if (!isRecord(rawItem)) return json({ error: `第 ${index + 1} 行格式不正确` }, 400);
+        if (!isRecord(rawItem)) return json({ error: `绗?${index + 1} 琛屾牸寮忎笉姝ｇ‘` }, 400);
         const cleanResult = cleanTalentPoolPayload({ ...rawItem, poolKey }, true);
-        if (cleanResult.error) return json({ error: `第 ${index + 1} 行：${cleanResult.error.message}` }, 400);
+        if (cleanResult.error) return json({ error: `绗?${index + 1} 琛岋細${cleanResult.error.message}` }, 400);
         const item = cleanResult.data;
         rows.push({
           pool_key: poolKey,
@@ -3805,18 +3807,18 @@ Deno.serve(async (req) => {
         action: "talent_pool.batch_upsert",
         objectType: "talent_pool_item",
         objectId: poolKey,
-        summary: `批量保存 ${poolKey} ${rows.length} 个天赋`,
+        summary: `鎵归噺淇濆瓨 ${poolKey} ${rows.length} 涓ぉ璧媊,
         afterState: { poolKey, count: rows.length, talentIds: rows.map((row) => row.talent_id) },
       });
       return json({ role, name: identity.displayName, data: { poolKey, count: rows.length } });
     }
 
     if (action === "adminSetTalentPoolItemEnabled") {
-      if (!hasPermission(identity, "talent_pool_manage")) return json({ error: "没有天赋池管理权限" }, 403);
+      if (!hasPermission(identity, "talent_pool_manage")) return json({ error: "娌℃湁澶╄祴姹犵鐞嗘潈闄? }, 403);
       const poolKey = cleanPoolKey(payload.poolKey);
       const talentId = cleanTalentId(payload.talentId);
       const enabled = payload.enabled === true;
-      if (!poolKey || !talentId) return json({ error: "天赋项目不完整" }, 400);
+      if (!poolKey || !talentId) return json({ error: "澶╄祴椤圭洰涓嶅畬鏁? }, 400);
       const beforeResult = await supabase
         .from("talent_pool_items")
         .select("pool_key, talent_id, talent_name, rank, effect, action_cost, is_enabled, admin_note")
@@ -3824,7 +3826,7 @@ Deno.serve(async (req) => {
         .eq("talent_id", talentId)
         .maybeSingle();
       if (beforeResult.error) return json({ error: beforeResult.error.message }, 400);
-      if (!beforeResult.data) return json({ error: "没有找到这个天赋" }, 404);
+      if (!beforeResult.data) return json({ error: "娌℃湁鎵惧埌杩欎釜澶╄祴" }, 404);
       const { error } = await supabase
         .from("talent_pool_items")
         .update({ is_enabled: enabled, updated_by_hash: identity.codeHash, updated_at: new Date().toISOString() })
@@ -3836,7 +3838,7 @@ Deno.serve(async (req) => {
         objectType: "talent_pool_item",
         objectId: `${poolKey}:${talentId}`,
         targetName: cleanText(beforeResult.data.talent_name, 80),
-        summary: `${enabled ? "启用" : "停用"} ${poolKey} #${talentId}`,
+        summary: `${enabled ? "鍚敤" : "鍋滅敤"} ${poolKey} #${talentId}`,
         beforeState: beforeResult.data as Record<string, unknown>,
         afterState: { ...(beforeResult.data as Record<string, unknown>), is_enabled: enabled },
       });
@@ -3844,38 +3846,38 @@ Deno.serve(async (req) => {
     }
 
     if (action === "listHonorOperationLogs") {
-      if (!canGrantTitles(identity)) return json({ error: "需要馆主或神明谕令" }, 403);
+      if (!canGrantTitles(identity)) return json({ error: "闇€瑕侀涓绘垨绁炴槑璋曚护" }, 403);
       const limit = Math.max(1, Math.min(50, Number(payload.limit || 30)));
       const result = await listHonorOperationLogs(supabase, identity, limit);
-      if (result.error) return json({ error: result.error.message || "称号诅咒操作日志读取失败" }, 400);
+      if (result.error) return json({ error: result.error.message || "绉板彿璇呭拻鎿嶄綔鏃ュ織璇诲彇澶辫触" }, 400);
       return json({ role, name: identity.displayName, data: { logs: result.data || [], unavailable: !!result.unavailable } });
     }
 
     if (action === "listGodBelievers") {
-      if (role !== "god") return json({ error: "只有神明账号可以查看自己的信徒" }, 403);
+      if (role !== "god") return json({ error: "鍙湁绁炴槑璐﹀彿鍙互鏌ョ湅鑷繁鐨勪俊寰? }, 403);
       const godName = cleanGodName(identity.displayName);
-      if (!godNames.has(godName)) return json({ error: "当前神明账号未绑定有效神名" }, 403);
+      if (!godNames.has(godName)) return json({ error: "褰撳墠绁炴槑璐﹀彿鏈粦瀹氭湁鏁堢鍚? }, 403);
       const result = await listGodBelievers(supabase, godName);
-      if (result.error) return json({ error: result.error.message || "信徒列表读取失败" }, 400);
+      if (result.error) return json({ error: result.error.message || "淇″緬鍒楄〃璇诲彇澶辫触" }, 400);
       return json({ role, name: identity.displayName, data: { god: godName, believers: result.data || [] } });
     }
 
     if (action === "godConvertBeliever") {
-      if (role !== "god") return json({ error: "只有神明账号可以执行改信敕令" }, 403);
+      if (role !== "god") return json({ error: "鍙湁绁炴槑璐﹀彿鍙互鎵ц鏀逛俊鏁曚护" }, 403);
       const actorGod = cleanGodName(identity.displayName);
-      if (!godNames.has(actorGod)) return json({ error: "当前神明账号未绑定有效神名" }, 403);
+      if (!godNames.has(actorGod)) return json({ error: "褰撳墠绁炴槑璐﹀彿鏈粦瀹氭湁鏁堢鍚? }, 403);
 
       const targetHash = cleanText(payload.targetHash, 64);
       const targetName = cleanText(payload.targetName, 40);
-      if (!targetHash && !targetName) return json({ error: "请选择要改信的信徒" }, 400);
+      if (!targetHash && !targetName) return json({ error: "璇烽€夋嫨瑕佹敼淇＄殑淇″緬" }, 400);
 
       const nextFaithGod = cleanGodName(payload.faithGod);
       const nextFaithPath = getFaithPathByGod(nextFaithGod);
       const nextProfession = cleanText(payload.profession, 40);
       const nextProfessionGod = getProfessionGod(nextProfession);
-      if (!nextFaithGod || !nextFaithPath || !godNames.has(nextFaithGod)) return json({ error: "请选择有效的新信仰神明" }, 400);
-      if (!nextProfession || !nextProfessionGod) return json({ error: "请选择新信仰下的职业" }, 400);
-      if (nextProfessionGod !== nextFaithGod) return json({ error: "职业必须属于新的信仰神明" }, 400);
+      if (!nextFaithGod || !nextFaithPath || !godNames.has(nextFaithGod)) return json({ error: "璇烽€夋嫨鏈夋晥鐨勬柊淇′话绁炴槑" }, 400);
+      if (!nextProfession || !nextProfessionGod) return json({ error: "璇烽€夋嫨鏂颁俊浠颁笅鐨勮亴涓? }, 400);
+      if (nextProfessionGod !== nextFaithGod) return json({ error: "鑱屼笟蹇呴』灞炰簬鏂扮殑淇′话绁炴槑" }, 400);
 
       let targetQuery = supabase
         .from("player_profiles")
@@ -3883,21 +3885,21 @@ Deno.serve(async (req) => {
       targetQuery = targetHash ? targetQuery.eq("invite_code_hash", targetHash) : targetQuery.eq("display_name", targetName);
       const { data: targetProfile, error: targetError } = await targetQuery.maybeSingle();
       if (targetError) return json({ error: targetError.message }, 400);
-      if (!targetProfile) return json({ error: "没有找到这个信徒档案" }, 404);
+      if (!targetProfile) return json({ error: "娌℃湁鎵惧埌杩欎釜淇″緬妗ｆ" }, 404);
 
       const beforeProfile = targetProfile as Record<string, unknown>;
       const beforeHash = cleanText(beforeProfile.invite_code_hash, 64);
       const beforeName = cleanText(beforeProfile.display_name, 40);
       const beforeFaithGod = cleanGodName(beforeProfile.faith_god);
       const beforeProfession = cleanText(beforeProfile.profession, 40);
-      if (!beforeHash) return json({ error: "目标信徒缺少邀请码哈希，无法执行改信" }, 400);
-      if (beforeFaithGod !== actorGod) return json({ error: "神明只能操作当前信仰自己的信徒" }, 403);
-      if (nextFaithGod === beforeFaithGod) return json({ error: "只能在改信仰时同步改职业，不能同信仰内单独改职业" }, 400);
+      if (!beforeHash) return json({ error: "鐩爣淇″緬缂哄皯閭€璇风爜鍝堝笇锛屾棤娉曟墽琛屾敼淇? }, 400);
+      if (beforeFaithGod !== actorGod) return json({ error: "绁炴槑鍙兘鎿嶄綔褰撳墠淇′话鑷繁鐨勪俊寰? }, 403);
+      if (nextFaithGod === beforeFaithGod) return json({ error: "鍙兘鍦ㄦ敼淇′话鏃跺悓姝ユ敼鑱屼笟锛屼笉鑳藉悓淇′话鍐呭崟鐙敼鑱屼笟" }, 400);
 
       const curseEnabled = payload.curseEnabled === true;
       const curseText = cleanText(payload.curseName ?? payload.curseText, 32);
       const curseNote = cleanText(payload.curseEffect ?? payload.curseNote, 120);
-      if (curseEnabled && (!curseText || !curseNote)) return json({ error: "勾选诅咒后必须填写诅咒名和诅咒效果" }, 400);
+      if (curseEnabled && (!curseText || !curseNote)) return json({ error: "鍕鹃€夎瘏鍜掑悗蹇呴』濉啓璇呭拻鍚嶅拰璇呭拻鏁堟灉" }, 400);
 
       const { data: updatedProfile, error: updateError } = await supabase
         .from("player_profiles")
@@ -3916,10 +3918,10 @@ Deno.serve(async (req) => {
       if (updateError) return json({ error: updateError.message }, 400);
 
       const talentRebalance = await rebalanceTalentPoolsAfterProfileChange(supabase, beforeHash, beforeProfile, updatedProfile as Record<string, unknown>);
-      if (talentRebalance.error) return json({ error: talentRebalance.error.message || "改信后天赋池回退失败，请联系馆主检查" }, 400);
+      if (talentRebalance.error) return json({ error: talentRebalance.error.message || "鏀逛俊鍚庡ぉ璧嬫睜鍥為€€澶辫触锛岃鑱旂郴棣嗕富妫€鏌? }, 400);
       if (talentRebalance.removedPoolKeys.length) {
         const refreshResult = await updateProfileTalentText(supabase, beforeHash);
-        if (refreshResult.error) return json({ error: refreshResult.error.message || "改信后天赋文本刷新失败" }, 400);
+        if (refreshResult.error) return json({ error: refreshResult.error.message || "鏀逛俊鍚庡ぉ璧嬫枃鏈埛鏂板け璐? }, 400);
       }
 
       let curseData: Record<string, unknown> | null = null;
@@ -3940,7 +3942,7 @@ Deno.serve(async (req) => {
           })
           .select("id, curse_text, curse_god, curse_note, curse_type, granted_by_type, granted_by_name, granted_at")
           .single();
-        if (curseError?.code === "42P01") return json({ error: "请先运行 profile_curses_migration.sql" }, 400);
+        if (curseError?.code === "42P01") return json({ error: "璇峰厛杩愯 profile_curses_migration.sql" }, 400);
         if (curseError) return json({ error: curseError.message }, 400);
         curseData = insertedCurse as Record<string, unknown>;
       }
@@ -3950,7 +3952,7 @@ Deno.serve(async (req) => {
         targetCodeHash: beforeHash,
         targetName: beforeName,
         objectType: "player_profile",
-        summary: `神明改信：${beforeName} 从 ${beforeFaithGod}/${beforeProfession} 改为 ${nextFaithGod}/${nextProfession}，觐见清零`,
+        summary: `绁炴槑鏀逛俊锛?{beforeName} 浠?${beforeFaithGod}/${beforeProfession} 鏀逛负 ${nextFaithGod}/${nextProfession}锛岃瑙佹竻闆禶,
         beforeState: {
           faithGod: beforeFaithGod,
           faithPath: cleanText(beforeProfile.faith_path, 20),
@@ -3993,39 +3995,39 @@ Deno.serve(async (req) => {
     }
 
     if (action === "adminScanTalentState") {
-      if (role !== "admin") return json({ error: "只有神谕馆主可以扫描天赋状态" }, 403);
+      if (role !== "admin") return json({ error: "鍙湁绁炶皶棣嗕富鍙互鎵弿澶╄祴鐘舵€? }, 403);
       const result = await buildAdminPlayerSnapshot(supabase, payload.targetName);
-      if (result.error) return json({ error: result.error.message || "天赋状态扫描失败" }, 400);
+      if (result.error) return json({ error: result.error.message || "澶╄祴鐘舵€佹壂鎻忓け璐? }, 400);
       const targetResult = await getProfileByDisplayName(supabase, payload.targetName);
       await writeAdminOperationLog(supabase, identity, {
         action: "talent.scan", targetCodeHash: targetResult.data?.invite_code_hash, targetName: result.data?.profile.displayName, objectType: "talent_state",
-        summary: result.data?.anomalies?.hasIssues ? "扫描发现天赋状态异常" : "扫描完成，未发现天赋异常",
+        summary: result.data?.anomalies?.hasIssues ? "鎵弿鍙戠幇澶╄祴鐘舵€佸紓甯? : "鎵弿瀹屾垚锛屾湭鍙戠幇澶╄祴寮傚父",
         afterState: { hasIssues: !!result.data?.anomalies?.hasIssues, messages: result.data?.anomalies?.messages || [] },
       });
       return json({ role, name: identity.displayName, data: { profile: result.data?.profile, anomalies: result.data?.anomalies } });
     }
 
     if (action === "adminRepairTalentState") {
-      if (role !== "admin") return json({ error: "只有神谕馆主可以修复天赋状态" }, 403);
+      if (role !== "admin") return json({ error: "鍙湁绁炶皶棣嗕富鍙互淇澶╄祴鐘舵€? }, 403);
       const result = await repairAdminTalentState(supabase, payload.targetName);
-      if ((result as any).error) return json({ error: (result as any).error.message || "天赋状态修复失败" }, 400);
+      if ((result as any).error) return json({ error: (result as any).error.message || "澶╄祴鐘舵€佷慨澶嶅け璐? }, 400);
       const targetResult = await getProfileByDisplayName(supabase, payload.targetName);
       await writeAdminOperationLog(supabase, identity, {
         action: "talent.repair", targetCodeHash: targetResult.data?.invite_code_hash, targetName: result.data?.snapshot?.profile?.displayName, objectType: "talent_state",
-        summary: `完成 ${Array.isArray(result.data?.repaired) ? result.data.repaired.length : 0} 项天赋状态修复`,
+        summary: `瀹屾垚 ${Array.isArray(result.data?.repaired) ? result.data.repaired.length : 0} 椤瑰ぉ璧嬬姸鎬佷慨澶峘,
         afterState: { repaired: result.data?.repaired || [], unresolved: result.data?.unresolved || [] },
       });
       return json({ role, name: identity.displayName, data: (result as any).data });
     }
 
     if (action === "updateDisplayName") {
-      if (!identity.inviteId) return json({ error: "共享邀请码不能绑定个人昵称，请使用专属码" }, 403);
+      if (!identity.inviteId) return json({ error: "鍏变韩閭€璇风爜涓嶈兘缁戝畾涓汉鏄电О锛岃浣跨敤涓撳睘鐮? }, 403);
       const inviteCodeText = cleanText(body.inviteCode, 200);
       const isInitialBinding = role !== "god" && cleanText(identity.displayName, 200).toLowerCase() === inviteCodeText.toLowerCase();
-      if (role !== "admin" && !isInitialBinding) return json({ error: "昵称为身份绑定字段，只有馆主可以更改" }, 403);
+      if (role !== "admin" && !isInitialBinding) return json({ error: "鏄电О涓鸿韩浠界粦瀹氬瓧娈碉紝鍙湁棣嗕富鍙互鏇存敼" }, 403);
 
       const display = cleanDisplayName(payload.displayName, role);
-      if (display.error || !display.name) return json({ error: display.error || "昵称不正确" }, 400);
+      if (display.error || !display.name) return json({ error: display.error || "鏄电О涓嶆纭? }, 400);
 
       const { data, error } = await supabase
         .from("invite_codes")
@@ -4033,7 +4035,7 @@ Deno.serve(async (req) => {
         .eq("id", identity.inviteId)
         .select("id, role, display_name")
         .single();
-      if (error?.code === "23505") return json({ error: "这个昵称已经有人绑定了" }, 409);
+      if (error?.code === "23505") return json({ error: "杩欎釜鏄电О宸茬粡鏈変汉缁戝畾浜? }, 409);
       if (error) return json({ error: error.message }, 400);
 
       await supabase
@@ -4045,8 +4047,8 @@ Deno.serve(async (req) => {
     }
 
     if (action === "saveProfile") {
-      if (role === "god") return json({ error: "神明账号不建立信徒个人档案" }, 403);
-      if (!hasRole(role, ["player", "author", "reviewer", "admin"])) return json({ error: "需要入局谕令" }, 403);
+      if (["god", "star"].includes(role)) return json({ error: "绁炴槑璐﹀彿涓嶅缓绔嬩俊寰掍釜浜烘。妗? }, 403);
+      if (!hasRole(role, ["player", "author", "reviewer", "admin"])) return json({ error: "闇€瑕佸叆灞€璋曚护" }, 403);
 
       const faithGod = cleanText(payload.faithGod, 20);
       const faithPath = cleanText(payload.faithPath, 20);
@@ -4054,30 +4056,30 @@ Deno.serve(async (req) => {
       const items = cleanText(payload.items, 800);
       const ascensionScore = cleanScore(payload.ascensionScore);
       const audienceScore = cleanScore(payload.audienceScore);
-      if (!faithGod || !faithPath || !profession) return json({ error: "个人档案缺少信仰或职业" }, 400);
+      if (!faithGod || !faithPath || !profession) return json({ error: "涓汉妗ｆ缂哄皯淇′话鎴栬亴涓? }, 400);
       const expectedFaithPath = getFaithPathByGod(faithGod);
       const professionGod = getProfessionGod(profession);
-      if (!expectedFaithPath) return json({ error: "请选择有效信仰神明" }, 400);
-      if (faithPath !== expectedFaithPath) return json({ error: "信仰命途与神明不匹配" }, 400);
-      if (!professionGod) return json({ error: "请选择有效职业" }, 400);
-      if (professionGod !== faithGod) return json({ error: "职业必须选择当前信仰神明下的职业" }, 400);
+      if (!expectedFaithPath) return json({ error: "璇烽€夋嫨鏈夋晥淇′话绁炴槑" }, 400);
+      if (faithPath !== expectedFaithPath) return json({ error: "淇′话鍛介€斾笌绁炴槑涓嶅尮閰? }, 400);
+      if (!professionGod) return json({ error: "璇烽€夋嫨鏈夋晥鑱屼笟" }, 400);
+      if (professionGod !== faithGod) return json({ error: "鑱屼笟蹇呴』閫夋嫨褰撳墠淇′话绁炴槑涓嬬殑鑱屼笟" }, 400);
 
       const { data: existing, error: readError } = await supabase
         .from("player_profiles")
         .select("faith_god, faith_path, original_faith_god, original_faith_path, profession, ascension_score, audience_score, items, talents, scores_locked_at")
         .eq("invite_code_hash", identity.codeHash)
         .maybeSingle();
-      if (readError?.code === "42P01") return json({ error: "请先运行 player_profiles_migration.sql" }, 400);
+      if (readError?.code === "42P01") return json({ error: "璇峰厛杩愯 player_profiles_migration.sql" }, 400);
       if (readError) return json({ error: readError.message }, 400);
 
       const canOverride = role === "admin";
       const locked = !canOverride && existing?.faith_god && !hasTrickeryFaithPrivilege(existing) && !isProfileBindingMismatched(existing);
       const existingIsTrickery = !!existing && hasTrickeryFaithPrivilege(existing);
       const nextFaithGod = existingIsTrickery
-        ? (existing.original_faith_god || existing.faith_god || "欺诈")
+        ? (existing.original_faith_god || existing.faith_god || "娆鸿瘓")
         : (locked ? existing.faith_god : faithGod);
       const nextFaithPath = existingIsTrickery
-        ? (existing.original_faith_path || getFaithPathByGod(String(nextFaithGod)) || existing.faith_path || "虚无")
+        ? (existing.original_faith_path || getFaithPathByGod(String(nextFaithGod)) || existing.faith_path || "铏氭棤")
         : (locked ? existing.faith_path : faithPath);
       const nextProfession = existingIsTrickery
         ? existing.profession
@@ -4115,7 +4117,7 @@ Deno.serve(async (req) => {
         })
         .select("display_name, role, faith_god, faith_path, original_faith_god, original_faith_path, profession, ascension_score, audience_score, items, talents, show_titles, scores_locked_at, updated_at")
         .single();
-      if (error?.code === "42P01") return json({ error: "请先运行 player_profiles_migration.sql" }, 400);
+      if (error?.code === "42P01") return json({ error: "璇峰厛杩愯 player_profiles_migration.sql" }, 400);
       if (error) return json({ error: error.message }, 400);
 
       const talentRebalance = await rebalanceTalentPoolsAfterProfileChange(supabase, identity.codeHash, existing, data);
@@ -4146,9 +4148,9 @@ Deno.serve(async (req) => {
     }
 
     if (action === "setProfileTitleVisibility") {
-      if (role === "god") return json({ error: "神明账号不建立信徒个人档案" }, 403);
-      if (!hasRole(role, ["player", "author", "reviewer", "admin"])) return json({ error: "需要入局谕令" }, 403);
-      if (typeof payload.showTitles !== "boolean") return json({ error: "称号佩戴状态不正确" }, 400);
+      if (["god", "star"].includes(role)) return json({ error: "绁炴槑璐﹀彿涓嶅缓绔嬩俊寰掍釜浜烘。妗? }, 403);
+      if (!hasRole(role, ["player", "author", "reviewer", "admin"])) return json({ error: "闇€瑕佸叆灞€璋曚护" }, 403);
+      if (typeof payload.showTitles !== "boolean") return json({ error: "绉板彿浣╂埓鐘舵€佷笉姝ｇ‘" }, 400);
 
       const { data, error } = await supabase
         .from("player_profiles")
@@ -4156,32 +4158,32 @@ Deno.serve(async (req) => {
         .eq("invite_code_hash", identity.codeHash)
         .select("show_titles, updated_at")
         .maybeSingle();
-      if (error?.code === "42703") return json({ error: "请先运行 profile_title_visibility_migration_20260727.sql" }, 400);
+      if (error?.code === "42703") return json({ error: "璇峰厛杩愯 profile_title_visibility_migration_20260727.sql" }, 400);
       if (error) return json({ error: error.message }, 400);
-      if (!data) return json({ error: "请先保存个人档案，再设置称号佩戴状态" }, 400);
+      if (!data) return json({ error: "璇峰厛淇濆瓨涓汉妗ｆ锛屽啀璁剧疆绉板彿浣╂埓鐘舵€? }, 400);
       return json({ role, name: identity.displayName, data });
     }
 
     if (action === "updateTrickeryFaith") {
-      if (role === "god") return json({ error: "神明账号不建立信徒个人档案" }, 403);
-      if (!hasRole(role, ["player", "author", "reviewer", "admin"])) return json({ error: "需要入局谕令" }, 403);
+      if (["god", "star"].includes(role)) return json({ error: "绁炴槑璐﹀彿涓嶅缓绔嬩俊寰掍釜浜烘。妗? }, 403);
+      if (!hasRole(role, ["player", "author", "reviewer", "admin"])) return json({ error: "闇€瑕佸叆灞€璋曚护" }, 403);
 
       const faithGod = cleanText(payload.faithGod, 20);
       const faithPath = getFaithPathByGod(faithGod);
       const profession = cleanText(payload.profession, 40);
-      if (!faithGod || !faithPath) return json({ error: "请选择有效信仰神明" }, 400);
-      if (!profession || getProfessionGod(profession) !== faithGod) return json({ error: "展示职业必须属于当前展示信仰" }, 400);
+      if (!faithGod || !faithPath) return json({ error: "璇烽€夋嫨鏈夋晥淇′话绁炴槑" }, 400);
+      if (!profession || getProfessionGod(profession) !== faithGod) return json({ error: "灞曠ず鑱屼笟蹇呴』灞炰簬褰撳墠灞曠ず淇′话" }, 400);
 
       const { data: existing, error: readError } = await supabase
         .from("player_profiles")
         .select("faith_god, faith_path, original_faith_god, original_faith_path, profession")
         .eq("invite_code_hash", identity.codeHash)
         .maybeSingle();
-      if (readError?.code === "42P01") return json({ error: "请先运行 player_profiles_migration.sql" }, 400);
+      if (readError?.code === "42P01") return json({ error: "璇峰厛杩愯 player_profiles_migration.sql" }, 400);
       if (readError) return json({ error: readError.message }, 400);
-      if (!existing) return json({ error: "请先保存个人档案" }, 400);
+      if (!existing) return json({ error: "璇峰厛淇濆瓨涓汉妗ｆ" }, 400);
       if (role !== "admin" && !hasTrickeryFaithPrivilege(existing) && !isProfileBindingMismatched(existing)) {
-        return json({ error: "只有欺诈信徒可以改写信仰档纹" }, 403);
+        return json({ error: "鍙湁娆鸿瘓淇″緬鍙互鏀瑰啓淇′话妗ｇ汗" }, 403);
       }
 
       const { data, error } = await supabase
@@ -4195,9 +4197,9 @@ Deno.serve(async (req) => {
         .eq("invite_code_hash", identity.codeHash)
         .select("display_name, role, faith_god, faith_path, original_faith_god, original_faith_path, trickery_display_faith_god, trickery_display_faith_path, trickery_display_profession, profession, ascension_score, audience_score, items, talents, show_titles, scores_locked_at, updated_at")
         .single();
-      if (error?.code === "42703") return json({ error: "请先运行 trickery_display_profile_migration_20260719.sql" }, 400);
+      if (error?.code === "42703") return json({ error: "璇峰厛杩愯 trickery_display_profile_migration_20260719.sql" }, 400);
       if (error) return json({ error: error.message }, 400);
-      if (!data) return json({ error: "请先保存个人档案" }, 400);
+      if (!data) return json({ error: "璇峰厛淇濆瓨涓汉妗ｆ" }, 400);
 
       const titleResult = await getActiveTitleForHash(supabase, identity.codeHash);
       if (titleResult.error) return json({ error: titleResult.error.message }, 400);
@@ -4217,17 +4219,17 @@ Deno.serve(async (req) => {
     }
 
     if (action === "getPublicProfile") {
-      if (!hasRole(role, ["player", "author", "reviewer", "admin", "god"])) return json({ error: "需要入局谕令" }, 403);
+      if (!hasRole(role, ["player", "author", "reviewer", "admin", "god"])) return json({ error: "闇€瑕佸叆灞€璋曚护" }, 403);
 
       const profileKey = cleanText(payload.profileKey ?? payload.profile_key, 96);
-      if (!/^[a-f0-9]{64}$/i.test(profileKey)) return json({ error: "公开档案标识不正确" }, 400);
+      if (!/^[a-f0-9]{64}$/i.test(profileKey)) return json({ error: "鍏紑妗ｆ鏍囪瘑涓嶆纭? }, 400);
 
       const { data: profiles, error: profileError } = await supabase
         .from("player_profiles")
         .select("invite_code_hash, display_name, role, faith_god, faith_path, original_faith_god, original_faith_path, trickery_display_faith_god, trickery_display_faith_path, trickery_display_profession, profession, ascension_score, audience_score, items, talents, show_titles, updated_at")
         .order("ascension_score", { ascending: false })
         .limit(1000);
-      if (profileError?.code === "42P01") return json({ error: "请先运行 player_profiles_migration.sql" }, 400);
+      if (profileError?.code === "42P01") return json({ error: "璇峰厛杩愯 player_profiles_migration.sql" }, 400);
       if (profileError) return json({ error: profileError.message }, 400);
 
       let targetProfile: Record<string, unknown> | null = null;
@@ -4240,7 +4242,7 @@ Deno.serve(async (req) => {
           break;
         }
       }
-      if (!targetProfile) return json({ error: "公开档案不存在或尚未保存" }, 404);
+      if (!targetProfile) return json({ error: "鍏紑妗ｆ涓嶅瓨鍦ㄦ垨灏氭湭淇濆瓨" }, 404);
 
       const targetInviteHash = cleanText(targetProfile.invite_code_hash, 64);
       const targetDisplayName = cleanText(targetProfile.display_name, 40);
@@ -4380,11 +4382,11 @@ Deno.serve(async (req) => {
     }
 
     if (action === "grantProfileTitle") {
-      if (!canGrantTitles(identity)) return json({ error: "需要馆主或神明谕令" }, 403);
+      if (!canGrantTitles(identity)) return json({ error: "闇€瑕侀涓绘垨绁炴槑璋曚护" }, 403);
 
       const targetResult = await getProfileByDisplayName(supabase, payload.targetName);
       if (targetResult.error) {
-        if (targetResult.error.code === "42P01") return json({ error: "请先运行 player_profiles_migration.sql" }, 400);
+        if (targetResult.error.code === "42P01") return json({ error: "璇峰厛杩愯 player_profiles_migration.sql" }, 400);
         return json({ error: targetResult.error.message }, 400);
       }
 
@@ -4393,9 +4395,9 @@ Deno.serve(async (req) => {
       const titleText = cleanText(payload.titleText, 32);
       const titleGod = getTitleGrantGod(identity, payload.titleGod);
       const titleNote = cleanText(payload.titleNote, 120);
-      if (!targetHash || !titleText) return json({ error: "请填写受封昵称和称号" }, 400);
+      if (!targetHash || !titleText) return json({ error: "璇峰～鍐欏彈灏佹樀绉板拰绉板彿" }, 400);
       if (role === "god" && cleanText(target.faith_god, 20) !== identity.displayName) {
-        return json({ error: "神明只能为对应信徒降下称号" }, 403);
+        return json({ error: "绁炴槑鍙兘涓哄搴斾俊寰掗檷涓嬬О鍙? }, 403);
       }
 
       const { data, error } = await supabase
@@ -4413,11 +4415,11 @@ Deno.serve(async (req) => {
         })
         .select("id, title_text, title_god, title_note, granted_by_type, granted_by_name, granted_at")
         .single();
-      if (error?.code === "42P01") return json({ error: "请先运行 profile_titles_migration.sql" }, 400);
+      if (error?.code === "42P01") return json({ error: "璇峰厛杩愯 profile_titles_migration.sql" }, 400);
       if (error) return json({ error: error.message }, 400);
       await writeAdminOperationLog(supabase, identity, {
         action: "title.grant", targetCodeHash: targetHash, targetName: target.display_name, objectType: "profile_title", objectId: data.id,
-        summary: `授予称号「${titleText}」`, afterState: { title: titleText, god: titleGod, note: titleNote },
+        summary: `鎺堜簣绉板彿銆?{titleText}銆峘, afterState: { title: titleText, god: titleGod, note: titleNote },
       });
 
       return json({
@@ -4432,11 +4434,11 @@ Deno.serve(async (req) => {
     }
 
     if (action === "grantBetrayalCurse") {
-      if (!canGrantTitles(identity)) return json({ error: "需要馆主或神明谕令" }, 403);
+      if (!canGrantTitles(identity)) return json({ error: "闇€瑕侀涓绘垨绁炴槑璋曚护" }, 403);
 
       const targetResult = await getProfileByDisplayName(supabase, payload.targetName);
       if (targetResult.error) {
-        if (targetResult.error.code === "42P01") return json({ error: "请先运行 player_profiles_migration.sql" }, 400);
+        if (targetResult.error.code === "42P01") return json({ error: "璇峰厛杩愯 player_profiles_migration.sql" }, 400);
         return json({ error: targetResult.error.message }, 400);
       }
 
@@ -4447,14 +4449,14 @@ Deno.serve(async (req) => {
       const curseNote = cleanText(payload.curseNote ?? payload.titleNote, 120);
       const curseType = normalizeCurseType(payload.curseType ?? payload.curse_type);
       const isBetrayalCurse = curseType === "betrayal";
-      const curseText = cleanText(payload.curseText, 32) || (isBetrayalCurse ? "背弃诅咒" : "普通诅咒");
-      if (!targetHash) return json({ error: "请填写受诅昵称" }, 400);
-      if (!curseGod) return json({ error: "请选择诅咒名义" }, 400);
+      const curseText = cleanText(payload.curseText, 32) || (isBetrayalCurse ? "鑳屽純璇呭拻" : "鏅€氳瘏鍜?);
+      if (!targetHash) return json({ error: "璇峰～鍐欏彈璇呮樀绉? }, 400);
+      if (!curseGod) return json({ error: "璇烽€夋嫨璇呭拻鍚嶄箟" }, 400);
       if (role === "god" && isBetrayalCurse && (!targetFaithGod || targetFaithGod === identity.displayName)) {
-        return json({ error: "对应神明只能对已改信者下放背弃诅咒" }, 403);
+        return json({ error: "瀵瑰簲绁炴槑鍙兘瀵瑰凡鏀逛俊鑰呬笅鏀捐儗寮冭瘏鍜? }, 403);
       }
 
-      const apostateTitle = "背弃者";
+      const apostateTitle = "鑳屽純鑰?;
       const { data: curseData, error: curseError } = await supabase
         .from("profile_curses")
         .insert({
@@ -4471,7 +4473,7 @@ Deno.serve(async (req) => {
         })
         .select("id, curse_text, curse_god, curse_note, curse_type, granted_by_type, granted_by_name, granted_at")
         .single();
-      if (curseError?.code === "42P01") return json({ error: "请先运行 profile_curses_migration.sql" }, 400);
+      if (curseError?.code === "42P01") return json({ error: "璇峰厛杩愯 profile_curses_migration.sql" }, 400);
       if (curseError) return json({ error: curseError.message }, 400);
 
       let titleData: Record<string, unknown> | null = null;
@@ -4491,13 +4493,13 @@ Deno.serve(async (req) => {
           })
           .select("id, title_text, title_god, title_note, granted_by_type, granted_by_name, granted_at")
           .single();
-        if (titleResult.error?.code === "42P01") return json({ error: "请先运行 profile_titles_migration.sql" }, 400);
+        if (titleResult.error?.code === "42P01") return json({ error: "璇峰厛杩愯 profile_titles_migration.sql" }, 400);
         if (titleResult.error) return json({ error: titleResult.error.message }, 400);
         titleData = titleResult.data as Record<string, unknown>;
       }
       await writeAdminOperationLog(supabase, identity, {
         action: "curse.grant", targetCodeHash: targetHash, targetName: target.display_name, objectType: "profile_curse", objectId: curseData.id,
-        summary: isBetrayalCurse ? `下放背弃诅咒「${curseText}」，并授予「${apostateTitle}」` : `下放普通诅咒「${curseText}」`,
+        summary: isBetrayalCurse ? `涓嬫斁鑳屽純璇呭拻銆?{curseText}銆嶏紝骞舵巿浜堛€?{apostateTitle}銆峘 : `涓嬫斁鏅€氳瘏鍜掋€?{curseText}銆峘,
         afterState: { curse: curseText, curseType, title: isBetrayalCurse ? apostateTitle : "", god: curseGod, note: curseNote },
       });
 
@@ -4517,11 +4519,11 @@ Deno.serve(async (req) => {
     }
 
     if (action === "revokeProfileTitle") {
-      if (!canGrantTitles(identity)) return json({ error: "需要馆主或神明谕令" }, 403);
+      if (!canGrantTitles(identity)) return json({ error: "闇€瑕侀涓绘垨绁炴槑璋曚护" }, 403);
 
       const targetResult = await getProfileByDisplayName(supabase, payload.targetName);
       if (targetResult.error) {
-        if (targetResult.error.code === "42P01") return json({ error: "请先运行 player_profiles_migration.sql" }, 400);
+        if (targetResult.error.code === "42P01") return json({ error: "璇峰厛杩愯 player_profiles_migration.sql" }, 400);
         return json({ error: targetResult.error.message }, 400);
       }
 
@@ -4539,16 +4541,16 @@ Deno.serve(async (req) => {
       if (titleText) activeTitleQuery = activeTitleQuery.eq("title_text", titleText);
       if (titleId) activeTitleQuery = activeTitleQuery.eq("id", titleId);
       const { data: activeTitles, error: activeTitleError } = await activeTitleQuery;
-      if (activeTitleError?.code === "42P01") return json({ error: "请先运行 profile_titles_migration.sql" }, 400);
+      if (activeTitleError?.code === "42P01") return json({ error: "璇峰厛杩愯 profile_titles_migration.sql" }, 400);
       if (activeTitleError) return json({ error: activeTitleError.message }, 400);
       const activeTitle = (activeTitles || [])[0];
-      if (!activeTitle) return json({ error: "这个玩家当前没有生效称号" }, 404);
+      if (!activeTitle) return json({ error: "杩欎釜鐜╁褰撳墠娌℃湁鐢熸晥绉板彿" }, 404);
       if (
         role === "god" &&
         cleanText((activeTitle as Record<string, unknown>).granted_by_hash, 64) !== identity.codeHash &&
         cleanText((activeTitle as Record<string, unknown>).title_god, 20) !== identity.displayName
       ) {
-        return json({ error: "神明只能回收本神名义下的称号" }, 403);
+        return json({ error: "绁炴槑鍙兘鍥炴敹鏈鍚嶄箟涓嬬殑绉板彿" }, 403);
       }
 
       const { data, error } = await supabase
@@ -4563,10 +4565,10 @@ Deno.serve(async (req) => {
         .select("id, title_text")
         .maybeSingle();
       if (error) return json({ error: error.message }, 400);
-      if (!data) return json({ error: "这个玩家当前没有生效称号" }, 404);
+      if (!data) return json({ error: "杩欎釜鐜╁褰撳墠娌℃湁鐢熸晥绉板彿" }, 404);
       await writeAdminOperationLog(supabase, identity, {
         action: "title.revoke", targetCodeHash: targetHash, targetName: target.display_name, objectType: "profile_title", objectId: data.id,
-        summary: `回收称号「${cleanText((data as Record<string, unknown>).title_text, 32)}」`, beforeState: { isActive: true }, afterState: { isActive: false },
+        summary: `鍥炴敹绉板彿銆?{cleanText((data as Record<string, unknown>).title_text, 32)}銆峘, beforeState: { isActive: true }, afterState: { isActive: false },
       });
 
       return json({
@@ -4580,13 +4582,13 @@ Deno.serve(async (req) => {
     }
 
     if (action === "restoreProfileTitle") {
-      if (role !== "admin") return json({ error: "只有神谕馆主可以恢复称号" }, 403);
+      if (role !== "admin") return json({ error: "鍙湁绁炶皶棣嗕富鍙互鎭㈠绉板彿" }, 403);
       const targetResult = await getProfileByDisplayName(supabase, payload.targetName);
-      if (targetResult.error) return json({ error: targetResult.error.message || "玩家档案读取失败" }, 400);
+      if (targetResult.error) return json({ error: targetResult.error.message || "鐜╁妗ｆ璇诲彇澶辫触" }, 400);
       const target = targetResult.data as Record<string, unknown>;
       const targetHash = cleanText(target.invite_code_hash, 64);
       const titleId = cleanBigIntId(payload.titleId);
-      if (!titleId) return json({ error: "称号记录不正确" }, 400);
+      if (!titleId) return json({ error: "绉板彿璁板綍涓嶆纭? }, 400);
       const { data, error } = await supabase
         .from("profile_titles")
         .update({ is_active: true, revoked_at: null, revoked_by_hash: null, revoked_by_name: null })
@@ -4595,24 +4597,24 @@ Deno.serve(async (req) => {
         .eq("is_active", false)
         .select("id, title_text")
         .maybeSingle();
-      if (error?.code === "42P01") return json({ error: "请先运行 profile_titles_migration.sql" }, 400);
+      if (error?.code === "42P01") return json({ error: "璇峰厛杩愯 profile_titles_migration.sql" }, 400);
       if (error) return json({ error: error.message }, 400);
-      if (!data) return json({ error: "未找到可恢复的已回收称号" }, 404);
+      if (!data) return json({ error: "鏈壘鍒板彲鎭㈠鐨勫凡鍥炴敹绉板彿" }, 404);
       await writeAdminOperationLog(supabase, identity, {
         action: "title.restore", targetCodeHash: targetHash, targetName: target.display_name, objectType: "profile_title", objectId: data.id,
-        summary: `恢复称号「${cleanText((data as Record<string, unknown>).title_text, 32)}」`, beforeState: { isActive: false }, afterState: { isActive: true },
+        summary: `鎭㈠绉板彿銆?{cleanText((data as Record<string, unknown>).title_text, 32)}銆峘, beforeState: { isActive: false }, afterState: { isActive: true },
       });
       return json({ role, name: identity.displayName, data: { targetName: cleanText(target.display_name, 40), restoredTitle: cleanText((data as Record<string, unknown>).title_text, 32) } });
     }
 
     if (action === "restoreProfileCurse") {
-      if (role !== "admin") return json({ error: "只有神谕馆主可以恢复诅咒" }, 403);
+      if (role !== "admin") return json({ error: "鍙湁绁炶皶棣嗕富鍙互鎭㈠璇呭拻" }, 403);
       const targetResult = await getProfileByDisplayName(supabase, payload.targetName);
-      if (targetResult.error) return json({ error: targetResult.error.message || "玩家档案读取失败" }, 400);
+      if (targetResult.error) return json({ error: targetResult.error.message || "鐜╁妗ｆ璇诲彇澶辫触" }, 400);
       const target = targetResult.data as Record<string, unknown>;
       const targetHash = cleanText(target.invite_code_hash, 64);
       const curseId = cleanBigIntId(payload.curseId);
-      if (!curseId) return json({ error: "诅咒记录不正确" }, 400);
+      if (!curseId) return json({ error: "璇呭拻璁板綍涓嶆纭? }, 400);
       const { data, error } = await supabase
         .from("profile_curses")
         .update({ is_active: true, revoked_at: null, revoked_by_hash: null, revoked_by_name: null })
@@ -4621,22 +4623,22 @@ Deno.serve(async (req) => {
         .eq("is_active", false)
         .select("id, curse_text")
         .maybeSingle();
-      if (error?.code === "42P01") return json({ error: "请先运行 profile_curses_migration.sql" }, 400);
+      if (error?.code === "42P01") return json({ error: "璇峰厛杩愯 profile_curses_migration.sql" }, 400);
       if (error) return json({ error: error.message }, 400);
-      if (!data) return json({ error: "未找到可恢复的已回收诅咒" }, 404);
+      if (!data) return json({ error: "鏈壘鍒板彲鎭㈠鐨勫凡鍥炴敹璇呭拻" }, 404);
       await writeAdminOperationLog(supabase, identity, {
         action: "curse.restore", targetCodeHash: targetHash, targetName: target.display_name, objectType: "profile_curse", objectId: data.id,
-        summary: `恢复诅咒「${cleanText((data as Record<string, unknown>).curse_text, 32)}」`, beforeState: { isActive: false }, afterState: { isActive: true },
+        summary: `鎭㈠璇呭拻銆?{cleanText((data as Record<string, unknown>).curse_text, 32)}銆峘, beforeState: { isActive: false }, afterState: { isActive: true },
       });
       return json({ role, name: identity.displayName, data: { targetName: cleanText(target.display_name, 40), restoredCurse: cleanText((data as Record<string, unknown>).curse_text, 32) } });
     }
 
     if (action === "revokeProfileCurse") {
-      if (!canGrantTitles(identity)) return json({ error: "需要馆主或神明谕令" }, 403);
+      if (!canGrantTitles(identity)) return json({ error: "闇€瑕侀涓绘垨绁炴槑璋曚护" }, 403);
 
       const targetResult = await getProfileByDisplayName(supabase, payload.targetName);
       if (targetResult.error) {
-        if (targetResult.error.code === "42P01") return json({ error: "请先运行 player_profiles_migration.sql" }, 400);
+        if (targetResult.error.code === "42P01") return json({ error: "璇峰厛杩愯 player_profiles_migration.sql" }, 400);
         return json({ error: targetResult.error.message }, 400);
       }
 
@@ -4654,16 +4656,16 @@ Deno.serve(async (req) => {
       if (curseText) activeCurseQuery = activeCurseQuery.eq("curse_text", curseText);
       if (curseId) activeCurseQuery = activeCurseQuery.eq("id", curseId);
       const { data: activeCurses, error: activeCurseError } = await activeCurseQuery;
-      if (activeCurseError?.code === "42P01") return json({ error: "请先运行 profile_curses_migration.sql" }, 400);
+      if (activeCurseError?.code === "42P01") return json({ error: "璇峰厛杩愯 profile_curses_migration.sql" }, 400);
       if (activeCurseError) return json({ error: activeCurseError.message }, 400);
       const activeCurse = (activeCurses || [])[0];
-      if (!activeCurse) return json({ error: "这个玩家当前没有生效诅咒" }, 404);
+      if (!activeCurse) return json({ error: "杩欎釜鐜╁褰撳墠娌℃湁鐢熸晥璇呭拻" }, 404);
       if (
         role === "god" &&
         cleanText((activeCurse as Record<string, unknown>).granted_by_hash, 64) !== identity.codeHash &&
         cleanText((activeCurse as Record<string, unknown>).curse_god, 20) !== identity.displayName
       ) {
-        return json({ error: "神明只能回收本神名义下的诅咒" }, 403);
+        return json({ error: "绁炴槑鍙兘鍥炴敹鏈鍚嶄箟涓嬬殑璇呭拻" }, 403);
       }
 
       const { data, error } = await supabase
@@ -4678,10 +4680,10 @@ Deno.serve(async (req) => {
         .select("id, curse_text")
         .maybeSingle();
       if (error) return json({ error: error.message }, 400);
-      if (!data) return json({ error: "这个玩家当前没有生效诅咒" }, 404);
+      if (!data) return json({ error: "杩欎釜鐜╁褰撳墠娌℃湁鐢熸晥璇呭拻" }, 404);
       await writeAdminOperationLog(supabase, identity, {
         action: "curse.revoke", targetCodeHash: targetHash, targetName: target.display_name, objectType: "profile_curse", objectId: data.id,
-        summary: `回收诅咒「${cleanText((data as Record<string, unknown>).curse_text, 32)}」`, beforeState: { isActive: true }, afterState: { isActive: false },
+        summary: `鍥炴敹璇呭拻銆?{cleanText((data as Record<string, unknown>).curse_text, 32)}銆峘, beforeState: { isActive: true }, afterState: { isActive: false },
       });
 
       return json({
@@ -4695,18 +4697,18 @@ Deno.serve(async (req) => {
     }
 
     if (action === "checkScorePreview") {
-      if (!canSettleScores(identity)) return json({ error: "需要审核员权限" }, 403);
+      if (!canSettleScores(identity)) return json({ error: "闇€瑕佸鏍稿憳鏉冮檺" }, 403);
       const { entries, invalidLines } = parseScoreSettlementText(payload.textContent);
       const preview = await buildScorePreview(supabase, entries, invalidLines);
-      if (preview.error?.code === "42P01") return json({ error: "请先运行 score_system_migration.sql" }, 400);
+      if (preview.error?.code === "42P01") return json({ error: "璇峰厛杩愯 score_system_migration.sql" }, 400);
       if (preview.error) return json({ error: preview.error.message }, 400);
       return json({ role, name: identity.displayName, data: preview.data });
     }
 
     if (action === "submitScoreBatch") {
-      if (!canSettleScores(identity)) return json({ error: "需要审核员权限" }, 403);
+      if (!canSettleScores(identity)) return json({ error: "闇€瑕佸鏍稿憳鏉冮檺" }, 403);
       const { entries, invalidLines } = parseScoreSettlementText(payload.textContent);
-      if (invalidLines.length) return json({ error: "结算文本格式有误", data: { invalidLines } }, 400);
+      if (invalidLines.length) return json({ error: "缁撶畻鏂囨湰鏍煎紡鏈夎", data: { invalidLines } }, 400);
       const result = await commitScoreSettlement(
         supabase,
         identity,
@@ -4722,18 +4724,18 @@ Deno.serve(async (req) => {
           settlementRequestId: payload.settlementRequestId,
         },
       );
-      if (result.error?.code === "42P01") return json({ error: "请先运行 score_system_migration.sql" }, 400);
-      if (result.error) return json({ error: result.error.message || "结算失败", data: result.error.preview || null }, 400);
+      if (result.error?.code === "42P01") return json({ error: "璇峰厛杩愯 score_system_migration.sql" }, 400);
+      if (result.error) return json({ error: result.error.message || "缁撶畻澶辫触", data: result.error.preview || null }, 400);
       return json({ role, name: identity.displayName, data: (result as any).data });
     }
 
     if (action === "submitScoreSingle") {
-      if (!canSettleScores(identity)) return json({ error: "需要审核员权限" }, 403);
+      if (!canSettleScores(identity)) return json({ error: "闇€瑕佸鏍稿憳鏉冮檺" }, 403);
       const nick = cleanText(payload.playerName, 40);
       const deng = cleanSettlementScore(payload.dengScore);
       const jin = cleanSettlementScore(payload.jinScore);
       const rangeMessage = checkSettlementScoreRange(deng, jin);
-      if (!nick || rangeMessage) return json({ error: rangeMessage || "请填写玩家昵称" }, 400);
+      if (!nick || rangeMessage) return json({ error: rangeMessage || "璇峰～鍐欑帺瀹舵樀绉? }, 400);
       const result = await commitScoreSettlement(
         supabase,
         identity,
@@ -4748,13 +4750,13 @@ Deno.serve(async (req) => {
           settlementRequestId: payload.settlementRequestId,
         },
       );
-      if (result.error?.code === "42P01") return json({ error: "请先运行 score_system_migration.sql" }, 400);
-      if (result.error) return json({ error: result.error.message || "补分失败", data: result.error.preview || null }, 400);
+      if (result.error?.code === "42P01") return json({ error: "璇峰厛杩愯 score_system_migration.sql" }, 400);
+      if (result.error) return json({ error: result.error.message || "琛ュ垎澶辫触", data: result.error.preview || null }, 400);
       return json({ role, name: identity.displayName, data: (result as any).data });
     }
 
     if (action === "listScoreSettlements") {
-      if (!canSettleScores(identity)) return json({ error: "需要审核员权限" }, 403);
+      if (!canSettleScores(identity)) return json({ error: "闇€瑕佸鏍稿憳鏉冮檺" }, 403);
       const limit = Math.max(1, Math.min(100, Number(payload.limit || 30)));
       const dungeonQuery = cleanText(payload.dungeonQuery, 80);
       const recentCutoff = new Date(Date.now() - 48 * 60 * 60 * 1000).toISOString();
@@ -4766,15 +4768,15 @@ Deno.serve(async (req) => {
         .limit(limit);
       if (dungeonQuery) query = query.ilike("dungeon_name", `%${dungeonQuery}%`);
       const { data, error } = await query;
-      if (error?.code === "42P01") return json({ error: "请先运行 score_system_migration.sql" }, 400);
+      if (error?.code === "42P01") return json({ error: "璇峰厛杩愯 score_system_migration.sql" }, 400);
       if (error) return json({ error: error.message }, 400);
       return json({ role, name: identity.displayName, data: data || [] });
     }
 
     if (action === "getScoreSettlementDetail") {
-      if (!canSettleScores(identity)) return json({ error: "需要审核员权限" }, 403);
+      if (!canSettleScores(identity)) return json({ error: "闇€瑕佸鏍稿憳鏉冮檺" }, 403);
       const settlementId = cleanText(payload.settlementId, 80);
-      if (!isUuid(settlementId)) return json({ error: "结算 ID 不正确" }, 400);
+      if (!isUuid(settlementId)) return json({ error: "缁撶畻 ID 涓嶆纭? }, 400);
       const { data: settlement, error: settlementError } = await supabase
         .from("score_settlements")
         .select("*")
@@ -4791,11 +4793,11 @@ Deno.serve(async (req) => {
     }
 
     if (action === "revokeScoreSettlement") {
-      if (!canSettleScores(identity)) return json({ error: "需要审核员权限" }, 403);
+      if (!canSettleScores(identity)) return json({ error: "闇€瑕佸鏍稿憳鏉冮檺" }, 403);
       const settlementId = cleanText(payload.settlementId, 80);
       const revokeRemark = cleanText(payload.revokeRemark, 500);
-      if (!isUuid(settlementId)) return json({ error: "结算 ID 不正确" }, 400);
-      if (!revokeRemark) return json({ error: "请填写撤销备注" }, 400);
+      if (!isUuid(settlementId)) return json({ error: "缁撶畻 ID 涓嶆纭? }, 400);
+      if (!revokeRemark) return json({ error: "璇峰～鍐欐挙閿€澶囨敞" }, 400);
 
       const { data: settlement, error: settlementError } = await supabase
         .from("score_settlements")
@@ -4803,9 +4805,9 @@ Deno.serve(async (req) => {
         .eq("id", settlementId)
         .single();
       if (settlementError) return json({ error: settlementError.message }, 400);
-      if (settlement.is_revoked) return json({ error: "这场结算已经撤销过" }, 409);
+      if (settlement.is_revoked) return json({ error: "杩欏満缁撶畻宸茬粡鎾ら攢杩? }, 409);
       if (role !== "admin" && settlement.operator_code_hash !== identity.codeHash) {
-        return json({ error: "审核员只能撤销自己提交的结算" }, 403);
+        return json({ error: "瀹℃牳鍛樺彧鑳芥挙閿€鑷繁鎻愪氦鐨勭粨绠? }, 403);
       }
 
       const { data: entries, error: entriesError } = await supabase
@@ -4865,14 +4867,14 @@ Deno.serve(async (req) => {
           player_name: entry.player_name,
           settlement_id: settlementId,
           msg_type: "revoke",
-          content: `【结算撤销｜副本：${settlement.dungeon_name}】\n撤销人：${identity.displayName}\n登神回滚：${-Number(entry.score_deng || 0)}\n觐见回滚：${-Number(entry.score_jin || 0)}\n备注：${revokeRemark}`,
+          content: `銆愮粨绠楁挙閿€锝滃壇鏈細${settlement.dungeon_name}銆慭n鎾ら攢浜猴細${identity.displayName}\n鐧荤鍥炴粴锛?{-Number(entry.score_deng || 0)}\n瑙愯鍥炴粴锛?{-Number(entry.score_jin || 0)}\n澶囨敞锛?{revokeRemark}`,
         }));
         const { error: messageError } = await supabase.from("score_messages").insert(revokeMessages);
         if (messageError) return json({ error: messageError.message }, 400);
       }
       await writeAdminOperationLog(supabase, identity, {
         action: "score_settlement.revoke", objectType: "score_settlement", objectId: settlementId,
-        summary: `撤销副本「${cleanText(settlement.dungeon_name, 80)}」的结算，影响 ${revokeLogs.length} 位玩家`,
+        summary: `鎾ら攢鍓湰銆?{cleanText(settlement.dungeon_name, 80)}銆嶇殑缁撶畻锛屽奖鍝?${revokeLogs.length} 浣嶇帺瀹禶,
         beforeState: { isRevoked: false, playerCount: revokeLogs.length }, afterState: { isRevoked: true, revokeRemark },
       });
 
@@ -4880,7 +4882,7 @@ Deno.serve(async (req) => {
     }
 
     if (action === "listMyScoreMessages") {
-      if (!hasRole(role, ["player", "author", "reviewer", "admin"])) return json({ error: "需要入局谕令" }, 403);
+      if (!hasRole(role, ["player", "author", "reviewer", "admin"])) return json({ error: "闇€瑕佸叆灞€璋曚护" }, 403);
       const limit = Math.max(1, Math.min(100, Number(payload.limit || 30)));
       const { data, error } = await supabase
         .from("score_messages")
@@ -4888,15 +4890,15 @@ Deno.serve(async (req) => {
         .eq("player_code_hash", identity.codeHash)
         .order("created_at", { ascending: false })
         .limit(limit);
-      if (error?.code === "42P01") return json({ error: "请先运行 score_system_migration.sql" }, 400);
+      if (error?.code === "42P01") return json({ error: "璇峰厛杩愯 score_system_migration.sql" }, 400);
       if (error) return json({ error: error.message }, 400);
       return json({ role, name: identity.displayName, data: data || [] });
     }
 
     if (action === "markScoreMessageRead") {
-      if (!hasRole(role, ["player", "author", "reviewer", "admin"])) return json({ error: "需要入局谕令" }, 403);
+      if (!hasRole(role, ["player", "author", "reviewer", "admin"])) return json({ error: "闇€瑕佸叆灞€璋曚护" }, 403);
       const messageId = cleanBigIntId(payload.messageId);
-      if (!messageId) return json({ error: "信封 ID 不正确" }, 400);
+      if (!messageId) return json({ error: "淇″皝 ID 涓嶆纭? }, 400);
       const { error } = await supabase
         .from("score_messages")
         .update({ is_read: true })
@@ -4907,35 +4909,35 @@ Deno.serve(async (req) => {
     }
 
     if (action === "getTalentState") {
-      if (!hasRole(role, ["player", "author", "reviewer", "admin"])) return json({ error: "需要入局谕令" }, 403);
+      if (!hasRole(role, ["player", "author", "reviewer", "admin"])) return json({ error: "闇€瑕佸叆灞€璋曚护" }, 403);
 
       const state = await buildTalentState(supabase, identity);
-      if (isMissingTalentTable(state.error ?? null)) return json({ error: "请先运行 talent_pool_migration.sql" }, 400);
+      if (isMissingTalentTable(state.error ?? null)) return json({ error: "璇峰厛杩愯 talent_pool_migration.sql" }, 400);
       if (state.error) return json({ error: state.error.message }, 400);
       return json({ role, name: identity.displayName, data: state.data });
     }
 
     if (action === "drawTalent") {
-      if (!hasRole(role, ["player", "author", "reviewer", "admin"])) return json({ error: "需要入局谕令" }, 403);
+      if (!hasRole(role, ["player", "author", "reviewer", "admin"])) return json({ error: "闇€瑕佸叆灞€璋曚护" }, 403);
 
       const poolKey = cleanPoolKey(payload.poolKey);
       const drawType = cleanText(payload.drawType, 12) === "ten" ? "ten" : "single";
       const drawCount = drawType === "ten" ? 10 : 1;
-      if (!poolKey) return json({ error: "请选择天赋池" }, 400);
+      if (!poolKey) return json({ error: "璇烽€夋嫨澶╄祴姹? }, 400);
 
       const profileResult = await getTalentProfile(supabase, identity);
       if (profileResult.error) {
-        if (isMissingTalentTable(profileResult.error)) return json({ error: "请先运行 player_profiles_migration.sql" }, 400);
+        if (isMissingTalentTable(profileResult.error)) return json({ error: "璇峰厛杩愯 player_profiles_migration.sql" }, 400);
         return json({ error: profileResult.error.message }, 400);
       }
       const profile = profileResult.data;
       const allowedPoolKeys = getAllowedTalentPools(profile);
-      if (!allowedPoolKeys.length) return json({ error: "请先保存信仰神明和个人职业" }, 400);
+      if (!allowedPoolKeys.length) return json({ error: "璇峰厛淇濆瓨淇′话绁炴槑鍜屼釜浜鸿亴涓? }, 400);
       if (!allowedPoolKeys.includes(poolKey)) {
-        return json({ error: "只能抽取你的信仰池和职业池" }, 403);
+        return json({ error: "鍙兘鎶藉彇浣犵殑淇′话姹犲拰鑱屼笟姹? }, 403);
       }
       const drawState = await getTalentDrawState(supabase, identity.codeHash);
-      if (isMissingTalentTable(drawState.error ?? null)) return json({ error: "请先运行 talent_pool_migration.sql" }, 400);
+      if (isMissingTalentTable(drawState.error ?? null)) return json({ error: "璇峰厛杩愯 talent_pool_migration.sql" }, 400);
       if (drawState.error) return json({ error: drawState.error.message }, 400);
 
       const basicDrawsEarned = getBasicDrawsEarned(profile.ascension_score) + drawState.eventBasicDraws;
@@ -4947,7 +4949,7 @@ Deno.serve(async (req) => {
       const availableDraws = basicAvailableDraws + advancedAvailableDraws;
       if (availableDraws < drawCount) {
         return json({
-          error: `抽数不足：当前可用 ${availableDraws} 抽。登神之路每获得 ${drawScoreStep} 分增加 1 抽，抽数可攒。`,
+          error: `鎶芥暟涓嶈冻锛氬綋鍓嶅彲鐢?${availableDraws} 鎶姐€傜櫥绁炰箣璺瘡鑾峰緱 ${drawScoreStep} 鍒嗗鍔?1 鎶斤紝鎶芥暟鍙敀銆俙,
         }, 400);
       }
 
@@ -4966,10 +4968,10 @@ Deno.serve(async (req) => {
         if (fallbackPoolResult.error) return json({ error: fallbackPoolResult.error.message }, 400);
         poolRows = (fallbackPoolResult.data || []) as any[];
       } else {
-        if (isMissingTalentTable(poolError)) return json({ error: "请先运行 talent_pool_migration.sql" }, 400);
+        if (isMissingTalentTable(poolError)) return json({ error: "璇峰厛杩愯 talent_pool_migration.sql" }, 400);
         if (poolError) return json({ error: poolError.message }, 400);
       }
-      if (!poolRows?.length) return json({ error: "该天赋池暂无天赋" }, 400);
+      if (!poolRows?.length) return json({ error: "璇ュぉ璧嬫睜鏆傛棤澶╄祴" }, 400);
 
       const talentItems = (poolRows || []) as TalentPoolItem[];
       const { data: counterRow, error: counterError } = await supabase
@@ -5026,7 +5028,7 @@ Deno.serve(async (req) => {
         .maybeSingle();
       if (reserveError) return json({ error: reserveError.message }, 400);
       if (!reservedState) {
-        return json({ error: "抽取请求已在处理中，请刷新天赋池后再试" }, 409);
+        return json({ error: "鎶藉彇璇锋眰宸插湪澶勭悊涓紝璇峰埛鏂板ぉ璧嬫睜鍚庡啀璇? }, 409);
       }
 
       for (let i = 0; i < drawCount; i += 1) {
@@ -5137,21 +5139,21 @@ Deno.serve(async (req) => {
     }
 
     if (action === "exchangeTalent") {
-      if (!hasRole(role, ["player", "author", "reviewer", "admin"])) return json({ error: "需要入局谕令" }, 403);
+      if (!hasRole(role, ["player", "author", "reviewer", "admin"])) return json({ error: "闇€瑕佸叆灞€璋曚护" }, 403);
 
       const poolKey = cleanPoolKey(payload.poolKey);
       const targetTalentId = cleanTalentId(payload.targetTalentId);
-      if (!poolKey || !targetTalentId) return json({ error: "兑换目标不正确" }, 400);
+      if (!poolKey || !targetTalentId) return json({ error: "鍏戞崲鐩爣涓嶆纭? }, 400);
 
       const profileResult = await getTalentProfile(supabase, identity);
       if (profileResult.error) {
-        if (isMissingTalentTable(profileResult.error)) return json({ error: "请先保存个人档案" }, 400);
+        if (isMissingTalentTable(profileResult.error)) return json({ error: "璇峰厛淇濆瓨涓汉妗ｆ" }, 400);
         return json({ error: profileResult.error.message }, 400);
       }
       const allowedPoolKeys = getAllowedTalentPools(profileResult.data);
-      if (!allowedPoolKeys.length) return json({ error: "请先保存信仰神明和个人职业" }, 400);
+      if (!allowedPoolKeys.length) return json({ error: "璇峰厛淇濆瓨淇′话绁炴槑鍜屼釜浜鸿亴涓? }, 400);
       if (!allowedPoolKeys.includes(poolKey)) {
-        return json({ error: "只能兑换你的信仰池和职业池天赋" }, 403);
+        return json({ error: "鍙兘鍏戞崲浣犵殑淇′话姹犲拰鑱屼笟姹犲ぉ璧? }, 403);
       }
 
       const { data: targetTalent, error: targetError } = await supabase
@@ -5173,12 +5175,12 @@ Deno.serve(async (req) => {
         if (fallbackTargetResult.error) return json({ error: fallbackTargetResult.error.message }, 400);
         targetTalentRow = fallbackTargetResult.data as any;
       } else {
-        if (isMissingTalentTable(targetError)) return json({ error: "请先运行 talent_pool_migration.sql" }, 400);
+        if (isMissingTalentTable(targetError)) return json({ error: "璇峰厛杩愯 talent_pool_migration.sql" }, 400);
         if (targetError) return json({ error: targetError.message }, 400);
       }
-      if (!targetTalentRow || !["A", "B"].includes(targetTalentRow.rank)) return json({ error: "只能兑换该池的 B/A 级天赋" }, 400);
+      if (!targetTalentRow || !["A", "B"].includes(targetTalentRow.rank)) return json({ error: "鍙兘鍏戞崲璇ユ睜鐨?B/A 绾уぉ璧? }, 400);
       if (targetTalentRow.rank === "A" && !isAdvancedTalentDrawUnlocked(profileResult.data.ascension_score)) {
-        return json({ error: "1500 分后才开放 A 级天赋兑换" }, 403);
+        return json({ error: "1500 鍒嗗悗鎵嶅紑鏀?A 绾уぉ璧嬪厬鎹? }, 403);
       }
       const exchangeCost = getTalentExchangeCost(targetTalentRow.rank);
 
@@ -5190,7 +5192,7 @@ Deno.serve(async (req) => {
         .eq("talent_id", targetTalentId)
         .maybeSingle();
       if (ownedError) return json({ error: ownedError.message }, 400);
-      if (owned) return json({ error: "你已经拥有这个天赋了，不需要重复兑换" }, 409);
+      if (owned) return json({ error: "浣犲凡缁忔嫢鏈夎繖涓ぉ璧嬩簡锛屼笉闇€瑕侀噸澶嶅厬鎹? }, 409);
 
       const { data: pendingSame, error: pendingSameError } = await supabase
         .from("talent_overflow_choices")
@@ -5200,13 +5202,13 @@ Deno.serve(async (req) => {
         .eq("talent_id", targetTalentId)
         .maybeSingle();
       if (pendingSameError) return json({ error: pendingSameError.message }, 400);
-      if (pendingSame) return json({ error: "这个天赋已经在待取舍列表里了，请先处理" }, 409);
+      if (pendingSame) return json({ error: "杩欎釜澶╄祴宸茬粡鍦ㄥ緟鍙栬垗鍒楄〃閲屼簡锛岃鍏堝鐞? }, 409);
 
       const fragmentState = await getFragmentTotal(supabase, identity.codeHash);
       if (fragmentState.error) return json({ error: fragmentState.error.message }, 400);
       if (fragmentState.fragmentTotal < exchangeCost) {
         return json({
-          error: `碎片不足：需要 ${exchangeCost}，当前 ${fragmentState.fragmentTotal}`,
+          error: `纰庣墖涓嶈冻锛氶渶瑕?${exchangeCost}锛屽綋鍓?${fragmentState.fragmentTotal}`,
         }, 400);
       }
 
@@ -5260,13 +5262,13 @@ Deno.serve(async (req) => {
     }
 
     if (action === "resolveTalentOverflow") {
-      if (!hasRole(role, ["player", "author", "reviewer", "admin"])) return json({ error: "需要入局谕令" }, 403);
+      if (!hasRole(role, ["player", "author", "reviewer", "admin"])) return json({ error: "闇€瑕佸叆灞€璋曚护" }, 403);
 
       const choiceId = cleanBigIntId(payload.choiceId);
       const decision = cleanText(payload.decision, 12);
-      if (!choiceId || !["discard", "replace"].includes(decision)) return json({ error: "溢出处理参数不正确" }, 400);
+      if (!choiceId || !["discard", "replace"].includes(decision)) return json({ error: "婧㈠嚭澶勭悊鍙傛暟涓嶆纭? }, 400);
       const replaceOwnedId = decision === "replace" ? cleanBigIntId(payload.replaceOwnedId) : 0;
-      if (decision === "replace" && !replaceOwnedId) return json({ error: "请选择要替换的仓库天赋" }, 400);
+      if (decision === "replace" && !replaceOwnedId) return json({ error: "璇烽€夋嫨瑕佹浛鎹㈢殑浠撳簱澶╄祴" }, 400);
 
       const { data: choice, error: choiceError } = await supabase
         .from("talent_overflow_choices")
@@ -5274,11 +5276,11 @@ Deno.serve(async (req) => {
         .eq("id", choiceId)
         .eq("invite_code_hash", identity.codeHash)
         .maybeSingle();
-      if (isMissingTalentTable(choiceError)) return json({ error: "请先运行 talent_inventory_migration.sql" }, 400);
+      if (isMissingTalentTable(choiceError)) return json({ error: "璇峰厛杩愯 talent_inventory_migration.sql" }, 400);
       if (choiceError) return json({ error: choiceError.message }, 400);
-      if (!choice) return json({ error: "待处理天赋不存在或已处理" }, 404);
+      if (!choice) return json({ error: "寰呭鐞嗗ぉ璧嬩笉瀛樺湪鎴栧凡澶勭悊" }, 404);
       if (decision === "discard" && String(choice.rank || "").toUpperCase() === "S") {
-        return json({ error: "S级天赋不可分解，请选择保留并替换其他天赋" }, 400);
+        return json({ error: "S绾уぉ璧嬩笉鍙垎瑙ｏ紝璇烽€夋嫨淇濈暀骞舵浛鎹㈠叾浠栧ぉ璧? }, 400);
       }
 
       let fragmentGainTotal = 0;
@@ -5307,9 +5309,9 @@ Deno.serve(async (req) => {
             .not("storage_slot", "is", null)
             .maybeSingle();
           if (replacedReadError) return json({ error: replacedReadError.message }, 400);
-          if (!replacedRow) return json({ error: "要替换的仓库天赋不存在或已处理" }, 404);
+          if (!replacedRow) return json({ error: "瑕佹浛鎹㈢殑浠撳簱澶╄祴涓嶅瓨鍦ㄦ垨宸插鐞? }, 404);
           if (String(replacedRow.rank || "").toUpperCase() === "S") {
-            return json({ error: "S级天赋不可作为替换分解对象" }, 400);
+            return json({ error: "S绾уぉ璧嬩笉鍙綔涓烘浛鎹㈠垎瑙ｅ璞? }, 400);
           }
           replaced = replacedRow;
           fragmentGainTotal += getTalentFragmentGain(replacedRow.rank);
@@ -5358,17 +5360,17 @@ Deno.serve(async (req) => {
     }
 
     if (action === "setEquippedTalent") {
-      if (!hasRole(role, ["player", "author", "reviewer", "admin"])) return json({ error: "需要入局谕令" }, 403);
+      if (!hasRole(role, ["player", "author", "reviewer", "admin"])) return json({ error: "闇€瑕佸叆灞€璋曚护" }, 403);
 
       const equippedSlot = cleanSlot(payload.equippedSlot, equippedSlotLimit);
       const ownedTalentId = cleanBigIntId(payload.ownedTalentId);
-      if (!equippedSlot) return json({ error: "携带槽位不正确" }, 400);
+      if (!equippedSlot) return json({ error: "鎼哄甫妲戒綅涓嶆纭? }, 400);
 
       const profileResult = await getTalentProfile(supabase, identity);
       if (profileResult.error) return json({ error: profileResult.error.message }, 400);
       const activeEquippedSlotLimit = getTalentSlotLimit(profileResult.data.ascension_score);
       if (equippedSlot > activeEquippedSlotLimit) {
-        return json({ error: "当前分数尚未开启这个携带槽" }, 403);
+        return json({ error: "褰撳墠鍒嗘暟灏氭湭寮€鍚繖涓惡甯︽Ы" }, 403);
       }
       const rankAllowance = getTalentRankAllowance(profileResult.data.ascension_score);
       const slotRequirement = getTalentSlotRequirement(profileResult.data, equippedSlot);
@@ -5395,10 +5397,10 @@ Deno.serve(async (req) => {
             .is("equipped_slot", null)
             .maybeSingle();
           if (ownedError) return json({ error: ownedError.message }, 400);
-          if (!ownedRow) return json({ error: "只能携带仓库中的未佩戴天赋" }, 404);
+          if (!ownedRow) return json({ error: "鍙兘鎼哄甫浠撳簱涓殑鏈僵鎴村ぉ璧? }, 404);
           owned = ownedRow as Record<string, unknown>;
           if (!canEquipTalentPool(owned.pool_key, slotRequirement)) {
-            return json({ error: `${slotRequirement.label}槽只能嵌入${slotRequirement.label}池天赋` }, 403);
+            return json({ error: `${slotRequirement.label}妲藉彧鑳藉祵鍏?{slotRequirement.label}姹犲ぉ璧媊 }, 403);
           }
         }
         const prospectiveRanks = (currentEquipped || [])
@@ -5406,7 +5408,7 @@ Deno.serve(async (req) => {
           .map((item) => item.rank);
         prospectiveRanks.push(owned.rank);
         if (!canEquipTalentRanks(prospectiveRanks, rankAllowance)) {
-          return json({ error: `当前分数最多只能携带 ${rankAllowance.join("/")} 品阶组合` }, 403);
+          return json({ error: `褰撳墠鍒嗘暟鏈€澶氬彧鑳芥惡甯?${rankAllowance.join("/")} 鍝侀樁缁勫悎` }, 403);
         }
       }
 
@@ -5414,7 +5416,7 @@ Deno.serve(async (req) => {
         // No state change needed; the request kept the current equipped talent selected.
       } else if (ownedTalentId) {
         const sourceStorageSlot = Number(owned?.storage_slot || 0);
-        if (!sourceStorageSlot) return json({ error: "仓库位状态异常，请刷新后重试" }, 400);
+        if (!sourceStorageSlot) return json({ error: "浠撳簱浣嶇姸鎬佸紓甯革紝璇峰埛鏂板悗閲嶈瘯" }, 400);
 
         if (currentSlotTalent) {
           const { error: clearCurrentSlotError } = await supabase
@@ -5443,7 +5445,7 @@ Deno.serve(async (req) => {
       } else if (currentSlotTalent) {
         const slotResult = await getAvailableStorageSlot(supabase, identity.codeHash);
         if (slotResult.error) return json({ error: slotResult.error.message }, 400);
-        if (!slotResult.slot) return json({ error: "仓库已满，无法卸下该天赋；请先分解一个仓库天赋" }, 409);
+        if (!slotResult.slot) return json({ error: "浠撳簱宸叉弧锛屾棤娉曞嵏涓嬭澶╄祴锛涜鍏堝垎瑙ｄ竴涓粨搴撳ぉ璧? }, 409);
 
         const { error: unequipError } = await supabase
           .from("owned_talents")
@@ -5461,10 +5463,10 @@ Deno.serve(async (req) => {
     }
 
     if (action === "discardOwnedTalent") {
-      if (!hasRole(role, ["player", "author", "reviewer", "admin"])) return json({ error: "需要入局谕令" }, 403);
+      if (!hasRole(role, ["player", "author", "reviewer", "admin"])) return json({ error: "闇€瑕佸叆灞€璋曚护" }, 403);
 
       const ownedTalentId = cleanBigIntId(payload.ownedTalentId);
-      if (!ownedTalentId) return json({ error: "仓库天赋不正确" }, 400);
+      if (!ownedTalentId) return json({ error: "浠撳簱澶╄祴涓嶆纭? }, 400);
 
       const { data: ownedTalent, error: ownedReadError } = await supabase
         .from("owned_talents")
@@ -5474,9 +5476,9 @@ Deno.serve(async (req) => {
         .not("storage_slot", "is", null)
         .maybeSingle();
       if (ownedReadError) return json({ error: ownedReadError.message }, 400);
-      if (!ownedTalent) return json({ error: "仓库天赋不存在或已处理" }, 404);
+      if (!ownedTalent) return json({ error: "浠撳簱澶╄祴涓嶅瓨鍦ㄦ垨宸插鐞? }, 404);
       if (String(ownedTalent.rank || "").toUpperCase() === "S") {
-        return json({ error: "S级天赋不可分解" }, 400);
+        return json({ error: "S绾уぉ璧嬩笉鍙垎瑙? }, 400);
       }
 
       const fragmentGain = getTalentFragmentGain(ownedTalent.rank);
@@ -5499,7 +5501,7 @@ Deno.serve(async (req) => {
     }
 
       if (action === "listMatchDungeons") {
-        if (!hasRole(role, ["player", "author", "reviewer", "admin"])) return json({ error: "需要入局谕令" }, 403);
+        if (!hasRole(role, ["player", "author", "reviewer", "admin"])) return json({ error: "闇€瑕佸叆灞€璋曚护" }, 403);
 
         const keyword = cleanText(payload.keyword, 120);
         const limit = Math.max(1, Math.min(Number(payload.limit) || (keyword ? 30 : 80), 200));
@@ -5521,7 +5523,7 @@ Deno.serve(async (req) => {
           dungeons = (fallback.data || []) as typeof dungeons;
           dungeonError = fallback.error;
         }
-      if (isMissingMatchMusterSystem(dungeonError)) return json({ error: "请先运行 match_muster_migration.sql" }, 400);
+      if (isMissingMatchMusterSystem(dungeonError)) return json({ error: "璇峰厛杩愯 match_muster_migration.sql" }, 400);
       if (dungeonError) return json({ error: dungeonError.message }, 400);
 
       const dungeonIds = (dungeons || []).map((dungeon) => String(dungeon.id)).filter(Boolean);
@@ -5534,7 +5536,7 @@ Deno.serve(async (req) => {
           .select("dungeon_id")
           .in("dungeon_id", dungeonIds)
           .eq("status", "queued");
-        if (isMissingMatchSystem(queueError)) return json({ error: "请先运行 match_system_migration.sql" }, 400);
+        if (isMissingMatchSystem(queueError)) return json({ error: "璇峰厛杩愯 match_system_migration.sql" }, 400);
         if (queueError) return json({ error: queueError.message }, 400);
 
         for (const row of queueRows || []) {
@@ -5547,7 +5549,7 @@ Deno.serve(async (req) => {
           .select("dungeon_id")
           .in("dungeon_id", dungeonIds)
           .eq("room_status", "running");
-        if (isMissingMatchSystem(roomError)) return json({ error: "请先运行 match_system_migration.sql" }, 400);
+        if (isMissingMatchSystem(roomError)) return json({ error: "璇峰厛杩愯 match_system_migration.sql" }, 400);
         if (roomError) return json({ error: roomError.message }, 400);
 
         for (const row of roomRows || []) {
@@ -5571,102 +5573,102 @@ Deno.serve(async (req) => {
     }
 
     if (action === "getMatchState") {
-      if (!hasRole(role, ["player", "author", "reviewer", "admin"])) return json({ error: "需要入局谕令" }, 403);
+      if (!hasRole(role, ["player", "author", "reviewer", "admin"])) return json({ error: "闇€瑕佸叆灞€璋曚护" }, 403);
 
       const dungeonId = cleanText(payload.dungeonId, 80);
-      if (!isUuid(dungeonId)) return json({ error: "副本 ID 不正确" }, 400);
+      if (!isUuid(dungeonId)) return json({ error: "鍓湰 ID 涓嶆纭? }, 400);
 
       const state = await getMatchState(supabase, dungeonId);
-      if (isMissingMatchSystem(state.error)) return json({ error: "请先运行 match_system_migration.sql" }, 400);
+      if (isMissingMatchSystem(state.error)) return json({ error: "璇峰厛杩愯 match_system_migration.sql" }, 400);
       if (state.error) return json({ error: state.error.message }, 400);
       return json({ role, name: identity.displayName, data: state.data });
     }
 
     if (action === "joinMatchQueue") {
-      if (!hasRole(role, ["player", "author", "reviewer", "admin"])) return json({ error: "需要入局谕令" }, 403);
+      if (!hasRole(role, ["player", "author", "reviewer", "admin"])) return json({ error: "闇€瑕佸叆灞€璋曚护" }, 403);
 
       const dungeonId = cleanText(payload.dungeonId, 80);
-      if (!isUuid(dungeonId)) return json({ error: "副本 ID 不正确" }, 400);
+      if (!isUuid(dungeonId)) return json({ error: "鍓湰 ID 涓嶆纭? }, 400);
 
       const { data: result, error } = await supabase.rpc("join_match_queue", {
         p_dungeon_id: dungeonId,
         p_player_code_hash: identity.codeHash,
         p_player_name: identity.displayName,
       });
-      if (isMissingMatchSystem(error)) return json({ error: "请先运行 match_system_migration.sql" }, 400);
+      if (isMissingMatchSystem(error)) return json({ error: "璇峰厛杩愯 match_system_migration.sql" }, 400);
       if (error) return json({ error: error.message }, 400);
 
       const state = await getMatchState(supabase, dungeonId);
-      if (isMissingMatchSystem(state.error)) return json({ error: "请先运行 match_system_migration.sql" }, 400);
+      if (isMissingMatchSystem(state.error)) return json({ error: "璇峰厛杩愯 match_system_migration.sql" }, 400);
       if (state.error) return json({ error: state.error.message }, 400);
       return json({ role, name: identity.displayName, data: { result, state: state.data } });
     }
 
     if (action === "cancelMatchQueue") {
-      if (!hasRole(role, ["player", "author", "reviewer", "admin"])) return json({ error: "需要入局谕令" }, 403);
+      if (!hasRole(role, ["player", "author", "reviewer", "admin"])) return json({ error: "闇€瑕佸叆灞€璋曚护" }, 403);
 
       const dungeonId = cleanText(payload.dungeonId, 80);
-      if (!isUuid(dungeonId)) return json({ error: "副本 ID 不正确" }, 400);
+      if (!isUuid(dungeonId)) return json({ error: "鍓湰 ID 涓嶆纭? }, 400);
 
       const { data: result, error } = await supabase.rpc("cancel_match_queue", {
         p_dungeon_id: dungeonId,
         p_player_code_hash: identity.codeHash,
       });
-      if (isMissingMatchSystem(error)) return json({ error: "请先运行 match_system_migration.sql" }, 400);
+      if (isMissingMatchSystem(error)) return json({ error: "璇峰厛杩愯 match_system_migration.sql" }, 400);
       if (error) return json({ error: error.message }, 400);
 
       const state = await getMatchState(supabase, dungeonId);
-      if (isMissingMatchSystem(state.error)) return json({ error: "请先运行 match_system_migration.sql" }, 400);
+      if (isMissingMatchSystem(state.error)) return json({ error: "璇峰厛杩愯 match_system_migration.sql" }, 400);
       if (state.error) return json({ error: state.error.message }, 400);
       return json({ role, name: identity.displayName, data: { result, state: state.data } });
     }
 
     if (action === "createBattleRoomFromMatchRoom") {
-      if (!hasRole(role, ["player", "author", "reviewer", "admin"])) return json({ error: "需要入局谕令" }, 403);
+      if (!hasRole(role, ["player", "author", "reviewer", "admin"])) return json({ error: "闇€瑕佸叆灞€璋曚护" }, 403);
 
       const matchRoomId = cleanText(payload.matchRoomId, 80);
-      if (!isUuid(matchRoomId)) return json({ error: "组队房间 ID 不正确" }, 400);
+      if (!isUuid(matchRoomId)) return json({ error: "缁勯槦鎴块棿 ID 涓嶆纭? }, 400);
 
       const state = await createBattleRoomFromMatchRoom(supabase, matchRoomId, identity);
-      if (isMissingBattleSystem(state.error)) return json({ error: "请先运行 battle_room_system_20260810.sql" }, 400);
+      if (isMissingBattleSystem(state.error)) return json({ error: "璇峰厛杩愯 battle_room_system_20260810.sql" }, 400);
       if (state.error) return json({ error: state.error.message }, 400);
       return json({ role, name: identity.displayName, data: state.data });
     }
 
     if (action === "createBattleRoom") {
-      if (!hasRole(role, ["player", "author", "reviewer", "admin"])) return json({ error: "需要入局谕令" }, 403);
+      if (!hasRole(role, ["player", "author", "reviewer", "admin"])) return json({ error: "闇€瑕佸叆灞€璋曚护" }, 403);
 
       const dungeonId = cleanText(payload.dungeonId, 80);
-      if (!isUuid(dungeonId)) return json({ error: "副本 ID 不正确" }, 400);
+      if (!isUuid(dungeonId)) return json({ error: "鍓湰 ID 涓嶆纭? }, 400);
 
       const state = await createBattleRoomFromDungeon(supabase, dungeonId, identity);
-      if (isMissingBattleSystem(state.error)) return json({ error: "请先运行 battle_room_system_20260810.sql" }, 400);
+      if (isMissingBattleSystem(state.error)) return json({ error: "璇峰厛杩愯 battle_room_system_20260810.sql" }, 400);
       if (state.error) return json({ error: state.error.message }, 400);
       return json({ role, name: identity.displayName, data: state.data });
     }
 
     if (action === "joinBattleRoom") {
-      if (!hasRole(role, ["player", "author", "reviewer", "admin"])) return json({ error: "需要入局谕令" }, 403);
+      if (!hasRole(role, ["player", "author", "reviewer", "admin"])) return json({ error: "闇€瑕佸叆灞€璋曚护" }, 403);
 
       const battleRoomId = cleanText(payload.battleRoomId, 80);
-      if (!isUuid(battleRoomId)) return json({ error: "战斗房间 ID 不正确" }, 400);
+      if (!isUuid(battleRoomId)) return json({ error: "鎴樻枟鎴块棿 ID 涓嶆纭? }, 400);
 
       const state = await joinBattleRoom(supabase, battleRoomId, identity);
-      if (isMissingBattleSystem(state.error)) return json({ error: "请先运行 battle_room_system_20260810.sql" }, 400);
+      if (isMissingBattleSystem(state.error)) return json({ error: "璇峰厛杩愯 battle_room_system_20260810.sql" }, 400);
       if (state.error) return json({ error: state.error.message }, 400);
       return json({ role, name: identity.displayName, data: state.data });
     }
 
     if (action === "getBattleRoom") {
-      if (!hasRole(role, ["player", "author", "reviewer", "admin"])) return json({ error: "需要入局谕令" }, 403);
+      if (!hasRole(role, ["player", "author", "reviewer", "admin"])) return json({ error: "闇€瑕佸叆灞€璋曚护" }, 403);
 
       const battleRoomId = cleanText(payload.battleRoomId, 80);
       const matchRoomId = cleanText(payload.matchRoomId, 80);
       const dungeonId = cleanText(payload.dungeonId, 80);
-      if (battleRoomId && !isUuid(battleRoomId)) return json({ error: "战斗房间 ID 不正确" }, 400);
-      if (matchRoomId && !isUuid(matchRoomId)) return json({ error: "组队房间 ID 不正确" }, 400);
-      if (dungeonId && !isUuid(dungeonId)) return json({ error: "副本 ID 不正确" }, 400);
-      if (!battleRoomId && !matchRoomId && !dungeonId) return json({ error: "缺少战斗房间 ID" }, 400);
+      if (battleRoomId && !isUuid(battleRoomId)) return json({ error: "鎴樻枟鎴块棿 ID 涓嶆纭? }, 400);
+      if (matchRoomId && !isUuid(matchRoomId)) return json({ error: "缁勯槦鎴块棿 ID 涓嶆纭? }, 400);
+      if (dungeonId && !isUuid(dungeonId)) return json({ error: "鍓湰 ID 涓嶆纭? }, 400);
+      if (!battleRoomId && !matchRoomId && !dungeonId) return json({ error: "缂哄皯鎴樻枟鎴块棿 ID" }, 400);
 
       let state = battleRoomId
         ? await getBattleRoomState(supabase, battleRoomId, identity)
@@ -5686,55 +5688,55 @@ Deno.serve(async (req) => {
         if (roomError) state = { error: roomError };
         else state = room?.id ? await getBattleRoomState(supabase, String(room.id), identity) : { data: null };
       }
-      if (isMissingBattleSystem(state.error)) return json({ error: "请先运行 battle_room_system_20260810.sql" }, 400);
+      if (isMissingBattleSystem(state.error)) return json({ error: "璇峰厛杩愯 battle_room_system_20260810.sql" }, 400);
       if (state.error) return json({ error: state.error.message }, 400);
       return json({ role, name: identity.displayName, data: state.data });
     }
 
     if (action === "updateBattleRoomRound") {
-      if (!hasRole(role, ["player", "author", "reviewer", "admin"])) return json({ error: "需要入局谕令" }, 403);
+      if (!hasRole(role, ["player", "author", "reviewer", "admin"])) return json({ error: "闇€瑕佸叆灞€璋曚护" }, 403);
 
       const battleRoomId = cleanText(payload.battleRoomId, 80);
-      if (!isUuid(battleRoomId)) return json({ error: "战斗房间 ID 不正确" }, 400);
+      if (!isUuid(battleRoomId)) return json({ error: "鎴樻枟鎴块棿 ID 涓嶆纭? }, 400);
 
       const state = await updateBattleRoomRound(supabase, battleRoomId, identity, payload.currentRound, payload.note);
-      if (isMissingBattleSystem(state.error)) return json({ error: "请先运行 battle_room_system_20260810.sql" }, 400);
+      if (isMissingBattleSystem(state.error)) return json({ error: "璇峰厛杩愯 battle_room_system_20260810.sql" }, 400);
       if (state.error) return json({ error: state.error.message }, 400);
       return json({ role, name: identity.displayName, data: state.data });
     }
 
     if (action === "applyBattlePlayerAction") {
-      if (!hasRole(role, ["player", "author", "reviewer", "admin"])) return json({ error: "需要入局谕令" }, 403);
+      if (!hasRole(role, ["player", "author", "reviewer", "admin"])) return json({ error: "闇€瑕佸叆灞€璋曚护" }, 403);
 
       const battleRoomId = cleanText(payload.battleRoomId, 80);
       const playerId = cleanBigIntId(payload.playerId);
       const battleActionType = cleanText(payload.actionType, 20);
-      if (!isUuid(battleRoomId)) return json({ error: "战斗房间 ID 不正确" }, 400);
-      if (!playerId) return json({ error: "战斗成员 ID 不正确" }, 400);
+      if (!isUuid(battleRoomId)) return json({ error: "鎴樻枟鎴块棿 ID 涓嶆纭? }, 400);
+      if (!playerId) return json({ error: "鎴樻枟鎴愬憳 ID 涓嶆纭? }, 400);
 
       const state = await applyBattlePlayerAction(supabase, battleRoomId, playerId, identity, battleActionType, payload.amount, payload.note);
-      if (isMissingBattleSystem(state.error)) return json({ error: "请先运行 battle_room_system_20260810.sql" }, 400);
+      if (isMissingBattleSystem(state.error)) return json({ error: "璇峰厛杩愯 battle_room_system_20260810.sql" }, 400);
       if (state.error) return json({ error: state.error.message }, 400);
       return json({ role, name: identity.displayName, data: state.data });
     }
 
     if (action === "finishBattleRoom") {
-      if (!hasRole(role, ["player", "author", "reviewer", "admin"])) return json({ error: "需要入局谕令" }, 403);
+      if (!hasRole(role, ["player", "author", "reviewer", "admin"])) return json({ error: "闇€瑕佸叆灞€璋曚护" }, 403);
 
       const battleRoomId = cleanText(payload.battleRoomId, 80);
-      if (!isUuid(battleRoomId)) return json({ error: "战斗房间 ID 不正确" }, 400);
+      if (!isUuid(battleRoomId)) return json({ error: "鎴樻枟鎴块棿 ID 涓嶆纭? }, 400);
 
       const state = await finishBattleRoom(supabase, battleRoomId, identity, payload.status, payload.note);
-      if (isMissingBattleSystem(state.error)) return json({ error: "请先运行 battle_room_system_20260810.sql" }, 400);
+      if (isMissingBattleSystem(state.error)) return json({ error: "璇峰厛杩愯 battle_room_system_20260810.sql" }, 400);
       if (state.error) return json({ error: state.error.message }, 400);
       return json({ role, name: identity.displayName, data: state.data });
     }
 
     if (action === "startMatchMuster") {
-      if (!hasRole(role, ["player", "author", "reviewer", "admin"])) return json({ error: "需要入局谕令" }, 403);
+      if (!hasRole(role, ["player", "author", "reviewer", "admin"])) return json({ error: "闇€瑕佸叆灞€璋曚护" }, 403);
 
       const dungeonId = cleanText(payload.dungeonId, 80);
-      if (!isUuid(dungeonId)) return json({ error: "副本 ID 不正确" }, 400);
+      if (!isUuid(dungeonId)) return json({ error: "鍓湰 ID 涓嶆纭? }, 400);
 
       const durationSeconds = Math.max(10, Math.min(Number(payload.durationSeconds) || 60, 3600));
       const { data: result, error } = await supabase.rpc("start_match_muster", {
@@ -5743,88 +5745,88 @@ Deno.serve(async (req) => {
         p_creator_name: identity.displayName,
         p_duration_seconds: durationSeconds,
       });
-      if (isMissingMatchMusterSystem(error)) return json({ error: "请先运行 match_muster_migration.sql" }, 400);
+      if (isMissingMatchMusterSystem(error)) return json({ error: "璇峰厛杩愯 match_muster_migration.sql" }, 400);
       if (error) return json({ error: error.message }, 400);
 
       const musterId = cleanText((result as Record<string, unknown> | null)?.musterId, 80);
-      if (!isUuid(musterId)) return json({ error: "召集创建失败" }, 400);
+      if (!isUuid(musterId)) return json({ error: "鍙泦鍒涘缓澶辫触" }, 400);
       const state = await getMatchMusterState(supabase, musterId, identity);
-      if (isMissingMatchMusterSystem(state.error)) return json({ error: "请先运行 match_muster_migration.sql" }, 400);
+      if (isMissingMatchMusterSystem(state.error)) return json({ error: "璇峰厛杩愯 match_muster_migration.sql" }, 400);
       if (state.error) return json({ error: state.error.message }, 400);
       return json({ role, name: identity.displayName, data: { result, state: state.data } });
     }
 
     if (action === "getMatchMuster") {
-      if (!hasRole(role, ["player", "author", "reviewer", "admin"])) return json({ error: "需要入局谕令" }, 403);
+      if (!hasRole(role, ["player", "author", "reviewer", "admin"])) return json({ error: "闇€瑕佸叆灞€璋曚护" }, 403);
 
       const musterId = cleanText(payload.musterId, 80);
-      if (!isUuid(musterId)) return json({ error: "召集 ID 不正确" }, 400);
+      if (!isUuid(musterId)) return json({ error: "鍙泦 ID 涓嶆纭? }, 400);
 
       const state = await getMatchMusterState(supabase, musterId, identity);
-      if (isMissingMatchMusterSystem(state.error)) return json({ error: "请先运行 match_muster_migration.sql" }, 400);
+      if (isMissingMatchMusterSystem(state.error)) return json({ error: "璇峰厛杩愯 match_muster_migration.sql" }, 400);
       if (state.error) return json({ error: state.error.message }, 400);
       return json({ role, name: identity.displayName, data: state.data });
     }
 
     if (action === "joinMatchMuster") {
-      if (!hasRole(role, ["player", "author", "reviewer", "admin"])) return json({ error: "需要入局谕令" }, 403);
+      if (!hasRole(role, ["player", "author", "reviewer", "admin"])) return json({ error: "闇€瑕佸叆灞€璋曚护" }, 403);
 
       const musterId = cleanText(payload.musterId, 80);
-      if (!isUuid(musterId)) return json({ error: "召集 ID 不正确" }, 400);
+      if (!isUuid(musterId)) return json({ error: "鍙泦 ID 涓嶆纭? }, 400);
 
       const { data: result, error } = await supabase.rpc("join_match_muster", {
         p_muster_id: musterId,
         p_player_code_hash: identity.codeHash,
         p_player_name: identity.displayName,
       });
-      if (isMissingMatchMusterSystem(error)) return json({ error: "请先运行 match_muster_migration.sql" }, 400);
+      if (isMissingMatchMusterSystem(error)) return json({ error: "璇峰厛杩愯 match_muster_migration.sql" }, 400);
       if (error) return json({ error: error.message }, 400);
 
       const state = await getMatchMusterState(supabase, musterId, identity);
-      if (isMissingMatchMusterSystem(state.error)) return json({ error: "请先运行 match_muster_migration.sql" }, 400);
+      if (isMissingMatchMusterSystem(state.error)) return json({ error: "璇峰厛杩愯 match_muster_migration.sql" }, 400);
       if (state.error) return json({ error: state.error.message }, 400);
       return json({ role, name: identity.displayName, data: { result, state: state.data } });
     }
 
     if (action === "cancelMatchMuster") {
-      if (!hasRole(role, ["player", "author", "reviewer", "admin"])) return json({ error: "需要入局谕令" }, 403);
+      if (!hasRole(role, ["player", "author", "reviewer", "admin"])) return json({ error: "闇€瑕佸叆灞€璋曚护" }, 403);
 
       const musterId = cleanText(payload.musterId, 80);
-      if (!isUuid(musterId)) return json({ error: "召集 ID 不正确" }, 400);
+      if (!isUuid(musterId)) return json({ error: "鍙泦 ID 涓嶆纭? }, 400);
 
       const { data: result, error } = await supabase.rpc("cancel_match_muster_join", {
         p_muster_id: musterId,
         p_player_code_hash: identity.codeHash,
       });
-      if (isMissingMatchMusterSystem(error)) return json({ error: "请先运行 match_muster_migration.sql" }, 400);
+      if (isMissingMatchMusterSystem(error)) return json({ error: "璇峰厛杩愯 match_muster_migration.sql" }, 400);
       if (error) return json({ error: error.message }, 400);
 
       const state = await getMatchMusterState(supabase, musterId, identity);
-      if (isMissingMatchMusterSystem(state.error)) return json({ error: "请先运行 match_muster_migration.sql" }, 400);
+      if (isMissingMatchMusterSystem(state.error)) return json({ error: "璇峰厛杩愯 match_muster_migration.sql" }, 400);
       if (state.error) return json({ error: state.error.message }, 400);
       return json({ role, name: identity.displayName, data: { result, state: state.data } });
     }
 
     if (action === "drawMatchMuster") {
-      if (!hasRole(role, ["player", "author", "reviewer", "admin"])) return json({ error: "需要入局谕令" }, 403);
+      if (!hasRole(role, ["player", "author", "reviewer", "admin"])) return json({ error: "闇€瑕佸叆灞€璋曚护" }, 403);
 
       const musterId = cleanText(payload.musterId, 80);
-      if (!isUuid(musterId)) return json({ error: "召集 ID 不正确" }, 400);
+      if (!isUuid(musterId)) return json({ error: "鍙泦 ID 涓嶆纭? }, 400);
 
       const { data: result, error } = await supabase.rpc("draw_match_muster", {
         p_muster_id: musterId,
       });
-      if (isMissingMatchMusterSystem(error)) return json({ error: "请先运行 match_muster_migration.sql" }, 400);
+      if (isMissingMatchMusterSystem(error)) return json({ error: "璇峰厛杩愯 match_muster_migration.sql" }, 400);
       if (error) return json({ error: error.message }, 400);
 
       const state = await getMatchMusterState(supabase, musterId, identity);
-      if (isMissingMatchMusterSystem(state.error)) return json({ error: "请先运行 match_muster_migration.sql" }, 400);
+      if (isMissingMatchMusterSystem(state.error)) return json({ error: "璇峰厛杩愯 match_muster_migration.sql" }, 400);
       if (state.error) return json({ error: state.error.message }, 400);
       return json({ role, name: identity.displayName, data: { result, state: state.data } });
     }
 
     if (action === "listMyDungeons") {
-      if (!hasRole(role, ["author", "reviewer", "admin", "god"])) return json({ error: "需要作者、审核员、神明或馆主邀请码" }, 403);
+      if (!hasRole(role, ["author", "reviewer", "admin", "god"])) return json({ error: "闇€瑕佷綔鑰呫€佸鏍稿憳銆佺鏄庢垨棣嗕富閭€璇风爜" }, 403);
       const limit = Math.max(1, Math.min(100, Number(payload.limit || 80)));
       const dungeonFields = "id, name, creator, co_creators, difficulty, type, participant_count, run_count, clear_count, clear_rate, avg_rating, rating_count, comment_count, created_at, is_one_shot";
       const authoredById = new Map<string, Record<string, unknown>>();
@@ -5891,27 +5893,27 @@ Deno.serve(async (req) => {
     }
 
     if (action === "submitDungeon") {
-      if (!hasRole(role, ["author", "reviewer", "admin", "god"])) return json({ error: "需要作者、审核员、神明或馆主邀请码" }, 403);
+      if (!hasRole(role, ["author", "reviewer", "admin", "god"])) return json({ error: "闇€瑕佷綔鑰呫€佸鏍稿憳銆佺鏄庢垨棣嗕富閭€璇风爜" }, 403);
 
       const name = cleanText(payload.name, 80);
       const creator = role === "god" ? identity.displayName : cleanText(payload.creator, 40);
       const coCreators = cleanCoCreators(payload.coCreators ?? payload.co_creators);
       const description = cleanText(payload.description, 1800);
       const pinnedNote = cleanText(payload.pinnedNote, 800);
-      const difficulty = cleanText(payload.difficulty, 20) || "超凡";
-      const type = cleanText(payload.type, 160) || "综合";
+      const difficulty = cleanText(payload.difficulty, 20) || "瓒呭嚒";
+      const type = cleanText(payload.type, 160) || "缁煎悎";
       const participantCount = Number(payload.participantCount ?? payload.participant_count);
       const runCount = Number(payload.runCount ?? payload.run_count ?? 1);
       const isOneShot = payload.isOneShot === true || payload.is_one_shot === true || cleanText(payload.dungeonMode, 20) === "one_shot";
-      if (!name || !creator || !description) return json({ error: "请填写完整副本信息" }, 400);
+      if (!name || !creator || !description) return json({ error: "璇峰～鍐欏畬鏁村壇鏈俊鎭? }, 400);
       if (
         !Number.isInteger(participantCount) ||
         participantCount < 1 ||
         participantCount > 99
       ) {
-        return json({ error: "固定人数不正确" }, 400);
+        return json({ error: "鍥哄畾浜烘暟涓嶆纭? }, 400);
       }
-      if (!Number.isInteger(runCount) || runCount < 1 || runCount > 999) return json({ error: "当前周目不正确" }, 400);
+      if (!Number.isInteger(runCount) || runCount < 1 || runCount > 999) return json({ error: "褰撳墠鍛ㄧ洰涓嶆纭? }, 400);
 
       const editDungeonId = cleanText(payload.dungeonId ?? payload.dungeon_id, 80);
       const reviewStatus = canReviewDungeons(identity) ? "approved" : "pending";
@@ -5931,17 +5933,17 @@ Deno.serve(async (req) => {
           review_note: "",
         };
       if (editDungeonId) {
-        if (!isUuid(editDungeonId)) return json({ error: "副本 ID 不正确" }, 400);
+        if (!isUuid(editDungeonId)) return json({ error: "鍓湰 ID 涓嶆纭? }, 400);
         const { data: existingDungeon, error: readError } = await supabase
           .from("dungeons")
           .select("id, invite_code_hash, invite_name, creator, co_creators, clear_count")
           .eq("id", editDungeonId)
           .single();
-        if (isMissingInviteColumn(readError)) return json({ error: "请先运行邀请码数据库升级 SQL" }, 400);
-        if (isMissingCoCreatorsColumn(readError)) return json({ error: "请先运行同契共筑数据库升级 SQL" }, 400);
+        if (isMissingInviteColumn(readError)) return json({ error: "璇峰厛杩愯閭€璇风爜鏁版嵁搴撳崌绾?SQL" }, 400);
+        if (isMissingCoCreatorsColumn(readError)) return json({ error: "璇峰厛杩愯鍚屽鍏辩瓚鏁版嵁搴撳崌绾?SQL" }, 400);
         if (readError) return json({ error: readError.message }, 400);
         if (role !== "admin" && !canManageDungeonRecord(existingDungeon as Record<string, unknown>, identity)) {
-          return json({ error: "只有副本作者、同契共筑者或馆主可以重铸绝境" }, 403);
+          return json({ error: "鍙湁鍓湰浣滆€呫€佸悓濂戝叡绛戣€呮垨棣嗕富鍙互閲嶉摳缁濆" }, 403);
         }
 
         const clearCount = Number((existingDungeon as Record<string, unknown>).clear_count || 0);
@@ -5966,9 +5968,9 @@ Deno.serve(async (req) => {
           .eq("id", editDungeonId)
           .select()
           .single();
-        if (isMissingCoCreatorsColumn(error)) return json({ error: "请先运行同契共筑数据库升级 SQL" }, 400);
-        if (isMissingDungeonReviewColumn(error)) return json({ error: "请先运行副本审核数据库升级 SQL" }, 400);
-        if (isMissingForumColumn(error)) return json({ error: "请先运行论坛功能数据库升级 SQL" }, 400);
+        if (isMissingCoCreatorsColumn(error)) return json({ error: "璇峰厛杩愯鍚屽鍏辩瓚鏁版嵁搴撳崌绾?SQL" }, 400);
+        if (isMissingDungeonReviewColumn(error)) return json({ error: "璇峰厛杩愯鍓湰瀹℃牳鏁版嵁搴撳崌绾?SQL" }, 400);
+        if (isMissingForumColumn(error)) return json({ error: "璇峰厛杩愯璁哄潧鍔熻兘鏁版嵁搴撳崌绾?SQL" }, 400);
         if (error) return json({ error: error.message }, 400);
         return json({ role, name: identity.displayName, data });
       }
@@ -6026,7 +6028,7 @@ Deno.serve(async (req) => {
         if (retry.error) return json({ error: retry.error.message }, 400);
         return json({ role, name: identity.displayName, data: retry.data });
       }
-      if (isMissingDungeonReviewColumn(error)) return json({ error: "请先运行副本审核数据库升级 SQL" }, 400);
+      if (isMissingDungeonReviewColumn(error)) return json({ error: "璇峰厛杩愯鍓湰瀹℃牳鏁版嵁搴撳崌绾?SQL" }, 400);
       if (isMissingForumColumn(error)) {
         const retry = await supabase
           .from("dungeons")
@@ -6053,13 +6055,13 @@ Deno.serve(async (req) => {
     }
 
     if (action === "reviewDungeon") {
-      if (!canReviewDungeons(identity)) return json({ error: "需要审核员、神明或馆主权限" }, 403);
+      if (!canReviewDungeons(identity)) return json({ error: "闇€瑕佸鏍稿憳銆佺鏄庢垨棣嗕富鏉冮檺" }, 403);
 
       const dungeonId = cleanText(payload.dungeonId, 80);
       const decision = cleanText(payload.decision, 20);
       const reviewNote = cleanText(payload.reviewNote, 800);
-      if (!isUuid(dungeonId)) return json({ error: "副本 ID 不正确" }, 400);
-      if (!["approve", "reject"].includes(decision)) return json({ error: "审核结果不正确" }, 400);
+      if (!isUuid(dungeonId)) return json({ error: "鍓湰 ID 涓嶆纭? }, 400);
+      if (!["approve", "reject"].includes(decision)) return json({ error: "瀹℃牳缁撴灉涓嶆纭? }, 400);
 
       const { data, error } = await supabase
         .from("dungeons")
@@ -6073,16 +6075,16 @@ Deno.serve(async (req) => {
         .eq("id", dungeonId)
         .select()
         .single();
-      if (isMissingDungeonReviewColumn(error)) return json({ error: "请先运行副本审核数据库升级 SQL" }, 400);
+      if (isMissingDungeonReviewColumn(error)) return json({ error: "璇峰厛杩愯鍓湰瀹℃牳鏁版嵁搴撳崌绾?SQL" }, 400);
       if (error) return json({ error: error.message }, 400);
       return json({ role, name: identity.displayName, data });
     }
 
     if (action === "markCleared") {
-      if (!hasRole(role, ["player", "author", "reviewer", "admin"])) return json({ error: "需要入局谕令" }, 403);
+      if (!hasRole(role, ["player", "author", "reviewer", "admin"])) return json({ error: "闇€瑕佸叆灞€璋曚护" }, 403);
 
       const dungeonId = cleanText(payload.dungeonId, 80);
-      if (!isUuid(dungeonId)) return json({ error: "副本 ID 不正确" }, 400);
+      if (!isUuid(dungeonId)) return json({ error: "鍓湰 ID 涓嶆纭? }, 400);
 
       const { data: dungeon, error: dungeonError } = await supabase
         .from("dungeons")
@@ -6091,7 +6093,7 @@ Deno.serve(async (req) => {
         .single();
       if (dungeonError) return json({ error: dungeonError.message }, 400);
       if (!canViewDungeonRecord(dungeon as Record<string, unknown>, identity) || getDungeonReviewStatus(dungeon as Record<string, unknown>) !== "approved") {
-        return json({ error: "副本尚未正式发布，不能登记通关" }, 403);
+        return json({ error: "鍓湰灏氭湭姝ｅ紡鍙戝竷锛屼笉鑳界櫥璁伴€氬叧" }, 403);
       }
       const runNumber = Number(dungeon.run_count) || 1;
       const feedbackTags = cleanFeedbackTags(payload.feedbackTags);
@@ -6109,7 +6111,7 @@ Deno.serve(async (req) => {
         })
         .select()
         .single();
-      if (error?.code === "23505") return json({ error: "你已经登记过本周目通过了" }, 409);
+      if (error?.code === "23505") return json({ error: "浣犲凡缁忕櫥璁拌繃鏈懆鐩€氳繃浜? }, 409);
       if (isMissingForumColumn(error)) {
         const retry = await supabase
           .from("clear_records")
@@ -6121,7 +6123,7 @@ Deno.serve(async (req) => {
           })
           .select()
           .single();
-        if (retry.error?.code === "23505") return json({ error: "你已经登记过本周目通过了" }, 409);
+        if (retry.error?.code === "23505") return json({ error: "浣犲凡缁忕櫥璁拌繃鏈懆鐩€氳繃浜? }, 409);
         if (retry.error) return json({ error: retry.error.message }, 400);
         const stats = await recalculateClearStats(supabase, dungeonId);
         if (stats.error) return json({ error: stats.error.message }, 400);
@@ -6135,10 +6137,10 @@ Deno.serve(async (req) => {
     }
 
     if (action === "advanceRun") {
-      if (!hasRole(role, ["author", "reviewer", "admin", "god"])) return json({ error: "需要作者、审核员、神明或馆主邀请码" }, 403);
+      if (!hasRole(role, ["author", "reviewer", "admin", "god"])) return json({ error: "闇€瑕佷綔鑰呫€佸鏍稿憳銆佺鏄庢垨棣嗕富閭€璇风爜" }, 403);
 
       const dungeonId = cleanText(payload.dungeonId, 80);
-      if (!isUuid(dungeonId)) return json({ error: "副本 ID 不正确" }, 400);
+      if (!isUuid(dungeonId)) return json({ error: "鍓湰 ID 涓嶆纭? }, 400);
 
       const { data: dungeon, error } = await supabase
         .from("dungeons")
@@ -6160,12 +6162,12 @@ Deno.serve(async (req) => {
     }
 
     if (action === "addRating") {
-      if (!hasRole(role, ["player", "author", "reviewer", "admin"])) return json({ error: "需要入局谕令" }, 403);
+      if (!hasRole(role, ["player", "author", "reviewer", "admin"])) return json({ error: "闇€瑕佸叆灞€璋曚护" }, 403);
 
       const dungeonId = cleanText(payload.dungeonId, 80);
       const rating = Number(payload.rating);
       if (!isUuid(dungeonId) || !Number.isInteger(rating) || rating < 1 || rating > 5) {
-        return json({ error: "评分参数不正确" }, 400);
+        return json({ error: "璇勫垎鍙傛暟涓嶆纭? }, 400);
       }
       const { data: dungeonForRating, error: dungeonForRatingError } = await supabase
         .from("dungeons")
@@ -6174,7 +6176,7 @@ Deno.serve(async (req) => {
         .single();
       if (dungeonForRatingError) return json({ error: dungeonForRatingError.message }, 400);
       if (!canViewDungeonRecord(dungeonForRating as Record<string, unknown>, identity) || getDungeonReviewStatus(dungeonForRating as Record<string, unknown>) !== "approved") {
-        return json({ error: "副本尚未正式发布，不能评分" }, 403);
+        return json({ error: "鍓湰灏氭湭姝ｅ紡鍙戝竷锛屼笉鑳借瘎鍒? }, 403);
       }
 
       const { data, error } = await supabase
@@ -6187,7 +6189,7 @@ Deno.serve(async (req) => {
         })
         .select()
         .single();
-      if (error?.code === "23505") return json({ error: "你已经评价过这个副本了" }, 409);
+      if (error?.code === "23505") return json({ error: "浣犲凡缁忚瘎浠疯繃杩欎釜鍓湰浜? }, 409);
       if (isMissingInviteColumn(error)) {
         const retry = await supabase
           .from("ratings")
@@ -6202,14 +6204,14 @@ Deno.serve(async (req) => {
     }
 
     if (action === "addComment") {
-      if (!hasRole(role, ["player", "author", "reviewer", "admin", "god"])) return json({ error: "需要入局谕令" }, 403);
+      if (!hasRole(role, ["player", "author", "reviewer", "admin", "god"])) return json({ error: "闇€瑕佸叆灞€璋曚护" }, 403);
 
       const dungeonId = cleanText(payload.dungeonId, 80);
       const authorInput = cleanText(payload.author, 40);
-      const author = identity.inviteId ? identity.displayName : (authorInput || identity.displayName || "匿名探索者");
+      const author = identity.inviteId ? identity.displayName : (authorInput || identity.displayName || "鍖垮悕鎺㈢储鑰?);
       const content = cleanText(payload.content, 800);
       const parentCommentId = cleanText(payload.parentCommentId, 80);
-      if (!isUuid(dungeonId) || !content) return json({ error: "评论参数不正确" }, 400);
+      if (!isUuid(dungeonId) || !content) return json({ error: "璇勮鍙傛暟涓嶆纭? }, 400);
       const { data: dungeonForComment, error: dungeonForCommentError } = await supabase
         .from("dungeons")
         .select("id, invite_code_hash, invite_name, creator, co_creators, review_status")
@@ -6217,20 +6219,20 @@ Deno.serve(async (req) => {
         .single();
       if (dungeonForCommentError) return json({ error: dungeonForCommentError.message }, 400);
       if (!canViewDungeonRecord(dungeonForComment as Record<string, unknown>, identity) || getDungeonReviewStatus(dungeonForComment as Record<string, unknown>) !== "approved") {
-        return json({ error: "副本尚未正式发布，不能递交证言" }, 403);
+        return json({ error: "鍓湰灏氭湭姝ｅ紡鍙戝竷锛屼笉鑳介€掍氦璇佽█" }, 403);
       }
       if (parentCommentId) {
-        if (!isUuid(parentCommentId)) return json({ error: "回复目标不正确" }, 400);
+        if (!isUuid(parentCommentId)) return json({ error: "鍥炲鐩爣涓嶆纭? }, 400);
         const { data: parent, error: parentError } = await supabase
           .from("comments")
           .select("id, dungeon_id, is_deleted")
           .eq("id", parentCommentId)
           .single();
         if (isMissingForumColumn(parentError)) {
-          return json({ error: "请先运行论坛功能数据库升级 SQL" }, 400);
+          return json({ error: "璇峰厛杩愯璁哄潧鍔熻兘鏁版嵁搴撳崌绾?SQL" }, 400);
         }
         if (parentError || parent?.dungeon_id !== dungeonId || parent?.is_deleted) {
-          return json({ error: "回复目标不存在" }, 400);
+          return json({ error: "鍥炲鐩爣涓嶅瓨鍦? }, 400);
         }
       }
 
@@ -6271,28 +6273,28 @@ Deno.serve(async (req) => {
           if (retry.error) return json({ error: retry.error.message }, 400);
           return json({ role, name: identity.displayName, data: retry.data });
         }
-        return json({ error: "请先运行论坛功能数据库升级 SQL" }, 400);
+        return json({ error: "璇峰厛杩愯璁哄潧鍔熻兘鏁版嵁搴撳崌绾?SQL" }, 400);
       }
       if (error) return json({ error: error.message }, 400);
       return json({ role, name: identity.displayName, data });
     }
 
     if (action === "deleteComment") {
-      if (!hasRole(role, ["player", "author", "reviewer", "admin", "god"])) return json({ error: "需要邀请码" }, 403);
+      if (!hasRole(role, ["player", "author", "reviewer", "admin", "god"])) return json({ error: "闇€瑕侀個璇风爜" }, 403);
 
       const commentId = cleanText(payload.commentId, 80);
-      if (!isUuid(commentId)) return json({ error: "评论 ID 不正确" }, 400);
+      if (!isUuid(commentId)) return json({ error: "璇勮 ID 涓嶆纭? }, 400);
 
       const { data: comment, error: readError } = await supabase
         .from("comments")
         .select("id, invite_code_hash, is_deleted")
         .eq("id", commentId)
         .single();
-      if (isMissingForumColumn(readError)) return json({ error: "请先运行论坛功能数据库升级 SQL" }, 400);
+      if (isMissingForumColumn(readError)) return json({ error: "璇峰厛杩愯璁哄潧鍔熻兘鏁版嵁搴撳崌绾?SQL" }, 400);
       if (readError) return json({ error: readError.message }, 400);
       if (comment.is_deleted) return json({ role, name: identity.displayName, data: comment });
       if (role !== "admin" && comment.invite_code_hash !== identity.codeHash) {
-        return json({ error: "只能删除自己的评论" }, 403);
+        return json({ error: "鍙兘鍒犻櫎鑷繁鐨勮瘎璁? }, 403);
       }
 
       const { data, error } = await supabase
@@ -6301,7 +6303,7 @@ Deno.serve(async (req) => {
           is_deleted: true,
           deleted_at: new Date().toISOString(),
           updated_at: new Date().toISOString(),
-          content: "此评论已被删除",
+          content: "姝よ瘎璁哄凡琚垹闄?,
         })
         .eq("id", commentId)
         .select()
@@ -6317,21 +6319,21 @@ Deno.serve(async (req) => {
     }
 
     if (action === "updatePinnedNote") {
-      if (!hasRole(role, ["author", "reviewer", "admin", "god"])) return json({ error: "需要作者、审核员、神明或馆主邀请码" }, 403);
+      if (!hasRole(role, ["author", "reviewer", "admin", "god"])) return json({ error: "闇€瑕佷綔鑰呫€佸鏍稿憳銆佺鏄庢垨棣嗕富閭€璇风爜" }, 403);
 
       const dungeonId = cleanText(payload.dungeonId, 80);
       const pinnedNote = cleanText(payload.pinnedNote, 800);
-      if (!isUuid(dungeonId)) return json({ error: "副本 ID 不正确" }, 400);
+      if (!isUuid(dungeonId)) return json({ error: "鍓湰 ID 涓嶆纭? }, 400);
 
       const { data: dungeon, error: readError } = await supabase
         .from("dungeons")
         .select("id, invite_code_hash, invite_name, creator, co_creators")
         .eq("id", dungeonId)
         .single();
-      if (isMissingInviteColumn(readError)) return json({ error: "请先运行邀请码数据库升级 SQL" }, 400);
+      if (isMissingInviteColumn(readError)) return json({ error: "璇峰厛杩愯閭€璇风爜鏁版嵁搴撳崌绾?SQL" }, 400);
       if (readError) return json({ error: readError.message }, 400);
       if (role !== "admin" && !canManageDungeonRecord(dungeon as Record<string, unknown>, identity)) {
-        return json({ error: "只有副本作者、同契共筑者或馆主可以修改置顶说明" }, 403);
+        return json({ error: "鍙湁鍓湰浣滆€呫€佸悓濂戝叡绛戣€呮垨棣嗕富鍙互淇敼缃《璇存槑" }, 403);
       }
 
       const { data, error } = await supabase
@@ -6340,26 +6342,26 @@ Deno.serve(async (req) => {
         .eq("id", dungeonId)
         .select()
         .single();
-      if (isMissingForumColumn(error)) return json({ error: "请先运行论坛功能数据库升级 SQL" }, 400);
+      if (isMissingForumColumn(error)) return json({ error: "璇峰厛杩愯璁哄潧鍔熻兘鏁版嵁搴撳崌绾?SQL" }, 400);
       if (error) return json({ error: error.message }, 400);
       return json({ role, name: identity.displayName, data });
     }
 
     if (action === "deleteDungeon") {
-      if (!hasRole(role, ["author", "reviewer", "admin", "god"])) return json({ error: "需要作者、审核员、神明或馆主邀请码" }, 403);
+      if (!hasRole(role, ["author", "reviewer", "admin", "god"])) return json({ error: "闇€瑕佷綔鑰呫€佸鏍稿憳銆佺鏄庢垨棣嗕富閭€璇风爜" }, 403);
 
       const dungeonId = cleanText(payload.dungeonId, 80);
-      if (!isUuid(dungeonId)) return json({ error: "副本 ID 不正确" }, 400);
+      if (!isUuid(dungeonId)) return json({ error: "鍓湰 ID 涓嶆纭? }, 400);
 
       const { data: dungeon, error: readError } = await supabase
         .from("dungeons")
         .select("id, invite_code_hash, invite_name, creator, co_creators")
         .eq("id", dungeonId)
         .single();
-      if (isMissingInviteColumn(readError)) return json({ error: "请先运行邀请码数据库升级 SQL" }, 400);
+      if (isMissingInviteColumn(readError)) return json({ error: "璇峰厛杩愯閭€璇风爜鏁版嵁搴撳崌绾?SQL" }, 400);
       if (readError) return json({ error: readError.message }, 400);
       if (role !== "admin" && !canManageDungeonRecord(dungeon as Record<string, unknown>, identity)) {
-        return json({ error: "只有副本作者、同契共筑者或馆主可以封存试炼" }, 403);
+        return json({ error: "鍙湁鍓湰浣滆€呫€佸悓濂戝叡绛戣€呮垨棣嗕富鍙互灏佸瓨璇曠偧" }, 403);
       }
 
       const { error } = await supabase.from("dungeons").delete().eq("id", dungeonId);
@@ -6367,8 +6369,8 @@ Deno.serve(async (req) => {
       return json({ role, name: identity.displayName, data: { id: dungeonId } });
     }
 
-    return json({ error: "未知操作" }, 400);
+    return json({ error: "鏈煡鎿嶄綔" }, 400);
   } catch (error) {
-    return json({ error: error instanceof Error ? error.message : "后端处理失败" }, 500);
+    return json({ error: error instanceof Error ? error.message : "鍚庣澶勭悊澶辫触" }, 500);
   }
 });
