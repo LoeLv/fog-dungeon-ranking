@@ -30,7 +30,6 @@ function normalizeLeaderboardEntry(key, rawProfile) {
 function getLeaderboardEntries() {
     return Object.entries(getStoredProfiles())
         .map(([key, profile]) => normalizeLeaderboardEntry(key, profile))
-        .filter(entry => !['god', 'star'].includes(entry.role))
         .filter(entry => entry.faithGod || entry.profession || entry.ascensionScore || entry.audienceScore || entry.displayName !== '未命名信徒');
 }
 
@@ -79,12 +78,12 @@ async function fetchLeaderboardEntries() {
         try {
             const { data, error } = await invokeDungeonAction('listProfiles', {});
             if (error || !Array.isArray(data)) {
-                console.warn('云端榜单读取失败，使用本地榜单。', error);
+                console.warn('云端榜单读取失败，使用本地榜单:', error);
                 return { entries: localEntries, source: 'local', error };
             }
-            return { entries: data.map(mapCloudLeaderboardEntry).filter(entry => !['god', 'star'].includes(entry.role)), source: 'cloud' };
+            return { entries: data.map(mapCloudLeaderboardEntry), source: 'cloud' };
         } catch (error) {
-            console.warn('云端榜单读取异常，使用本地榜单。', error);
+            console.warn('云端榜单读取异常，使用本地榜单:', error);
             return { entries: localEntries, source: 'local', error };
         }
     });
@@ -123,9 +122,9 @@ function renderLeaderboardLookup(entries) {
     const results = !queryKey
         ? ''
         : !matches.length
-        ? '<div class="profile-empty">没有找到匹配的名字，请检查输入。</div>'
+        ? '<div class="profile-empty">没有找到匹配昵称，请检查输入。</div>'
         : `<div class="leaderboard-lookup-results">${matches.map(entry => {
-            const faith = entry.faithGod ? `${entry.faithGod} / ${entry.faithPath}` : '未立信仰';
+            const faith = entry.faithGod ? `${entry.faithGod}之神 · ${entry.faithPath}命途` : '未立信仰';
             const ascensionRank = getLeaderboardRank(entries, entry, 'ascension');
             const audienceRank = getLeaderboardRank(entries, entry, 'audience');
             return `<article class="leaderboard-lookup-result" onclick='openProfileFromLeaderboard(${jsString(entry.key)})'>
@@ -135,12 +134,12 @@ function renderLeaderboardLookup(entries) {
                 </div>
                 <div class="leaderboard-lookup-metrics">
                     <span class="metric-pill">登神 #${ascensionRank} · ${escapeHtml(formatProfileScore(entry.ascensionScore))}</span>
-                    <span class="metric-pill">观星 #${audienceRank} · ${escapeHtml(formatProfileScore(entry.audienceScore))}</span>
+                    <span class="metric-pill">觐见 #${audienceRank} · ${escapeHtml(formatProfileScore(entry.audienceScore))}</span>
                 </div>
             </article>`;
         }).join('')}</div>`;
     return `<section class="leaderboard-lookup">
-        <div class="leaderboard-lookup-head"><span>昵称查询</span><small>跨全站页定位角色</small></div>
+        <div class="leaderboard-lookup-head"><span>昵称查询</span><small>跨全部分页定位玩家</small></div>
         <div class="leaderboard-lookup-controls">
             <input id="leaderboardSearchInput" maxlength="40" value="${escapeHtml(query).replace(/"/g, '&quot;')}" placeholder="输入完整或部分昵称" onkeydown="if(event.key === 'Enter'){ event.preventDefault(); applyLeaderboardSearch(); }">
             <button type="button" class="btn btn-primary btn-sm" onclick="applyLeaderboardSearch()">查询</button>
@@ -154,7 +153,7 @@ async function applyLeaderboardSearch() {
     const input = document.getElementById('leaderboardSearchInput');
     leaderboardSearchQuery = cleanDisplayNameInput(input?.value || '');
     if (!Array.isArray(leaderboardEntriesCache)) {
-        showToast('榜单数据还没准备好，请刷新后再试。');
+        showToast('榜单数据尚未准备，请刷新榜单后查询');
         return;
     }
     await renderLeaderboardPage({ useCachedEntries: true });
@@ -169,12 +168,6 @@ async function clearLeaderboardSearch() {
 function getLeaderboardGodSeats(scoreType, options = {}) {
     const gods = getAllGods();
     const filtered = options.path ? gods.filter(item => item.path === options.path) : gods;
-    const baseTitle = {
-        titleText: '第零神席',
-        titleGod: '命运',
-        grantedByType: 'god',
-        grantedByName: '十六神明'
-    };
     if (options.mergeGodSeats && !options.path) {
         return [{
             key: 'god-seat-cosmos',
@@ -185,13 +178,18 @@ function getLeaderboardGodSeats(scoreType, options = {}) {
             faithClass: 'path-void',
             profession: '',
             professionClass: '',
-            ascensionScore: 0,
-            audienceScore: 0,
+            ascensionScore: '∞',
+            audienceScore: '∞',
             updatedAt: new Date(0).toISOString(),
             isCurrent: false,
             isGodSeat: true,
             isMergedGodSeat: true,
-            activeTitle: baseTitle,
+            activeTitle: {
+                titleText: '第零神席',
+                titleGod: '命运',
+                grantedByType: 'god',
+                grantedByName: '十六神明'
+            },
             scoreType
         }];
     }
@@ -204,14 +202,15 @@ function getLeaderboardGodSeats(scoreType, options = {}) {
         faithClass: className,
         profession: '',
         professionClass: '',
-        ascensionScore: 0,
-        audienceScore: 0,
+        ascensionScore: '∞',
+        audienceScore: '∞',
         updatedAt: new Date(0).toISOString(),
         isCurrent: isGodRole() && inviteSession?.name === god,
         isGodSeat: true,
         activeTitle: {
-            ...baseTitle,
+            titleText: '第零神席',
             titleGod: god,
+            grantedByType: 'god',
             grantedByName: god
         },
         scoreType
@@ -221,12 +220,12 @@ function getLeaderboardGodSeats(scoreType, options = {}) {
 function renderLeaderboardRows(entries, scoreType, limit = LEADERBOARD_PAGE_SIZE, options = {}) {
     const godRows = options.includeGodSeats ? getLeaderboardGodSeats(scoreType, options).slice(0, options.godLimit || 16) : [];
     const ranked = sortLeaderboardEntries(entries, scoreType).slice(0, limit);
-    if (!ranked.length && !godRows.length) return renderRitualEmpty('暂无榜单档案。', '命运', '榜单为空');
+    if (!ranked.length && !godRows.length) return renderRitualEmpty('此途暂无留存信徒档案，静待众生踏入新的愚戏。', '命运', '信徒名录暂空');
     const topScore = ranked.reduce((max, entry) => Math.max(max, getLeaderboardScore(entry, scoreType)), 1);
     const renderEntryRow = (entry, index) => {
         const role = ROLE_LABELS[entry.role] || '入局信徒';
-        const faith = entry.faithGod ? `${entry.faithGod} / ${entry.faithPath}` : '未立信仰';
-        const profession = entry.profession ? `${entry.professionClass} / ${entry.profession}` : '未定职业';
+        const faith = entry.faithGod ? `${entry.faithGod}之神 · ${entry.faithPath}命途` : '未立信仰';
+        const profession = entry.profession ? `${entry.professionClass} · ${entry.profession}` : '未定职业';
         const metaHtml = entry.isMergedGodSeat
             ? '<span class="mini-tag path-void">十六神明</span><span class="metric-pill">第零神席</span>'
             : entry.isGodSeat
@@ -237,7 +236,7 @@ function renderLeaderboardRows(entries, scoreType, limit = LEADERBOARD_PAGE_SIZE
             ? `${formatProfileScore(entry.ascensionScore)} / ${formatProfileScore(entry.audienceScore)}`
             : formatProfileScore(score);
         const secondaryScoreText = options.showAscensionInParentheses && !entry.isGodSeat
-            ? `<em>登神 ${escapeHtml(formatProfileScore(entry.ascensionScore))}</em>`
+            ? `<em>（登神之路 ${escapeHtml(formatProfileScore(entry.ascensionScore))}）</em>`
             : '';
         const progress = entry.isGodSeat ? 100 : Math.max(4, Math.round((Math.max(0, score) / Math.max(1, topScore)) * 100));
         const skinStyle = entry.faithGod ? getGodSkinStyle(entry.faithGod) : getGodSkinStyle('命运');
@@ -269,10 +268,17 @@ function renderLeaderboardRows(entries, scoreType, limit = LEADERBOARD_PAGE_SIZE
     };
     return [...godRows.map((entry, index) => renderEntryRow(entry, index)), ...ranked.map(renderEntryRow)].join('');
 }
+
 function renderLeaderboardBoard(title, entries, scoreType, options = {}) {
     const boardClass = options.full ? 'leaderboard-board full' : 'leaderboard-board';
-    const subtitle = options.subtitle || `${entries.length} 名记录`;
-    const boardKey = [leaderboardMode, leaderboardPath, scoreType, options.path || 'all', title].join('|');
+    const subtitle = options.subtitle || `${entries.length} 位信徒`;
+    const boardKey = [
+        leaderboardMode,
+        leaderboardPath,
+        scoreType,
+        options.path || 'all',
+        title
+    ].join('|');
     const boardKeyToken = encodeURIComponent(boardKey);
     const pageCount = Math.max(1, Math.ceil(entries.length / LEADERBOARD_PAGE_SIZE));
     const currentPage = Math.min(Math.max(1, Number(leaderboardPages[boardKey] || 1)), pageCount);
@@ -287,7 +293,7 @@ function renderLeaderboardBoard(title, entries, scoreType, options = {}) {
     const pagination = pageCount > 1
         ? `<nav class="leaderboard-pagination" aria-label="${escapeHtml(title)} 分页">
             <button type="button" class="leaderboard-page-button" data-leaderboard-page-key="${boardKeyToken}" data-leaderboard-page="${currentPage - 1}" ${currentPage === 1 ? 'disabled' : ''}>上一页</button>
-            <span class="leaderboard-page-status">第 ${currentPage} / ${pageCount} 页 · 本页 ${pageEntries.length} / 共 ${entries.length}</span>
+            <span class="leaderboard-page-status">第 ${currentPage} / ${pageCount} 页 · 本页 ${pageEntries.length} 位 / 共 ${entries.length} 位</span>
             <button type="button" class="leaderboard-page-button" data-leaderboard-page-key="${boardKeyToken}" data-leaderboard-page="${currentPage + 1}" ${currentPage === pageCount ? 'disabled' : ''}>下一页</button>
         </nav>`
         : '';
@@ -306,17 +312,17 @@ async function setLeaderboardPage(boardKey, page) {
     const normalizedKey = String(boardKey || '');
     const normalizedPage = Math.max(1, Number(page) || 1);
     if (!normalizedKey || !Array.isArray(leaderboardEntriesCache)) {
-        showToast('榜单数据还没准备好，请刷新后再试。');
+        showToast('榜单数据尚未准备，请刷新榜单后重试');
         return;
     }
     const lockKey = `leaderboard-page:${normalizedKey}`;
-    if (!acquireUiActionLock(lockKey, '榜单正在翻页，请稍候')) return;
+    if (!acquireUiActionLock(lockKey, '榜单正在翻页，请勿重复点击')) return;
     try {
         leaderboardPages[normalizedKey] = normalizedPage;
         await renderLeaderboardPage({ useCachedEntries: true });
     } catch (error) {
         console.error('榜单翻页失败', error);
-        showToast(`错误：${getFriendlyActionError(error, '榜单翻页失败')}`);
+        showToast(`❌ ${getFriendlyActionError(error, '榜单翻页失败')}`);
     } finally {
         releaseUiActionLock(lockKey);
     }
@@ -324,52 +330,52 @@ async function setLeaderboardPage(boardKey, page) {
 
 function renderLeaderboardTabs() {
     const tabs = [
-        ['overall', '总览'],
-        ['path', '分途'],
-        ['ascension', '登神'],
-        ['audience', '观星']
+        ['overall', '寰宇信徒总览'],
+        ['path', '分途信仰名录'],
+        ['ascension', '登神阶途榜单'],
+        ['audience', '觐见观星榜单']
     ];
     return `<div class="leaderboard-tabs">${tabs.map(([mode, label]) => `<button type="button" class="leaderboard-tab ${leaderboardMode === mode ? 'active' : ''}" data-leaderboard-mode="${escapeHtml(mode)}">${escapeHtml(label)}</button>`).join('')}</div>`;
 }
 
 function renderLeaderboardPathTabs() {
-    const tabs = [['all', '全部'], ...GOD_GROUPS.map(group => [group.path, `${getPathMetaByPath(group.path).sigil} ${group.path}`])];
+    const tabs = [['all', '全部命途'], ...GOD_GROUPS.map(group => [group.path, `${getPathMetaByPath(group.path).sigil} ${group.path}`])];
     return `<div class="leaderboard-path-tabs">${tabs.map(([path, label]) => `<button type="button" class="leaderboard-tab ${leaderboardPath === path ? 'active' : ''}" data-leaderboard-path="${escapeHtml(path)}">${escapeHtml(label)}</button>`).join('')}</div>`;
 }
 
 function renderLeaderboardContent(entries) {
     const lookup = renderLeaderboardLookup(entries);
     if (leaderboardMode === 'ascension') {
-        return `${lookup}<div class="leaderboard-layout">${renderLeaderboardBoard('登神总榜', entries, 'ascension', { full: true, includeGodSeats: true, mergeGodSeats: true })}</div><div class="leaderboard-observer-note">第 0 位为神席。</div>`;
+        return `${lookup}<div class="leaderboard-layout">${renderLeaderboardBoard('命运骰录 · 登神阶途总榜', entries, 'ascension', { full: true, includeGodSeats: true, mergeGodSeats: true })}</div><div class="leaderboard-observer-note">第 0 位为寰宇至尊；登神之路分数越高，代表信徒踏遍试炼切片越多。</div>`;
     }
     if (leaderboardMode === 'audience') {
-        return `${lookup}<div class="leaderboard-layout">${renderLeaderboardBoard('观星总榜', entries, 'audience', { full: true, includeGodSeats: true, mergeGodSeats: true })}</div><div class="leaderboard-observer-note">第 0 位为神席。</div>`;
+        return `${lookup}<div class="leaderboard-layout">${renderLeaderboardBoard('星轨观览 · 觐见之梯总榜', entries, 'audience', { full: true, includeGodSeats: true, mergeGodSeats: true })}</div><div class="leaderboard-observer-note">第 0 位为寰宇至尊；觐见之梯源自信徒对试炼的评判证言。</div>`;
     }
     if (leaderboardMode === 'path') {
         const pathTabs = renderLeaderboardPathTabs();
         if (leaderboardPath !== 'all') {
             const pathEntries = entries.filter(entry => entry.faithPath === leaderboardPath);
-            return `${lookup}${pathTabs}<div class="leaderboard-layout">${renderLeaderboardBoard(`${leaderboardPath} · 信徒独立榜`, pathEntries, 'audience', { full: true, subtitle: `${pathEntries.length} 名信徒`, path: leaderboardPath, showAscensionInParentheses: true, includeGodSeats: true })}</div>`;
+            return `${lookup}${pathTabs}<div class="leaderboard-layout">${renderLeaderboardBoard(`${leaderboardPath}命途 · 信徒独立录`, pathEntries, 'audience', { full: true, subtitle: `${pathEntries.length} 位信徒 · 第 0 位为神席`, path: leaderboardPath, showAscensionInParentheses: true, includeGodSeats: true })}</div>`;
         }
         const boards = GOD_GROUPS.map(group => {
             const pathEntries = entries.filter(entry => entry.faithPath === group.path);
-            const gods = group.gods.join('、');
-            return renderLeaderboardBoard(`${group.path} · ${gods}`, pathEntries, 'audience', { subtitle: `${pathEntries.length} 名信徒`, path: group.path, showAscensionInParentheses: true, includeGodSeats: true });
+            const gods = group.gods.map(god => `${god}`).join('、');
+            return renderLeaderboardBoard(`${group.path}命途 · ${gods}信徒录`, pathEntries, 'audience', { subtitle: `${pathEntries.length} 位信徒 · 第 0 位为神席`, path: group.path, showAscensionInParentheses: true, includeGodSeats: true });
         }).join('');
         return `${lookup}${pathTabs}<div class="leaderboard-layout">${boards}</div>`;
     }
     return `
         ${lookup}
         <div class="leaderboard-layout">
-            ${renderLeaderboardBoard('登神总榜', entries, 'ascension', { includeGodSeats: true, mergeGodSeats: true })}
-            ${renderLeaderboardBoard('观星总榜', entries, 'audience', { includeGodSeats: true, mergeGodSeats: true })}
+            ${renderLeaderboardBoard('命运骰录 · 登神阶途总榜', entries, 'ascension', { includeGodSeats: true, mergeGodSeats: true })}
+            ${renderLeaderboardBoard('星轨观览 · 觐见之梯总榜', entries, 'audience', { includeGodSeats: true, mergeGodSeats: true })}
         </div>`;
 }
 
 async function renderLeaderboardPage(options = {}) {
     const container = document.getElementById('leaderboardContent');
     if (!container) return;
-    container.innerHTML = '<div class="loading"><div class="spinner"></div><br>正在整理榜单...</div>';
+    container.innerHTML = '<div class="loading"><div class="spinner"></div><br>正在整理登神与觐见名录...</div>';
     const leaderboardResult = options.useCachedEntries && Array.isArray(leaderboardEntriesCache)
         ? { entries: leaderboardEntriesCache, source: leaderboardEntriesSource, error: leaderboardEntriesError }
         : await fetchLeaderboardEntries();
@@ -392,22 +398,24 @@ async function renderLeaderboardPage(options = {}) {
             <div class="profile-avatar path-void" style="${heroStyle}">${renderGodSigil(heroGod, 'lg')}</div>
             <div class="profile-hero-copy">
                 <div class="profile-kicker">ASCENSION LEDGER</div>
-                <h1 class="profile-name">登神观览录</h1>
-                <div class="profile-subline">${currentSummary}</div>
-                <div class="profile-faith-prayer">${escapeHtml(source === 'cloud' ? '当前为云端全站观览册。' : '当前读取本地记录。')}${escapeHtml(sourceHint)}</div>
+                <h1 class="profile-name">登神觐见录</h1>
+                <div class="profile-subline">
+                    ${currentSummary}
+                </div>
+                <div class="profile-faith-prayer">寰宇信徒登神之路，诸神观览万民命途。${escapeHtml(source === 'cloud' ? '此为云端全域观览册。' : '当前读取本地记录。')}</div>
             </div>
             <div class="leaderboard-mini-stats">
-                <div class="leaderboard-mini-card"><span>登神分</span><strong>${currentEntry ? formatProfileScore(currentEntry.ascensionScore) : '—'}</strong></div>
-                <div class="leaderboard-mini-card"><span>观星分</span><strong>${currentEntry ? formatProfileScore(currentEntry.audienceScore) : '—'}</strong></div>
+                <div class="leaderboard-mini-card"><span>登神之路分</span><strong>${currentEntry ? formatProfileScore(currentEntry.ascensionScore) : '—'}</strong></div>
+                <div class="leaderboard-mini-card"><span>觐见之梯分</span><strong>${currentEntry ? formatProfileScore(currentEntry.audienceScore) : '—'}</strong></div>
                 <div class="leaderboard-mini-card"><span>${escapeHtml(sourceText)}</span><strong>${entries.length}</strong></div>
             </div>
         </section>
         <section class="profile-panel">
             ${renderLeaderboardTabs()}
-            <div class="leaderboard-summary">榜单仅展示普通信徒与可参与排行的档案；特殊账号会被保留，但不会进入这张榜单。</div>
+            <div class="leaderboard-summary">本录收录已保存的个人档案；信徒更新自身信仰记录后，名录将同步刷新。${source === 'cloud' ? '当前为云端全域观览册。' : `当前为本地榜单，运行 Supabase 档案表并更新 Edge Function 后会切换为全站榜。${escapeHtml(sourceHint)}`}</div>
             ${renderLeaderboardFaithDistribution(entries)}
             ${renderLeaderboardContent(entries)}
-            <div class="leaderboard-observer-note">${escapeHtml(VOID_CHRONICLES[entries.length % VOID_CHRONICLES.length])}</div>
+            <div class="leaderboard-observer-note">登神阶途观测记事：${escapeHtml(VOID_CHRONICLES[entries.length % VOID_CHRONICLES.length])}</div>
         </section>`;
 }
 

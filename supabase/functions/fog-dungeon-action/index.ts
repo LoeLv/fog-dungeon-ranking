@@ -8,7 +8,7 @@ const corsHeaders = {
   "Access-Control-Allow-Methods": "POST, OPTIONS",
 };
 
-type InviteRole = "player" | "author" | "reviewer" | "admin" | "god" | "star";
+type InviteRole = "player" | "author" | "reviewer" | "admin" | "god";
 
 type RequestBody = {
   action?: string;
@@ -118,7 +118,6 @@ const roleLabels: Record<InviteRole, string> = {
   reviewer: "审核员",
   admin: "馆主",
   god: "神明",
-  star: "星途",
 };
 const dungeonReviewerNames = new Set(["羔羊", "槐柏"]);
 
@@ -620,7 +619,6 @@ async function listGodBelievers(
     .select(godBelieverProfileSelect)
     .eq("faith_god", godName)
     .neq("role", "god")
-    .neq("role", "star")
     .order("updated_at", { ascending: false })
     .limit(200);
   if (error) return { error };
@@ -781,7 +779,7 @@ async function getInviteIdentity(
   if (error) return null;
 
   const roleFromTable = data?.role as InviteRole | undefined;
-  if (data?.is_active && roleFromTable && ["player", "author", "reviewer", "admin", "god", "star"].includes(roleFromTable)) {
+  if (data?.is_active && roleFromTable && ["player", "author", "reviewer", "admin", "god"].includes(roleFromTable)) {
     let profileDisplayName = "";
     const profileResult = await supabase
       .from("player_profiles")
@@ -3514,20 +3512,19 @@ Deno.serve(async (req) => {
       .limit(300);
     if (error?.code === "42P01") return json({ error: "请先运行 player_profiles_migration.sql" }, 400);
     if (error) return json({ error: error.message }, 400);
-    const visibleProfiles = (data || []).filter((profile: Record<string, unknown>) => !["god", "star"].includes(cleanText(profile.role, 20)));
 
     const titleResult = await getActiveTitlesByHashes(
       supabase,
-      visibleProfiles.map((profile: Record<string, unknown>) => cleanText(profile.invite_code_hash, 64)),
+      (data || []).map((profile: Record<string, unknown>) => cleanText(profile.invite_code_hash, 64)),
     );
     if (titleResult.error) return json({ error: titleResult.error.message }, 400);
     const curseResult = await getActiveCursesByHashes(
       supabase,
-      visibleProfiles.map((profile: Record<string, unknown>) => cleanText(profile.invite_code_hash, 64)),
+      (data || []).map((profile: Record<string, unknown>) => cleanText(profile.invite_code_hash, 64)),
     );
     if (curseResult.error) return json({ error: curseResult.error.message }, 400);
 
-    const publicProfiles = await Promise.all(visibleProfiles.map(async (profile: Record<string, unknown>) => {
+    const publicProfiles = await Promise.all((data || []).map(async (profile: Record<string, unknown>) => {
       const inviteCodeHash = cleanText(profile.invite_code_hash, 64);
       const { invite_code_hash: _hiddenInviteHash, ...rest } = profile;
       return {
@@ -3578,7 +3575,7 @@ Deno.serve(async (req) => {
     }
 
     if (action === "getMyProfile") {
-      if (["god", "star"].includes(role)) return json({ role, name: identity.displayName, data: null });
+      if (role === "god") return json({ role, name: identity.displayName, data: null });
       if (!hasRole(role, ["player", "author", "reviewer", "admin"])) return json({ error: "需要入局谕令" }, 403);
 
       const { data: profile, error: profileError } = await supabase
@@ -3638,10 +3635,10 @@ Deno.serve(async (req) => {
       const targetHash = cleanText(targetAccount.code_hash, 64);
       const beforeRole = cleanText(targetAccount.role, 20);
       const nextRole = cleanText(payload.role, 20);
-      const allowedRoles = new Set(["player", "author", "reviewer", "admin", "star"]);
-      if (!allowedRoles.has(nextRole)) return json({ error: "只能设置为玩家、作者、审核员、馆主或星途" }, 400);
+      const allowedRoles = new Set(["player", "author", "reviewer", "admin"]);
+      if (!allowedRoles.has(nextRole)) return json({ error: "只能设置为玩家、作者、审核员或馆主" }, 400);
       if (targetHash === identity.codeHash) return json({ error: "不能调整当前正在使用的馆主账号权限" }, 400);
-      if (["god", "star"].includes(beforeRole)) return json({ error: "特殊账号不能通过馆主管理面板改权" }, 403);
+      if (beforeRole === "god") return json({ error: "神明账号不能通过馆主管理面板改权" }, 403);
       if (delegatedRoleManager && !(beforeRole === "player" && nextRole === "author")) {
         return json({ error: "当前权限只允许将玩家升级为作者" }, 403);
       }
@@ -4024,7 +4021,7 @@ Deno.serve(async (req) => {
     if (action === "updateDisplayName") {
       if (!identity.inviteId) return json({ error: "共享邀请码不能绑定个人昵称，请使用专属码" }, 403);
       const inviteCodeText = cleanText(body.inviteCode, 200);
-      const isInitialBinding = !["god", "star"].includes(role) && cleanText(identity.displayName, 200).toLowerCase() === inviteCodeText.toLowerCase();
+      const isInitialBinding = role !== "god" && cleanText(identity.displayName, 200).toLowerCase() === inviteCodeText.toLowerCase();
       if (role !== "admin" && !isInitialBinding) return json({ error: "昵称为身份绑定字段，只有馆主可以更改" }, 403);
 
       const display = cleanDisplayName(payload.displayName, role);
@@ -4048,7 +4045,7 @@ Deno.serve(async (req) => {
     }
 
     if (action === "saveProfile") {
-      if (["god", "star"].includes(role)) return json({ error: "特殊账号不建立信徒个人档案" }, 403);
+      if (role === "god") return json({ error: "神明账号不建立信徒个人档案" }, 403);
       if (!hasRole(role, ["player", "author", "reviewer", "admin"])) return json({ error: "需要入局谕令" }, 403);
 
       const faithGod = cleanText(payload.faithGod, 20);
@@ -4149,7 +4146,7 @@ Deno.serve(async (req) => {
     }
 
     if (action === "setProfileTitleVisibility") {
-      if (["god", "star"].includes(role)) return json({ error: "特殊账号不建立信徒个人档案" }, 403);
+      if (role === "god") return json({ error: "神明账号不建立信徒个人档案" }, 403);
       if (!hasRole(role, ["player", "author", "reviewer", "admin"])) return json({ error: "需要入局谕令" }, 403);
       if (typeof payload.showTitles !== "boolean") return json({ error: "称号佩戴状态不正确" }, 400);
 
@@ -4166,7 +4163,7 @@ Deno.serve(async (req) => {
     }
 
     if (action === "updateTrickeryFaith") {
-      if (["god", "star"].includes(role)) return json({ error: "特殊账号不建立信徒个人档案" }, 403);
+      if (role === "god") return json({ error: "神明账号不建立信徒个人档案" }, 403);
       if (!hasRole(role, ["player", "author", "reviewer", "admin"])) return json({ error: "需要入局谕令" }, 403);
 
       const faithGod = cleanText(payload.faithGod, 20);
