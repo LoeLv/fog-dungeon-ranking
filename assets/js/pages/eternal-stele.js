@@ -100,4 +100,28 @@ function installEternalStelePageGuards() {
     ['openProfilePage', 'openLeaderboardPage', 'openScorePage', 'openMatchPage', 'openBattlePage', 'openAdminPage', 'openPermissionDesk'].forEach(wrap);
 }
 
+function bindEternalSteleButtons() {
+    const ids = ['eternalSteleButton', 'mobileEternalSteleButton'];
+    for (const id of ids) {
+        const button = document.getElementById(id);
+        if (!button || button.dataset.steleBound === 'true') continue;
+        button.dataset.steleBound = 'true';
+        button.addEventListener('click', (event) => {
+            event.preventDefault();
+            openEternalStelePage();
+        });
+    }
+}
+
+window.openEternalStelePage = openEternalStelePage;
+window.closeEternalStelePage = closeEternalStelePage;
+window.hideEternalStelePage = hideEternalStelePage;
+window.renderEternalStelePage = renderEternalStelePage;
+
 installEternalStelePageGuards();
+
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', bindEternalSteleButtons, { once: true });
+} else {
+    bindEternalSteleButtons();
+}
