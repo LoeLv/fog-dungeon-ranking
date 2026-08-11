@@ -8,7 +8,7 @@ const corsHeaders = {
   "Access-Control-Allow-Methods": "POST, OPTIONS",
 };
 
-type InviteRole = "player" | "author" | "reviewer" | "admin" | "god";
+type InviteRole = "player" | "author" | "reviewer" | "admin" | "god" | "astral";
 
 type RequestBody = {
   action?: string;
@@ -113,12 +113,14 @@ function isPublicReadRateLimited(req: Request, action: string) {
 }
 
 const roleLabels: Record<InviteRole, string> = {
-  player: "玩家",
-  author: "作者",
-  reviewer: "审核员",
-  admin: "馆主",
-  god: "神明",
+  player: "入局信徒",
+  author: "试炼构筑者",
+  reviewer: "结算审核员",
+  admin: "神谕馆主",
+  god: "祈愿神明",
+  astral: "星途",
 };
+const specialAccountRoles = new Set<InviteRole>(["god", "astral"]);
 const dungeonReviewerNames = new Set(["羔羊", "槐柏"]);
 
 const godNames = new Set([
@@ -618,7 +620,7 @@ async function listGodBelievers(
     .from("player_profiles")
     .select(godBelieverProfileSelect)
     .eq("faith_god", godName)
-    .neq("role", "god")
+    .neq("role", "god").neq("role", "astral")
     .order("updated_at", { ascending: false })
     .limit(200);
   if (error) return { error };
@@ -779,7 +781,7 @@ async function getInviteIdentity(
   if (error) return null;
 
   const roleFromTable = data?.role as InviteRole | undefined;
-  if (data?.is_active && roleFromTable && ["player", "author", "reviewer", "admin", "god"].includes(roleFromTable)) {
+  if (data?.is_active && roleFromTable && ["player", "author", "reviewer", "admin", "god", "astral"].includes(roleFromTable)) {
     let profileDisplayName = "";
     const profileResult = await supabase
       .from("player_profiles")
@@ -881,17 +883,17 @@ function hasPermission(identity: InviteIdentity, permission: string) {
 }
 
 function canGrantTitles(identity: InviteIdentity) {
-  return hasRole(identity.role, ["admin", "god"]);
+  return hasRole(identity.role, ["admin", "god", "astral"]);
 }
 
 function canReviewDungeons(identity: InviteIdentity) {
-  if (hasRole(identity.role, ["admin", "god"])) return true;
+  if (hasRole(identity.role, ["admin", "god", "astral"])) return true;
   if (hasPermission(identity, "review_dungeons")) return true;
   return false;
 }
 
 function getTitleGrantGod(identity: InviteIdentity, requestedGod: unknown) {
-  if (identity.role === "god") return identity.displayName;
+  if (specialAccountRoles.has(identity.role)) return identity.displayName;
   return cleanText(requestedGod, 20);
 }
 
@@ -1029,7 +1031,7 @@ async function listHonorOperationLogs(
     .in("action", honorActions)
     .order("created_at", { ascending: false })
     .limit(Math.max(1, Math.min(50, limit)));
-  if (identity.role === "god") query = query.eq("actor_code_hash", identity.codeHash);
+  if (specialAccountRoles.has(identity.role)) query = query.eq("actor_code_hash", identity.codeHash);
   const { data, error } = await query;
   if (isMissingAdminOperationLogTable(error)) return { data: [], unavailable: true };
   if (error) return { data: [], error };
@@ -3513,18 +3515,20 @@ Deno.serve(async (req) => {
     if (error?.code === "42P01") return json({ error: "请先运行 player_profiles_migration.sql" }, 400);
     if (error) return json({ error: error.message }, 400);
 
+    const visibleProfiles = (data || []).filter((profile: Record<string, unknown>) => !specialAccountRoles.has(cleanText(profile.role, 20) as InviteRole));
+
     const titleResult = await getActiveTitlesByHashes(
       supabase,
-      (data || []).map((profile: Record<string, unknown>) => cleanText(profile.invite_code_hash, 64)),
+      visibleProfiles.map((profile: Record<string, unknown>) => cleanText(profile.invite_code_hash, 64)),
     );
     if (titleResult.error) return json({ error: titleResult.error.message }, 400);
     const curseResult = await getActiveCursesByHashes(
       supabase,
-      (data || []).map((profile: Record<string, unknown>) => cleanText(profile.invite_code_hash, 64)),
+      visibleProfiles.map((profile: Record<string, unknown>) => cleanText(profile.invite_code_hash, 64)),
     );
     if (curseResult.error) return json({ error: curseResult.error.message }, 400);
 
-    const publicProfiles = await Promise.all((data || []).map(async (profile: Record<string, unknown>) => {
+    const publicProfiles = await Promise.all(visibleProfiles.map(async (profile: Record<string, unknown>) => {
       const inviteCodeHash = cleanText(profile.invite_code_hash, 64);
       const { invite_code_hash: _hiddenInviteHash, ...rest } = profile;
       return {
@@ -3575,7 +3579,7 @@ Deno.serve(async (req) => {
     }
 
     if (action === "getMyProfile") {
-      if (role === "god") return json({ role, name: identity.displayName, data: null });
+      if (specialAccountRoles.has(role)) return json({ role, name: identity.displayName, data: null });
       if (!hasRole(role, ["player", "author", "reviewer", "admin"])) return json({ error: "需要入局谕令" }, 403);
 
       const { data: profile, error: profileError } = await supabase
@@ -3638,7 +3642,7 @@ Deno.serve(async (req) => {
       const allowedRoles = new Set(["player", "author", "reviewer", "admin"]);
       if (!allowedRoles.has(nextRole)) return json({ error: "只能设置为玩家、作者、审核员或馆主" }, 400);
       if (targetHash === identity.codeHash) return json({ error: "不能调整当前正在使用的馆主账号权限" }, 400);
-      if (beforeRole === "god") return json({ error: "神明账号不能通过馆主管理面板改权" }, 403);
+      if (specialAccountRoles.has(beforeRole as InviteRole)) return json({ error: "特殊账号不能通过馆主管理面板改权" }, 403);
       if (delegatedRoleManager && !(beforeRole === "player" && nextRole === "author")) {
         return json({ error: "当前权限只允许将玩家升级为作者" }, 403);
       }
@@ -3852,18 +3856,21 @@ Deno.serve(async (req) => {
     }
 
     if (action === "listGodBelievers") {
-      if (role !== "god") return json({ error: "只有神明账号可以查看自己的信徒" }, 403);
+      if (!specialAccountRoles.has(role)) return json({ error: "只有神明账号可以查看自己的信徒" }, 403);
       const godName = cleanGodName(identity.displayName);
-      if (!godNames.has(godName)) return json({ error: "当前神明账号未绑定有效神名" }, 403);
+      if (!godNames.has(godName)) {
+        if (role === "astral") return json({ role, name: identity.displayName, data: { god: identity.displayName, believers: [] } });
+        return json({ error: "当前神明账号未绑定有效神名" }, 403);
+      }
       const result = await listGodBelievers(supabase, godName);
       if (result.error) return json({ error: result.error.message || "信徒列表读取失败" }, 400);
       return json({ role, name: identity.displayName, data: { god: godName, believers: result.data || [] } });
     }
 
     if (action === "godConvertBeliever") {
-      if (role !== "god") return json({ error: "只有神明账号可以执行改信敕令" }, 403);
+      if (!specialAccountRoles.has(role)) return json({ error: "只有神明账号可以执行改信敕令" }, 403);
       const actorGod = cleanGodName(identity.displayName);
-      if (!godNames.has(actorGod)) return json({ error: "当前神明账号未绑定有效神名" }, 403);
+      if (!godNames.has(actorGod)) return json({ error: role === "astral" ? "星途账号不执行改信敕令" : "当前神明账号未绑定有效神名" }, 403);
 
       const targetHash = cleanText(payload.targetHash, 64);
       const targetName = cleanText(payload.targetName, 40);
@@ -4021,7 +4028,7 @@ Deno.serve(async (req) => {
     if (action === "updateDisplayName") {
       if (!identity.inviteId) return json({ error: "共享邀请码不能绑定个人昵称，请使用专属码" }, 403);
       const inviteCodeText = cleanText(body.inviteCode, 200);
-      const isInitialBinding = role !== "god" && cleanText(identity.displayName, 200).toLowerCase() === inviteCodeText.toLowerCase();
+      const isInitialBinding = !specialAccountRoles.has(role) && cleanText(identity.displayName, 200).toLowerCase() === inviteCodeText.toLowerCase();
       if (role !== "admin" && !isInitialBinding) return json({ error: "昵称为身份绑定字段，只有馆主可以更改" }, 403);
 
       const display = cleanDisplayName(payload.displayName, role);
@@ -4045,7 +4052,7 @@ Deno.serve(async (req) => {
     }
 
     if (action === "saveProfile") {
-      if (role === "god") return json({ error: "神明账号不建立信徒个人档案" }, 403);
+      if (specialAccountRoles.has(role)) return json({ error: "神明账号不建立信徒个人档案" }, 403);
       if (!hasRole(role, ["player", "author", "reviewer", "admin"])) return json({ error: "需要入局谕令" }, 403);
 
       const faithGod = cleanText(payload.faithGod, 20);
@@ -4146,7 +4153,7 @@ Deno.serve(async (req) => {
     }
 
     if (action === "setProfileTitleVisibility") {
-      if (role === "god") return json({ error: "神明账号不建立信徒个人档案" }, 403);
+      if (specialAccountRoles.has(role)) return json({ error: "神明账号不建立信徒个人档案" }, 403);
       if (!hasRole(role, ["player", "author", "reviewer", "admin"])) return json({ error: "需要入局谕令" }, 403);
       if (typeof payload.showTitles !== "boolean") return json({ error: "称号佩戴状态不正确" }, 400);
 
@@ -4163,7 +4170,7 @@ Deno.serve(async (req) => {
     }
 
     if (action === "updateTrickeryFaith") {
-      if (role === "god") return json({ error: "神明账号不建立信徒个人档案" }, 403);
+      if (specialAccountRoles.has(role)) return json({ error: "神明账号不建立信徒个人档案" }, 403);
       if (!hasRole(role, ["player", "author", "reviewer", "admin"])) return json({ error: "需要入局谕令" }, 403);
 
       const faithGod = cleanText(payload.faithGod, 20);
@@ -4217,7 +4224,7 @@ Deno.serve(async (req) => {
     }
 
     if (action === "getPublicProfile") {
-      if (!hasRole(role, ["player", "author", "reviewer", "admin", "god"])) return json({ error: "需要入局谕令" }, 403);
+      if (!hasRole(role, ["player", "author", "reviewer", "admin", "god", "astral"])) return json({ error: "需要入局谕令" }, 403);
 
       const profileKey = cleanText(payload.profileKey ?? payload.profile_key, 96);
       if (!/^[a-f0-9]{64}$/i.test(profileKey)) return json({ error: "公开档案标识不正确" }, 400);
@@ -4394,7 +4401,7 @@ Deno.serve(async (req) => {
       const titleGod = getTitleGrantGod(identity, payload.titleGod);
       const titleNote = cleanText(payload.titleNote, 120);
       if (!targetHash || !titleText) return json({ error: "请填写受封昵称和称号" }, 400);
-      if (role === "god" && cleanText(target.faith_god, 20) !== identity.displayName) {
+      if (specialAccountRoles.has(role) && cleanText(target.faith_god, 20) !== identity.displayName) {
         return json({ error: "神明只能为对应信徒降下称号" }, 403);
       }
 
@@ -4406,7 +4413,7 @@ Deno.serve(async (req) => {
           title_text: titleText,
           title_god: titleGod,
           title_note: titleNote,
-          granted_by_type: role === "god" || titleGod ? "god" : "admin",
+          granted_by_type: specialAccountRoles.has(role) || titleGod ? "god" : "admin",
           granted_by_hash: identity.codeHash,
           granted_by_name: identity.displayName,
           is_active: true,
@@ -4450,7 +4457,7 @@ Deno.serve(async (req) => {
       const curseText = cleanText(payload.curseText, 32) || (isBetrayalCurse ? "背弃诅咒" : "普通诅咒");
       if (!targetHash) return json({ error: "请填写受诅昵称" }, 400);
       if (!curseGod) return json({ error: "请选择诅咒名义" }, 400);
-      if (role === "god" && isBetrayalCurse && (!targetFaithGod || targetFaithGod === identity.displayName)) {
+      if (specialAccountRoles.has(role) && isBetrayalCurse && (!targetFaithGod || targetFaithGod === identity.displayName)) {
         return json({ error: "对应神明只能对已改信者下放背弃诅咒" }, 403);
       }
 
@@ -4464,7 +4471,7 @@ Deno.serve(async (req) => {
           curse_god: curseGod,
           curse_note: curseNote,
           curse_type: curseType,
-          granted_by_type: role === "god" || curseGod ? "god" : "admin",
+          granted_by_type: specialAccountRoles.has(role) || curseGod ? "god" : "admin",
           granted_by_hash: identity.codeHash,
           granted_by_name: identity.displayName,
           is_active: true,
@@ -4544,7 +4551,7 @@ Deno.serve(async (req) => {
       const activeTitle = (activeTitles || [])[0];
       if (!activeTitle) return json({ error: "这个玩家当前没有生效称号" }, 404);
       if (
-        role === "god" &&
+        specialAccountRoles.has(role) &&
         cleanText((activeTitle as Record<string, unknown>).granted_by_hash, 64) !== identity.codeHash &&
         cleanText((activeTitle as Record<string, unknown>).title_god, 20) !== identity.displayName
       ) {
@@ -4659,7 +4666,7 @@ Deno.serve(async (req) => {
       const activeCurse = (activeCurses || [])[0];
       if (!activeCurse) return json({ error: "这个玩家当前没有生效诅咒" }, 404);
       if (
-        role === "god" &&
+        specialAccountRoles.has(role) &&
         cleanText((activeCurse as Record<string, unknown>).granted_by_hash, 64) !== identity.codeHash &&
         cleanText((activeCurse as Record<string, unknown>).curse_god, 20) !== identity.displayName
       ) {
@@ -5824,7 +5831,7 @@ Deno.serve(async (req) => {
     }
 
     if (action === "listMyDungeons") {
-      if (!hasRole(role, ["author", "reviewer", "admin", "god"])) return json({ error: "需要作者、审核员、神明或馆主邀请码" }, 403);
+      if (!hasRole(role, ["author", "reviewer", "admin", "god", "astral"])) return json({ error: "需要作者、审核员、神明或馆主邀请码" }, 403);
       const limit = Math.max(1, Math.min(100, Number(payload.limit || 80)));
       const dungeonFields = "id, name, creator, co_creators, difficulty, type, participant_count, run_count, clear_count, clear_rate, avg_rating, rating_count, comment_count, created_at, is_one_shot";
       const authoredById = new Map<string, Record<string, unknown>>();
@@ -5891,10 +5898,10 @@ Deno.serve(async (req) => {
     }
 
     if (action === "submitDungeon") {
-      if (!hasRole(role, ["author", "reviewer", "admin", "god"])) return json({ error: "需要作者、审核员、神明或馆主邀请码" }, 403);
+      if (!hasRole(role, ["author", "reviewer", "admin", "god", "astral"])) return json({ error: "需要作者、审核员、神明或馆主邀请码" }, 403);
 
       const name = cleanText(payload.name, 80);
-      const creator = role === "god" ? identity.displayName : cleanText(payload.creator, 40);
+      const creator = specialAccountRoles.has(role) ? identity.displayName : cleanText(payload.creator, 40);
       const coCreators = cleanCoCreators(payload.coCreators ?? payload.co_creators);
       const description = cleanText(payload.description, 1800);
       const pinnedNote = cleanText(payload.pinnedNote, 800);
@@ -6135,7 +6142,7 @@ Deno.serve(async (req) => {
     }
 
     if (action === "advanceRun") {
-      if (!hasRole(role, ["author", "reviewer", "admin", "god"])) return json({ error: "需要作者、审核员、神明或馆主邀请码" }, 403);
+      if (!hasRole(role, ["author", "reviewer", "admin", "god", "astral"])) return json({ error: "需要作者、审核员、神明或馆主邀请码" }, 403);
 
       const dungeonId = cleanText(payload.dungeonId, 80);
       if (!isUuid(dungeonId)) return json({ error: "副本 ID 不正确" }, 400);
@@ -6202,7 +6209,7 @@ Deno.serve(async (req) => {
     }
 
     if (action === "addComment") {
-      if (!hasRole(role, ["player", "author", "reviewer", "admin", "god"])) return json({ error: "需要入局谕令" }, 403);
+      if (!hasRole(role, ["player", "author", "reviewer", "admin", "god", "astral"])) return json({ error: "需要入局谕令" }, 403);
 
       const dungeonId = cleanText(payload.dungeonId, 80);
       const authorInput = cleanText(payload.author, 40);
@@ -6278,7 +6285,7 @@ Deno.serve(async (req) => {
     }
 
     if (action === "deleteComment") {
-      if (!hasRole(role, ["player", "author", "reviewer", "admin", "god"])) return json({ error: "需要邀请码" }, 403);
+      if (!hasRole(role, ["player", "author", "reviewer", "admin", "god", "astral"])) return json({ error: "需要邀请码" }, 403);
 
       const commentId = cleanText(payload.commentId, 80);
       if (!isUuid(commentId)) return json({ error: "评论 ID 不正确" }, 400);
@@ -6317,7 +6324,7 @@ Deno.serve(async (req) => {
     }
 
     if (action === "updatePinnedNote") {
-      if (!hasRole(role, ["author", "reviewer", "admin", "god"])) return json({ error: "需要作者、审核员、神明或馆主邀请码" }, 403);
+      if (!hasRole(role, ["author", "reviewer", "admin", "god", "astral"])) return json({ error: "需要作者、审核员、神明或馆主邀请码" }, 403);
 
       const dungeonId = cleanText(payload.dungeonId, 80);
       const pinnedNote = cleanText(payload.pinnedNote, 800);
@@ -6346,7 +6353,7 @@ Deno.serve(async (req) => {
     }
 
     if (action === "deleteDungeon") {
-      if (!hasRole(role, ["author", "reviewer", "admin", "god"])) return json({ error: "需要作者、审核员、神明或馆主邀请码" }, 403);
+      if (!hasRole(role, ["author", "reviewer", "admin", "god", "astral"])) return json({ error: "需要作者、审核员、神明或馆主邀请码" }, 403);
 
       const dungeonId = cleanText(payload.dungeonId, 80);
       if (!isUuid(dungeonId)) return json({ error: "副本 ID 不正确" }, 400);

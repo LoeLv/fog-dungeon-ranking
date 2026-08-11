@@ -41,15 +41,15 @@ function canUseRole(roles) { return roles.includes(getInviteRole()); }
 
 function canInteract() { return canUseRole(['player', 'author', 'reviewer', 'admin']); }
 
-function canTestify() { return canUseRole(['player', 'author', 'reviewer', 'admin', 'god']); }
+function canTestify() { return canUseRole(['player', 'author', 'reviewer', 'admin', 'god', 'astral']); }
 
-function canSubmit() { return canUseRole(['author', 'reviewer', 'admin', 'god']); }
+function canSubmit() { return canUseRole(['author', 'reviewer', 'admin', 'god', 'astral']); }
 
 function isAdmin() { return getInviteRole() === 'admin'; }
 
-function isGodRole() { return getInviteRole() === 'god'; }
+function isGodRole() { return getInviteRole() === 'god' || getInviteRole() === 'astral'; }
 
-function canGrantTitlesUI() { return canUseRole(['admin', 'god']); }
+function canGrantTitlesUI() { return canUseRole(['admin', 'god', 'astral']); }
 
 function canSettleScores() { return isAdmin() || hasInvitePermission('settle_scores'); }
 

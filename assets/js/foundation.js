@@ -59,7 +59,7 @@ const INVITE_STORAGE_KEY = 'invite_session_v1';
 const PROFILE_STORAGE_KEY = 'personal_profiles_v1';
 const PROFILE_NOTICE_SEEN_KEY = 'profile_notice_seen_v1';
 const MOBILE_ONBOARDING_STORAGE_KEY = 'mobile_onboarding_seen_v1';
-const ROLE_LABELS = { player: '入局信徒', author: '试炼构筑者', reviewer: '结算审核员', admin: '神谕馆主', god: '祈愿神明' };
+const ROLE_LABELS = { player: '入局信徒', author: '试炼构筑者', reviewer: '结算审核员', admin: '神谕馆主', god: '祈愿神明', astral: '星途' };
 const ROLE_UI_COPY = {
     guest: {
         title: '旁观者只读',
@@ -119,6 +119,16 @@ const ROLE_UI_COPY = {
             ['🎭', '祈愿创本', '祈愿试炼'],
             ['◇', '第零神席', '寰宇至尊'],
             ['✧', '神明证言', '试炼证言']
+        ]
+    },
+    astral: {
+        title: '星途',
+        note: '永恒留名，受万民敬仰。',
+        cards: [
+            ['✦', '永恒神碑', '纪念名录'],
+            ['◇', '自由之神', '曦'],
+            ['✧', '星途席位', '特殊账号'],
+            ['🎭', '纪念留档', '不入信徒榜']
         ]
     }
 };

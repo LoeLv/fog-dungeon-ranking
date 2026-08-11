@@ -1,7 +1,7 @@
 // Shared utility and lookup helpers. Keep page-state and write-flow functions in assets/app.js.
 
 function normalizeRole(role) {
-    return ['player', 'author', 'reviewer', 'admin', 'god'].includes(role) ? role : null;
+    return ['player', 'author', 'reviewer', 'admin', 'god', 'astral'].includes(role) ? role : null;
 }
 
 function cssEscape(value) {
