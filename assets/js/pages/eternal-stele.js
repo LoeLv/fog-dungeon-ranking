@@ -3,10 +3,10 @@
 const ETERNAL_STELE_RECORDS = [
     {
         rank: '01',
-        title: '自由之神--曦',
-        subtitle: '星途 · 第一块碑',
-        summary: '作为信仰之地的初创者，祂历经黑暗时代的压迫与血火，独立成长，最终成为自由之神，受万民敬仰。',
-        note: '永恒铭记 · 不入信徒排行',
+        title: '\u81ea\u7531\u4e4b\u795e--\u66e6',
+        subtitle: '\u661f\u9014 \u00b7 \u7b2c\u4e00\u5757\u7891',
+        summary: '\u4f5c\u4e3a\u4fe1\u4ef0\u4e4b\u5730\u7684\u521d\u521b\u8005\uff0c\u4f60\u5386\u7ecf\u9ed1\u6697\u65f6\u4ee3\u7684\u538b\u8feb\u4e0e\u8840\u706b\uff0c\u72ec\u7acb\u6210\u957f\uff0c\u6700\u7ec8\u6210\u4e3a\u81ea\u7531\u4e4b\u795e\uff0c\u53d7\u4e07\u6c11\u656c\u4fef\u3002',
+        note: '\u5927\u6bb5\u7ec8\u5f52 \u00b7 \u6027\u8d28\u4fdd\u7559',
     }
 ];
 
@@ -17,16 +17,16 @@ function renderEternalStelePage() {
     if (!container) return;
     const record = ETERNAL_STELE_RECORDS[0];
     container.innerHTML = `
-        <section class="stele-hero">
-            <div>
+        <section class="stele-hero stele-hero-silent">
+            <div class="stele-hero-copy">
                 <div class="stele-kicker">ETERNAL STELE</div>
-                <h1 class="stele-title">永恒神碑</h1>
-                <p class="stele-lead">这里不是榜单的延伸，而是把被记住的人，安静地立成碑。</p>
+                <h1 class="stele-title">\u6c38\u6052\u795e\u7891</h1>
+                <p class="stele-lead">\u8fd9\u91cc\u4e0d\u662f\u699c\u5355\uff0c\u800c\u662f\u628a\u88ab\u8bb0\u4f4f\u7684\u4eba\u4f5c\u4e3a\u4e00\u5757\u5899\uff0c\u4e00\u5757\u7845\uff0c\u4e00\u9053\u4e0d\u4f1a\u9000\u8272\u7684\u7b7e\u8bb0\u3002</p>
             </div>
             <div class="stele-meta">
-                <div class="stele-stat"><span>铭刻数量</span><strong>${ETERNAL_STELE_RECORDS.length}</strong></div>
-                <div class="stele-stat"><span>席位属性</span><strong>星途</strong></div>
-                <div class="stele-stat"><span>页面性质</span><strong>纪念</strong></div>
+                <div class="stele-stat"><span>\u9ed8\u8bb0\u5e8f\u5217</span><strong>${ETERNAL_STELE_RECORDS.length}</strong></div>
+                <div class="stele-stat"><span>\u5f53\u524d\u4e3b\u4f4d</span><strong>\u661f\u9014</strong></div>
+                <div class="stele-stat"><span>\u7f16\u8f91\u72b6\u6001</span><strong>\u7ee7\u7eed\u7acb\u7a0b</strong></div>
             </div>
         </section>
         <section class="stele-monolith">
@@ -40,23 +40,11 @@ function renderEternalStelePage() {
             <div class="stele-monolith-body">
                 <p>${escapeHtml(record.summary)}</p>
             </div>
+            <div class="stele-monolith-foot">
+                <span>${escapeHtml(record.note)}</span>
+                <span>\u53ea\u7559\u4e0b\u4e00\u4e2a\u540d\u5b57\uff0c\u5176\u4f59\u4ea4\u7ed9\u65f6\u95f4\u3002</span>
+            </div>
         </section>
-        <div class="stele-grid">
-            <section class="stele-panel">
-                <div class="profile-panel-title">
-                    <span>星途说明</span>
-                    <small>特殊账号</small>
-                </div>
-                <p class="stele-copy">星途会保留独立身份，但不会进入普通信徒排行榜。</p>
-            </section>
-            <section class="stele-panel">
-                <div class="profile-panel-title">
-                    <span>后续扩展</span>
-                    <small>留白预留</small>
-                </div>
-                <p class="stele-copy">以后如果要继续立碑，可以直接在这里追加新的铭刻记录。</p>
-            </section>
-        </div>
     `;
 }
 

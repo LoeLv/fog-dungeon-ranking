@@ -3884,24 +3884,43 @@ button.is-action-ack {
 }
 .eternal-stele-content {
     display: grid;
-    gap: 16px;
+    gap: 18px;
 }
 .stele-hero {
     display: grid;
-    grid-template-columns: minmax(0, 1.3fr) minmax(220px, 0.7fr);
-    gap: 16px;
-    padding: 22px;
-    border: 1px solid rgba(231,207,138,0.14);
-    border-radius: 16px;
+    grid-template-columns: minmax(0, 1.2fr) minmax(240px, 0.62fr);
+    gap: 18px;
+    padding: 26px;
+    border: 1px solid rgba(231,207,138,0.16);
+    border-radius: 18px;
     background:
-        linear-gradient(180deg, rgba(255,255,255,0.045), rgba(255,255,255,0.012)),
+        linear-gradient(180deg, rgba(255,255,255,0.05), rgba(255,255,255,0.012)),
         rgba(7,8,12,0.72);
+}
+.stele-hero-silent {
+    position: relative;
+    overflow: hidden;
+}
+.stele-hero-silent::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    background:
+        linear-gradient(135deg, transparent 0 36%, rgba(243,222,160,0.06) 36% 37%, transparent 37% 100%),
+        linear-gradient(225deg, transparent 0 54%, rgba(122,174,194,0.08) 54% 55%, transparent 55% 100%);
+    opacity: 0.85;
+}
+.stele-hero-copy {
+    position: relative;
+    z-index: 1;
 }
 .stele-kicker {
     color: var(--gold-light);
     font-size: 0.7rem;
     font-weight: 900;
     letter-spacing: 0.24em;
+    text-transform: uppercase;
 }
 .stele-title {
     margin: 6px 0 10px;
@@ -3912,9 +3931,10 @@ button.is-action-ack {
 }
 .stele-lead {
     margin: 0;
-    max-width: 52ch;
+    max-width: 58ch;
     color: var(--text-muted);
-    line-height: 1.9;
+    line-height: 1.95;
+    font-size: 0.98rem;
 }
 .stele-meta {
     display: grid;
@@ -3922,10 +3942,13 @@ button.is-action-ack {
     align-content: center;
 }
 .stele-stat {
-    padding: 14px 16px;
-    border: 1px solid rgba(255,255,255,0.06);
+    padding: 14px 16px 15px;
+    border: 1px solid rgba(255,255,255,0.07);
+    border-left: 2px solid rgba(243,222,160,0.46);
     border-radius: 14px;
-    background: rgba(0,0,0,0.18);
+    background:
+        linear-gradient(90deg, rgba(243,222,160,0.06), transparent 52%),
+        rgba(0,0,0,0.18);
 }
 .stele-stat span {
     display: block;
@@ -3939,27 +3962,29 @@ button.is-action-ack {
     font-size: 1.15rem;
 }
 .stele-monolith {
-    padding: 22px;
-    border: 1px solid rgba(255,255,255,0.075);
-    border-radius: 16px;
+    padding: 26px 26px 20px;
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 18px;
     background:
-        linear-gradient(180deg, rgba(255,255,255,0.04), rgba(255,255,255,0.015)),
+        linear-gradient(180deg, rgba(255,255,255,0.05), rgba(255,255,255,0.012)),
         rgba(7,8,12,0.74);
 }
 .stele-monolith-head {
     display: grid;
     grid-template-columns: auto minmax(0, 1fr);
-    gap: 14px;
+    gap: 16px;
     align-items: center;
 }
 .stele-rank {
     display: grid;
     place-items: center;
-    width: 58px;
-    height: 58px;
-    border-radius: 16px;
-    border: 1px solid rgba(243,222,160,0.22);
-    background: rgba(243,222,160,0.08);
+    width: 64px;
+    height: 64px;
+    border-radius: 18px;
+    border: 1px solid rgba(243,222,160,0.24);
+    background:
+        linear-gradient(180deg, rgba(243,222,160,0.14), rgba(243,222,160,0.06)),
+        rgba(243,222,160,0.04);
     color: var(--gold-light);
     font-family: var(--font-display);
     font-size: 1.3rem;
@@ -3968,7 +3993,7 @@ button.is-action-ack {
 .stele-monolith-title {
     color: var(--text-bright);
     font-family: var(--font-display);
-    font-size: clamp(1.45rem, 2.8vw, 2.1rem);
+    font-size: clamp(1.55rem, 3vw, 2.25rem);
     line-height: 1.15;
 }
 .stele-monolith-subtitle {
@@ -3977,33 +4002,67 @@ button.is-action-ack {
     font-size: 0.82rem;
 }
 .stele-monolith-body {
-    margin: 16px 0 0;
-    padding: 16px 0 0;
+    margin: 18px 0 0;
+    padding: 18px 0 0;
     border-top: 1px solid rgba(255,255,255,0.05);
 }
 .stele-monolith-body p {
     margin: 0;
-    max-width: 60ch;
+    max-width: 66ch;
     color: var(--text);
-    line-height: 1.95;
+    line-height: 2;
+    font-size: 1rem;
 }
-.stele-grid {
-    display: grid;
-    gap: 14px;
-}
-.stele-panel {
-    padding: 18px;
-    border: 1px solid rgba(255,255,255,0.075);
-    border-radius: 16px;
-    background: rgba(7,8,12,0.72);
-}
-.stele-copy {
-    margin: 0;
+.stele-monolith-foot {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    margin-top: 18px;
+    padding-top: 14px;
+    border-top: 1px solid rgba(255,255,255,0.05);
     color: var(--text-muted);
-    line-height: 1.8;
+    font-size: 0.82rem;
+    line-height: 1.6;
+}
+.stele-monolith-foot span:last-child {
+    color: var(--gold-soft);
 }
 body.eternal-stele-view-open .profile-toolbar {
     position: sticky;
+}
+.eternal-stele-page .profile-content {
+    padding-bottom: 28px;
+}
+@media (max-width: 920px) {
+    .stele-hero {
+        grid-template-columns: minmax(0, 1fr);
+    }
+    .stele-meta {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+}
+@media (max-width: 640px) {
+    .eternal-stele-page .profile-content {
+        padding-bottom: 20px;
+    }
+    .stele-hero,
+    .stele-monolith {
+        padding: 18px;
+        border-radius: 16px;
+    }
+    .stele-meta {
+        grid-template-columns: 1fr;
+    }
+    .stele-monolith-head {
+        grid-template-columns: 1fr;
+    }
+    .stele-rank {
+        width: 52px;
+        height: 52px;
+    }
+    .stele-monolith-foot {
+        flex-direction: column;
+    }
 }
 .profile-atmosphere {
     position: fixed;
