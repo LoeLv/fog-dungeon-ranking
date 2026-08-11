@@ -4223,6 +4223,22 @@ Deno.serve(async (req) => {
       });
     }
 
+    if (action === "redeemPromoCode") {
+      if (specialAccountRoles.has(role)) return json({ error: "星途账号不使用兑换口令" }, 403);
+      const codeText = cleanText(payload.codeText ?? payload.code, 120);
+      if (!codeText) return json({ error: "请输入兑换口令" }, 400);
+
+      const { data, error } = await supabase.rpc("redeem_promo_code", {
+        p_code_text: codeText,
+        p_invite_code_hash: identity.codeHash,
+      });
+      if (error?.code === "42883" || error?.code === "PGRST202") return json({ error: "请先运行 promo_code_redemption_20260811.sql" }, 400);
+      if (error) return json({ error: error.message }, 400);
+      const result = Array.isArray(data) ? data[0] : data;
+      if (!result?.ok) return json({ error: result?.error || "兑换失败" }, 400);
+      return json({ role, name: identity.displayName, data: result });
+    }
+
     if (action === "getPublicProfile") {
       if (!hasRole(role, ["player", "author", "reviewer", "admin", "god", "astral"])) return json({ error: "需要入局谕令" }, 403);
 

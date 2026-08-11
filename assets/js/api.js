@@ -142,7 +142,7 @@ async function invokeDungeonAction(action, payload = {}, codeOverride = null, op
         invalidateShortReadCache('my-clear-records');
         invalidateShortReadCache('dungeon-detail:');
     }
-    if (new Set(['saveProfile', 'updateDisplayName', 'updateTrickeryFaith', 'godConvertBeliever', 'grantProfileTitle', 'revokeProfileTitle', 'restoreProfileTitle', 'grantBetrayalCurse', 'revokeProfileCurse', 'restoreProfileCurse']).has(action)) {
+    if (new Set(['saveProfile', 'updateDisplayName', 'updateTrickeryFaith', 'redeemPromoCode', 'godConvertBeliever', 'grantProfileTitle', 'revokeProfileTitle', 'restoreProfileTitle', 'grantBetrayalCurse', 'revokeProfileCurse', 'restoreProfileCurse']).has(action)) {
         invalidateShortReadCache('leaderboard');
     }
     return { data: result.data ?? null, error: null, role, name: result.name };

@@ -158,6 +158,16 @@ async function renderProfilePage() {
                         <button class="btn btn-outline btn-sm" onclick="exportProfileCardImage()">进献神恩</button>
                         <button class="btn btn-primary btn-sm" data-profile-save-button onclick="saveProfilePage()">封存信徒档案</button>
                     </div>
+                    <div class="profile-form-grid" style="margin-top:14px;">
+                        <div class="form-group full">
+                            <label for="promoCodeInput">兑换码</label>
+                            <div class="profile-tools">
+                                <input id="promoCodeInput" maxlength="80" placeholder="输入今日口令" style="flex:1;min-width:220px;">
+                                <button class="btn btn-outline btn-sm" data-promo-redeem-button onclick="redeemPromoCode()">立即兑换</button>
+                            </div>
+                            <div class="identity-help">今日口令：灵魂安眠，生命终焉</div>
+                        </div>
+                    </div>
                 </section>
                 <section class="profile-panel" data-god="${escapeHtml(faithGod)}" style="${faithStyle}">
                     <div class="profile-panel-title">
@@ -407,6 +417,45 @@ async function saveProfilePage() {
     } finally {
         restoreSaveButtons();
         releaseUiActionLock('saveProfilePage');
+    }
+}
+
+let promoCodeRedeemInFlight = false;
+async function redeemPromoCode() {
+    if (promoCodeRedeemInFlight) return;
+    if (!inviteSession?.code) {
+        openInviteModal('先验入局谕令后可兑换口令。');
+        return;
+    }
+    const input = document.getElementById('promoCodeInput');
+    const codeText = String(input?.value || '').trim().slice(0, 80);
+    if (!codeText) {
+        showToast('请输入兑换口令');
+        return;
+    }
+    if (!acquireUiActionLock('redeemPromoCode', '兑换码正在兑换中，请勿重复点击')) return;
+    promoCodeRedeemInFlight = true;
+    const restoreButtons = setActionButtonsBusy('[data-promo-redeem-button]', '兑换中...');
+    try {
+        const { data, error } = await invokeDungeonAction('redeemPromoCode', { codeText });
+        if (error) {
+            showToast(`❌ ${getFriendlyActionError(error, '兑换失败')}`);
+            return;
+        }
+        await refreshCurrentProfileFromCloud({ preserveSessionOnInvalid: true });
+        const ascensionAward = Number(data?.reward_ascension_score ?? data?.ascension_awarded ?? 20);
+        const basicDraws = Number(data?.reward_basic_draws ?? data?.basic_draws_awarded ?? 5);
+        const advancedDraws = Number(data?.reward_advanced_draws ?? data?.advanced_draws_awarded ?? 0);
+        if (input) input.value = '';
+        showToast(`兑换成功：登神 +${ascensionAward}，抽数 +${basicDraws + advancedDraws}`);
+        await renderProfilePage();
+        if (document.getElementById('leaderboardPage')?.style.display !== 'none') await renderLeaderboardPage();
+    } catch (error) {
+        showToast(`❌ ${getFriendlyActionError(error, '兑换失败')}`);
+    } finally {
+        restoreButtons();
+        promoCodeRedeemInFlight = false;
+        releaseUiActionLock('redeemPromoCode');
     }
 }
 
