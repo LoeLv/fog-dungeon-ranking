@@ -29,20 +29,27 @@ function renderEternalStelePage() {
                 <div class="stele-stat"><span>\u7f16\u8f91\u72b6\u6001</span><strong>\u7ee7\u7eed\u7acb\u7a0b</strong></div>
             </div>
         </section>
-        <section class="stele-monolith">
-            <div class="stele-monolith-head">
-                <span class="stele-rank">${escapeHtml(record.rank)}</span>
-                <div>
-                    <div class="stele-monolith-title">${escapeHtml(record.title)}</div>
-                    <div class="stele-monolith-subtitle">${escapeHtml(record.subtitle)}</div>
+        <section class="stele-sanctum" aria-label="\u6c38\u6052\u795e\u7891\u4e3b\u7891">
+            <div class="stele-sanctum-pillars" aria-hidden="true">
+                <span class="stele-pillar stele-pillar-left"></span>
+                <span class="stele-pillar stele-pillar-right"></span>
+                <span class="stele-sanctum-arch"></span>
+            </div>
+            <div class="stele-monolith">
+                <div class="stele-monolith-head">
+                    <span class="stele-rank">${escapeHtml(record.rank)}</span>
+                    <div class="stele-monolith-heading">
+                        <div class="stele-monolith-title">${escapeHtml(record.title)}</div>
+                        <div class="stele-monolith-subtitle">${escapeHtml(record.subtitle)}</div>
+                    </div>
                 </div>
-            </div>
-            <div class="stele-monolith-body">
-                <p>${escapeHtml(record.summary)}</p>
-            </div>
-            <div class="stele-monolith-foot">
-                <span>${escapeHtml(record.note)}</span>
-                <span>\u53ea\u7559\u4e0b\u4e00\u4e2a\u540d\u5b57\uff0c\u5176\u4f59\u4ea4\u7ed9\u65f6\u95f4\u3002</span>
+                <div class="stele-monolith-body">
+                    <p>${escapeHtml(record.summary)}</p>
+                </div>
+                <div class="stele-monolith-foot">
+                    <span>${escapeHtml(record.note)}</span>
+                    <span>\u53ea\u7559\u4e0b\u4e00\u4e2a\u540d\u5b57\uff0c\u5176\u4f59\u4ea4\u7ed9\u65f6\u95f4\u3002</span>
+                </div>
             </div>
         </section>
     `;
