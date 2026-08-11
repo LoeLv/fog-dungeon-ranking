@@ -142,6 +142,18 @@ body.match-view-open > #leaderboardPage,
 body.match-view-open > #scorePage {
     display: none;
 }
+body.eternal-stele-view-open > .header,
+body.eternal-stele-view-open > .container,
+body.eternal-stele-view-open > .detail-overlay,
+body.eternal-stele-view-open > #profilePage,
+body.eternal-stele-view-open > #leaderboardPage,
+body.eternal-stele-view-open > #scorePage,
+body.eternal-stele-view-open > #matchPage,
+body.eternal-stele-view-open > #battleRoomPage,
+body.eternal-stele-view-open > #adminPage,
+body.eternal-stele-view-open > #permissionPage {
+    display: none;
+}
 body.battle-room-view-open > .header,
 body.battle-room-view-open > .container,
 body.battle-room-view-open > .detail-overlay,
@@ -3853,6 +3865,145 @@ button.is-action-ack {
         linear-gradient(118deg, transparent 0 45%, color-mix(in srgb, var(--god-primary, #e7cf8a) 5%, transparent) 45.3%, transparent 47%),
         linear-gradient(62deg, transparent 0 33%, color-mix(in srgb, var(--god-secondary, #7aaec2) 5%, transparent) 33.4%, transparent 35%);
     color: var(--text);
+}
+.eternal-stele-page {
+    --god-primary: #f3dea0;
+    --god-secondary: #7aaec2;
+    background:
+        radial-gradient(circle at 20% 12%, rgba(243,222,160,0.08), transparent 24%),
+        radial-gradient(circle at 80% 16%, rgba(122,174,194,0.09), transparent 28%),
+        var(--bg);
+}
+.eternal-stele-page .profile-shell {
+    gap: 16px;
+}
+.eternal-stele-page .profile-toolbar {
+    background:
+        linear-gradient(90deg, rgba(243,222,160,0.09), transparent 46%),
+        rgba(8, 10, 15, 0.96);
+}
+.eternal-stele-content {
+    display: grid;
+    gap: 16px;
+}
+.stele-hero {
+    display: grid;
+    grid-template-columns: minmax(0, 1.3fr) minmax(220px, 0.7fr);
+    gap: 16px;
+    padding: 22px;
+    border: 1px solid rgba(231,207,138,0.14);
+    border-radius: 16px;
+    background:
+        linear-gradient(180deg, rgba(255,255,255,0.045), rgba(255,255,255,0.012)),
+        rgba(7,8,12,0.72);
+}
+.stele-kicker {
+    color: var(--gold-light);
+    font-size: 0.7rem;
+    font-weight: 900;
+    letter-spacing: 0.24em;
+}
+.stele-title {
+    margin: 6px 0 10px;
+    color: var(--text-bright);
+    font-family: var(--font-display);
+    font-size: clamp(2rem, 4vw, 3.2rem);
+    line-height: 1.05;
+}
+.stele-lead {
+    margin: 0;
+    max-width: 52ch;
+    color: var(--text-muted);
+    line-height: 1.9;
+}
+.stele-meta {
+    display: grid;
+    gap: 10px;
+    align-content: center;
+}
+.stele-stat {
+    padding: 14px 16px;
+    border: 1px solid rgba(255,255,255,0.06);
+    border-radius: 14px;
+    background: rgba(0,0,0,0.18);
+}
+.stele-stat span {
+    display: block;
+    margin-bottom: 6px;
+    color: var(--text-muted);
+    font-size: 0.74rem;
+}
+.stele-stat strong {
+    color: var(--gold-light);
+    font-family: var(--font-display);
+    font-size: 1.15rem;
+}
+.stele-monolith {
+    padding: 22px;
+    border: 1px solid rgba(255,255,255,0.075);
+    border-radius: 16px;
+    background:
+        linear-gradient(180deg, rgba(255,255,255,0.04), rgba(255,255,255,0.015)),
+        rgba(7,8,12,0.74);
+}
+.stele-monolith-head {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    gap: 14px;
+    align-items: center;
+}
+.stele-rank {
+    display: grid;
+    place-items: center;
+    width: 58px;
+    height: 58px;
+    border-radius: 16px;
+    border: 1px solid rgba(243,222,160,0.22);
+    background: rgba(243,222,160,0.08);
+    color: var(--gold-light);
+    font-family: var(--font-display);
+    font-size: 1.3rem;
+    font-weight: 900;
+}
+.stele-monolith-title {
+    color: var(--text-bright);
+    font-family: var(--font-display);
+    font-size: clamp(1.45rem, 2.8vw, 2.1rem);
+    line-height: 1.15;
+}
+.stele-monolith-subtitle {
+    margin-top: 6px;
+    color: var(--text-muted);
+    font-size: 0.82rem;
+}
+.stele-monolith-body {
+    margin: 16px 0 0;
+    padding: 16px 0 0;
+    border-top: 1px solid rgba(255,255,255,0.05);
+}
+.stele-monolith-body p {
+    margin: 0;
+    max-width: 60ch;
+    color: var(--text);
+    line-height: 1.95;
+}
+.stele-grid {
+    display: grid;
+    gap: 14px;
+}
+.stele-panel {
+    padding: 18px;
+    border: 1px solid rgba(255,255,255,0.075);
+    border-radius: 16px;
+    background: rgba(7,8,12,0.72);
+}
+.stele-copy {
+    margin: 0;
+    color: var(--text-muted);
+    line-height: 1.8;
+}
+body.eternal-stele-view-open .profile-toolbar {
+    position: sticky;
 }
 .profile-atmosphere {
     position: fixed;
