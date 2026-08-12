@@ -3,6 +3,7 @@
 let adminMembers = [];
 let adminTalentPools = [];
 let adminTalentPoolSelected = '';
+let adminTalentEditingItem = null;
 let adminManagementLoading = false;
 let adminTalentWarehouseLoading = false;
 let adminManagementView = 'overview';
@@ -202,8 +203,8 @@ function renderAdminTalentRows() {
                     <div class="profile-list-meta" style="white-space:pre-wrap;">${escapeHtml(item.effect || '未填写效果')}</div>
                     <div class="profile-list-meta">${escapeHtml(item.adminNote || '无备注')}</div>
                     <div class="profile-tools" style="margin-top:auto;">
-                        <button class="btn btn-outline btn-sm" onclick="adminEditTalentPoolItemByKey(${escapeHtml(jsString(item.poolKey))}, ${Number(item.talentId || 0)})">编辑</button>
-                        <button class="btn btn-outline btn-sm" onclick="adminToggleTalentPoolItem(${escapeHtml(jsString(item.poolKey))}, ${Number(item.talentId || 0)}, ${item.isEnabled ? 'false' : 'true'})">${item.isEnabled ? '停用' : '启用'}</button>
+                        <button class="btn btn-outline btn-sm" onclick='adminEditTalentPoolItemByKey(${jsString(item.poolKey)}, ${Number(item.talentId || 0)})'>编辑</button>
+                        <button class="btn btn-outline btn-sm" onclick='adminToggleTalentPoolItem(${jsString(item.poolKey)}, ${Number(item.talentId || 0)}, ${item.isEnabled ? 'false' : 'true'})'>${item.isEnabled ? '停用' : '启用'}</button>
                     </div>
                 </article>`;
             }).join('')}
@@ -336,7 +337,7 @@ async function adminLoadMembers(showResult = false) {
     try {
         const { data, error } = await invokeDungeonAction('adminListMembers', {});
         if (error) { showToast(`失败：${error.message || '成员列表读取失败'}`); return; }
-        adminMembers = Array.isArray(data) ? data : [];
+        adminMembers = (Array.isArray(data) ? data : []).filter(member => member?.isActive !== false);
         if (showResult) showToast(`已读取 ${adminMembers.length} 位成员`);
     } finally {
         adminManagementLoading = false;
@@ -488,10 +489,21 @@ async function adminDeleteMember(targetHash, displayName) {
             showToast(`失败：${error.message || '删除失败'}`);
             return;
         }
-        setAdminManagementStatus('账号已禁用并清理', 'success');
-        showToast('账号已禁用并清理');
+        adminMembers = adminMembers.filter(member => member.codeHash !== targetHash);
+        const rows = document.getElementById('adminMemberRows');
+        if (rows) rows.innerHTML = renderAdminMemberRows();
+        const roleTarget = document.getElementById('adminRoleTarget');
+        if (roleTarget) {
+            roleTarget.innerHTML = adminMembers
+                .filter(member => member.isActive && member.role !== 'god')
+                .map(member => `<option value="${escapeHtml(member.codeHash)}">${escapeHtml(member.displayName || '未命名')} · ${escapeHtml(member.role || 'player')}</option>`)
+                .join('') || '<option value="">暂无可调整成员</option>';
+        }
+        const successMessage = `已删除 ${displayName || '该账号'}，成员列表已刷新`;
+        setAdminManagementStatus(successMessage, 'success');
+        showToast(successMessage);
         await Promise.all([adminLoadMembers(false), refreshAdminOperationLogs()]);
-        await renderAdminPage();
+        setAdminManagementStatus(successMessage, 'success');
     } catch (error) {
         const message = `删除失败：${error?.message || error || '未知错误'}`;
         setAdminManagementStatus(message, 'error');
@@ -499,29 +511,72 @@ async function adminDeleteMember(targetHash, displayName) {
     }
 }
 
-function adminEditTalentPoolItem(rawItem) {
-    const item = typeof rawItem === 'string' ? JSON.parse(rawItem) : rawItem;
-    if (!item) {
+function fillAdminTalentFields(fields) {
+    Object.entries(fields).forEach(([id, value]) => {
+        const el = document.getElementById(id);
+        if (!el) return;
+        if (el.type === 'checkbox') {
+            el.checked = value !== false;
+        } else {
+            el.value = value ?? '';
+        }
+    });
+}
+
+function getAdminTalentPayloadFromFields(prefix = 'adminTalent') {
+    return {
+        poolKey: document.getElementById(`${prefix}PoolKey`)?.value || adminTalentPoolSelected,
+        talentId: document.getElementById(`${prefix}Id`)?.value || '',
+        talentName: document.getElementById(`${prefix}Name`)?.value || '',
+        rank: document.getElementById(`${prefix}Rank`)?.value || 'C',
+        effect: document.getElementById(`${prefix}Effect`)?.value || '',
+        cooldown: document.getElementById(`${prefix}Cooldown`)?.value || '',
+        actionCost: document.getElementById(`${prefix}ActionCost`)?.value || 0,
+        isEnabled: !!document.getElementById(`${prefix}Enabled`)?.checked,
+        adminNote: document.getElementById(`${prefix}Note`)?.value || ''
+    };
+}
+
+function openAdminTalentEditModal(item) {
+    adminTalentEditingItem = item || null;
+    if (!adminTalentEditingItem) {
         showToast('没有找到这个天赋，请刷新仓库后再试');
         return;
     }
-    adminTalentPoolSelected = item.poolKey || adminTalentPoolSelected;
-    const fields = {
-        adminTalentPoolKey: item.poolKey || '',
-        adminTalentId: item.talentId || '',
-        adminTalentName: item.talentName || '',
-        adminTalentRank: item.rank || 'C',
-        adminTalentEffect: item.effect || '',
-        adminTalentCooldown: item.cooldown || '',
-        adminTalentActionCost: item.actionCost || 0,
-        adminTalentNote: item.adminNote || ''
-    };
-    Object.entries(fields).forEach(([id, value]) => {
-        const el = document.getElementById(id);
-        if (el) el.value = value;
+    adminTalentPoolSelected = adminTalentEditingItem.poolKey || adminTalentPoolSelected;
+    fillAdminTalentFields({
+        adminTalentModalPoolKey: adminTalentEditingItem.poolKey || '',
+        adminTalentModalId: adminTalentEditingItem.talentId || '',
+        adminTalentModalName: adminTalentEditingItem.talentName || '',
+        adminTalentModalRank: adminTalentEditingItem.rank || 'C',
+        adminTalentModalEffect: adminTalentEditingItem.effect || '',
+        adminTalentModalCooldown: adminTalentEditingItem.cooldown || '',
+        adminTalentModalActionCost: adminTalentEditingItem.actionCost || 0,
+        adminTalentModalEnabled: adminTalentEditingItem.isEnabled !== false,
+        adminTalentModalNote: adminTalentEditingItem.adminNote || ''
     });
-    const enabled = document.getElementById('adminTalentEnabled');
-    if (enabled) enabled.checked = item.isEnabled !== false;
+    const title = document.getElementById('adminTalentEditModalTitle');
+    if (title) title.textContent = `编辑天赋 #${Number(adminTalentEditingItem.talentId || 0)}`;
+    const overlay = document.getElementById('adminTalentEditModalOverlay');
+    if (overlay) {
+        overlay.style.display = 'flex';
+        document.body.style.overflow = 'hidden';
+    }
+    setAdminManagementStatus(`正在编辑 #${Number(adminTalentEditingItem.talentId || 0)} ${adminTalentEditingItem.talentName || '天赋'}`, 'success');
+    window.setTimeout(() => document.getElementById('adminTalentModalName')?.focus(), 80);
+}
+
+function closeAdminTalentEditModal(event) {
+    const overlay = document.getElementById('adminTalentEditModalOverlay');
+    if (event && event.target !== overlay) return;
+    if (overlay) overlay.style.display = 'none';
+    document.body.style.overflow = '';
+    adminTalentEditingItem = null;
+}
+
+function adminEditTalentPoolItem(rawItem) {
+    const item = typeof rawItem === 'string' ? JSON.parse(rawItem) : rawItem;
+    openAdminTalentEditModal(item);
 }
 
 function adminEditTalentPoolItemByKey(poolKey, talentId) {
@@ -542,17 +597,7 @@ function adminClearTalentPoolForm() {
 }
 
 async function adminSaveTalentPoolItem() {
-    const payload = {
-        poolKey: document.getElementById('adminTalentPoolKey')?.value || adminTalentPoolSelected,
-        talentId: document.getElementById('adminTalentId')?.value || '',
-        talentName: document.getElementById('adminTalentName')?.value || '',
-        rank: document.getElementById('adminTalentRank')?.value || 'C',
-        effect: document.getElementById('adminTalentEffect')?.value || '',
-        cooldown: document.getElementById('adminTalentCooldown')?.value || '',
-        actionCost: document.getElementById('adminTalentActionCost')?.value || 0,
-        isEnabled: !!document.getElementById('adminTalentEnabled')?.checked,
-        adminNote: document.getElementById('adminTalentNote')?.value || ''
-    };
+    const payload = getAdminTalentPayloadFromFields('adminTalent');
     setAdminManagementStatus('天赋保存处理中...', 'pending');
     try {
         const { error } = await invokeDungeonAction('adminUpsertTalentPoolItem', payload);
@@ -564,6 +609,41 @@ async function adminSaveTalentPoolItem() {
         }
         adminTalentPoolSelected = String(payload.poolKey || '');
         setAdminManagementStatus('天赋已保存', 'success');
+        showToast('天赋已保存');
+        await Promise.all([adminLoadTalentWarehouse(false), refreshAdminOperationLogs()]);
+        await renderAdminPage();
+    } catch (error) {
+        const message = `保存失败：${error?.message || error || '未知错误'}`;
+        setAdminManagementStatus(message, 'error');
+        showToast(`失败：${error?.message || '保存失败'}`);
+    }
+}
+
+async function adminSaveTalentPoolItemFromModal() {
+    const payload = getAdminTalentPayloadFromFields('adminTalentModal');
+    setAdminManagementStatus('天赋保存处理中...', 'pending');
+    try {
+        const { error } = await invokeDungeonAction('adminUpsertTalentPoolItem', payload);
+        if (error) {
+            const message = `保存失败：${error.message || '后端未返回原因'}`;
+            setAdminManagementStatus(message, 'error');
+            showToast(`失败：${error.message || '保存失败'}`);
+            return;
+        }
+        adminTalentPoolSelected = String(payload.poolKey || '');
+        fillAdminTalentFields({
+            adminTalentPoolKey: payload.poolKey,
+            adminTalentId: payload.talentId,
+            adminTalentName: payload.talentName,
+            adminTalentRank: payload.rank,
+            adminTalentEffect: payload.effect,
+            adminTalentCooldown: payload.cooldown,
+            adminTalentActionCost: payload.actionCost,
+            adminTalentEnabled: payload.isEnabled,
+            adminTalentNote: payload.adminNote
+        });
+        closeAdminTalentEditModal();
+        setAdminManagementStatus('天赋已保存，仓库已刷新', 'success');
         showToast('天赋已保存');
         await Promise.all([adminLoadTalentWarehouse(false), refreshAdminOperationLogs()]);
         await renderAdminPage();

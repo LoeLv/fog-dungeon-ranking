@@ -453,6 +453,36 @@
         </div>
     </div>
 
+    <div class="modal-overlay" id="adminTalentEditModalOverlay" style="display:none;" onclick="closeAdminTalentEditModal(event)">
+        <div class="modal ritual-modal" id="adminTalentEditModal" onclick="event.stopPropagation()" style="max-width:760px;">
+            <div class="ritual-modal-head">
+                <div>
+                    <div class="ritual-modal-kicker">TALENT POOL · 天赋仓库</div>
+                    <h2 id="adminTalentEditModalTitle">编辑天赋</h2>
+                    <div class="ritual-prayer">保存后会直接更新当前天赋池，不会修改玩家已经拥有的天赋。</div>
+                </div>
+                <button type="button" class="ritual-close" onclick="closeAdminTalentEditModal()" title="关闭天赋编辑" aria-label="关闭天赋编辑">✕</button>
+            </div>
+            <div class="ritual-scroll">
+                <div class="profile-form-grid">
+                    <div class="form-group"><label>天赋池</label><input id="adminTalentModalPoolKey" readonly></div>
+                    <div class="form-group"><label>编号</label><input id="adminTalentModalId" inputmode="numeric" readonly></div>
+                    <div class="form-group"><label>名称</label><input id="adminTalentModalName" maxlength="80"></div>
+                    <div class="form-group"><label>等级</label><select id="adminTalentModalRank"><option value="S">S</option><option value="A">A</option><option value="B">B</option><option value="C">C</option></select></div>
+                    <div class="form-group"><label>冷却</label><input id="adminTalentModalCooldown" maxlength="80" placeholder="例如 3 回合 / 无"></div>
+                    <div class="form-group"><label>行动点</label><input id="adminTalentModalActionCost" type="number" min="0" step="1"></div>
+                    <div class="form-group full"><label>效果</label><textarea id="adminTalentModalEffect" rows="5" maxlength="1200"></textarea></div>
+                    <div class="form-group full"><label>备注</label><input id="adminTalentModalNote" maxlength="200"></div>
+                    <div class="form-group full"><label class="checkbox-label"><input id="adminTalentModalEnabled" type="checkbox" checked> 在抽取池中启用</label></div>
+                </div>
+            </div>
+            <div class="form-actions ritual-actions">
+                <button type="button" class="btn btn-outline" onclick="closeAdminTalentEditModal()">取消</button>
+                <button type="button" class="btn btn-primary" onclick="adminSaveTalentPoolItemFromModal()">保存修改</button>
+            </div>
+        </div>
+    </div>
+
     <div id="toastContainer"></div>
 
     <nav class="mobile-bottom-nav" id="mobileBottomNav" aria-label="手机端主入口">
@@ -509,7 +539,7 @@
     <script src="assets/js/pages/score.js?v=20260808-structure1"></script>
     <script src="assets/js/pages/admin.js?v=20260810-adminroles1"></script>
     <script src="assets/js/pages/admin-panel.js?v=20260809-structure1"></script>
-    <script src="assets/js/pages/admin-management.js?v=20260810-talentbatch2"></script>
+    <script src="assets/js/pages/admin-management.js?v=20260812-talentmodal1"></script>
     <script src="assets/js/pages/permission-desk.js?v=20260810-adminroles1"></script>
     <script src="assets/js/pages/match-tools.js?v=20260810-battle6"></script>
     <script src="assets/js/pages/match.js?v=20260810-battle6"></script>
