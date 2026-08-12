@@ -560,7 +560,6 @@ function openAdminTalentEditModal(item) {
     const overlay = document.getElementById('adminTalentEditModalOverlay');
     if (overlay) {
         overlay.style.display = 'flex';
-        document.body.style.overflow = 'hidden';
     }
     setAdminManagementStatus(`正在编辑 #${Number(adminTalentEditingItem.talentId || 0)} ${adminTalentEditingItem.talentName || '天赋'}`, 'success');
     window.setTimeout(() => document.getElementById('adminTalentModalName')?.focus(), 80);
@@ -570,7 +569,6 @@ function closeAdminTalentEditModal(event) {
     const overlay = document.getElementById('adminTalentEditModalOverlay');
     if (event && event.target !== overlay) return;
     if (overlay) overlay.style.display = 'none';
-    document.body.style.overflow = '';
     adminTalentEditingItem = null;
 }
 
