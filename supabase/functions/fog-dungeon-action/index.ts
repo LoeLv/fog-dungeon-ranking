@@ -83,6 +83,7 @@ const publicReadActions = new Set([
   "listDungeonArchivePage",
   "getDungeonDetail",
   "listProfiles",
+  "listFaithTraits",
   "listDungeonComments",
   "getDungeonCommentCount",
 ]);
@@ -3347,6 +3348,26 @@ async function listAdminTalentPoolItems(supabase: SupabaseClientAny) {
   return { data: { pools: [...pools.entries()].map(([poolKey, items]) => ({ poolKey, items })) } };
 }
 
+async function listFaithTraits(supabase: SupabaseClientAny) {
+  const { data, error } = await supabase
+    .from("faith_traits")
+    .select("god_name, path_name, trait_text, is_enabled, admin_note, updated_at")
+    .order("sort_order", { ascending: true });
+  if (error?.code === "42P01" || error?.code === "42703") return { data: { traits: [], unavailable: true } };
+  if (error) return { error };
+  const traits = (data || [])
+    .filter((item: Record<string, unknown>) => item.is_enabled !== false)
+    .map((item: Record<string, unknown>) => ({
+      god: cleanGodName(item.god_name),
+      path: cleanText(item.path_name, 20),
+      trait: cleanText(item.trait_text, 1000),
+      adminNote: cleanText(item.admin_note, 300),
+      updatedAt: cleanText(item.updated_at, 80),
+    }))
+    .filter((item) => item.god && item.trait);
+  return { data: { traits } };
+}
+
 async function getNextTalentId(supabase: SupabaseClientAny, poolKey: string) {
   const { data, error } = await supabase
     .from("talent_pool_items")
@@ -3356,6 +3377,17 @@ async function getNextTalentId(supabase: SupabaseClientAny, poolKey: string) {
     .limit(1);
   if (error) return { error };
   return { data: Number(data?.[0]?.talent_id || 0) + 1 };
+}
+
+function cleanFaithTraitPayload(payload: Record<string, unknown>) {
+  const god = cleanGodName(payload.god || payload.godName || payload.god_name);
+  const path = cleanText(payload.path || payload.pathName || payload.path_name, 20) || godPathByName.get(god) || "";
+  const trait = cleanText(payload.trait || payload.traitText || payload.trait_text, 1000);
+  const adminNote = cleanText(payload.adminNote || payload.admin_note, 300);
+  const isEnabled = payload.isEnabled !== false;
+  if (!godNames.has(god)) return { error: { message: "请选择正确的神明" } };
+  if (!trait) return { error: { message: "请填写信仰特性" } };
+  return { data: { god, path, trait, adminNote, isEnabled } };
 }
 
 function cleanTalentPoolPayload(payload: Record<string, unknown>, requireTalentId = false) {
@@ -3543,6 +3575,12 @@ Deno.serve(async (req) => {
     }));
 
     return json({ data: publicProfiles });
+  }
+
+  if (action === "listFaithTraits") {
+    const result = await listFaithTraits(supabase);
+    if (result.error) return json({ error: result.error.message || "信仰特性读取失败" }, 400);
+    return json({ data: result.data });
   }
 
   const identity = await getInviteIdentity(supabase, body.inviteCode);
@@ -3845,6 +3883,42 @@ Deno.serve(async (req) => {
         afterState: { ...(beforeResult.data as Record<string, unknown>), is_enabled: enabled },
       });
       return json({ role, name: identity.displayName, data: { poolKey, talentId, isEnabled: enabled } });
+    }
+
+    if (action === "adminUpsertFaithTrait") {
+      if (!hasPermission(identity, "talent_pool_manage")) return json({ error: "没有信仰特性管理权限" }, 403);
+      const cleanResult = cleanFaithTraitPayload(payload);
+      if (cleanResult.error) return json({ error: cleanResult.error.message }, 400);
+      const { god, path, trait, adminNote, isEnabled } = cleanResult.data;
+      const beforeResult = await supabase
+        .from("faith_traits")
+        .select("god_name, path_name, trait_text, is_enabled, admin_note")
+        .eq("god_name", god)
+        .maybeSingle();
+      if (beforeResult.error?.code === "42P01" || beforeResult.error?.code === "42703") return json({ error: "请先运行 faith_traits_management_20260812.sql" }, 400);
+      if (beforeResult.error) return json({ error: beforeResult.error.message }, 400);
+      const sortOrder = [...godNames].indexOf(god) + 1;
+      const { error } = await supabase.from("faith_traits").upsert({
+        god_name: god,
+        path_name: path,
+        trait_text: trait,
+        is_enabled: isEnabled,
+        admin_note: adminNote,
+        sort_order: sortOrder > 0 ? sortOrder : 999,
+        updated_by_hash: identity.codeHash,
+        updated_at: new Date().toISOString(),
+      }, { onConflict: "god_name" });
+      if (error) return json({ error: error.message }, 400);
+      await writeAdminOperationLog(supabase, identity, {
+        action: "faith_trait.upsert",
+        objectType: "faith_trait",
+        objectId: god,
+        targetName: god,
+        summary: `更新 ${god} 信仰特性`,
+        beforeState: beforeResult.data || {},
+        afterState: { god, path, trait, isEnabled, adminNote },
+      });
+      return json({ role, name: identity.displayName, data: { god, path, trait, isEnabled, adminNote } });
     }
 
     if (action === "listHonorOperationLogs") {

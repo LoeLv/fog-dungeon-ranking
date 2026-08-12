@@ -177,6 +177,25 @@ const FAITH_TRAITS = {
     欺诈: '对指定目标宣告一个是否事件，秘密给出答案，对方回答后若不同则造成30伤害，冷却4回合。',
     命运: '可以在自己丢出骰子时，再丢一个骰子，并选择是否替换它，一局 2 次。'
 };
+
+const DEFAULT_FAITH_TRAITS = { ...FAITH_TRAITS };
+
+function getFaithTraitEntries() {
+    return GOD_GROUPS.flatMap(group => group.gods.map(god => ({
+        path: group.path,
+        god,
+        trait: FAITH_TRAITS[god] || DEFAULT_FAITH_TRAITS[god] || ''
+    })));
+}
+
+function applyFaithTraitOverrides(items) {
+    if (!Array.isArray(items)) return;
+    items.forEach(item => {
+        const god = cleanGodName(item?.god || item?.god_name || '');
+        const trait = String(item?.trait || item?.trait_text || '').trim();
+        if (god && trait) FAITH_TRAITS[god] = trait;
+    });
+}
 const GOD_SKINS = {
     欺诈: {
         primary: '#d7a95f',

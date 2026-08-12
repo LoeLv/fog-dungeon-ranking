@@ -483,6 +483,31 @@
         </div>
     </div>
 
+    <div class="modal-overlay" id="adminFaithTraitEditModalOverlay" style="display:none;" onclick="closeAdminFaithTraitEditModal(event)">
+        <div class="modal ritual-modal" id="adminFaithTraitEditModal" onclick="event.stopPropagation()" style="max-width:760px;">
+            <div class="ritual-modal-head">
+                <div>
+                    <div class="ritual-modal-kicker">FAITH TRAIT · 信仰特性</div>
+                    <h2 id="adminFaithTraitEditModalTitle">编辑信仰特性</h2>
+                    <div class="ritual-prayer">保存后会更新档案页与档案导出卡中的信仰特性说明。</div>
+                </div>
+                <button type="button" class="ritual-close" onclick="closeAdminFaithTraitEditModal()" title="关闭信仰特性编辑" aria-label="关闭信仰特性编辑">✕</button>
+            </div>
+            <div class="ritual-scroll">
+                <div class="profile-form-grid">
+                    <div class="form-group"><label>神明</label><input id="adminFaithTraitModalGod" readonly></div>
+                    <div class="form-group"><label>命途</label><input id="adminFaithTraitModalPath" readonly></div>
+                    <div class="form-group full"><label>信仰特性</label><textarea id="adminFaithTraitModalTrait" rows="7" maxlength="1000"></textarea></div>
+                    <div class="form-group full"><label>馆主备注</label><input id="adminFaithTraitModalNote" maxlength="300" placeholder="可选，仅后台显示"></div>
+                </div>
+            </div>
+            <div class="form-actions ritual-actions">
+                <button type="button" class="btn btn-outline" onclick="closeAdminFaithTraitEditModal()">取消</button>
+                <button type="button" class="btn btn-primary" onclick="adminSaveFaithTraitFromModal()">保存特性</button>
+            </div>
+        </div>
+    </div>
+
     <div id="toastContainer"></div>
 
     <nav class="mobile-bottom-nav" id="mobileBottomNav" aria-label="手机端主入口">
@@ -518,11 +543,11 @@
         </div>
     </div>
     <script src="assets/js/foundation.js?v=20260810-loginrollback1"></script>
-<script src="assets/js/world-data.js?v=20260810-taxonomy1"></script>
+    <script src="assets/js/world-data.js?v=20260812-faithtraits1"></script>
 <script src="assets/js/utils.js?v=20260810-taxonomy1"></script>
     <script src="assets/js/session.js?v=20260810-adminroles1"></script>
     <script src="assets/js/state.js?v=20260810-battle6"></script>
-    <script src="assets/js/api.js?v=20260811-promo1"></script>
+    <script src="assets/js/api.js?v=20260812-faithtraits1"></script>
 <script src="assets/js/profile-core.js?v=20260810-login1"></script>
 <script src="assets/js/profile-talent.js?v=20260808-structure1"></script>
     <script src="assets/js/runtime.js?v=20260810-adminroles1"></script>
@@ -539,7 +564,7 @@
     <script src="assets/js/pages/score.js?v=20260808-structure1"></script>
     <script src="assets/js/pages/admin.js?v=20260810-adminroles1"></script>
     <script src="assets/js/pages/admin-panel.js?v=20260809-structure1"></script>
-    <script src="assets/js/pages/admin-management.js?v=20260812-talentmodal2"></script>
+    <script src="assets/js/pages/admin-management.js?v=20260812-faithtraits1"></script>
     <script src="assets/js/pages/permission-desk.js?v=20260810-adminroles1"></script>
     <script src="assets/js/pages/match-tools.js?v=20260810-battle6"></script>
     <script src="assets/js/pages/match.js?v=20260810-battle6"></script>
@@ -549,6 +574,6 @@
     <script src="assets/js/trial-detail-ui.js?v=20260809-structure3"></script>
     <script src="assets/js/trial-actions.js?v=20260809-structure2"></script>
 <script src="assets/app.js?v=20260808-structure1"></script>
-<script src="assets/js/startup.js?v=20260809-structure4"></script>
+    <script src="assets/js/startup.js?v=20260812-faithtraits1"></script>
 </body>
 </html>

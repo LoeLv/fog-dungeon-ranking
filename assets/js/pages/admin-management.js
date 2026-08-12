@@ -4,6 +4,9 @@ let adminMembers = [];
 let adminTalentPools = [];
 let adminTalentPoolSelected = '';
 let adminTalentEditingItem = null;
+let adminFaithTraits = [];
+let adminFaithTraitsLoading = false;
+let adminFaithTraitEditingItem = null;
 let adminManagementLoading = false;
 let adminTalentWarehouseLoading = false;
 let adminManagementView = 'overview';
@@ -162,7 +165,7 @@ function renderAdminManagementNav() {
         ['overview', '权限工作台', isAdmin() ? '馆主总览 / 管理入口' : '按职责显示可用入口']
     ];
     if (isAdmin()) items.push(['members', '成员管理', '活跃状态 / 改名 / 重置 / 删除']);
-    if (canManageTalentPoolUI()) items.push(['talents', '天赋池维护', '天赋池仓库 / 新增 / 启停']);
+    if (canManageTalentPoolUI()) items.push(['talents', '天赋池维护', '天赋池仓库 / 信仰特性']);
     return `<section class="profile-panel" data-god="真理" style="${getGodSkinStyle('真理')}">
         <div class="profile-panel-title"><span>馆主后台</span><small>统一管理入口</small></div>
         <div id="adminManagementStatus" class="profile-action-status ${adminManagementStatus?.type === 'error' ? 'error' : (adminManagementStatus?.type === 'pending' ? 'pending' : 'success')}" ${adminManagementStatus ? '' : 'hidden'}>${escapeHtml(adminManagementStatus?.message || '')}</div>
@@ -275,6 +278,50 @@ function renderAdminTalentWarehousePanel() {
     </section>`;
 }
 
+function getAdminFaithTraitList() {
+    const overrides = new Map((adminFaithTraits || []).map(item => [cleanGodName(item.god), item]));
+    return GOD_GROUPS.flatMap(group => group.gods.map(god => {
+        const override = overrides.get(god) || {};
+        return {
+            path: group.path,
+            god,
+            trait: override.trait || FAITH_TRAITS[god] || DEFAULT_FAITH_TRAITS[god] || '',
+            adminNote: override.adminNote || '',
+            updatedAt: override.updatedAt || ''
+        };
+    }));
+}
+
+function renderAdminFaithTraitCards() {
+    if (adminFaithTraitsLoading) return '<div class="profile-empty">正在读取信仰特性...</div>';
+    return GOD_GROUPS.map(group => {
+        const items = getAdminFaithTraitList().filter(item => item.path === group.path);
+        return `<section class="profile-panel" data-god="${escapeHtml(items[0]?.god || '真理')}" style="margin-top:12px;${getGodSkinStyle(items[0]?.god || '真理')}">
+            <div class="profile-panel-title"><span>${escapeHtml(group.path)}命途</span><small>${items.length} 位神明</small></div>
+            <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:10px;">
+                ${items.map(item => `<article class="profile-list-item" style="height:100%;display:flex;flex-direction:column;gap:8px;">
+                    <div class="profile-list-title"><span>${escapeHtml(getGodIcon(item.god))} ${escapeHtml(item.god)}之神</span><small>${escapeHtml(item.path)}</small></div>
+                    <div class="profile-list-meta" style="white-space:pre-wrap;">${escapeHtml(item.trait || '未填写信仰特性')}</div>
+                    ${item.adminNote ? `<div class="profile-list-meta">${escapeHtml(item.adminNote)}</div>` : ''}
+                    <div class="profile-tools" style="margin-top:auto;">
+                        <button class="btn btn-outline btn-sm" onclick='adminEditFaithTrait(${jsString(item.god)})'>编辑</button>
+                    </div>
+                </article>`).join('')}
+            </div>
+        </section>`;
+    }).join('');
+}
+
+function renderAdminFaithTraitPanel() {
+    return `<section class="profile-panel" data-god="真理" style="${getGodSkinStyle('真理')}">
+        <div class="profile-panel-title"><span>信仰特性维护</span><small>修改后会影响档案页与导出卡显示</small></div>
+        <div class="profile-tools" style="margin-bottom:12px;">
+            <button class="btn btn-primary btn-sm" onclick="adminLoadFaithTraits(true)">刷新信仰特性</button>
+        </div>
+        <div id="adminFaithTraitRows">${renderAdminFaithTraitCards()}</div>
+    </section>`;
+}
+
 function renderAdminManagementPanels() {
     if (!isAdmin()) return '';
     return `<section class="profile-panel" data-god="真理" style="${getGodSkinStyle('真理')}">
@@ -291,7 +338,7 @@ function renderAdminMembersPage() {
 }
 
 function renderAdminTalentPoolPage() {
-    return renderAdminTalentWarehousePanel();
+    return `${renderAdminTalentWarehousePanel()}${renderAdminFaithTraitPanel()}`;
 }
 
 function renderAdminRolePanel() {
@@ -370,6 +417,22 @@ async function adminLoadTalentWarehouse(showResult = false) {
         if (select) select.innerHTML = renderAdminTalentPoolOptions();
         const target = document.getElementById('adminTalentPoolRows');
         if (target) target.innerHTML = renderAdminTalentRows();
+    }
+}
+
+async function adminLoadFaithTraits(showResult = false) {
+    if (!canManageTalentPoolUI()) return;
+    adminFaithTraitsLoading = true;
+    const rows = document.getElementById('adminFaithTraitRows');
+    if (rows) rows.innerHTML = '<div class="profile-empty">正在读取信仰特性...</div>';
+    try {
+        const traits = await loadFaithTraits({ showError: showResult, ttl: showResult ? 1 : undefined });
+        adminFaithTraits = Array.isArray(traits) ? traits : getFaithTraitEntries();
+        if (showResult) showToast(`已读取 ${adminFaithTraits.length} 条信仰特性`);
+    } finally {
+        adminFaithTraitsLoading = false;
+        const target = document.getElementById('adminFaithTraitRows');
+        if (target) target.innerHTML = renderAdminFaithTraitCards();
     }
 }
 
@@ -572,6 +635,77 @@ function closeAdminTalentEditModal(event) {
     adminTalentEditingItem = null;
 }
 
+function findAdminFaithTrait(god) {
+    const cleanGod = cleanGodName(god);
+    return getAdminFaithTraitList().find(item => item.god === cleanGod) || null;
+}
+
+function openAdminFaithTraitEditModal(item) {
+    adminFaithTraitEditingItem = item || null;
+    if (!adminFaithTraitEditingItem) {
+        showToast('没有找到这个信仰特性，请刷新后再试');
+        return;
+    }
+    fillAdminTalentFields({
+        adminFaithTraitModalGod: adminFaithTraitEditingItem.god || '',
+        adminFaithTraitModalPath: adminFaithTraitEditingItem.path || '',
+        adminFaithTraitModalTrait: adminFaithTraitEditingItem.trait || '',
+        adminFaithTraitModalNote: adminFaithTraitEditingItem.adminNote || ''
+    });
+    const title = document.getElementById('adminFaithTraitEditModalTitle');
+    if (title) title.textContent = `编辑 ${adminFaithTraitEditingItem.god || '信仰'}特性`;
+    const overlay = document.getElementById('adminFaithTraitEditModalOverlay');
+    if (overlay) overlay.style.display = 'flex';
+    setAdminManagementStatus(`正在编辑 ${adminFaithTraitEditingItem.god || '信仰'}特性`, 'success');
+    window.setTimeout(() => document.getElementById('adminFaithTraitModalTrait')?.focus(), 80);
+}
+
+function closeAdminFaithTraitEditModal(event) {
+    const overlay = document.getElementById('adminFaithTraitEditModalOverlay');
+    if (event && event.target !== overlay) return;
+    if (overlay) overlay.style.display = 'none';
+    adminFaithTraitEditingItem = null;
+}
+
+function adminEditFaithTrait(god) {
+    openAdminFaithTraitEditModal(findAdminFaithTrait(god));
+}
+
+async function adminSaveFaithTraitFromModal() {
+    const payload = {
+        god: document.getElementById('adminFaithTraitModalGod')?.value || '',
+        path: document.getElementById('adminFaithTraitModalPath')?.value || '',
+        trait: document.getElementById('adminFaithTraitModalTrait')?.value || '',
+        adminNote: document.getElementById('adminFaithTraitModalNote')?.value || '',
+        isEnabled: true
+    };
+    if (!payload.god || !payload.trait.trim()) {
+        showToast('请填写神明和信仰特性');
+        return;
+    }
+    setAdminManagementStatus('信仰特性保存处理中...', 'pending');
+    try {
+        const { error } = await invokeDungeonAction('adminUpsertFaithTrait', payload);
+        if (error) {
+            const message = `保存失败：${error.message || '后端未返回原因'}`;
+            setAdminManagementStatus(message, 'error');
+            showToast(`失败：${error.message || '保存失败'}`);
+            return;
+        }
+        closeAdminFaithTraitEditModal();
+        invalidateShortReadCache('faith-traits');
+        await adminLoadFaithTraits(false);
+        await refreshAdminOperationLogs();
+        if (document.getElementById('profilePage')?.style.display !== 'none') await renderProfilePage();
+        setAdminManagementStatus('信仰特性已保存', 'success');
+        showToast('信仰特性已保存');
+    } catch (error) {
+        const message = `保存失败：${error?.message || error || '未知错误'}`;
+        setAdminManagementStatus(message, 'error');
+        showToast(`失败：${error?.message || '保存失败'}`);
+    }
+}
+
 function adminEditTalentPoolItem(rawItem) {
     const item = typeof rawItem === 'string' ? JSON.parse(rawItem) : rawItem;
     openAdminTalentEditModal(item);
@@ -741,7 +875,10 @@ if (typeof renderAdminPage === 'function') {
         }
         if (adminManagementView === 'talents') {
             container.innerHTML = `${renderAdminManagementNav()}${renderAdminTalentPoolPage()}`;
-            if (!adminTalentPools.length && !adminTalentWarehouseLoading) await adminLoadTalentWarehouse(false);
+            const loads = [];
+            if (!adminTalentPools.length && !adminTalentWarehouseLoading) loads.push(adminLoadTalentWarehouse(false));
+            if (!adminFaithTraits.length && !adminFaithTraitsLoading) loads.push(adminLoadFaithTraits(false));
+            if (loads.length) await Promise.all(loads);
             return;
         }
         await renderAdminPageBase();

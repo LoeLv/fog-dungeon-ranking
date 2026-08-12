@@ -89,7 +89,7 @@ function isDungeonListMutation(action) {
 async function invokeDungeonAction(action, payload = {}, codeOverride = null, options = {}) {
     const inviteCode = codeOverride ?? inviteSession?.code;
     const inviteSnapshot = codeOverride ? '' : getInviteSnapshot();
-    const publicReadActions = new Set(['listDungeons', 'listDungeonArchivePage', 'getDungeonDetail', 'listProfiles']);
+    const publicReadActions = new Set(['listDungeons', 'listDungeonArchivePage', 'getDungeonDetail', 'listProfiles', 'listFaithTraits']);
     if (!USE_LOCAL_FALLBACK && !inviteCode && !publicReadActions.has(action)) {
         return { data: null, error: { message: '请先验入局谕令' } };
     }
@@ -145,5 +145,22 @@ async function invokeDungeonAction(action, payload = {}, codeOverride = null, op
     if (new Set(['saveProfile', 'updateDisplayName', 'updateTrickeryFaith', 'redeemPromoCode', 'godConvertBeliever', 'grantProfileTitle', 'revokeProfileTitle', 'restoreProfileTitle', 'grantBetrayalCurse', 'revokeProfileCurse', 'restoreProfileCurse']).has(action)) {
         invalidateShortReadCache('leaderboard');
     }
+    if (action === 'adminUpsertFaithTrait') invalidateShortReadCache('faith-traits');
     return { data: result.data ?? null, error: null, role, name: result.name };
+}
+
+async function loadFaithTraits(options = {}) {
+    if (USE_LOCAL_FALLBACK) return getFaithTraitEntries();
+    try {
+        const data = await getShortCachedRead('faith-traits', async () => {
+            const { data, error } = await invokeDungeonAction('listFaithTraits', {}, null, { preserveSessionOnInvalid: true });
+            if (error) throw new Error(error.message || '信仰特性读取失败');
+            return Array.isArray(data?.traits) ? data.traits : [];
+        }, options.ttl || 5 * 60 * 1000);
+        applyFaithTraitOverrides(data);
+        return getFaithTraitEntries();
+    } catch (error) {
+        if (options.showError) showToast(`信仰特性读取失败：${error?.message || error || '未知错误'}`);
+        return getFaithTraitEntries();
+    }
 }

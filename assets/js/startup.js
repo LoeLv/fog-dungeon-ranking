@@ -8,6 +8,7 @@
     renderGodFilters();
     renderDifficultyFilters();
     updateInviteUI();
+    await loadFaithTraits();
     await renderDungeonList();
     await renderLatestComments();
     if (USE_LOCAL_FALLBACK && getLocalData('dungeons', []).length === 0) {
