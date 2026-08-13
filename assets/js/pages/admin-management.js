@@ -162,12 +162,12 @@ async function adminSetManagementView(view) {
 
 function renderAdminManagementNav() {
     const items = [
-        ['overview', '权限工作台', isAdmin() ? '馆主总览 / 管理入口' : '按职责显示可用入口']
+        ['overview', '权限工作台', '']
     ];
-    if (isAdmin()) items.push(['members', '成员管理', '活跃状态 / 改名 / 重置 / 删除']);
-    if (canManageTalentPoolUI()) items.push(['talents', '天赋池维护', '天赋池仓库 / 信仰特性']);
+    if (isAdmin()) items.push(['members', '成员管理', '']);
+    if (canManageTalentPoolUI()) items.push(['talents', '天赋池维护', '']);
     return `<section class="profile-panel" data-god="真理" style="${getGodSkinStyle('真理')}">
-        <div class="profile-panel-title"><span>馆主后台</span><small>统一管理入口</small></div>
+        <div class="profile-panel-title"><span>馆主后台</span></div>
         <div id="adminManagementStatus" class="profile-action-status ${adminManagementStatus?.type === 'error' ? 'error' : (adminManagementStatus?.type === 'pending' ? 'pending' : 'success')}" ${adminManagementStatus ? '' : 'hidden'}>${escapeHtml(adminManagementStatus?.message || '')}</div>
         <div class="profile-tools">
             ${items.map(([key, label, note]) => `<button class="btn ${adminManagementView === key ? 'btn-primary' : 'btn-outline'} btn-sm" onclick="adminSetManagementView('${key}')" title="${escapeHtml(note)}">${escapeHtml(label)}</button>`).join('')}
@@ -218,7 +218,7 @@ function renderAdminTalentRows() {
 function renderAdminTalentWarehousePanel() {
     const pool = getAdminTalentSelectedPool();
     return `<section class="profile-panel" data-god="真理" style="${getGodSkinStyle('真理')}">
-        <div class="profile-panel-title"><span>天赋仓库</span><small>馆主维护抽池，不修改玩家已拥有天赋</small></div>
+        <div class="profile-panel-title"><span>天赋仓库</span></div>
         <div class="profile-form-grid">
             <div class="form-group">
                 <label>天赋池</label>
@@ -314,7 +314,7 @@ function renderAdminFaithTraitCards() {
 
 function renderAdminFaithTraitPanel() {
     return `<section class="profile-panel" data-god="真理" style="${getGodSkinStyle('真理')}">
-        <div class="profile-panel-title"><span>信仰特性维护</span><small>修改后会影响档案页与导出卡显示</small></div>
+        <div class="profile-panel-title"><span>信仰特性维护</span></div>
         <div class="profile-tools" style="margin-bottom:12px;">
             <button class="btn btn-primary btn-sm" onclick="adminLoadFaithTraits(true)">刷新信仰特性</button>
         </div>
@@ -325,7 +325,7 @@ function renderAdminFaithTraitPanel() {
 function renderAdminManagementPanels() {
     if (!isAdmin()) return '';
     return `<section class="profile-panel" data-god="真理" style="${getGodSkinStyle('真理')}">
-        <div class="profile-panel-title"><span>成员管理</span><small>活跃状态 / 改名 / 重置 / 删除</small></div>
+        <div class="profile-panel-title"><span>成员管理</span></div>
         <div class="profile-tools" style="margin-bottom:12px;">
             <button class="btn btn-primary btn-sm" data-admin-members-refresh onclick="adminLoadMembers(true)">刷新成员</button>
         </div>

@@ -73,7 +73,6 @@
             <div class="world-altar-copy">
                 <div class="world-kicker">TRIAL ARCHIVE · 愚戏棋局</div>
                 <h1 class="world-title">祈愿试炼留存地</h1>
-                <p class="world-line">欺诈假面垂落，命运骰子已在裂隙中转动。这里记录构筑者降下的切片宇宙，也收存入局信徒的神格判定与试炼证言。</p>
             </div>
             <div class="world-altar-symbols" aria-hidden="true">
                 <div class="void-constellation">
@@ -123,7 +122,6 @@
                 <div class="god-filter-panel" aria-label="神明分区筛选">
                     <div class="filter-heading">
                         <span>✦ 六大命途</span>
-                        <span>按命途与神明筛选祈愿试炼</span>
                     </div>
                     <div class="god-filter-list" id="godFilterList"></div>
                 </div>
@@ -135,25 +133,11 @@
             </div>
         </div>
 
-        <section class="role-insight-panel" id="roleInsightPanel" aria-label="当前身份入口说明">
-            <div class="role-insight-head">
-                <div class="role-insight-title">当前入局身份</div>
-                <div class="role-insight-note">旁观者可浏览；入局后按谕令身份开启对应入口。</div>
-            </div>
-            <div class="role-insight-cards">
-                <div class="role-insight-card"><strong>🎲 旁观者</strong><span>可浏览试炼、榜单与公开证言。</span></div>
-                <div class="role-insight-card"><strong>✦ 入局信徒</strong><span>可判定、证言、登记通关、保存档案。</span></div>
-                <div class="role-insight-card"><strong>🎭 构筑者</strong><span>可构筑试炼；分数结算不开放。</span></div>
-                <div class="role-insight-card"><strong>⚖ 审核席</strong><span>审核员 / 馆主可进入分数结算。</span></div>
-            </div>
-        </section>
-
         <section class="forum-feed is-collapsed" id="forumFeed" aria-label="全站最新证言">
             <div class="forum-feed-head">
                 <div>
                     <div class="forum-feed-kicker">ORACLE LOG · 神谕留存</div>
                     <div class="forum-feed-title">试炼证言殿</div>
-                    <div class="forum-feed-note">记录入局信徒递交的证言、楼中副证与试炼余温，点击任意证言可进入对应试炼。</div>
                 </div>
                 <div class="forum-feed-actions">
                     <div class="feed-count-badge"><span>最近</span><strong>3</strong><span>则证言</span></div>
@@ -174,7 +158,7 @@
                     <div id="eraScrollPanel">
                         <div class="era-scroll-head">
                             <div class="era-scroll-title">寰宇纪元更迭卷轴</div>
-                            <div class="era-scroll-note">正在读取六大命途与十六神明。</div>
+                            <div class="era-scroll-note"></div>
                         </div>
                     </div>
                 </section>
@@ -216,7 +200,7 @@
             </div>
             <div id="detailContent" class="detail-content"></div>
             <div class="detail-footer" id="detailFooter">
-                <span class="detail-footer-note">按 ESC 可返回试炼列表。</span>
+                <span class="detail-footer-note"></span>
                 <button class="btn btn-outline btn-sm detail-leave-btn" onclick="closeDetail()">返回试炼列表</button>
             </div>
         </div>
@@ -345,7 +329,7 @@
         <div class="modal" id="inviteModal" onclick="event.stopPropagation()">
             <button class="close-btn" style="position:absolute;top:16px;right:20px;" onclick="closeInviteModal()">✕</button>
             <h2>🎲 入局谕令</h2>
-            <p class="modal-note" id="inviteHint">输入群内谕令后，才能参与神格判定、试炼证言、构筑愚戏或分数结算。</p>
+            <p class="modal-note" id="inviteHint"></p>
             <div class="form-group">
                 <label>入局谕令</label>
                 <input type="password" id="inviteCodeInput" placeholder="输入你的同契谕令" autocomplete="off">
@@ -366,7 +350,6 @@
                     <input type="text" id="displayNameInput" maxlength="16" placeholder="绑定你的昵称，例如：无我">
                     <button type="button" class="btn btn-primary btn-sm" id="displayNameButton" onclick="saveDisplayName()">保存昵称</button>
                 </div>
-                <div class="identity-help">保存后，这枚谕令在证言、判定、构筑愚戏和分数结算时都会显示这个昵称。</div>
             </div>
             <div class="form-actions">
                 <button type="button" class="btn btn-outline" onclick="clearInviteSession()">退出身份</button>
@@ -459,7 +442,6 @@
                 <div>
                     <div class="ritual-modal-kicker">TALENT POOL · 天赋仓库</div>
                     <h2 id="adminTalentEditModalTitle">编辑天赋</h2>
-                    <div class="ritual-prayer">保存后会直接更新当前天赋池，不会修改玩家已经拥有的天赋。</div>
                 </div>
                 <button type="button" class="ritual-close" onclick="closeAdminTalentEditModal()" title="关闭天赋编辑" aria-label="关闭天赋编辑">✕</button>
             </div>
@@ -489,7 +471,6 @@
                 <div>
                     <div class="ritual-modal-kicker">FAITH TRAIT · 信仰特性</div>
                     <h2 id="adminFaithTraitEditModalTitle">编辑信仰特性</h2>
-                    <div class="ritual-prayer">保存后会更新档案页与档案导出卡中的信仰特性说明。</div>
                 </div>
                 <button type="button" class="ritual-close" onclick="closeAdminFaithTraitEditModal()" title="关闭信仰特性编辑" aria-label="关闭信仰特性编辑">✕</button>
             </div>
@@ -554,8 +535,8 @@
 <script src="assets/js/data-access.js?v=20260808-structure1"></script>
 <script src="assets/js/detail.js?v=20260808-structure1"></script>
 <script src="assets/js/discovery.js?v=20260809-structure1"></script>
-    <script src="assets/js/pages/leaderboard.js?v=20260809-rankfix1"></script>
-    <script src="assets/js/pages/archive-tools.js?v=20260809-structure1"></script>
+    <script src="assets/js/pages/leaderboard.js?v=20260813-uiclean1"></script>
+    <script src="assets/js/pages/archive-tools.js?v=20260813-uiclean1"></script>
     <script src="assets/js/pages/archive.js?v=20260808-structure1"></script>
     <script src="assets/js/pages/profile-data.js?v=20260809-structure1"></script>
     <script src="assets/js/pages/profile-panels.js?v=20260809-structure1"></script>
@@ -564,7 +545,7 @@
     <script src="assets/js/pages/score.js?v=20260808-structure1"></script>
     <script src="assets/js/pages/admin.js?v=20260810-adminroles1"></script>
     <script src="assets/js/pages/admin-panel.js?v=20260809-structure1"></script>
-    <script src="assets/js/pages/admin-management.js?v=20260812-faithtraits1"></script>
+    <script src="assets/js/pages/admin-management.js?v=20260813-uiclean1"></script>
     <script src="assets/js/pages/permission-desk.js?v=20260810-adminroles1"></script>
     <script src="assets/js/pages/match-tools.js?v=20260810-battle6"></script>
     <script src="assets/js/pages/match.js?v=20260810-battle6"></script>

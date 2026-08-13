@@ -187,13 +187,13 @@ function renderEraSidebar(dungeons = [], sidebar = null) {
         eraPanel.innerHTML = `
             <div class="era-scroll-head">
                 <div class="era-scroll-title">寰宇纪元更迭卷轴</div>
-                <div class="era-scroll-note">按时代筛选命途，按神明徽记锁定专属试炼；虚无纪元为当前现世。</div>
+                <div class="era-scroll-note"></div>
             </div>
             <div class="era-list">${blocks}</div>`;
     }
     if (faithPanel) {
         const pathTotal = Object.values(pathCounts).reduce((sum, value) => sum + Number(value || 0), 0);
-        faithPanel.innerHTML = renderFaithFlowBars(pathCounts, pathTotal, { note: hasServerSummary ? '当前归档的试炼命途分布；共创试炼会同时计入多个命途。' : '当前视野内的试炼命途分布；共创试炼会同时计入多个命途。' });
+        faithPanel.innerHTML = renderFaithFlowBars(pathCounts, pathTotal);
     }
     renderGodQuickIndex(godCounts);
     startVoidChronicleRotation(dungeons);

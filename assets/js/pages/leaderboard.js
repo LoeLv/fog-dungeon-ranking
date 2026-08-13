@@ -346,10 +346,10 @@ function renderLeaderboardPathTabs() {
 function renderLeaderboardContent(entries) {
     const lookup = renderLeaderboardLookup(entries);
     if (leaderboardMode === 'ascension') {
-        return `${lookup}<div class="leaderboard-layout">${renderLeaderboardBoard('命运骰录 · 登神阶途总榜', entries, 'ascension', { full: true, includeGodSeats: true, mergeGodSeats: true })}</div><div class="leaderboard-observer-note">第 0 位为寰宇至尊；登神之路分数越高，代表信徒踏遍试炼切片越多。</div>`;
+        return `${lookup}<div class="leaderboard-layout">${renderLeaderboardBoard('命运骰录 · 登神阶途总榜', entries, 'ascension', { full: true, includeGodSeats: true, mergeGodSeats: true })}</div>`;
     }
     if (leaderboardMode === 'audience') {
-        return `${lookup}<div class="leaderboard-layout">${renderLeaderboardBoard('星轨观览 · 觐见之梯总榜', entries, 'audience', { full: true, includeGodSeats: true, mergeGodSeats: true })}</div><div class="leaderboard-observer-note">第 0 位为寰宇至尊；觐见之梯源自信徒对试炼的评判证言。</div>`;
+        return `${lookup}<div class="leaderboard-layout">${renderLeaderboardBoard('星轨观览 · 觐见之梯总榜', entries, 'audience', { full: true, includeGodSeats: true, mergeGodSeats: true })}</div>`;
     }
     if (leaderboardMode === 'path') {
         const pathTabs = renderLeaderboardPathTabs();
@@ -392,7 +392,6 @@ async function renderLeaderboardPage(options = {}) {
         ? `<span class="mini-tag ${currentEntry.faithClass}">${escapeHtml(currentFaithLabel)}</span><span class="metric-pill">你：<strong>${escapeHtml(currentEntry.displayName)}</strong></span><span class="metric-pill">${escapeHtml(ROLE_LABELS[currentEntry.role] || '入局信徒')}</span>`
         : '<span class="metric-pill">尚未保存个人档案</span>';
     const sourceText = source === 'cloud' ? '云端榜单' : '本地记录';
-    const sourceHint = error?.message ? ` · ${error.message}` : '';
     container.innerHTML = `
         <section class="profile-hero leaderboard-hero" data-god="${escapeHtml(heroGod)}" data-motif="${escapeHtml(heroSkin.motif)}" style="${heroStyle}">
             <div class="profile-avatar path-void" style="${heroStyle}">${renderGodSigil(heroGod, 'lg')}</div>
@@ -402,7 +401,6 @@ async function renderLeaderboardPage(options = {}) {
                 <div class="profile-subline">
                     ${currentSummary}
                 </div>
-                <div class="profile-faith-prayer">寰宇信徒登神之路，诸神观览万民命途。${escapeHtml(source === 'cloud' ? '此为云端全域观览册。' : '当前读取本地记录。')}</div>
             </div>
             <div class="leaderboard-mini-stats">
                 <div class="leaderboard-mini-card"><span>登神之路分</span><strong>${currentEntry ? formatProfileScore(currentEntry.ascensionScore) : '—'}</strong></div>
@@ -412,10 +410,9 @@ async function renderLeaderboardPage(options = {}) {
         </section>
         <section class="profile-panel">
             ${renderLeaderboardTabs()}
-            <div class="leaderboard-summary">本录收录已保存的个人档案；信徒更新自身信仰记录后，名录将同步刷新。${source === 'cloud' ? '当前为云端全域观览册。' : `当前为本地榜单，运行 Supabase 档案表并更新 Edge Function 后会切换为全站榜。${escapeHtml(sourceHint)}`}</div>
+            <div class="leaderboard-summary"></div>
             ${renderLeaderboardFaithDistribution(entries)}
             ${renderLeaderboardContent(entries)}
-            <div class="leaderboard-observer-note">登神阶途观测记事：${escapeHtml(VOID_CHRONICLES[entries.length % VOID_CHRONICLES.length])}</div>
         </section>`;
 }
 
