@@ -248,21 +248,24 @@ async function submitDungeon(e) {
     if (!type) { focusSubmitField('dungeonType', '请选择神明标签'); return; }
     if (!Number.isFinite(participantCount) || participantCount < 1) { focusSubmitField('participantCount', '请输入有效的参与人数'); return; }
     if (!Number.isFinite(runCount) || runCount < 1) { focusSubmitField('runCount', '请输入有效的试炼轮回次数'); return; }
+    const isEditing = !!editingDungeonId;
+    const activeEditingDungeonId = editingDungeonId;
     const lockKey = editingDungeonId ? `submitDungeon:edit:${editingDungeonId}` : 'submitDungeon:new';
     if (!acquireUiActionLock(lockKey, '试炼正在提交，请勿重复点击')) return;
     if (btn) {
         btn.disabled = true;
-        btn.textContent = editingDungeonId ? '重铸中...' : (isGodRole() ? '降下中...' : '献祭中...');
+        btn.textContent = isEditing ? '重铸中...' : (isGodRole() ? '降下中...' : '献祭中...');
     }
     try {
-        const payload = { name, creator, coCreators, difficulty, participantCount, runCount, description, pinnedNote, type, mode };
-        const { error, data } = await addDungeon(payload, editingDungeonId || undefined);
+        const payload = { name, creator, coCreators, difficulty, participantCount, runCount, description, pinnedNote, type, mode, dungeonMode: mode, isOneShot: mode === 'one_shot' };
+        const { error, data } = await addDungeon(payload, activeEditingDungeonId || undefined);
         if (error) { showToast(`❌ ${error.message || '提交失败'}`); return; }
-        const dungeonId = editingDungeonId || data?.id || '';
-        const submittedStatus = data?.review_status || (canReviewDungeonsUI() ? 'approved' : 'pending');
+        const savedDungeon = Array.isArray(data) ? data[0] : data;
+        const dungeonId = activeEditingDungeonId || savedDungeon?.id || '';
+        const submittedStatus = savedDungeon?.review_status || (canReviewDungeonsUI() ? 'approved' : 'pending');
         const successText = submittedStatus === 'approved'
-            ? (dungeonId ? '副本已重铸并发布' : '试炼已正式发布')
-            : (dungeonId ? '副本已重铸，等待审核' : '试炼已提交，等待审核后发布');
+            ? (isEditing ? '副本已重铸并发布' : '试炼已正式发布')
+            : (isEditing ? '副本已重铸，等待审核' : '试炼已提交，等待审核后发布');
         showToast(successText);
         closeSubmitModal();
         if (dungeonId) await openDetail(dungeonId);
@@ -273,7 +276,7 @@ async function submitDungeon(e) {
     } finally {
         if (btn) {
             btn.disabled = false;
-            btn.textContent = editingDungeonId ? '重铸副本' : (isGodRole() ? '降下祈愿创本' : '献祭试炼至圣殿');
+            btn.textContent = isEditing ? '重铸副本' : (isGodRole() ? '降下祈愿创本' : '献祭试炼至圣殿');
         }
         releaseUiActionLock(lockKey);
     }

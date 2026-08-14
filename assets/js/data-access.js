@@ -183,14 +183,16 @@ async function fetchClearFeedbackSummary(dungeonId) {
     });
 }
 
-async function addDungeon(dungeonData) {
+async function addDungeon(dungeonData, dungeonId = '') {
+    const editDungeonId = String(dungeonId || dungeonData.dungeonId || dungeonData.dungeon_id || '').trim();
+    const payload = editDungeonId ? { ...dungeonData, dungeonId: editDungeonId } : dungeonData;
     if (USE_LOCAL_FALLBACK) {
         const dungeons = getLocalData('dungeons', []);
-        if (dungeonData.dungeonId) {
-            const d = dungeons.find(item => item.id === dungeonData.dungeonId);
+        if (editDungeonId) {
+            const d = dungeons.find(item => String(item.id) === editDungeonId);
             if (!d) return { error: { message: '试炼未找到' } };
-            Object.assign(d, dungeonData, {
-                id: dungeonData.dungeonId,
+            Object.assign(d, payload, {
+                id: editDungeonId,
                 pinned_note: dungeonData.pinnedNote || '',
                 co_creators: dungeonData.coCreators || [],
                 participant_count: dungeonData.participantCount,
@@ -203,7 +205,7 @@ async function addDungeon(dungeonData) {
         const newDungeon = { id: 'local_' + Date.now() + '_' + Math.random().toString(36).substr(2,6), ...dungeonData, clear_count:0, clear_rate:0, avg_rating:0, rating_count:0, comment_count:0, created_at: new Date().toISOString() };
         dungeons.push(newDungeon); setLocalData('dungeons', dungeons); return { data: [newDungeon], error: null };
     }
-    return invokeDungeonAction('submitDungeon', dungeonData);
+    return invokeDungeonAction('submitDungeon', payload);
 }
 
 async function addRating(dungeonId, ratingValue) {
