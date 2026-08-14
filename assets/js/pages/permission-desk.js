@@ -1,6 +1,21 @@
 // Delegated permission workbench for non-curator staff.
 
 let permissionDeskScrollY = 0;
+let permissionDeskStatusTimer = null;
+
+function setPermissionDeskStatus(message, type = 'success') {
+    const el = document.getElementById('permissionDeskStatus');
+    if (!el) return;
+    el.textContent = message || '';
+    el.className = `profile-action-status ${type || 'success'}`;
+    el.hidden = !message;
+    if (permissionDeskStatusTimer) window.clearTimeout(permissionDeskStatusTimer);
+    if (message) {
+        permissionDeskStatusTimer = window.setTimeout(() => {
+            el.hidden = true;
+        }, 4000);
+    }
+}
 
 function canUsePermissionDesk() {
     return hasInvitePermission('talent_pool_manage') ||
@@ -39,6 +54,7 @@ function renderPermissionShortcutCards() {
     }
     return `<section class="profile-panel" data-god="真理" style="${getGodSkinStyle('真理')}">
         <div class="profile-panel-title"><span>权限工作台</span></div>
+        <div id="permissionDeskStatus" class="profile-action-status" hidden></div>
         <div class="profile-tools">
             ${cards.map(([label, action]) => `<button class="btn btn-outline btn-sm" onclick="${escapeHtml(action)}">${escapeHtml(label)}</button>`).join('')}
         </div>
@@ -113,16 +129,25 @@ function renderPermissionTalentPoolPanel() {
 async function permissionUpgradePlayerToAuthor() {
     const targetName = cleanDisplayNameInput(document.getElementById('permissionUpgradeName')?.value || '');
     if (!targetName) {
+        setPermissionDeskStatus('请输入玩家昵称', 'error');
         showToast('请输入玩家昵称');
         return;
     }
     if (!window.confirm(`确认将 ${targetName} 从玩家升级为作者？`)) return;
+    setPermissionDeskStatus('正在升级为作者...', 'pending');
     const { error } = await invokeDungeonAction('adminSetAccountRole', { targetName, role: 'author' });
     if (error) {
+        const message = `升级失败：${error.message || '后端未返回原因'}`;
+        setPermissionDeskStatus(message, 'error');
         showToast(`失败：${error.message || '升级失败'}`);
         return;
     }
-    showToast(`${targetName} 已升级为作者`);
+    const successMessage = `${targetName} 已升级为作者`;
+    setPermissionDeskStatus(successMessage, 'success');
+    showToast(successMessage);
+    if (typeof adminLoadMembers === 'function') await adminLoadMembers(false);
+    if (typeof refreshAdminOperationLogs === 'function') await refreshAdminOperationLogs();
+    if (typeof renderAdminPage === 'function') await renderAdminPage();
 }
 
 async function permissionSaveTalentPoolItem() {
