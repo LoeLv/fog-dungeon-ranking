@@ -46,7 +46,6 @@ async function renderProfilePage() {
         <section class="profile-panel" data-god="${escapeHtml(faithGod)}" style="${faithStyle}">
             <div class="profile-panel-title">
                 <span>🎭 构筑者记录</span>
-                <small>作者身份额外记录</small>
             </div>
             <div class="profile-score-row">
                 <div class="profile-stat-card"><span>构筑试炼数</span><strong>${authored.length}</strong></div>
@@ -108,13 +107,11 @@ async function renderProfilePage() {
                 <section class="profile-panel" data-god="${escapeHtml(faithGod)}" style="${faithStyle}">
                     <div class="profile-panel-title">
                         <span>基础信仰设定</span>
-                        <small>昵称会绑定到当前邀请码</small>
                     </div>
                     <div class="profile-form-grid">
                         <div class="form-group">
                             <label for="profileDisplayName">个人昵称</label>
                             <input id="profileDisplayName" maxlength="16" value="${escapeHtml(isInitialDisplayNameBinding() ? '' : (inviteSession.name || ''))}" placeholder="例如：无我" ${canEditDisplayName() ? '' : 'disabled'} title="${isInitialDisplayNameBinding() ? '首次绑定昵称，保存后不可自行更改' : (isAdminDisplayNameEdit() ? '馆主可更改身份昵称' : '昵称为身份绑定字段，只有馆主可以更改')}">
-                            <div class="identity-help">${isInitialDisplayNameBinding() ? '这是首次绑定昵称，封存后会固定到当前谕令，之后不可自行更改。' : (isAdminDisplayNameEdit() ? '馆主可在这里校正自己的身份昵称。' : '昵称由入局谕令绑定；玩家、作者、审核员和神明不可自行更改。')}</div>
                         </div>
                         <div class="form-group">
                             <label for="profileFaithGod">信仰神明</label>
@@ -149,7 +146,6 @@ async function renderProfilePage() {
                         </div>
                         <div class="form-group full">
                             <label>个人天赋</label>
-                            <div class="identity-help">个人天赋由天赋仓库接管；信仰槽、职业槽与任意槽独立校验池子和品阶组合。</div>
                             <div id="profileTalentEquipPanel">${renderEquippedTalentSlots(talentState, faithGod)}</div>
                         </div>
                     </div>
@@ -226,7 +222,6 @@ async function renderProfilePage() {
                 <section class="profile-panel" data-god="${escapeHtml(faithGod)}" style="${faithStyle}">
                     <div class="profile-panel-title">
                         <span>当前称号</span>
-                        <small>称号 / 诅咒状态</small>
                     </div>
                     ${renderProfileTitleStatus(profile.activeTitle, profile.activeCurse, faithGod, profile.activeTitles, profile.activeCurses, profile.showTitles)}
                 </section>

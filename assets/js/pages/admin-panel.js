@@ -152,11 +152,10 @@ function renderGodCommandPanel() {
     const currentFaith = currentBeliever ? cleanGodName(currentBeliever.faith_god || '') : godName;
     const initialFaith = GOD_GROUPS.flatMap(group => group.gods).find(god => god !== currentFaith && god !== godName) || '';
     const initialProfession = Object.values((PROFESSION_GROUPS.find(group => group.god === initialFaith) || {}).careers || {})[0] || '';
-    const curseHelp = '勾选后才填写诅咒名与效果；不勾选则本次只改信仰与职业。';
     return `
         ${renderGodBelieverStatus()}
         <section class="profile-panel" data-god="${escapeHtml(godName)}" style="${getGodSkinStyle(godName)}">
-            <div class="profile-panel-title"><span>神明改信区</span><small>改命途 + 职业，诅咒可选</small></div>
+            <div class="profile-panel-title"><span>神明改信区</span></div>
             <div class="profile-form-grid">
                 <div class="form-group full">
                     <label>目标信徒</label>
@@ -176,7 +175,6 @@ function renderGodCommandPanel() {
                 <div class="form-group"><label>诅咒名字</label><input id="godConvertCurseName" maxlength="32" placeholder="勾选后填写" disabled></div>
                 <div class="form-group"><label>诅咒效果</label><input id="godConvertCurseEffect" maxlength="120" placeholder="勾选后填写" disabled></div>
             </div>
-            <div class="identity-help">${escapeHtml(curseHelp)} 只有“改信仰”时才能同步改职业，同信仰单独改职业会被后端拒绝。</div>
             <div class="profile-tools">
                 <button class="btn btn-primary btn-sm" data-god-convert-action="convert" onclick="godConvertBelieverUI()">执行改信敕令</button>
                 <button class="btn btn-outline btn-sm" data-god-convert-action="refresh" onclick="refreshGodBelievers(true)">刷新信徒名单</button>
@@ -337,16 +335,10 @@ function renderTitleAdminPanel(entries) {
     const curseGodControl = isGodRole()
         ? `<input id="curseGodSelect" value="${escapeHtml(godName)}" disabled>`
         : `<select id="curseGodSelect">${renderGodSelectOptions(godName)}</select>`;
-    const titleGodHelp = isGodRole()
-        ? `${escapeHtml(godName)}之神只能为当前 ${escapeHtml(godName)} 信徒降下称号`
-        : '选择降号名义';
-    const curseHelp = isGodRole()
-        ? `${escapeHtml(godName)}之神下放背弃诅咒时仍要求对方已改信；普通诅咒不要求改信`
-        : '馆主可代任一神明下放背弃诅咒或普通诅咒';
     return `
         ${renderHonorActionStatus()}
         <section class="profile-panel" data-god="${escapeHtml(godName || '命运')}" style="${getGodSkinStyle(godName || '命运')}">
-            <div class="profile-panel-title"><span>称号敕令</span><small>${isGodRole() ? '神明降号' : '馆主降下 / 神明名义'}</small></div>
+            <div class="profile-panel-title"><span>称号敕令</span></div>
             <div class="profile-form-grid">
                 <div class="form-group full">
                     <label>受封昵称</label>
@@ -357,14 +349,13 @@ function renderTitleAdminPanel(entries) {
                 <div class="form-group"><label>降号名义</label>${titleGodControl}</div>
                 <div class="form-group"><label>敕令备注</label><input id="titleNoteInput" maxlength="120" placeholder="可选，授予缘由"></div>
             </div>
-            <div class="identity-help">${titleGodHelp}</div>
             <div class="profile-tools">
                 <button class="btn btn-primary btn-sm" data-honor-action="grant-title" onclick="grantProfileTitleUI()">降下称号</button>
                 <button class="btn btn-outline btn-sm" data-honor-action="revoke-title" onclick="revokeProfileTitleUI()">回收称号</button>
             </div>
         </section>
         <section class="profile-panel" data-god="${escapeHtml(godName || '命运')}" style="${getGodSkinStyle(godName || '命运')}">
-            <div class="profile-panel-title"><span>下放诅咒</span><small>背弃 / 普通</small></div>
+            <div class="profile-panel-title"><span>下放诅咒</span></div>
             <div class="profile-form-grid">
                 <div class="form-group full">
                     <label>受诅昵称</label>
@@ -382,7 +373,6 @@ function renderTitleAdminPanel(entries) {
                 <div class="form-group"><label>诅咒名</label><input id="curseTextInput" maxlength="32" placeholder="默认：背弃诅咒"></div>
                 <div class="form-group"><label>诅咒效果</label><input id="curseNoteInput" maxlength="120" placeholder="建议填写：此诅咒的实际效果或限制"></div>
             </div>
-            <div class="identity-help">${curseHelp}。背弃诅咒会自动授予「背弃者」；普通诅咒不会自动授予称号。诅咒效果会显示在玩家个人页与个人档案导出图中。</div>
             <div class="profile-tools">
                 <button class="btn btn-danger btn-sm" data-honor-action="grant-curse" onclick="grantBetrayalCurseUI()">下放诅咒</button>
                 <button class="btn btn-outline btn-sm" data-honor-action="revoke-curse" onclick="revokeProfileCurseUI()">回收诅咒</button>

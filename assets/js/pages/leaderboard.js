@@ -104,7 +104,7 @@ function renderLeaderboardFaithDistribution(entries) {
         <section class="leaderboard-faith-strip">
             <h3>寰宇信仰占比简录</h3>
             <div class="leaderboard-faith-bars">
-                ${renderFaithFlowBars(counts, entries.length, { note: '本录收束已保存个人档案，信徒更新档案后会同步刷新。' })}
+                ${renderFaithFlowBars(counts, entries.length)}
             </div>
         </section>`;
 }
@@ -139,7 +139,7 @@ function renderLeaderboardLookup(entries) {
             </article>`;
         }).join('')}</div>`;
     return `<section class="leaderboard-lookup">
-        <div class="leaderboard-lookup-head"><span>昵称查询</span><small>跨全部分页定位玩家</small></div>
+        <div class="leaderboard-lookup-head"><span>昵称查询</span></div>
         <div class="leaderboard-lookup-controls">
             <input id="leaderboardSearchInput" maxlength="40" value="${escapeHtml(query).replace(/"/g, '&quot;')}" placeholder="输入完整或部分昵称" onkeydown="if(event.key === 'Enter'){ event.preventDefault(); applyLeaderboardSearch(); }">
             <button type="button" class="btn btn-primary btn-sm" onclick="applyLeaderboardSearch()">查询</button>

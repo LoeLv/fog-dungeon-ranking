@@ -93,7 +93,6 @@ async function openDetail(id) {
                 ${canManageDungeon(d) ? `<button class="btn btn-danger btn-xs" onclick="deleteDungeon('${escapeHtml(id)}')">封存试炼</button>` : ''}
             </div>
             <div class="trial-entry-body">
-                <p><strong>神明专属说明：</strong>${escapeHtml(skin.entryHint)}</p>
                 <p><strong>试炼说明：</strong>${escapeHtml(d.description || '此试炼尚未留下说明。')}</p>
                 <p>${escapeHtml(skin.oracle)}</p>
             </div>
@@ -129,7 +128,7 @@ async function openDetail(id) {
             <div class="testimony-launch ${godClass}" data-god="${escapeHtml(getGodInfo(d.type).god)}" style="${godStyle}">
                 <div>
                     <div class="testimony-launch-title">${renderGodSigil(d.type, 'sm')} 提交试炼证言</div>
-                    <div class="testimony-launch-note">当前身份：<strong>${testimonyLocked ? '访客' : escapeHtml(inviteSession?.name || ROLE_LABELS[getInviteRole()] || '匿名')}</strong>。神谕记录将会留存，供后来信徒判读。</div>
+                    <div class="testimony-launch-note">当前身份：<strong>${testimonyLocked ? '访客' : escapeHtml(inviteSession?.name || ROLE_LABELS[getInviteRole()] || '匿名')}</strong></div>
                 </div>
                 <button class="btn btn-primary btn-sm" onclick="${testimonyLocked ? `openInviteModal('入局谕令后可提交证言。')` : `openTestimonyModal('${escapeHtml(id)}')`}">${testimonyLocked ? '入局谕令' : '留下证言'}</button>
             </div>
@@ -148,7 +147,7 @@ async function openDetail(id) {
     const footer = document.getElementById('detailFooter');
     if (footer) {
         footer.innerHTML = `
-            <span class="detail-footer-note">${escapeHtml(skin.oracle)} · ${escapeHtml(skin.entryHint)}</span>
+            <span class="detail-footer-note">${escapeHtml(skin.oracle)}</span>
             <div class="detail-footer-actions">
                 <button type="button" class="btn btn-outline btn-sm detail-leave-btn" onclick="closeDetail()">${escapeHtml(skin.cancelText)}</button>
                 <button type="button" class="btn btn-primary btn-sm" onclick="focusTrialRecord()">${escapeHtml(skin.confirmText)}</button>

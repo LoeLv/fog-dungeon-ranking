@@ -2,9 +2,7 @@
 
 function renderArchiveEmptyState(filtered) {
     const title = filtered ? '未检索到对应试炼' : '暂无新构筑的愚戏试炼';
-    const note = filtered
-        ? '此试炼碎片未录入神谕名录，或已被当前筛选条件遮蔽。可以清空筛选，重新观测六大命途。'
-        : '静待筑戏人献祭新试炼；作者或馆主入局后，可从顶部构筑愚戏入口创建。';
+    const note = filtered ? '暂无匹配试炼。' : '暂无试炼。';
     const actions = filtered
         ? '<button type="button" class="btn btn-outline btn-sm" onclick="clearDiscoveryFilters()">清空筛选</button>'
         : '<button type="button" class="btn btn-outline btn-sm" onclick="retryArchiveRead()">重新观测试炼</button><button type="button" class="btn btn-outline btn-sm" onclick="openLeaderboardPage()">先看登神觐见录</button>';
@@ -109,19 +107,17 @@ function renderGodQuickIndex(godCounts = {}) {
 function renderVoidChronicle(dungeons, index) {
     const chronicle = document.getElementById('voidChronicle');
     if (!chronicle) return;
-    const pathCounts = countDungeonsByPath(dungeons, dungeon => dungeon.type);
     const filterNode = getFilterAtmosphereNode();
     const node = filterNode || getActiveAtmosphereNode();
     const era = node.path;
     syncEdgeAtmosphere();
     const library = ERA_CHRONICLE_LIBRARY[era] || ERA_CHRONICLE_LIBRARY['虚无'];
     const entry = library[index % library.length];
-    const eraCount = Number(pathCounts[era] || 0);
     const modeLabel = filterNode ? '筛选高亮' : '自动轮转';
     chronicle.classList.remove('is-rotating');
     chronicle.innerHTML = `
         <strong>${renderGodSigil(node.god, 'xs')} ${escapeHtml(node.god)}之神 · ${escapeHtml(entry.lead)}</strong>
-        <span>${escapeHtml(entry.note)} ${modeLabel}：${escapeHtml(era)}命途 / ${escapeHtml(getGodPrayer(node.god))}。当前视野收录 ${dungeons.length} 个试炼，其中${escapeHtml(era)}命途 ${eraCount} 个。</span>`;
+        <span>${escapeHtml(entry.note)} ${modeLabel}：${escapeHtml(era)}命途 / ${escapeHtml(getGodPrayer(node.god))}。</span>`;
     requestAnimationFrame(() => chronicle.classList.add('is-rotating'));
 }
 

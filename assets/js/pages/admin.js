@@ -73,7 +73,7 @@ async function renderAdminPage() {
             : renderRitualEmpty('权限工作台尚未载入。', '真理', '等待载入');
         return;
     }
-    const lookup = adminLookupState.snapshot ? `<div class="admin-snapshot">${renderAdminSnapshot(adminLookupState.snapshot)}</div>` : renderRitualEmpty('输入已绑定的玩家昵称，读取其后台档案、称号诅咒与天赋状态。', '真理', '等待查询');
+    const lookup = adminLookupState.snapshot ? `<div class="admin-snapshot">${renderAdminSnapshot(adminLookupState.snapshot)}</div>` : renderRitualEmpty('暂无查询结果。', '真理', '等待查询');
     const globalOperations = `<section class="profile-panel" data-god="真理" style="${getGodSkinStyle('真理')}"><div class="profile-panel-title"><span>全站最近操作</span><small>最近 50 条</small></div>${renderAdminOperationRows(adminRecentOperations, adminOperationsUnavailable)}</section>`;
     const workbench = typeof renderPermissionDeskContent === 'function' ? renderPermissionDeskContent() : '';
     container.innerHTML = `${workbench}<section class="profile-panel" data-god="真理" style="${getGodSkinStyle('真理')}"><div class="profile-panel-title"><span>玩家查询</span><small>仅馆主可见</small></div><div class="profile-form-grid"><div class="form-group full"><label>玩家昵称</label><input id="adminTargetName" maxlength="40" value="${escapeHtml(adminLookupState.targetName || '')}" placeholder="输入已保存个人档案的昵称" onkeydown="if(event.key==='Enter') adminLookupPlayer()"></div></div><div class="profile-tools"><button class="btn btn-primary btn-sm" data-admin-lookup onclick="adminLookupPlayer()">查询档案</button></div></section>${globalOperations}${lookup}`;
