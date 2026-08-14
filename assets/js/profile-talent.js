@@ -377,7 +377,6 @@ function renderTalentPoolPanel(state, error, profile) {
         <section class="profile-panel" id="talentPoolPanel" data-god="${escapeHtml(profileGod)}" style="${profileGodStyle}">
             <div class="profile-panel-title">
                 <span>${escapeHtml(selectedPoolTitle)}</span>
-                <small>仅开放信仰池与职业池</small>
             </div>
             <div class="talent-pool-card" data-god="${escapeHtml(profileGod)}" style="${profileGodStyle}">
                 <div class="profile-score-row">

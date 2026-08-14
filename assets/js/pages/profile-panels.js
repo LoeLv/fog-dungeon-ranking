@@ -50,7 +50,6 @@ function renderProfileFaithObservatory(clearRecords, authored, faithGod, profile
         <section class="profile-panel" data-god="${escapeHtml(getGodInfo(faithGod).god)}" style="${getGodSkinStyle(faithGod)}">
             <div class="profile-panel-title">
                 <span>信仰观测录</span>
-                <small>游玩 / 构筑命途分布</small>
             </div>
             <div class="profile-observatory">
                 <div class="profile-observatory-grid">
@@ -58,7 +57,7 @@ function renderProfileFaithObservatory(clearRecords, authored, faithGod, profile
                     <div class="profile-observatory-card"><span>最常接触命途</span><strong>${escapeHtml(topPath?.count ? topPath.path : '未定')}</strong></div>
                     <div class="profile-observatory-card"><span>观测切片总数</span><strong>${total}</strong></div>
                 </div>
-                ${renderFaithFlowBars(combinedCounts, total, { note: `寰宇信仰流向，见证你踏入或构筑的每一场愚戏。` })}
+                ${renderFaithFlowBars(combinedCounts, total)}
                 <div class="profile-list-meta">${escapeHtml(getGodOracle(faithGod))}</div>
             </div>
         </section>`;

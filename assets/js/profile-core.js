@@ -217,7 +217,6 @@ function renderProfileBattlePanel(profile) {
         <section id="profileBattlePanel" class="profile-panel" data-god="${escapeHtml(faithGod)}" style="${getGodSkinStyle(faithGod)}">
             <div class="profile-panel-title">
                 <span>战斗面板</span>
-                <small>由职业、登神之路与信仰特性实时推导</small>
             </div>
             ${hasProfession ? `
                 <div class="profile-battle-grid">

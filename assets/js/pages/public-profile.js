@@ -175,7 +175,6 @@ function renderPublicProfileDossier(payload) {
                         <span class="metric-pill">通关记录 <strong>${clearCount}</strong></span>
                         <span class="metric-pill">构筑试炼 <strong>${authoredCount}</strong></span>
                     </div>
-                    <div class="public-profile-note">公开档案只展示榜单字段、履迹摘要和构筑摘要；入局谕令、内部结算明细和邀请码哈希不会公开。</div>
                 </section>
                 <section class="profile-panel" data-god="${escapeHtml(faithGod)}" style="${faithStyle}">
                     <div class="profile-panel-title">

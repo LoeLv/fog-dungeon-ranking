@@ -25,22 +25,22 @@ async function openTalentManagementFromWorkbench() {
 function renderPermissionShortcutCards() {
     const cards = [];
     if (hasInvitePermission('review_dungeons')) {
-        cards.push(['副本审核', '查看待审核副本并通过或退回', 'openReviewQueueFromWorkbench()']);
+        cards.push(['副本审核', 'openReviewQueueFromWorkbench()']);
     }
     if (hasInvitePermission('account_role_manage')) {
-        cards.push(['玩家升作者', '按昵称把玩家升级为作者', "document.getElementById('permissionUpgradeName')?.focus()"]);
+        cards.push(['玩家升作者', "document.getElementById('permissionUpgradeName')?.focus()"]);
     }
     if (hasInvitePermission('settle_scores')) {
-        cards.push(['分数结算', '进入独立结算页提交加分', 'openScorePage()']);
+        cards.push(['分数结算', 'openScorePage()']);
     }
     if (hasInvitePermission('talent_pool_manage')) {
-        cards.push(['天赋池维护', '新增、修改、启停抽池天赋', 'openTalentManagementFromWorkbench()']);
-        cards.push(['天赋池仓库', '查看当前天赋池仓库', 'openTalentManagementFromWorkbench()']);
+        cards.push(['天赋池维护', 'openTalentManagementFromWorkbench()']);
+        cards.push(['天赋池仓库', 'openTalentManagementFromWorkbench()']);
     }
     return `<section class="profile-panel" data-god="真理" style="${getGodSkinStyle('真理')}">
-        <div class="profile-panel-title"><span>权限工作台</span><small>按职责显示可用功能</small></div>
+        <div class="profile-panel-title"><span>权限工作台</span></div>
         <div class="profile-tools">
-            ${cards.map(([label, note, action]) => `<button class="btn btn-outline btn-sm" onclick="${escapeHtml(action)}" title="${escapeHtml(note)}">${escapeHtml(label)}</button>`).join('')}
+            ${cards.map(([label, action]) => `<button class="btn btn-outline btn-sm" onclick="${escapeHtml(action)}">${escapeHtml(label)}</button>`).join('')}
         </div>
     </section>`;
 }
@@ -52,19 +52,19 @@ function renderPermissionDeskContent() {
     const panels = [renderPermissionShortcutCards()];
     if (hasInvitePermission('settle_scores')) {
         panels.push(`<section class="profile-panel" data-god="真理" style="${getGodSkinStyle('真理')}">
-            <div class="profile-panel-title"><span>分数权限</span><small>进入分数结算工作台</small></div>
+            <div class="profile-panel-title"><span>分数权限</span></div>
             <div class="profile-tools"><button class="btn btn-primary btn-sm" onclick="openScorePage()">打开分数结算</button></div>
         </section>`);
     }
     if (hasInvitePermission('review_dungeons')) {
         panels.push(`<section class="profile-panel" data-god="真理" style="${getGodSkinStyle('真理')}">
-            <div class="profile-panel-title"><span>副本审核</span><small>待审核副本会显示通过按钮</small></div>
+            <div class="profile-panel-title"><span>副本审核</span></div>
             <div class="profile-tools"><button class="btn btn-primary btn-sm" onclick="openReviewQueueFromWorkbench()">查看待审核副本</button></div>
         </section>`);
     }
     if (hasInvitePermission('account_role_manage')) {
         panels.push(`<section class="profile-panel" data-god="真理" style="${getGodSkinStyle('真理')}">
-            <div class="profile-panel-title"><span>玩家升作者</span><small>按昵称操作，仅允许 player -> author</small></div>
+            <div class="profile-panel-title"><span>玩家升作者</span></div>
             <div class="profile-form-grid">
                 <div class="form-group full">
                     <label>玩家昵称</label>
@@ -78,7 +78,7 @@ function renderPermissionDeskContent() {
     }
     if (hasInvitePermission('talent_pool_manage')) {
         panels.push(`<section class="profile-panel" data-god="真理" style="${getGodSkinStyle('真理')}">
-            <div class="profile-panel-title"><span>天赋池仓库</span><small>打开独立维护页</small></div>
+            <div class="profile-panel-title"><span>天赋池仓库</span></div>
             <div class="profile-tools"><button class="btn btn-primary btn-sm" onclick="openTalentManagementFromWorkbench()">打开天赋池维护</button></div>
         </section>`);
     }
@@ -93,7 +93,7 @@ function renderPermissionDesk() {
 
 function renderPermissionTalentPoolPanel() {
     return `<section class="profile-panel" data-god="真理" style="${getGodSkinStyle('真理')}">
-        <div class="profile-panel-title"><span>天赋池维护</span><small>新增/修改/启停抽池天赋</small></div>
+        <div class="profile-panel-title"><span>天赋池维护</span></div>
         <div class="profile-form-grid">
             <div class="form-group"><label>天赋池</label><input id="permissionTalentPoolKey" maxlength="40" placeholder="例如 Pool战士"></div>
             <div class="form-group"><label>编号</label><input id="permissionTalentId" type="number" min="1" placeholder="留空自动编号"></div>

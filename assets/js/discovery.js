@@ -1,7 +1,7 @@
 function renderGodFilters() {
     const listEl = document.getElementById('godFilterList');
     if (!listEl) return;
-    const allButton = `<div class="god-cluster"><div class="god-cluster-title"><strong>全神廳</strong><small>不限命途，查看所有祈願試煉。</small></div><div class="god-cluster-buttons"><button class="god-button path-all ${selectedGod === 'all' && selectedPath === 'all' ? 'active' : ''}" onclick="setGodFilter('all')">全神廳</button></div></div>`;
+    const allButton = `<div class="god-cluster"><div class="god-cluster-title"><strong>全神廳</strong></div><div class="god-cluster-buttons"><button class="god-button path-all ${selectedGod === 'all' && selectedPath === 'all' ? 'active' : ''}" onclick="setGodFilter('all')">全神廳</button></div></div>`;
     const groupHtml = GOD_GROUPS.map(group => `
         <div class="god-cluster ${group.className}">
             <div class="god-cluster-title">

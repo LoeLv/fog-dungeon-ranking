@@ -59,16 +59,11 @@ async function renderScorePage() {
                 <div class="profile-hero-score"><span>权限席位</span><strong>${getInviteRole() === 'admin' ? '馆主' : '审核'}</strong></div>
             </div>
         </section>
-        <div class="score-rule-grid">
-            <div class="score-rule-card"><strong>批量结算</strong><span>适合副本结束后按名单一次性录入，先预览校验再提交。</span></div>
-            <div class="score-rule-card"><strong>单人补分</strong><span>用于漏分、迟到记录或单人修正，仍会写入结算信封。</span></div>
-            <div class="score-rule-card"><strong>撤销回滚</strong><span>近期结算可撤销，回滚后玩家会收到撤销通知。</span></div>
-        </div>
         <div class="profile-grid">
             <div>
                 <section class="profile-panel" data-god="真理" style="${getGodSkinStyle('真理')}">
-                    <div class="profile-panel-title"><span>批量结算</span><small>格式：昵称+登神+觐见，可带编号</small></div>
-                    <div class="form-group"><label>搜索副本</label><input id="scoreDungeonSearch" maxlength="80" placeholder="输入副本名过滤，或在结算文本第一行写副本名" oninput="filterScoreDungeonOptions('scoreDungeonSearch', 'scoreDungeonId')"><div class="identity-help" id="scoreDungeonSearchStatus">输入副本名可快速过滤</div></div>
+                    <div class="profile-panel-title"><span>批量结算</span></div>
+                    <div class="form-group"><label>搜索副本</label><input id="scoreDungeonSearch" maxlength="80" placeholder="输入副本名过滤，或在结算文本第一行写副本名" oninput="filterScoreDungeonOptions('scoreDungeonSearch', 'scoreDungeonId')"><div class="identity-help" id="scoreDungeonSearchStatus"></div></div>
                     <div class="form-group"><label>副本圣名</label><select id="scoreDungeonId">${dungeonOptions}</select></div>
                     <div class="form-group"><label>结算文本</label><textarea id="scoreBatchText" maxlength="20000" placeholder="修弥斯的钟，一人（棺材板）胜利，其余人失败&#10;1. 羔羊:+8+0&#10;2. 棺材板:+9+2"></textarea></div>
                     <div class="form-group"><label>备注</label><input id="scoreBatchRemark" maxlength="500" placeholder="可选，写结算来源或说明"></div>
@@ -79,23 +74,23 @@ async function renderScorePage() {
                     <div id="scorePreviewPanel" style="margin-top:14px;">${renderScorePreview(scorePreviewState)}</div>
                 </section>
                 <section class="profile-panel" data-god="真理" style="${getGodSkinStyle('真理')}">
-                    <div class="profile-panel-title"><span>单人补分</span><small>漏分补发</small></div>
+                    <div class="profile-panel-title"><span>单人补分</span></div>
                     <div class="profile-form-grid">
-                        <div class="form-group full"><label>搜索副本</label><input id="singleDungeonSearch" maxlength="80" placeholder="输入副本名过滤" oninput="filterScoreDungeonOptions('singleDungeonSearch', 'singleDungeonId')"><div class="identity-help" id="singleDungeonSearchStatus">输入副本名可快速过滤</div></div>
+                        <div class="form-group full"><label>搜索副本</label><input id="singleDungeonSearch" maxlength="80" placeholder="输入副本名过滤" oninput="filterScoreDungeonOptions('singleDungeonSearch', 'singleDungeonId')"><div class="identity-help" id="singleDungeonSearchStatus"></div></div>
                         <div class="form-group full"><label>副本圣名</label><select id="singleDungeonId">${dungeonOptions}</select></div>
                         <div class="form-group"><label>玩家昵称</label><input id="singlePlayerName" maxlength="40"></div>
                         <div class="form-group"><label>登神之路</label><input id="singleDengScore" type="number" min="${scoreDengMin}" max="${scoreDengMax}" step="0.1" value="0"></div>
                         <div class="form-group"><label>觐见之梯</label><input id="singleJinScore" type="number" min="${scoreJinMin}" max="${scoreJinMax}" step="0.1" value="0"></div>
                         <div class="form-group full"><label>备注</label><input id="singleRemark" maxlength="500" placeholder="补发原因"></div>
-                        <div class="form-group full"><label>通关结果（可不选）</label><div class="score-clear-choice"><label><input type="radio" name="singleClearStatus" value="passed"> 逢生</label><label><input type="radio" name="singleClearStatus" value="lost"> 迷失</label></div><div class="identity-help">作者、主持人等不计入通关数据时可留空。</div></div>
+                        <div class="form-group full"><label>通关结果（可不选）</label><div class="score-clear-choice"><label><input type="radio" name="singleClearStatus" value="passed"> 逢生</label><label><input type="radio" name="singleClearStatus" value="lost"> 迷失</label></div></div>
                     </div>
                     <div class="profile-tools"><button class="btn btn-primary btn-sm" data-score-action="submit-score-single" onclick="submitScoreSingleUI()">提交补分</button></div>
                 </section>
             </div>
             <div>
                 <section class="profile-panel" data-god="真理" style="${getGodSkinStyle('真理')}">
-                    <div class="profile-panel-title"><span>加分记录</span><small>仅保留最近 48 小时</small></div>
-                    <div class="form-group"><label for="scoreSettlementSearch">搜索副本</label><input id="scoreSettlementSearch" maxlength="80" placeholder="输入副本名，查看该副本给谁加了分" oninput="queueScoreSettlementSearch()"><div class="identity-help">输入后自动筛选；超过两天的记录不在此处显示。</div></div>
+                    <div class="profile-panel-title"><span>加分记录</span></div>
+                    <div class="form-group"><label for="scoreSettlementSearch">搜索副本</label><input id="scoreSettlementSearch" maxlength="80" placeholder="输入副本名，查看该副本给谁加了分" oninput="queueScoreSettlementSearch()"></div>
                     <div id="scoreSettlementsPanel">${renderScoreSettlements(settlements, error)}</div>
                 </section>
                 ${renderTitleAdminPanel(titleEntries)}

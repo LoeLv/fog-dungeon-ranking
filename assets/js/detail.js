@@ -153,7 +153,6 @@ function renderDetailDossier(d, context = {}) {
             <div class="trial-dossier-card" data-mark="召">
                 <span>召集入口</span>
                 <strong>小程序主入口</strong>
-                <small>网站端召集入口保持隐藏，此处只保留浏览、证言和判定。</small>
             </div>
             <div class="trial-dossier-card" data-mark="身">
                 <span>当前身份</span>

@@ -162,15 +162,15 @@ async function adminSetManagementView(view) {
 
 function renderAdminManagementNav() {
     const items = [
-        ['overview', '权限工作台', '']
+        ['overview', '权限工作台']
     ];
-    if (isAdmin()) items.push(['members', '成员管理', '']);
-    if (canManageTalentPoolUI()) items.push(['talents', '天赋池维护', '']);
+    if (isAdmin()) items.push(['members', '成员管理']);
+    if (canManageTalentPoolUI()) items.push(['talents', '天赋池维护']);
     return `<section class="profile-panel" data-god="真理" style="${getGodSkinStyle('真理')}">
         <div class="profile-panel-title"><span>馆主后台</span></div>
         <div id="adminManagementStatus" class="profile-action-status ${adminManagementStatus?.type === 'error' ? 'error' : (adminManagementStatus?.type === 'pending' ? 'pending' : 'success')}" ${adminManagementStatus ? '' : 'hidden'}>${escapeHtml(adminManagementStatus?.message || '')}</div>
         <div class="profile-tools">
-            ${items.map(([key, label, note]) => `<button class="btn ${adminManagementView === key ? 'btn-primary' : 'btn-outline'} btn-sm" onclick="adminSetManagementView('${key}')" title="${escapeHtml(note)}">${escapeHtml(label)}</button>`).join('')}
+            ${items.map(([key, label]) => `<button class="btn ${adminManagementView === key ? 'btn-primary' : 'btn-outline'} btn-sm" onclick="adminSetManagementView('${key}')">${escapeHtml(label)}</button>`).join('')}
         </div>
     </section>`;
 }
@@ -347,7 +347,7 @@ function renderAdminRolePanel() {
         .map(member => `<option value="${escapeHtml(member.codeHash)}">${escapeHtml(member.displayName || '未命名')} · ${escapeHtml(member.role || 'player')}</option>`)
         .join('');
     return `<section class="profile-panel" data-god="真理" style="${getGodSkinStyle('真理')}">
-        <div class="profile-panel-title"><span>权限调整</span><small>馆主可直接调整成员权限</small></div>
+        <div class="profile-panel-title"><span>权限调整</span></div>
         <div class="profile-form-grid">
             <div class="form-group">
                 <label>成员</label>
