@@ -1217,7 +1217,7 @@ async function rebalanceTalentPoolsAfterProfileChange(
       .in("pool_key", removedPoolKeys),
     supabase
       .from("talent_draw_state")
-      .select("spent_draws, basic_spent_draws, advanced_spent_draws")
+      .select("spent_draws, basic_spent_draws, advanced_spent_draws, event_basic_spent_draws, event_advanced_spent_draws")
       .eq("invite_code_hash", codeHash)
       .maybeSingle(),
     supabase
@@ -1244,11 +1244,15 @@ async function rebalanceTalentPoolsAfterProfileChange(
   const currentSpentDraws = Number(drawStateResult.data?.spent_draws || 0);
   const currentBasicSpentDraws = Number(drawStateResult.data?.basic_spent_draws || 0);
   const currentAdvancedSpentDraws = Number(drawStateResult.data?.advanced_spent_draws || 0);
+  const currentEventBasicSpentDraws = Number(drawStateResult.data?.event_basic_spent_draws || 0);
+  const currentEventAdvancedSpentDraws = Number(drawStateResult.data?.event_advanced_spent_draws || 0);
   const nextDrawState = {
     invite_code_hash: codeHash,
     spent_draws: Math.max(0, currentSpentDraws - refundedDraws),
     basic_spent_draws: Math.max(0, currentBasicSpentDraws - refundedBasicDraws),
     advanced_spent_draws: Math.max(0, currentAdvancedSpentDraws - refundedAdvancedDraws),
+    event_basic_spent_draws: Math.max(0, currentEventBasicSpentDraws - refundedBasicDraws),
+    event_advanced_spent_draws: Math.max(0, currentEventAdvancedSpentDraws - refundedAdvancedDraws),
     updated_at: new Date().toISOString(),
   };
 
@@ -1602,40 +1606,49 @@ async function getTalentDrawState(
 ) {
   const { data, error } = await supabase
     .from("talent_draw_state")
-    .select("spent_draws, basic_spent_draws, advanced_spent_draws, event_basic_draws, event_advanced_draws")
+    .select("spent_draws, basic_spent_draws, advanced_spent_draws, event_basic_draws, event_advanced_draws, event_basic_spent_draws, event_advanced_spent_draws")
     .eq("invite_code_hash", codeHash)
     .maybeSingle();
   if (
     error?.code === "42703" &&
-    (error.message?.includes("event_basic_draws") || error.message?.includes("event_advanced_draws"))
+    (
+      error.message?.includes("event_basic_draws")
+      || error.message?.includes("event_advanced_draws")
+      || error.message?.includes("event_basic_spent_draws")
+      || error.message?.includes("event_advanced_spent_draws")
+    )
   ) {
     const fallback = await supabase
       .from("talent_draw_state")
-      .select("spent_draws, basic_spent_draws, advanced_spent_draws")
+      .select("spent_draws, basic_spent_draws, advanced_spent_draws, event_basic_draws, event_advanced_draws")
       .eq("invite_code_hash", codeHash)
       .maybeSingle();
     if (fallback.error?.code === "42703") {
-      return { error: { ...fallback.error, message: "请先运行 talent_draw_tier_1500_20260727.sql" }, spentDraws: 0, basicSpentDraws: 0, advancedSpentDraws: 0, eventBasicDraws: 0, eventAdvancedDraws: 0 };
+      return { error: { ...fallback.error, message: "请先运行 talent_draw_tier_1500_20260727.sql" }, spentDraws: 0, basicSpentDraws: 0, advancedSpentDraws: 0, eventBasicDraws: 0, eventAdvancedDraws: 0, eventBasicSpentDraws: 0, eventAdvancedSpentDraws: 0 };
     }
-    if (fallback.error) return { error: fallback.error, spentDraws: 0, basicSpentDraws: 0, advancedSpentDraws: 0, eventBasicDraws: 0, eventAdvancedDraws: 0 };
+    if (fallback.error) return { error: fallback.error, spentDraws: 0, basicSpentDraws: 0, advancedSpentDraws: 0, eventBasicDraws: 0, eventAdvancedDraws: 0, eventBasicSpentDraws: 0, eventAdvancedSpentDraws: 0 };
     return {
       spentDraws: Number(fallback.data?.spent_draws || 0),
       basicSpentDraws: Number(fallback.data?.basic_spent_draws || 0),
       advancedSpentDraws: Number(fallback.data?.advanced_spent_draws || 0),
-      eventBasicDraws: 0,
-      eventAdvancedDraws: 0,
+      eventBasicDraws: Number(fallback.data?.event_basic_draws || 0),
+      eventAdvancedDraws: Number(fallback.data?.event_advanced_draws || 0),
+      eventBasicSpentDraws: 0,
+      eventAdvancedSpentDraws: 0,
     };
   }
   if (error?.code === "42703") {
-    return { error: { ...error, message: "请先运行 talent_draw_tier_1500_20260727.sql" }, spentDraws: 0, basicSpentDraws: 0, advancedSpentDraws: 0, eventBasicDraws: 0, eventAdvancedDraws: 0 };
+    return { error: { ...error, message: "请先运行 talent_draw_tier_1500_20260727.sql" }, spentDraws: 0, basicSpentDraws: 0, advancedSpentDraws: 0, eventBasicDraws: 0, eventAdvancedDraws: 0, eventBasicSpentDraws: 0, eventAdvancedSpentDraws: 0 };
   }
-  if (error) return { error, spentDraws: 0, basicSpentDraws: 0, advancedSpentDraws: 0, eventBasicDraws: 0, eventAdvancedDraws: 0 };
+  if (error) return { error, spentDraws: 0, basicSpentDraws: 0, advancedSpentDraws: 0, eventBasicDraws: 0, eventAdvancedDraws: 0, eventBasicSpentDraws: 0, eventAdvancedSpentDraws: 0 };
   return {
     spentDraws: Number(data?.spent_draws || 0),
     basicSpentDraws: Number(data?.basic_spent_draws || 0),
     advancedSpentDraws: Number(data?.advanced_spent_draws || 0),
     eventBasicDraws: Number(data?.event_basic_draws || 0),
     eventAdvancedDraws: Number(data?.event_advanced_draws || 0),
+    eventBasicSpentDraws: Number(data?.event_basic_spent_draws || 0),
+    eventAdvancedSpentDraws: Number(data?.event_advanced_spent_draws || 0),
   };
 }
 
@@ -5039,8 +5052,12 @@ Deno.serve(async (req) => {
       const advancedDrawsEarned = getAdvancedDrawsEarned(profile.ascension_score) + drawState.eventAdvancedDraws;
       const basicSpentDraws = drawState.basicSpentDraws;
       const advancedSpentDraws = drawState.advancedSpentDraws;
+      const eventBasicSpentDraws = Math.min(drawState.eventBasicDraws, drawState.eventBasicSpentDraws);
+      const eventAdvancedSpentDraws = Math.min(drawState.eventAdvancedDraws, drawState.eventAdvancedSpentDraws);
       const basicAvailableDraws = Math.max(0, basicDrawsEarned - basicSpentDraws);
       const advancedAvailableDraws = Math.max(0, advancedDrawsEarned - advancedSpentDraws);
+      const eventBasicAvailableDraws = Math.max(0, drawState.eventBasicDraws - eventBasicSpentDraws);
+      const eventAdvancedAvailableDraws = Math.max(0, drawState.eventAdvancedDraws - eventAdvancedSpentDraws);
       const availableDraws = basicAvailableDraws + advancedAvailableDraws;
       if (availableDraws < drawCount) {
         return json({
@@ -5088,10 +5105,14 @@ Deno.serve(async (req) => {
       }
       const basicDrawsToUse = Math.min(drawCount, basicAvailableDraws);
       const advancedDrawsToUse = drawCount - basicDrawsToUse;
+      const eventBasicDrawsToUse = Math.min(basicDrawsToUse, eventBasicAvailableDraws);
+      const eventAdvancedDrawsToUse = Math.min(advancedDrawsToUse, eventAdvancedAvailableDraws);
       const results: Record<string, unknown>[] = [];
       let fragmentGainTotal = 0;
       const nextBasicSpentDraws = basicSpentDraws + basicDrawsToUse;
       const nextAdvancedSpentDraws = advancedSpentDraws + advancedDrawsToUse;
+      const nextEventBasicSpentDraws = eventBasicSpentDraws + eventBasicDrawsToUse;
+      const nextEventAdvancedSpentDraws = eventAdvancedSpentDraws + eventAdvancedDrawsToUse;
       const nextSpentDraws = nextBasicSpentDraws + nextAdvancedSpentDraws;
 
       const { error: initialStateError } = await supabase
@@ -5113,6 +5134,8 @@ Deno.serve(async (req) => {
           spent_draws: nextSpentDraws,
           basic_spent_draws: nextBasicSpentDraws,
           advanced_spent_draws: nextAdvancedSpentDraws,
+          event_basic_spent_draws: nextEventBasicSpentDraws,
+          event_advanced_spent_draws: nextEventAdvancedSpentDraws,
           updated_at: new Date().toISOString(),
         })
         .eq("invite_code_hash", identity.codeHash)
@@ -5126,9 +5149,16 @@ Deno.serve(async (req) => {
         return json({ error: "抽取请求已在处理中，请刷新天赋池后再试" }, 409);
       }
 
+      let baseBasicIndex = 0;
       for (let i = 0; i < drawCount; i += 1) {
         const isBasicDraw = i < basicDrawsToUse;
-        const isStarterDraw = isBasicDraw && basicSpentDraws + i < starterTalentDrawGrant;
+        const tierIndex = isBasicDraw ? i : i - basicDrawsToUse;
+        const isEventDraw = isBasicDraw
+          ? tierIndex < eventBasicDrawsToUse
+          : tierIndex < eventAdvancedDrawsToUse;
+        const isStarterDraw = isBasicDraw
+          && !isEventDraw
+          && (basicSpentDraws - eventBasicSpentDraws + baseBasicIndex < starterTalentDrawGrant);
         const drawResult = pickDrawTalentWithGuarantee(talentItems, continueDraw, sContinueDraw, !isStarterDraw, !isBasicDraw);
         const target = drawResult.talent;
         const isB = target.rank === "B";
@@ -5138,6 +5168,7 @@ Deno.serve(async (req) => {
           continueDraw = isB ? 0 : continueDraw + 1;
           if (!isBasicDraw) sContinueDraw = isS ? 0 : sContinueDraw + 1;
         }
+        if (isBasicDraw && !isEventDraw) baseBasicIndex += 1;
 
         const { data: existingOwned, error: ownedReadError } = await supabase
           .from("owned_talents")
