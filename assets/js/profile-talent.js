@@ -498,6 +498,7 @@ function getProfileExportPayload() {
         professionTrait: healthSummary.classTrait || CLASS_TRAITS[professionInfo.className] || '',
         ascensionScore: Number(profile.ascensionScore || 0),
         audienceScore: Number(profile.audienceScore || 0),
+        items: splitProfileLines(profile.items).slice(0, 20),
         health: {
             maxHp: healthSummary.maxHp,
             baseHp: healthSummary.rule.baseHp,
@@ -534,6 +535,15 @@ function drawProfileCardImage(payload) {
         }).filter(Boolean).join(' / ')
         : '暂无已佩戴称号';
     const titleLines = wrapCanvasText(measureCtx, titleText, 960, Infinity);
+    const itemEntries = Array.isArray(payload.items) && payload.items.length
+        ? payload.items
+        : ['无'];
+    const itemLayouts = itemEntries.map(item => {
+        measureCtx.font = '700 28px "Microsoft YaHei", sans-serif';
+        const lines = wrapCanvasText(measureCtx, String(item || '无'), 880, Infinity);
+        const cardHeight = Math.max(76, 42 + lines.length * 34);
+        return { lines, cardHeight };
+    });
     const curseEntries = Array.isArray(payload.curses) && payload.curses.length
         ? payload.curses
         : [{ name: '暂无诅咒', god: payload.faithGod || '命运', effect: '当前没有挂载中的诅咒。', type: 'ordinary', empty: true }];
@@ -560,7 +570,10 @@ function drawProfileCardImage(payload) {
     const battleHeight = Math.max(240, 104 + faithTraitLines.length * 31 + 58 + professionTraitLines.length * 31);
     const titlesHeadingY = battleTop + battleHeight + 84;
     const titleStartY = titlesHeadingY + 52;
-    const curseHeadingY = titleStartY + titleLines.length * 44 + 86;
+    const itemsHeadingY = titleStartY + titleLines.length * 44 + 76;
+    const firstItemY = itemsHeadingY + 38;
+    const itemTotalHeight = itemLayouts.reduce((sum, item, index) => sum + item.cardHeight + (index ? 14 : 0), 0);
+    const curseHeadingY = firstItemY + itemTotalHeight + 62;
     const curseStartY = curseHeadingY + 38;
     const curseTotalHeight = curseLayouts.reduce((sum, item, index) => sum + item.cardHeight + (index ? 18 : 0), 0);
     const talentsHeadingY = curseStartY + curseTotalHeight + 76;
@@ -726,6 +739,27 @@ function drawProfileCardImage(payload) {
         ctx.fillStyle = index ? 'rgba(244,240,223,0.72)' : '#f4f0df';
         ctx.font = '800 34px "Microsoft YaHei", sans-serif';
         ctx.fillText(line, 108, titleStartY + index * 44);
+    });
+
+    ctx.fillStyle = main;
+    ctx.font = '900 30px "Microsoft YaHei", sans-serif';
+    ctx.fillText('个人道具', 108, itemsHeadingY);
+    let itemY = firstItemY;
+    itemLayouts.forEach((layout, index) => {
+        const y = itemY;
+        drawRoundRect(ctx, 108, y, 984, layout.cardHeight, 16);
+        ctx.fillStyle = 'rgba(255,255,255,0.035)';
+        ctx.fill();
+        ctx.strokeStyle = index % 2 ? accent : main;
+        ctx.globalAlpha = 0.28;
+        ctx.stroke();
+        ctx.globalAlpha = 1;
+        ctx.fillStyle = '#f4f0df';
+        ctx.font = '700 28px "Microsoft YaHei", sans-serif';
+        layout.lines.forEach((line, lineIndex) => {
+            ctx.fillText(line, 136, y + 48 + lineIndex * 34);
+        });
+        itemY += layout.cardHeight + 14;
     });
 
     ctx.fillStyle = '#d98d8d';
