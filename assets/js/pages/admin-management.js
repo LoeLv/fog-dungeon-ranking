@@ -333,8 +333,101 @@ function renderAdminManagementPanels() {
     </section>`;
 }
 
+function renderAdminIdentityTargetOptions() {
+    return adminMembers
+        .filter(member => member.isActive && member.role !== 'god')
+        .map(member => `<option value="${escapeHtml(member.codeHash)}">${escapeHtml(member.displayName || '未命名')} · ${escapeHtml(member.faithGod || '未定信仰')} · ${escapeHtml(member.profession || '未定职业')}</option>`)
+        .join('');
+}
+
+function renderAdminIdentityPanel() {
+    return `<section class="profile-panel" data-god="真理" style="${getGodSkinStyle('真理')}">
+        <div class="profile-panel-title"><span>信仰与职业调整</span><small>调整后会清空天赋、碎片并返还已用抽数</small></div>
+        <div class="profile-form-grid">
+            <div class="form-group full">
+                <label>目标成员</label>
+                <select id="adminIdentityTarget" onchange="syncAdminIdentitySelection()">${renderAdminIdentityTargetOptions() || '<option value="">暂无可调整成员</option>'}</select>
+            </div>
+            <div class="form-group">
+                <label>调整方式</label>
+                <select id="adminIdentityMode" onchange="syncAdminIdentitySelection()">
+                    <option value="faith_and_profession">改信仰并改职业</option>
+                    <option value="profession">只改职业</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>新信仰</label>
+                <select id="adminIdentityFaith" onchange="updateAdminIdentityProfessionOptions()">${renderGodSelectOptions()}</select>
+            </div>
+            <div class="form-group">
+                <label>新职业</label>
+                <select id="adminIdentityProfession">${renderProfileProfessionOptions(adminMembers[0]?.profession || '', adminMembers[0]?.faithGod || '')}</select>
+            </div>
+        </div>
+        <div class="profile-tools">
+            <button class="btn btn-primary btn-sm" data-admin-identity-action onclick="adminChangeMemberIdentityUI()">执行身份调整</button>
+        </div>
+    </section>`;
+}
+
+function syncAdminIdentitySelection() {
+    const target = adminMembers.find(member => member.codeHash === document.getElementById('adminIdentityTarget')?.value);
+    const mode = document.getElementById('adminIdentityMode')?.value || 'faith_and_profession';
+    const faithSelect = document.getElementById('adminIdentityFaith');
+    if (target && mode === 'profession' && faithSelect) faithSelect.value = target.faithGod || '';
+    if (faithSelect) faithSelect.disabled = mode === 'profession';
+    updateAdminIdentityProfessionOptions();
+}
+
+function updateAdminIdentityProfessionOptions() {
+    const faith = cleanGodName(document.getElementById('adminIdentityFaith')?.value || '');
+    const target = adminMembers.find(member => member.codeHash === document.getElementById('adminIdentityTarget')?.value);
+    const current = target?.profession || '';
+    const select = document.getElementById('adminIdentityProfession');
+    if (!select) return;
+    select.innerHTML = renderProfileProfessionOptions(current, faith);
+    if (current && Array.from(select.options).some(option => option.value === current)) select.value = current;
+}
+
+async function adminChangeMemberIdentityUI() {
+    if (!isAdmin()) { showToast('只有馆主可以调整成员信仰和职业'); return; }
+    const targetHash = document.getElementById('adminIdentityTarget')?.value || '';
+    const target = adminMembers.find(member => member.codeHash === targetHash);
+    const changeMode = document.getElementById('adminIdentityMode')?.value === 'profession' ? 'profession' : 'faith_and_profession';
+    const faithGod = cleanGodName(document.getElementById('adminIdentityFaith')?.value || '');
+    const profession = normalizeProfession(document.getElementById('adminIdentityProfession')?.value || '');
+    if (!targetHash || !target || !profession || (changeMode !== 'profession' && !faithGod)) {
+        showToast('请完整选择目标、信仰和职业');
+        return;
+    }
+    const summary = changeMode === 'profession' ? `${target.displayName}：职业改为 ${profession}` : `${target.displayName}：改为 ${faithGod}/${profession}`;
+    if (!window.confirm(`确认${summary}？这会清空天赋和碎片，并返还已用抽数。`)) return;
+    const lockKey = `adminIdentity:${targetHash}:${changeMode}:${faithGod}:${profession}`;
+    if (!acquireUiActionLock(lockKey, '身份调整正在处理，请勿重复点击')) return;
+    setAdminManagementStatus('身份调整处理中...', 'pending');
+    const restore = setActionButtonsBusy('[data-admin-identity-action]', '处理中...');
+    try {
+        const { data, error } = await invokeDungeonAction('adminChangeMemberIdentity', { targetHash, changeMode, faithGod, profession });
+        if (error) {
+            const message = `身份调整失败：${error.message || '后端未返回原因'}`;
+            setAdminManagementStatus(message, 'error');
+            showToast(`❌ ${message}`);
+            return;
+        }
+        const reset = data?.talentReset || {};
+        const message = `身份调整成功：${data?.targetName || target.displayName} 已完成，清空 ${reset.clearedFragments || 0} 碎片，返还 ${reset.refundedDraws || 0} 抽`;
+        setAdminManagementStatus(message, 'success');
+        showToast(message);
+        await Promise.all([adminLoadMembers(false), refreshAdminOperationLogs()]);
+        await renderAdminPage();
+    } finally {
+        restore();
+        releaseUiActionLock(lockKey);
+    }
+}
+
 function renderAdminMembersPage() {
-    return `${renderAdminManagementPanels()}${renderAdminRolePanel()}`;
+    return `${renderAdminManagementPanels()}${renderAdminIdentityPanel()}${renderAdminRolePanel()}`;
 }
 
 function renderAdminTalentPoolPage() {

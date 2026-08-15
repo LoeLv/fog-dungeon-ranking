@@ -176,11 +176,46 @@ function renderGodCommandPanel() {
                 <div class="form-group"><label>诅咒效果</label><input id="godConvertCurseEffect" maxlength="120" placeholder="勾选后填写" disabled></div>
             </div>
             <div class="profile-tools">
+                <button class="btn btn-outline btn-sm" data-god-convert-action="profession" onclick="godChangeBelieverProfessionUI()">单独改职业</button>
                 <button class="btn btn-primary btn-sm" data-god-convert-action="convert" onclick="godConvertBelieverUI()">执行改信敕令</button>
                 <button class="btn btn-outline btn-sm" data-god-convert-action="refresh" onclick="refreshGodBelievers(true)">刷新信徒名单</button>
             </div>
             <div id="godBelieverPanel" class="profile-list" style="margin-top:14px;">${renderGodBelieverRows()}</div>
         </section>`;
+}
+
+async function godChangeBelieverProfessionUI() {
+    if (!isGodRole()) { showToast('只有神明账号可以单独改职业'); return; }
+    const targetHash = String(document.getElementById('godConvertTargetSelect')?.value || '').trim();
+    const target = Array.isArray(godBelievers) ? godBelievers.find(entry => String(entry.invite_code_hash || '') === targetHash) : null;
+    if (!targetHash || !target) { showToast('请先选择要改职业的信徒'); return; }
+    const faithGod = cleanGodName(target.faith_god || '');
+    const careers = Object.values((PROFESSION_GROUPS.find(group => group.god === faithGod) || {}).careers || {});
+    const profession = String(window.prompt(`请输入新职业（可选：${careers.join('、')}），当前：${target.profession || '未设置'}`, careers[0] || '') || '').trim();
+    if (!profession) return;
+    if (!careers.includes(profession)) { showToast('职业不属于该信仰，请从提示列表中选择'); return; }
+    if (!window.confirm(`确认将 ${target.display_name} 的职业改为 ${profession}？这会清空天赋和碎片，并返还已用抽数。`)) return;
+    const lockKey = `godProfession:${targetHash}:${profession}`;
+    if (!acquireUiActionLock(lockKey, '职业调整正在处理，请勿重复点击')) return;
+    setGodBelieverStatus(`正在调整职业：${target.display_name} -> ${profession}...`, 'pending');
+    const restore = setActionButtonsBusy('[data-god-convert-action]', '处理中...');
+    try {
+        const { data, error } = await invokeDungeonAction('godChangeBelieverProfession', { targetHash, targetName: target.display_name, profession });
+        if (error) {
+            const message = `职业调整失败：${error.message || '后端未返回原因'}`;
+            setGodBelieverStatus(message, 'error');
+            showToast(`❌ ${message}`);
+            return;
+        }
+        const message = `职业调整成功：${data?.targetName || target.display_name} 已改为 ${profession}，天赋、碎片和已用抽数已重置`;
+        setGodBelieverStatus(message, 'success');
+        showToast(message);
+        await refreshGodBelievers(false);
+        if (document.getElementById('profilePage')?.style.display !== 'none') await renderProfilePage();
+    } finally {
+        restore();
+        releaseUiActionLock(lockKey);
+    }
 }
 
 function toggleGodConversionCurseFields() {

@@ -1294,6 +1294,120 @@ async function rebalanceTalentPoolsAfterProfileChange(
   };
 }
 
+type IdentityResetResult = {
+  removedPoolKeys: string[];
+  error?: LooseError;
+  refundedDraws?: number;
+  refundedBasicDraws?: number;
+  refundedAdvancedDraws?: number;
+  refundedEventBasicDraws?: number;
+  refundedEventAdvancedDraws?: number;
+  clearedFragments?: number;
+  removedAllTalents?: boolean;
+};
+
+function identityResetError(error: LooseError): IdentityResetResult {
+  return { removedPoolKeys: [], error };
+}
+
+async function resetTalentStateAfterIdentityChange(
+  supabase: SupabaseClientAny,
+  codeHash: string,
+): Promise<IdentityResetResult> {
+  const [drawStateResult, fragmentResult] = await Promise.all([
+    supabase
+      .from("talent_draw_state")
+      .select("spent_draws, basic_spent_draws, advanced_spent_draws, event_basic_spent_draws, event_advanced_spent_draws")
+      .eq("invite_code_hash", codeHash)
+      .maybeSingle(),
+    supabase
+      .from("user_fragments")
+      .select("fragment_total")
+      .eq("invite_code_hash", codeHash)
+      .maybeSingle(),
+  ]);
+  if (drawStateResult.error) return identityResetError(drawStateResult.error);
+  if (fragmentResult.error) return identityResetError(fragmentResult.error);
+
+  const drawState = (drawStateResult.data || {}) as Record<string, unknown>;
+  const refundedDraws = Math.max(0, Number(drawState.spent_draws || 0));
+  const refundedBasicDraws = Math.max(0, Number(drawState.basic_spent_draws || 0));
+  const refundedAdvancedDraws = Math.max(0, Number(drawState.advanced_spent_draws || 0));
+  const refundedEventBasicDraws = Math.max(0, Number(drawState.event_basic_spent_draws || 0));
+  const refundedEventAdvancedDraws = Math.max(0, Number(drawState.event_advanced_spent_draws || 0));
+  const clearedFragments = Math.max(0, Number(fragmentResult.data?.fragment_total || 0));
+
+  const deleteOps = [
+    supabase.from("owned_talents").delete().eq("invite_code_hash", codeHash),
+    supabase.from("talent_overflow_choices").delete().eq("invite_code_hash", codeHash),
+    supabase.from("talent_draw_logs").delete().eq("invite_code_hash", codeHash),
+    supabase.from("talent_exchange_logs").delete().eq("invite_code_hash", codeHash),
+    supabase.from("talent_pool_counters").delete().eq("invite_code_hash", codeHash),
+  ] as const;
+  for (const op of deleteOps) {
+    const { error } = await op;
+    if (error) return identityResetError(error);
+  }
+
+  if (fragmentResult.data || clearedFragments > 0) {
+    const { error } = await supabase
+      .from("user_fragments")
+      .upsert({
+        invite_code_hash: codeHash,
+        fragment_total: 0,
+        updated_at: new Date().toISOString(),
+      });
+    if (error) return identityResetError(error);
+  }
+
+  if (drawStateResult.data) {
+    const { error } = await supabase
+      .from("talent_draw_state")
+      .update({
+        spent_draws: 0,
+        basic_spent_draws: 0,
+        advanced_spent_draws: 0,
+        event_basic_spent_draws: 0,
+        event_advanced_spent_draws: 0,
+        updated_at: new Date().toISOString(),
+      })
+      .eq("invite_code_hash", codeHash);
+    if (error) {
+      if (error.code === "42703") {
+        const fallback = await supabase
+          .from("talent_draw_state")
+          .update({
+            spent_draws: 0,
+            basic_spent_draws: 0,
+            advanced_spent_draws: 0,
+            updated_at: new Date().toISOString(),
+          })
+          .eq("invite_code_hash", codeHash);
+        if (fallback.error) return identityResetError(fallback.error);
+      } else {
+        return identityResetError(error);
+      }
+    }
+  }
+
+  const { error: profileTalentError } = await supabase
+    .from("player_profiles")
+    .update({ talents: "", updated_at: new Date().toISOString() })
+    .eq("invite_code_hash", codeHash);
+  if (profileTalentError && profileTalentError.code !== "42703") return identityResetError(profileTalentError);
+
+  return {
+    removedPoolKeys: [],
+    refundedDraws,
+    refundedBasicDraws,
+    refundedAdvancedDraws,
+    refundedEventBasicDraws,
+    refundedEventAdvancedDraws,
+    clearedFragments,
+    removedAllTalents: true,
+  };
+}
+
 function canSettleScores(identity: InviteIdentity) {
   return identity.role === "admin" || hasPermission(identity, "settle_scores");
 }
@@ -3756,6 +3870,67 @@ Deno.serve(async (req) => {
       return json({ role, name: identity.displayName, data: { codeHash, displayName: display.name } });
     }
 
+    if (action === "adminChangeMemberIdentity") {
+      if (role !== "admin") return json({ error: "只有馆主可以修改成员信仰和职业" }, 403);
+      const targetResult = await getAdminTargetAccount(supabase, payload.targetHash);
+      if (targetResult.error) return json({ error: targetResult.error.message || "目标账号读取失败" }, 400);
+      const targetAccount = targetResult.data as Record<string, unknown>;
+      const targetHash = cleanText(targetAccount.code_hash, 64);
+      const targetRole = cleanText(targetAccount.role, 20) as InviteRole;
+      if (!targetHash) return json({ error: "目标账号缺少邀请码哈希" }, 400);
+      if (targetHash === identity.codeHash) return json({ error: "不能修改当前馆主自己的信仰或职业" }, 400);
+      if (specialAccountRoles.has(targetRole)) return json({ error: "神明和星途账号不能通过馆主成员面板修改" }, 403);
+
+      const { data: beforeProfile, error: profileReadError } = await supabase
+        .from("player_profiles")
+        .select(godBelieverProfileSelect)
+        .eq("invite_code_hash", targetHash)
+        .maybeSingle();
+      if (profileReadError) return json({ error: profileReadError.message }, 400);
+      if (!beforeProfile) return json({ error: "目标成员还没有个人档案" }, 404);
+
+      const before = beforeProfile as Record<string, unknown>;
+      const beforeFaithGod = cleanGodName(before.faith_god);
+      const beforeProfession = cleanText(before.profession, 40);
+      const professionOnly = cleanText(payload.changeMode, 30) === "profession";
+      const nextFaithGod = professionOnly ? beforeFaithGod : cleanGodName(payload.faithGod);
+      const nextProfession = cleanText(payload.profession, 40);
+      const nextFaithPath = getFaithPathByGod(nextFaithGod);
+      if (!nextFaithGod || !nextFaithPath || !godNames.has(nextFaithGod)) return json({ error: "请选择有效的信仰神明" }, 400);
+      if (!nextProfession || getProfessionGod(nextProfession) !== nextFaithGod) return json({ error: "职业必须属于当前信仰神明" }, 400);
+      if (professionOnly && nextProfession === beforeProfession) return json({ error: "新职业不能与当前职业相同" }, 400);
+      if (!professionOnly && nextFaithGod === beforeFaithGod && nextProfession === beforeProfession) return json({ error: "信仰和职业都没有变化" }, 400);
+
+      const talentReset = await resetTalentStateAfterIdentityChange(supabase, targetHash);
+      if (talentReset.error) return json({ error: talentReset.error.message || "身份变更后的天赋重置失败，请联系馆主检查" }, 400);
+      const { data: updatedProfile, error: updateError } = await supabase
+        .from("player_profiles")
+        .update({
+          faith_god: nextFaithGod,
+          faith_path: nextFaithPath,
+          original_faith_god: nextFaithGod,
+          original_faith_path: nextFaithPath,
+          profession: nextProfession,
+          audience_score: 0,
+          updated_at: new Date().toISOString(),
+        })
+        .eq("invite_code_hash", targetHash)
+        .select(godBelieverProfileSelect)
+        .single();
+      if (updateError) return json({ error: updateError.message }, 400);
+
+      await writeAdminOperationLog(supabase, identity, {
+        action: professionOnly ? "member.profession_change" : "member.identity_change",
+        targetCodeHash: targetHash,
+        targetName: cleanText(before.display_name, 40),
+        objectType: "player_profile",
+        summary: `馆主将 ${cleanText(before.display_name, 40)} 从 ${beforeFaithGod}/${beforeProfession} 调整为 ${nextFaithGod}/${nextProfession}，天赋、碎片和已用抽数已重置`,
+        beforeState: { faithGod: beforeFaithGod, profession: beforeProfession },
+        afterState: { faithGod: nextFaithGod, profession: nextProfession, talentReset },
+      });
+      return json({ role, name: identity.displayName, data: { targetName: cleanText(before.display_name, 40), profile: updatedProfile, talentReset } });
+    }
+
     if (action === "adminResetAccount" || action === "adminDeleteAccount") {
       if (role !== "admin") return json({ error: "只有馆主可以管理账号" }, 403);
       const mode = action === "adminDeleteAccount" ? "delete" : "reset";
@@ -3954,6 +4129,53 @@ Deno.serve(async (req) => {
       return json({ role, name: identity.displayName, data: { god: godName, believers: result.data || [] } });
     }
 
+    if (action === "godChangeBelieverProfession") {
+      if (!specialAccountRoles.has(role)) return json({ error: "只有神明账号可以单独修改信徒职业" }, 403);
+      const actorGod = cleanGodName(identity.displayName);
+      if (!godNames.has(actorGod)) return json({ error: role === "astral" ? "星途账号不执行信徒职业调整" : "当前神明账号未绑定有效神名" }, 403);
+      const targetHash = cleanText(payload.targetHash, 64);
+      const targetName = cleanText(payload.targetName, 40);
+      if (!targetHash && !targetName) return json({ error: "请选择要修改职业的信徒" }, 400);
+
+      let targetQuery = supabase.from("player_profiles").select(godBelieverProfileSelect);
+      targetQuery = targetHash ? targetQuery.eq("invite_code_hash", targetHash) : targetQuery.eq("display_name", targetName);
+      const { data: targetProfile, error: targetError } = await targetQuery.maybeSingle();
+      if (targetError) return json({ error: targetError.message }, 400);
+      if (!targetProfile) return json({ error: "没有找到这个信徒档案" }, 404);
+
+      const beforeProfile = targetProfile as Record<string, unknown>;
+      const beforeHash = cleanText(beforeProfile.invite_code_hash, 64);
+      const beforeName = cleanText(beforeProfile.display_name, 40);
+      const beforeFaithGod = cleanGodName(beforeProfile.faith_god);
+      const beforeProfession = cleanText(beforeProfile.profession, 40);
+      const nextProfession = cleanText(payload.profession, 40);
+      if (!beforeHash) return json({ error: "目标信徒缺少邀请码哈希" }, 400);
+      if (beforeFaithGod !== actorGod) return json({ error: "神明只能操作当前信仰自己的信徒" }, 403);
+      if (!nextProfession || getProfessionGod(nextProfession) !== beforeFaithGod) return json({ error: "新职业必须属于当前信仰神明" }, 400);
+      if (nextProfession === beforeProfession) return json({ error: "新职业不能与当前职业相同" }, 400);
+
+      const talentReset = await resetTalentStateAfterIdentityChange(supabase, beforeHash);
+      if (talentReset.error) return json({ error: talentReset.error.message || "职业变更后的天赋重置失败，请联系馆主检查" }, 400);
+      const { data: updatedProfile, error: updateError } = await supabase
+        .from("player_profiles")
+        .update({ profession: nextProfession, audience_score: 0, talents: "", updated_at: new Date().toISOString() })
+        .eq("invite_code_hash", beforeHash)
+        .select(godBelieverProfileSelect)
+        .single();
+      if (updateError) return json({ error: updateError.message }, 400);
+
+      await writeAdminOperationLog(supabase, identity, {
+        action: "faith.profession_change",
+        targetCodeHash: beforeHash,
+        targetName: beforeName,
+        objectType: "player_profile",
+        summary: `神明单独改职业：${beforeName} 从 ${beforeFaithGod}/${beforeProfession} 调整为 ${beforeFaithGod}/${nextProfession}，天赋、碎片和已用抽数已重置`,
+        beforeState: { faithGod: beforeFaithGod, profession: beforeProfession },
+        afterState: { faithGod: beforeFaithGod, profession: nextProfession, talentReset },
+      });
+      return json({ role, name: identity.displayName, data: { targetName: beforeName, profile: updatedProfile, talentReset } });
+    }
+
     if (action === "godConvertBeliever") {
       if (!specialAccountRoles.has(role)) return json({ error: "只有神明账号可以执行改信敕令" }, 403);
       const actorGod = cleanGodName(identity.displayName);
@@ -4009,7 +4231,7 @@ Deno.serve(async (req) => {
         .single();
       if (updateError) return json({ error: updateError.message }, 400);
 
-      const talentRebalance = await rebalanceTalentPoolsAfterProfileChange(supabase, beforeHash, beforeProfile, updatedProfile as Record<string, unknown>);
+      const talentRebalance = await resetTalentStateAfterIdentityChange(supabase, beforeHash);
       if (talentRebalance.error) return json({ error: talentRebalance.error.message || "改信后天赋池回退失败，请联系馆主检查" }, 400);
       if (talentRebalance.removedPoolKeys.length) {
         const refreshResult = await updateProfileTalentText(supabase, beforeHash);
