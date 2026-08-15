@@ -1,3 +1,6 @@
+let talentWarehouseBatchSelections = new Set();
+let talentWarehouseBatchInFlight = false;
+
 function normalizeTalentState(rawState) {
     const state = rawState || {};
     return {
@@ -77,6 +80,7 @@ function replaceTalentPoolPanel(profile = getCurrentProfile()) {
     if (panel) panel.outerHTML = renderTalentPoolPanel(currentTalentState, currentTalentError, profile);
     const equipPanel = document.getElementById('profileTalentEquipPanel');
     if (equipPanel) equipPanel.innerHTML = renderEquippedTalentSlots(currentTalentState, getProfileFaithGod(profile) || '命运');
+    syncWarehouseBatchToolbar();
     if (isMobileViewport() && document.getElementById('profilePage')?.style.display !== 'none') {
         setMobileProfileTab(mobileProfileTab, { scroll: false });
     }
@@ -149,7 +153,8 @@ function renderTalentExchangeOptions(state, poolKey) {
             const owned = ownedKeys.has(`${item.pool_key}:${item.talent_id}`);
             const cost = item.rank === 'A' ? Number(state.aTalentExchangeCost || 260) : Number(state.targetTalentExchangeCost || 80);
             const actionCost = Number(item.action_cost ?? item.actionCost ?? 0);
-            return `<option value="${Number(item.talent_id)}" data-rank="${escapeHtml(item.rank)}" data-cost="${cost}" data-name="${escapeHtml(item.talent_name)}" ${owned ? 'disabled' : ''}>${escapeHtml(item.rank)} · ${escapeHtml(item.talent_name)} · 行动点 ${actionCost}（${cost}碎片）${owned ? '（已拥有）' : ''}</option>`;
+            const effect = formatTalentEffectSummary(getTalentEffectText(state, item), 26);
+            return `<option value="${Number(item.talent_id)}" data-rank="${escapeHtml(item.rank)}" data-cost="${cost}" data-name="${escapeHtml(item.talent_name)}" data-effect="${escapeHtml(effect)}" ${owned ? 'disabled' : ''}>${escapeHtml(item.rank)} · ${escapeHtml(item.talent_name)} · 行动点 ${actionCost} · 效果 ${escapeHtml(effect || '无')}（${cost}碎片）${owned ? '（已拥有）' : ''}</option>`;
         });
     return options.length ? options.join('') : '<option value="">该池暂无可兑换 B/A 天赋</option>';
 }
@@ -170,6 +175,13 @@ function getTalentEffectText(state, talent) {
     ).trim();
 }
 
+function formatTalentEffectSummary(effect, maxLength = 28) {
+    const text = String(effect || '').replace(/\s+/g, ' ').trim();
+    if (!text) return '';
+    if (text.length <= maxLength) return text;
+    return `${text.slice(0, Math.max(1, maxLength - 1))}…`;
+}
+
 function getTalentActionCost(state, talent) {
     if (!talent) return 0;
     const direct = talent.actionCost ?? talent.action_cost;
@@ -186,6 +198,40 @@ function getTalentDismantleGain(state, rank) {
     if (normalizedRank === 'B') return Number(state.bTalentFragmentGain || 10);
     if (normalizedRank === 'C') return Number(state.cTalentFragmentGain || 5);
     return 0;
+}
+
+function syncWarehouseBatchToolbar() {
+    const selectedCount = talentWarehouseBatchSelections.size;
+    const label = document.getElementById('talentWarehouseBatchLabel');
+    if (label) label.textContent = selectedCount ? `已选 ${selectedCount} 个` : '批量分解';
+    const batchButton = document.getElementById('talentWarehouseBatchButton');
+    if (batchButton) batchButton.disabled = selectedCount === 0 || talentManageInFlight || talentWarehouseBatchInFlight;
+    const clearButton = document.getElementById('talentWarehouseClearButton');
+    if (clearButton) clearButton.disabled = selectedCount === 0 || talentManageInFlight || talentWarehouseBatchInFlight;
+    const selectAllButton = document.getElementById('talentWarehouseSelectAllButton');
+    if (selectAllButton) selectAllButton.disabled = talentManageInFlight || talentWarehouseBatchInFlight;
+}
+
+function clearWarehouseBatchSelection() {
+    talentWarehouseBatchSelections.clear();
+    syncWarehouseBatchToolbar();
+}
+
+function selectAllWarehouseTalents() {
+    const selectableIds = (currentTalentState.ownedTalents || [])
+        .filter(talent => talent.storage_slot && String(talent.rank || '').toUpperCase() !== 'S')
+        .map(talent => Number(talent.id));
+    talentWarehouseBatchSelections = new Set(selectableIds);
+    syncWarehouseBatchToolbar();
+    replaceTalentPoolPanel();
+}
+
+function toggleWarehouseTalentSelection(ownedTalentId, checked) {
+    const talentId = Number(ownedTalentId);
+    if (!talentId) return;
+    if (checked) talentWarehouseBatchSelections.add(talentId);
+    else talentWarehouseBatchSelections.delete(talentId);
+    syncWarehouseBatchToolbar();
 }
 
 function getTalentRankWeight(rank) {
@@ -279,7 +325,17 @@ function renderTalentWarehouse(state, god = getProfileFaithGod(getCurrentProfile
     const talents = state.ownedTalents || [];
     const byStorageSlot = new Map(talents.filter(t => t.storage_slot).map(t => [Number(t.storage_slot), t]));
     const limit = Number(state.inventorySlotLimit || 10);
-    return `<div class="talent-inventory-grid">${Array.from({ length: limit }, (_, index) => {
+    const selectableCount = talents.filter(t => t.storage_slot && String(t.rank || '').toUpperCase() !== 'S').length;
+    return `
+        <div class="talent-warehouse-toolbar">
+            <div class="talent-warehouse-batch-note">勾选多个仓库天赋后可一次性分解，避免逐个处理。</div>
+            <div class="talent-warehouse-batch-actions">
+                <button type="button" class="btn btn-outline btn-sm" id="talentWarehouseSelectAllButton" onclick="selectAllWarehouseTalents()" ${talentManageInFlight || talentWarehouseBatchInFlight || !selectableCount ? 'disabled' : ''}>全选</button>
+                <button type="button" class="btn btn-outline btn-sm" id="talentWarehouseClearButton" onclick="clearWarehouseBatchSelection()" ${talentManageInFlight || talentWarehouseBatchInFlight || !talentWarehouseBatchSelections.size ? 'disabled' : ''}>清空</button>
+                <button type="button" class="btn btn-primary btn-sm" id="talentWarehouseBatchButton" onclick="discardWarehouseTalentsUI()" ${talentManageInFlight || talentWarehouseBatchInFlight || !talentWarehouseBatchSelections.size ? 'disabled' : ''}>${talentWarehouseBatchSelections.size ? `批量分解 ${talentWarehouseBatchSelections.size} 个` : '批量分解'}</button>
+            </div>
+        </div>
+        <div class="talent-inventory-grid">${Array.from({ length: limit }, (_, index) => {
         const slot = index + 1;
         const talent = byStorageSlot.get(slot);
         if (!talent) {
@@ -296,6 +352,10 @@ function renderTalentWarehouse(state, god = getProfileFaithGod(getCurrentProfile
         return `
             <div class="talent-slot-card">
                 <div class="talent-slot-head"><span>仓库位 ${slot}</span><span>未佩戴</span></div>
+                <label class="talent-slot-select">
+                    <input type="checkbox" ${talentWarehouseBatchSelections.has(Number(talent.id)) ? 'checked' : ''} ${talentManageInFlight || talentWarehouseBatchInFlight || !canDismantle ? 'disabled' : ''} onchange="toggleWarehouseTalentSelection(${Number(talent.id)}, this.checked)">
+                    <span>批量分解</span>
+                </label>
                 <div class="talent-slot-name">${escapeHtml(talent.talent_name)}</div>
                 <div class="talent-slot-meta">${escapeHtml(talent.rank)}级 · ${escapeHtml(formatTalentPoolLabel(talent.pool_key))}池 · 行动点 ${actionCost}</div>
                 ${effect ? `<div class="talent-effect-text">${escapeHtml(effect)}</div>` : ''}
@@ -444,6 +504,7 @@ async function refreshTalentPoolUI(showToastOnSuccess = true) {
     setCurrentTalentState(state, error);
     lastTalentDrawResult = [];
     replaceTalentPoolPanel();
+    clearWarehouseBatchSelection();
     if (error) showToast(`❌ ${error.message || '刷新失败'}`);
     else if ((state?.settledOverflowChoices || []).length) showToast(`已将 ${state.settledOverflowChoices.length} 个待取舍天赋补入空仓位`);
     else if (showToastOnSuccess) showToast('天赋池已刷新');
@@ -455,6 +516,7 @@ function applyTalentActionState(data) {
     setCurrentTalentState(nextState, null);
     applyTalentStateProfile(nextState);
     replaceTalentPoolPanel();
+    clearWarehouseBatchSelection();
     if ((nextState.settledOverflowChoices || []).length) showToast(`已将 ${nextState.settledOverflowChoices.length} 个待取舍天赋补入空仓位`);
 }
 
@@ -901,8 +963,9 @@ async function exchangeTalentUI() {
     const optionRank = selectedOption?.dataset?.rank || '';
     const optionName = selectedOption?.dataset?.name || selectedOption?.textContent || '该天赋';
     const optionCost = Number(selectedOption?.dataset?.cost || 0);
+    const optionEffect = selectedOption?.dataset?.effect || '';
     const confirmText = optionCost > 0
-        ? `确定消耗 ${optionCost} 碎片兑换 ${optionRank}级天赋「${optionName}」吗？`
+        ? `确定消耗 ${optionCost} 碎片兑换 ${optionRank}级天赋「${optionName}」吗？${optionEffect ? `\n效果：${optionEffect}` : ''}`
         : `确定兑换天赋「${optionName}」吗？`;
     if (!window.confirm(confirmText)) return;
     if (!acquireUiActionLock('exchangeTalent', '天赋兑换正在处理中，请勿重复点击')) return;
@@ -987,6 +1050,56 @@ async function discardOwnedTalentUI(ownedTalentId) {
     } finally {
         if (isInviteSnapshotCurrent(inviteSnapshot)) {
             talentManageInFlight = false;
+            replaceTalentPoolPanel();
+        }
+    }
+}
+
+async function discardWarehouseTalentsUI() {
+    if (!inviteSession?.code) { openInviteModal('先验入局谕令后可整理仓库。'); return; }
+    if (talentManageInFlight || talentWarehouseBatchInFlight) { showToast('天赋正在处理中，请勿重复点击'); return; }
+    const selectedIds = (currentTalentState.ownedTalents || [])
+        .filter(talent => talent.storage_slot && String(talent.rank || '').toUpperCase() !== 'S' && talentWarehouseBatchSelections.has(Number(talent.id)))
+        .map(talent => Number(talent.id));
+    if (!selectedIds.length) { showToast('先勾选要分解的仓库天赋'); return; }
+    const previewCount = selectedIds.length;
+    const previewGain = (currentTalentState.ownedTalents || [])
+        .filter(talent => selectedIds.includes(Number(talent.id)))
+        .reduce((sum, talent) => sum + getTalentDismantleGain(currentTalentState, talent.rank), 0);
+    if (!window.confirm(`确定批量分解这 ${previewCount} 个仓库天赋吗？预计获得 ${previewGain} 碎片。`)) return;
+
+    talentWarehouseBatchInFlight = true;
+    talentManageInFlight = true;
+    const inviteSnapshot = getInviteSnapshot();
+    replaceTalentPoolPanel();
+    try {
+        let lastData = null;
+        let totalGain = 0;
+        for (const ownedTalentId of selectedIds) {
+            const { data, error } = await invokeDungeonAction('discardOwnedTalent', { ownedTalentId });
+            if (!isInviteSnapshotCurrent(inviteSnapshot)) return;
+            if (error) {
+                if (lastData) {
+                    lastTalentDrawResult = [];
+                    applyTalentActionState(lastData);
+                    clearWarehouseBatchSelection();
+                }
+                showToast(`❌ ${error.message || '批量分解失败'}`);
+                return;
+            }
+            lastData = data;
+            totalGain += Number(data?.fragmentGain || 0);
+        }
+        if (lastData) {
+            lastTalentDrawResult = [];
+            applyTalentActionState(lastData);
+            clearWarehouseBatchSelection();
+            showToast(`已批量分解 ${previewCount} 个仓库天赋 +${totalGain} 碎片`);
+        }
+    } finally {
+        talentWarehouseBatchInFlight = false;
+        talentManageInFlight = false;
+        if (isInviteSnapshotCurrent(inviteSnapshot)) {
             replaceTalentPoolPanel();
         }
     }

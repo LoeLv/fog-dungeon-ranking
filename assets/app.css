@@ -5377,6 +5377,28 @@ body.visual-effects-muted .profile-chronicle-card.is-rotating .profile-chronicle
 .talent-inventory-grid {
     grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
 }
+.talent-warehouse-toolbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    flex-wrap: wrap;
+    margin-top: 12px;
+}
+.talent-warehouse-batch-note {
+    color: var(--text-muted);
+    font-size: 0.72rem;
+    line-height: 1.4;
+}
+.talent-warehouse-batch-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+.talent-warehouse-batch-actions .btn:disabled {
+    opacity: 0.52;
+}
 .talent-equipped-grid {
     grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
 }
@@ -5405,6 +5427,20 @@ body.visual-effects-muted .profile-chronicle-card.is-rotating .profile-chronicle
     color: var(--text-muted);
     font-size: 0.74rem;
     margin-bottom: 8px;
+}
+.talent-slot-select {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    color: var(--text-muted);
+    font-size: 0.7rem;
+    line-height: 1.2;
+    cursor: pointer;
+    margin-bottom: 8px;
+}
+.talent-slot-select input {
+    accent-color: var(--gold-light);
+    margin: 0;
 }
 .talent-slot-name {
     color: var(--text-bright);
