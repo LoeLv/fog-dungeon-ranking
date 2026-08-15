@@ -7574,6 +7574,34 @@ body.visual-effects-muted .profile-chronicle-card.is-rotating .profile-chronicle
     .profile-panel {
         padding: 15px;
     }
+    .profile-mobile-section,
+    .profile-mobile-section > .profile-panel,
+    .profile-mobile-section .talent-pool-card,
+    .profile-mobile-section .talent-warehouse-toolbar,
+    .profile-mobile-section .talent-inventory-grid,
+    .profile-mobile-section .talent-overflow-list,
+    .profile-mobile-section .talent-slot-card,
+    .profile-mobile-section .talent-overflow-card {
+        width: 100%;
+        max-width: 100%;
+        min-width: 0;
+        box-sizing: border-box;
+    }
+    .profile-mobile-section .metric-strip,
+    .profile-mobile-section .metric-pill,
+    .profile-mobile-section .talent-rule-strip span,
+    .profile-mobile-section .talent-slot-name,
+    .profile-mobile-section .talent-slot-meta,
+    .profile-mobile-section .talent-effect-text,
+    .profile-mobile-section .talent-warehouse-batch-note {
+        min-width: 0;
+        max-width: 100%;
+        overflow-wrap: anywhere;
+        word-break: break-word;
+    }
+    .profile-mobile-section .metric-pill {
+        white-space: normal;
+    }
     .profile-chronicle-card {
         grid-template-columns: auto minmax(0, 1fr);
         align-items: start;
