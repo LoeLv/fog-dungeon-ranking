@@ -3619,7 +3619,7 @@ Deno.serve(async (req) => {
 
   if (action === "listDungeons") {
     const identity = body.inviteCode ? await getInviteIdentity(supabase, body.inviteCode) : null;
-    const limit = Math.max(1, Math.min(120, Number(payload.limit || 120)));
+    const limit = Math.max(1, Math.min(1000, Number(payload.limit || 500)));
     const { data, error } = await supabase
       .from("dungeons")
       .select(dungeonArchiveSelectFields)

@@ -22,7 +22,7 @@ async function fetchDungeons(options = {}) {
     const cacheVersion = dungeonListCacheVersion;
     dungeonListRequest = (async () => {
         // Keep the shared archive cache bounded. The detail view retrieves long text on demand.
-        const { data, error } = await invokeDungeonAction('listDungeons', { limit: 120 });
+        const { data, error } = await invokeDungeonAction('listDungeons', { limit: 500 });
         if (error) { showToast('❌ 获取数据失败'); return []; }
         const normalized = (data || []).map(d => ({ ...d, pinned_note: d.pinned_note || '' }));
         if (cacheVersion === dungeonListCacheVersion) writeDungeonListCache(normalized);
