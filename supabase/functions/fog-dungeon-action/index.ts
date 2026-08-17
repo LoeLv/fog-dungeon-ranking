@@ -1766,6 +1766,44 @@ async function getTalentDrawState(
   };
 }
 
+async function getPendingSTalentChoices(
+  supabase: SupabaseClientAny,
+  codeHash: string,
+) {
+  const { data, error } = await supabase
+    .from("talent_s_choices")
+    .select("id, pool_key, source_draw_log_id, source_draw_type, is_guarantee, status, selected_talent_id, selected_talent_name, created_at, used_at")
+    .eq("invite_code_hash", codeHash)
+    .eq("status", "pending")
+    .order("created_at", { ascending: true });
+  if (error?.code === "42P01" || error?.code === "42703") {
+    return { error: { ...error, message: "请先运行 talent_s_choice_slot_20260817.sql" }, pendingChoices: [] as Record<string, unknown>[] };
+  }
+  if (error) return { error, pendingChoices: [] as Record<string, unknown>[] };
+  return { pendingChoices: data || [] };
+}
+
+async function consumeSTalentChoice(
+  supabase: SupabaseClientAny,
+  codeHash: string,
+  choice: { id: number; pool_key: string; source_draw_type: string; is_guarantee: boolean },
+  selectedTalent: TalentPoolItem,
+) {
+  const { error } = await supabase
+    .from("talent_s_choices")
+    .update({
+      status: "used",
+      selected_talent_id: selectedTalent.talent_id,
+      selected_talent_name: selectedTalent.talent_name,
+      used_at: new Date().toISOString(),
+    })
+    .eq("id", choice.id)
+    .eq("invite_code_hash", codeHash)
+    .eq("status", "pending");
+  if (error) return { error };
+  return { data: { ...choice, selectedTalent } };
+}
+
 async function getFragmentTotal(
   supabase: SupabaseClientAny,
   codeHash: string,
@@ -1806,13 +1844,15 @@ async function updateProfileTalentText(
 ) {
   const { data: owned, error } = await supabase
     .from("owned_talents")
-    .select("talent_name, rank, equipped_slot")
+    .select("talent_name, rank, equipped_slot, s_slot")
     .eq("invite_code_hash", codeHash)
-    .not("equipped_slot", "is", null)
+    .or("equipped_slot.not.is.null,s_slot.not.is.null")
     .order("equipped_slot", { ascending: true });
   if (error) return { error };
   const talentText = (owned || [])
-    .map((item) => `槽位${item.equipped_slot}：${item.talent_name}（${item.rank}）`)
+    .map((item) => item.s_slot
+      ? `S级专属：${item.talent_name}（${item.rank}）`
+      : `槽位${item.equipped_slot}：${item.talent_name}（${item.rank}）`)
     .join("\n")
     .slice(0, 800);
   const { error: updateError } = await supabase
@@ -2064,13 +2104,15 @@ async function buildTalentState(
     }
   }
 
-  const poolMap = new Map<string, { poolKey: string; total: number; bCount: number; cCount: number }>();
+  const poolMap = new Map<string, { poolKey: string; total: number; sCount: number; aCount: number; bCount: number; cCount: number }>();
   allowedPoolKeys.forEach((poolKey) => {
-    poolMap.set(poolKey, { poolKey, total: 0, bCount: 0, cCount: 0 });
+    poolMap.set(poolKey, { poolKey, total: 0, sCount: 0, aCount: 0, bCount: 0, cCount: 0 });
   });
   poolItems.forEach((item) => {
-    const existing = poolMap.get(item.pool_key) || { poolKey: item.pool_key, total: 0, bCount: 0, cCount: 0 };
+    const existing = poolMap.get(item.pool_key) || { poolKey: item.pool_key, total: 0, sCount: 0, aCount: 0, bCount: 0, cCount: 0 };
     existing.total += 1;
+    if (item.rank === "S") existing.sCount += 1;
+    if (item.rank === "A") existing.aCount += 1;
     if (item.rank === "B") existing.bCount += 1;
     if (item.rank === "C") existing.cCount += 1;
     poolMap.set(item.pool_key, existing);
@@ -2117,15 +2159,17 @@ async function buildTalentState(
     acquired_from: string;
     storage_slot: number | null;
     equipped_slot: number | null;
+    s_slot: number | null;
     acquired_at: string;
   }[] = [];
   const ownedResult = await supabase
     .from("owned_talents")
-    .select("id, pool_key, talent_id, talent_name, rank, acquired_from, storage_slot, equipped_slot, acquired_at")
+    .select("id, pool_key, talent_id, talent_name, rank, acquired_from, storage_slot, equipped_slot, s_slot, acquired_at")
     .eq("invite_code_hash", identity.codeHash)
     .order("storage_slot", { ascending: true });
+  if (ownedResult.error?.code === "42703") return { error: { ...ownedResult.error, message: "请先运行 talent_s_choice_slot_20260817.sql" } };
   if (ownedResult.error) return { error: ownedResult.error };
-  ownedTalents = (ownedResult.data || []).filter((item) => item.storage_slot || item.equipped_slot);
+  ownedTalents = (ownedResult.data || []).filter((item) => item.storage_slot || item.equipped_slot || item.s_slot);
 
   let drawLogs: {
     pool_key: string;
@@ -2192,12 +2236,18 @@ async function buildTalentState(
   if ((openSlotSettlement.settledChoices || []).length) {
     const refreshedOwnedResult = await supabase
       .from("owned_talents")
-      .select("id, pool_key, talent_id, talent_name, rank, acquired_from, storage_slot, equipped_slot, acquired_at")
+      .select("id, pool_key, talent_id, talent_name, rank, acquired_from, storage_slot, equipped_slot, s_slot, acquired_at")
       .eq("invite_code_hash", identity.codeHash)
       .order("storage_slot", { ascending: true });
+    if (refreshedOwnedResult.error?.code === "42703") return { error: { ...refreshedOwnedResult.error, message: "请先运行 talent_s_choice_slot_20260817.sql" } };
     if (refreshedOwnedResult.error) return { error: refreshedOwnedResult.error };
-    ownedTalents = (refreshedOwnedResult.data || []).filter((item) => item.storage_slot || item.equipped_slot);
+    ownedTalents = (refreshedOwnedResult.data || []).filter((item) => item.storage_slot || item.equipped_slot || item.s_slot);
   }
+  const pendingSChoiceResult = await getPendingSTalentChoices(supabase, identity.codeHash);
+  if (pendingSChoiceResult.error) return { error: pendingSChoiceResult.error };
+  const pendingSChoices = pendingSChoiceResult.pendingChoices || [];
+  const sTalentSlot = ownedTalents.find((item) => item.s_slot) || null;
+  const sTalentOptions = poolItems.filter((item) => item.rank === "S");
   const settledFragmentTotal = fragmentState.fragmentTotal + Number(overflowSettlement.fragmentGain || 0);
 
   return {
@@ -2241,6 +2291,9 @@ async function buildTalentState(
       poolItems,
       counters,
       ownedTalents,
+      sTalentSlot,
+      sTalentOptions,
+      pendingSChoices,
       overflowChoices: openSlotSettlement.overflowChoices || [],
       settledOverflowChoices: openSlotSettlement.settledChoices || [],
       drawLogs,
@@ -5342,6 +5395,18 @@ Deno.serve(async (req) => {
       if (!poolRows?.length) return json({ error: "该天赋池暂无天赋" }, 400);
 
       const talentItems = (poolRows || []) as TalentPoolItem[];
+      const sSlotResult = await supabase
+        .from("owned_talents")
+        .select("id")
+        .eq("invite_code_hash", identity.codeHash)
+        .eq("s_slot", 1)
+        .maybeSingle();
+      if (sSlotResult.error?.code === "42703") return json({ error: "请先运行 talent_s_choice_slot_20260817.sql" }, 400);
+      if (sSlotResult.error) return json({ error: sSlotResult.error.message }, 400);
+      let sTalentSlotUnlocked = !!sSlotResult.data;
+      const pendingSChoiceResult = await getPendingSTalentChoices(supabase, identity.codeHash);
+      if (pendingSChoiceResult.error) return json({ error: pendingSChoiceResult.error.message }, 400);
+      let pendingSChoiceOpen = (pendingSChoiceResult.pendingChoices || []).length > 0;
       const { data: counterRow, error: counterError } = await supabase
         .from("talent_pool_counters")
         .select("continue_draw, s_continue_draw")
@@ -5426,34 +5491,38 @@ Deno.serve(async (req) => {
         }
         if (isBasicDraw && !isEventDraw) baseBasicIndex += 1;
 
-        const { data: existingOwned, error: ownedReadError } = await supabase
-          .from("owned_talents")
-          .select("id, storage_slot")
-          .eq("invite_code_hash", identity.codeHash)
-          .eq("pool_key", poolKey)
-          .eq("talent_id", target.talent_id)
-          .maybeSingle();
-        if (ownedReadError) return json({ error: ownedReadError.message }, 400);
-        let isRepeat = !!existingOwned;
+        let isRepeat = false;
         let fragmentGain = 0;
         let storageSlot = 0;
         let overflowChoice: Record<string, unknown> | null = null;
-        if (!isRepeat) {
-          const addResult = await addOwnedTalentToStorage(supabase, identity.codeHash, target, "draw");
-          if (addResult.error) return json({ error: addResult.error.message }, 400);
-          storageSlot = Number(addResult.ownedTalent?.storage_slot || 0);
-          overflowChoice = addResult.overflowChoice || null;
-          if (addResult.duplicateFragmentGain) {
-            isRepeat = true;
-            fragmentGain = Number(addResult.duplicateFragmentGain || 0);
+        let sChoiceCreated = false;
+        if (!isS) {
+          const { data: existingOwned, error: ownedReadError } = await supabase
+            .from("owned_talents")
+            .select("id, storage_slot")
+            .eq("invite_code_hash", identity.codeHash)
+            .eq("pool_key", poolKey)
+            .eq("talent_id", target.talent_id)
+            .maybeSingle();
+          if (ownedReadError) return json({ error: ownedReadError.message }, 400);
+          isRepeat = !!existingOwned;
+          if (!isRepeat) {
+            const addResult = await addOwnedTalentToStorage(supabase, identity.codeHash, target, "draw");
+            if (addResult.error) return json({ error: addResult.error.message }, 400);
+            storageSlot = Number(addResult.ownedTalent?.storage_slot || 0);
+            overflowChoice = addResult.overflowChoice || null;
+            if (addResult.duplicateFragmentGain) {
+              isRepeat = true;
+              fragmentGain = Number(addResult.duplicateFragmentGain || 0);
+              fragmentGainTotal += fragmentGain;
+            }
+          } else {
+            fragmentGain = getTalentFragmentGain(target.rank);
             fragmentGainTotal += fragmentGain;
           }
-        } else {
-          fragmentGain = getTalentFragmentGain(target.rank);
-          fragmentGainTotal += fragmentGain;
         }
 
-        const { error: logError } = await supabase
+        const { data: logRow, error: logError } = await supabase
           .from("talent_draw_logs")
           .insert({
             invite_code_hash: identity.codeHash,
@@ -5465,8 +5534,26 @@ Deno.serve(async (req) => {
             is_guarantee: isGuarantee,
             is_repeat: isRepeat,
             fragment_gain: fragmentGain,
-          });
+          })
+          .select("id")
+          .single();
         if (logError) return json({ error: logError.message }, 400);
+
+        if (isS && !sTalentSlotUnlocked && !pendingSChoiceOpen) {
+          const { error: sChoiceError } = await supabase
+            .from("talent_s_choices")
+            .insert({
+              invite_code_hash: identity.codeHash,
+              pool_key: poolKey,
+              source_draw_log_id: logRow?.id || null,
+              source_draw_type: drawType,
+              is_guarantee: isGuarantee,
+            });
+          if (sChoiceError?.code === "42P01" || sChoiceError?.code === "42703") return json({ error: "请先运行 talent_s_choice_slot_20260817.sql" }, 400);
+          if (sChoiceError) return json({ error: sChoiceError.message }, 400);
+          pendingSChoiceOpen = true;
+          sChoiceCreated = true;
+        }
 
         results.push({
           poolKey,
@@ -5482,6 +5569,9 @@ Deno.serve(async (req) => {
           storageSlot,
           isOverflow: !!overflowChoice,
           overflowChoiceId: overflowChoice?.id || null,
+          isSChoice: isS,
+          sChoiceCreated,
+          sTalentSlotUnlocked,
         });
       }
 
@@ -5515,6 +5605,117 @@ Deno.serve(async (req) => {
           advancedDrawsUsed: advancedDrawsToUse,
           results,
           fragmentGain: fragmentGainTotal,
+          state: state.data,
+        },
+      });
+    }
+
+    if (action === "selectSTalent") {
+      if (!hasRole(role, ["player", "author", "reviewer", "admin"])) return json({ error: "需要入局谕令" }, 403);
+
+      const poolKey = cleanPoolKey(payload.poolKey);
+      const targetTalentId = cleanTalentId(payload.targetTalentId);
+      if (!poolKey || !targetTalentId) return json({ error: "请选择 S 级天赋" }, 400);
+
+      const profileResult = await getTalentProfile(supabase, identity);
+      if (profileResult.error) return json({ error: profileResult.error.message }, 400);
+      const allowedPoolKeys = getAllowedTalentPools(profileResult.data);
+      if (!allowedPoolKeys.includes(poolKey)) {
+        return json({ error: "只能选择你的信仰池和职业池中的 S 级天赋" }, 403);
+      }
+
+      const { data: targetTalent, error: targetError } = await supabase
+        .from("talent_pool_items")
+        .select("pool_key, talent_id, talent_name, rank, effect, action_cost")
+        .eq("pool_key", poolKey)
+        .eq("talent_id", targetTalentId)
+        .eq("rank", "S")
+        .eq("is_enabled", true)
+        .maybeSingle();
+      if (targetError?.code === "42703" && targetError.message?.includes("effect")) {
+        return json({ error: "请先运行 talent_pool_cooldown_batch_20260810.sql" }, 400);
+      }
+      if (targetError) return json({ error: targetError.message }, 400);
+      if (!targetTalent) return json({ error: "没有找到这个可选择的 S 级天赋" }, 404);
+
+      const { data: ownedSRows, error: ownedSError } = await supabase
+        .from("owned_talents")
+        .select("id, pool_key, talent_id, talent_name, rank, storage_slot, equipped_slot, s_slot")
+        .eq("invite_code_hash", identity.codeHash)
+        .eq("rank", "S");
+      if (ownedSError?.code === "42703") return json({ error: "请先运行 talent_s_choice_slot_20260817.sql" }, 400);
+      if (ownedSError) return json({ error: ownedSError.message }, 400);
+
+      const currentS = (ownedSRows || []).find((item: Record<string, unknown>) => Number(item.s_slot || 0) === 1) || null;
+      const sameOwned = (ownedSRows || []).find((item: Record<string, unknown>) =>
+        String(item.pool_key || "") === poolKey && Number(item.talent_id || 0) === targetTalentId
+      ) || null;
+
+      const pendingChoiceResult = await getPendingSTalentChoices(supabase, identity.codeHash);
+      if (pendingChoiceResult.error) return json({ error: pendingChoiceResult.error.message }, 400);
+      const pendingChoice = (pendingChoiceResult.pendingChoices || []).find((choice: Record<string, unknown>) => String(choice.pool_key || "") === poolKey) || null;
+      if (!currentS && !pendingChoice && !sameOwned) {
+        return json({ error: "还没有可用的 S 级自选机会" }, 403);
+      }
+
+      if (currentS && Number(currentS.id || 0) !== Number(sameOwned?.id || 0)) {
+        const { error: clearCurrentError } = await supabase
+          .from("owned_talents")
+          .update({ s_slot: null })
+          .eq("id", currentS.id)
+          .eq("invite_code_hash", identity.codeHash);
+        if (clearCurrentError) return json({ error: clearCurrentError.message }, 400);
+      }
+
+      let selectedOwnedId = Number(sameOwned?.id || 0);
+      if (sameOwned) {
+        const { error: updateOwnedError } = await supabase
+          .from("owned_talents")
+          .update({ storage_slot: null, equipped_slot: null, s_slot: 1 })
+          .eq("id", sameOwned.id)
+          .eq("invite_code_hash", identity.codeHash);
+        if (updateOwnedError) return json({ error: updateOwnedError.message }, 400);
+      } else {
+        const { data: insertedOwned, error: insertOwnedError } = await supabase
+          .from("owned_talents")
+          .insert({
+            invite_code_hash: identity.codeHash,
+            pool_key: poolKey,
+            talent_id: targetTalent.talent_id,
+            talent_name: targetTalent.talent_name,
+            rank: "S",
+            acquired_from: "draw",
+            s_slot: 1,
+          })
+          .select("id")
+          .single();
+        if (insertOwnedError) return json({ error: insertOwnedError.message }, 400);
+        selectedOwnedId = Number(insertedOwned?.id || 0);
+      }
+
+      if (pendingChoice) {
+        const consumeResult = await consumeSTalentChoice(supabase, identity.codeHash, pendingChoice as { id: number; pool_key: string; source_draw_type: string; is_guarantee: boolean }, targetTalent as TalentPoolItem);
+        if (consumeResult.error) return json({ error: consumeResult.error.message }, 400);
+      }
+
+      const talentTextUpdate = await updateProfileTalentText(supabase, identity.codeHash);
+      if (talentTextUpdate.error) return json({ error: talentTextUpdate.error.message }, 400);
+      const state = await buildTalentState(supabase, identity);
+      if (state.error) return json({ error: state.error.message }, 400);
+
+      return json({
+        role,
+        name: identity.displayName,
+        data: {
+          selectedOwnedId,
+          talent: {
+            poolKey,
+            talentId: targetTalent.talent_id,
+            talentName: targetTalent.talent_name,
+            effect: targetTalent.effect || "",
+            actionCost: Number(targetTalent.action_cost || 0),
+            rank: "S",
+          },
           state: state.data,
         },
       });
