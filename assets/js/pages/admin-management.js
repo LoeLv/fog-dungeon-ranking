@@ -886,7 +886,29 @@ function adminClearTalentPoolForm() {
     if (enabled) enabled.checked = true;
 }
 
+function captureAdminTalentScrollState() {
+    return {
+        windowY: window.scrollY || document.documentElement.scrollTop || 0,
+        modalScrollTop: document.querySelector('#adminTalentEditModalOverlay .ritual-scroll')?.scrollTop || 0,
+    };
+}
+
+function restoreAdminTalentScrollState(scrollState) {
+    if (!scrollState) return;
+    requestAnimationFrame(() => {
+        window.scrollTo({ top: Number(scrollState.windowY || 0), left: 0, behavior: 'auto' });
+        const modalScroll = document.querySelector('#adminTalentEditModalOverlay .ritual-scroll');
+        if (modalScroll) modalScroll.scrollTop = Number(scrollState.modalScrollTop || 0);
+    });
+}
+
+async function renderAdminPageKeepingTalentScroll(scrollState = captureAdminTalentScrollState()) {
+    await renderAdminPage();
+    restoreAdminTalentScrollState(scrollState);
+}
+
 async function adminSaveTalentPoolItem() {
+    const scrollState = captureAdminTalentScrollState();
     const payload = getAdminTalentPayloadFromFields('adminTalent');
     setAdminManagementStatus('天赋保存处理中...', 'pending');
     try {
@@ -901,7 +923,7 @@ async function adminSaveTalentPoolItem() {
         setAdminManagementStatus('天赋已保存', 'success');
         showToast('天赋已保存');
         await Promise.all([adminLoadTalentWarehouse(false), refreshAdminOperationLogs()]);
-        await renderAdminPage();
+        await renderAdminPageKeepingTalentScroll(scrollState);
     } catch (error) {
         const message = `保存失败：${error?.message || error || '未知错误'}`;
         setAdminManagementStatus(message, 'error');
@@ -910,6 +932,7 @@ async function adminSaveTalentPoolItem() {
 }
 
 async function adminSaveTalentPoolItemFromModal() {
+    const scrollState = captureAdminTalentScrollState();
     const payload = getAdminTalentPayloadFromFields('adminTalentModal');
     payload.originalTalentId = adminTalentEditingItem?.talentId || payload.talentId;
     setAdminManagementStatus('天赋保存处理中...', 'pending');
@@ -937,7 +960,7 @@ async function adminSaveTalentPoolItemFromModal() {
         setAdminManagementStatus('天赋已保存，仓库已刷新', 'success');
         showToast('天赋已保存');
         await Promise.all([adminLoadTalentWarehouse(false), refreshAdminOperationLogs()]);
-        await renderAdminPage();
+        await renderAdminPageKeepingTalentScroll(scrollState);
     } catch (error) {
         const message = `保存失败：${error?.message || error || '未知错误'}`;
         setAdminManagementStatus(message, 'error');
@@ -959,6 +982,7 @@ function parseAdminTalentBatchLine(line, index) {
 }
 
 async function adminBatchSaveTalentPoolItems() {
+    const scrollState = captureAdminTalentScrollState();
     const poolKey = document.getElementById('adminTalentPoolKey')?.value || adminTalentPoolSelected;
     const text = document.getElementById('adminTalentBatchInput')?.value || '';
     if (!poolKey) { showToast('请先选择或填写天赋池'); return; }
@@ -987,7 +1011,7 @@ async function adminBatchSaveTalentPoolItems() {
         const input = document.getElementById('adminTalentBatchInput');
         if (input) input.value = '';
         await Promise.all([adminLoadTalentWarehouse(false), refreshAdminOperationLogs()]);
-        await renderAdminPage();
+        await renderAdminPageKeepingTalentScroll(scrollState);
     } catch (error) {
         const message = `批量保存失败：${error?.message || error || '未知错误'}`;
         setAdminManagementStatus(message, 'error');
@@ -996,6 +1020,7 @@ async function adminBatchSaveTalentPoolItems() {
 }
 
 async function adminBatchDeleteTalentPoolItems() {
+    const scrollState = captureAdminTalentScrollState();
     const poolKey = document.getElementById('adminTalentPoolKey')?.value || adminTalentPoolSelected;
     const selectedItems = getAdminTalentSelectedDeleteItems(poolKey);
     const talentIds = selectedItems.map(item => Number(item.talentId || 0)).filter(Boolean);
@@ -1023,7 +1048,7 @@ async function adminBatchDeleteTalentPoolItems() {
         setAdminManagementStatus(message, 'success');
         showToast(message);
         await Promise.all([adminLoadTalentWarehouse(false), refreshAdminOperationLogs()]);
-        await renderAdminPage();
+        await renderAdminPageKeepingTalentScroll(scrollState);
     } catch (error) {
         const message = `批量删除失败：${error?.message || error || '未知错误'}`;
         setAdminManagementStatus(message, 'error');
@@ -1032,6 +1057,7 @@ async function adminBatchDeleteTalentPoolItems() {
 }
 
 async function adminToggleTalentPoolItem(poolKey, talentId, enabled) {
+    const scrollState = captureAdminTalentScrollState();
     setAdminManagementStatus('天赋状态更新中...', 'pending');
     try {
         const { error } = await invokeDungeonAction('adminSetTalentPoolItemEnabled', { poolKey, talentId, enabled });
@@ -1045,7 +1071,7 @@ async function adminToggleTalentPoolItem(poolKey, talentId, enabled) {
         setAdminManagementStatus(message, 'success');
         showToast(message);
         await Promise.all([adminLoadTalentWarehouse(false), refreshAdminOperationLogs()]);
-        await renderAdminPage();
+        await renderAdminPageKeepingTalentScroll(scrollState);
     } catch (error) {
         const message = `启停失败：${error?.message || error || '未知错误'}`;
         setAdminManagementStatus(message, 'error');
