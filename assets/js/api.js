@@ -4,14 +4,29 @@
 // per invite identity and is cleared immediately after a write succeeds.
 const DUNGEON_LIST_CACHE_TTL_MS = 3 * 60 * 1000;
 const SHORT_READ_CACHE_TTL_MS = 90 * 1000;
+const DUNGEON_LIST_CACHE_PREFIX = 'fog-dungeon-list-v3';
+const SHORT_READ_CACHE_PREFIX = 'fog-read-cache-v3';
 let dungeonListRequest = null;
 let dungeonListCacheVersion = 0;
 const shortReadRequests = new Map();
 let shortReadCacheVersion = 0;
 
+function purgeLegacyReadCaches() {
+    try {
+        for (let index = sessionStorage.length - 1; index >= 0; index -= 1) {
+            const key = sessionStorage.key(index);
+            if (key?.startsWith('fog-dungeon-list-v2:') || key?.startsWith('fog-read-cache-v2:')) {
+                sessionStorage.removeItem(key);
+            }
+        }
+    } catch (_) {}
+}
+
+purgeLegacyReadCaches();
+
 function getDungeonListCacheKey() {
     const identity = inviteSession?.code || 'guest';
-    return `fog-dungeon-list-v2:${identity}`;
+    return `${DUNGEON_LIST_CACHE_PREFIX}:${identity}`;
 }
 
 function readDungeonListCache() {
@@ -41,14 +56,14 @@ function invalidateDungeonListCache() {
 }
 
 function getShortReadCacheKey(name) {
-    return `fog-read-cache-v2:${name}:${inviteSession?.code || 'guest'}`;
+    return `${SHORT_READ_CACHE_PREFIX}:${name}:${inviteSession?.code || 'guest'}`;
 }
 
 function invalidateShortReadCache(name = '') {
     try {
         for (let index = sessionStorage.length - 1; index >= 0; index -= 1) {
             const key = sessionStorage.key(index);
-            if (key?.startsWith(`fog-read-cache-v2:${name}`)) sessionStorage.removeItem(key);
+            if (key?.startsWith(`${SHORT_READ_CACHE_PREFIX}:${name}`)) sessionStorage.removeItem(key);
         }
     } catch (_) {}
     [...shortReadRequests.keys()]
