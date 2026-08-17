@@ -4041,6 +4041,40 @@ Deno.serve(async (req) => {
       return json({ role, name: identity.displayName, data: { poolKey, count: rows.length } });
     }
 
+    if (action === "adminBatchDeleteTalentPoolItems") {
+      if (!hasPermission(identity, "talent_pool_manage")) return json({ error: "没有天赋池管理权限" }, 403);
+      const poolKey = cleanPoolKey(payload.poolKey);
+      const rawTalentIds = Array.isArray(payload.talentIds) ? payload.talentIds : [];
+      const talentIds = Array.from(new Set(rawTalentIds.map(cleanTalentId).filter(Boolean)));
+      if (!poolKey || !talentIds.length) return json({ error: "请填写天赋池和要删除的天赋编号" }, 400);
+      if (talentIds.length > 100) return json({ error: "单次最多批量删除 100 个天赋" }, 400);
+      const beforeResult = await supabase
+        .from("talent_pool_items")
+        .select("pool_key, talent_id, talent_name, rank, effect, cooldown, action_cost, is_enabled, admin_note")
+        .eq("pool_key", poolKey)
+        .in("talent_id", talentIds);
+      if (beforeResult.error) return json({ error: beforeResult.error.message }, 400);
+      const beforeRows = (beforeResult.data || []) as Record<string, unknown>[];
+      const foundIds = new Set(beforeRows.map((row) => cleanTalentId(row.talent_id)).filter(Boolean));
+      const missingTalentIds = talentIds.filter((talentId) => !foundIds.has(talentId));
+      if (!beforeRows.length) return json({ error: "没有找到要删除的天赋池条目" }, 404);
+      const { error } = await supabase
+        .from("talent_pool_items")
+        .delete()
+        .eq("pool_key", poolKey)
+        .in("talent_id", [...foundIds]);
+      if (error) return json({ error: error.message }, 400);
+      await writeAdminOperationLog(supabase, identity, {
+        action: "talent_pool.batch_delete",
+        objectType: "talent_pool_item",
+        objectId: poolKey,
+        summary: `批量删除 ${poolKey} ${beforeRows.length} 个天赋`,
+        beforeState: { poolKey, items: beforeRows },
+        afterState: { poolKey, count: beforeRows.length, talentIds: [...foundIds], missingTalentIds },
+      });
+      return json({ role, name: identity.displayName, data: { poolKey, count: beforeRows.length, talentIds: [...foundIds], missingTalentIds } });
+    }
+
     if (action === "adminSetTalentPoolItemEnabled") {
       if (!hasPermission(identity, "talent_pool_manage")) return json({ error: "没有天赋池管理权限" }, 403);
       const poolKey = cleanPoolKey(payload.poolKey);

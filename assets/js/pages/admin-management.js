@@ -3,6 +3,7 @@
 let adminMembers = [];
 let adminTalentPools = [];
 let adminTalentPoolSelected = '';
+let adminTalentDeleteSelection = new Set();
 let adminTalentEditingItem = null;
 let adminFaithTraits = [];
 let adminFaithTraitsLoading = false;
@@ -184,6 +185,32 @@ function renderAdminTalentPoolOptions() {
     return adminTalentPools.map(pool => `<option value="${escapeHtml(pool.poolKey)}" ${pool.poolKey === adminTalentPoolSelected ? 'selected' : ''}>${escapeHtml(pool.poolKey)} · ${pool.items?.length || 0}</option>`).join('');
 }
 
+function getAdminTalentDeleteKey(poolKey, talentId) {
+    return `${String(poolKey || '')}::${Number(talentId || 0)}`;
+}
+
+function getAdminTalentSelectedDeleteItems(poolKey = adminTalentPoolSelected) {
+    const pool = adminTalentPools.find(item => item.poolKey === poolKey);
+    if (!pool) return [];
+    return (pool.items || []).filter(item => adminTalentDeleteSelection.has(getAdminTalentDeleteKey(item.poolKey, item.talentId)));
+}
+
+function adminPruneTalentDeleteSelection() {
+    const valid = new Set();
+    (adminTalentPools || []).forEach(pool => {
+        (pool.items || []).forEach(item => valid.add(getAdminTalentDeleteKey(item.poolKey, item.talentId)));
+    });
+    adminTalentDeleteSelection = new Set([...adminTalentDeleteSelection].filter(key => valid.has(key)));
+}
+
+function adminUpdateTalentDeleteSummary() {
+    const selectedCount = getAdminTalentSelectedDeleteItems().length;
+    const summary = document.getElementById('adminTalentDeleteSummary');
+    if (summary) summary.textContent = `已选择 ${selectedCount} 个待删除天赋`;
+    const button = document.querySelector('[data-admin-talent-delete]');
+    if (button) button.disabled = selectedCount <= 0;
+}
+
 function renderAdminTalentRows() {
     if (adminTalentWarehouseLoading) return '<div class="profile-empty">正在读取天赋仓库...</div>';
     const pool = getAdminTalentSelectedPool();
@@ -200,12 +227,14 @@ function renderAdminTalentRows() {
         <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px;">
             ${group.items.map(item => {
                 const cooldown = String(item.cooldown || '').trim() || '无';
+                const deleteChecked = adminTalentDeleteSelection.has(getAdminTalentDeleteKey(item.poolKey, item.talentId));
                 return `<article class="profile-list-item" style="height:100%;display:flex;flex-direction:column;gap:8px;">
                     <div class="profile-list-title"><span>#${Number(item.talentId || 0)} ${escapeHtml(item.talentName || '未命名')}</span><small>${item.isEnabled ? '启用' : '停用'}</small></div>
                     <div class="profile-list-meta">冷却 ${escapeHtml(cooldown)} · 行动点 ${Number(item.actionCost || 0)}</div>
                     <div class="profile-list-meta" style="white-space:pre-wrap;">${escapeHtml(item.effect || '未填写效果')}</div>
                     <div class="profile-list-meta">${escapeHtml(item.adminNote || '无备注')}</div>
                     <div class="profile-tools" style="margin-top:auto;">
+                        <label class="identity-help"><input type="checkbox" ${deleteChecked ? 'checked' : ''} onchange='adminToggleTalentDeleteSelection(${jsString(item.poolKey)}, ${Number(item.talentId || 0)}, this.checked)'> 删除</label>
                         <button class="btn btn-outline btn-sm" onclick='adminEditTalentPoolItemByKey(${jsString(item.poolKey)}, ${Number(item.talentId || 0)})'>编辑</button>
                         <button class="btn btn-outline btn-sm" onclick='adminToggleTalentPoolItem(${jsString(item.poolKey)}, ${Number(item.talentId || 0)}, ${item.isEnabled ? 'false' : 'true'})'>${item.isEnabled ? '停用' : '启用'}</button>
                     </div>
@@ -273,6 +302,10 @@ function renderAdminTalentWarehousePanel() {
         </div>
         <div class="profile-tools">
             <button class="btn btn-primary btn-sm" data-admin-talent-batch onclick="adminBatchSaveTalentPoolItems()">批量保存到当前池</button>
+            <button class="btn btn-outline btn-sm" onclick="adminSelectAllVisibleTalentsForDelete()">全选当前池</button>
+            <button class="btn btn-outline btn-sm" onclick="adminClearTalentDeleteSelection()">清空选择</button>
+            <button class="btn btn-outline btn-sm" data-admin-talent-delete onclick="adminBatchDeleteTalentPoolItems()" ${getAdminTalentSelectedDeleteItems().length ? '' : 'disabled'}>批量删除选中</button>
+            <span id="adminTalentDeleteSummary" class="identity-help">已选择 ${getAdminTalentSelectedDeleteItems().length} 个待删除天赋</span>
         </div>
         <div id="adminTalentPoolRows" class="profile-list" style="margin-top:14px;">${renderAdminTalentRows()}</div>
     </section>`;
@@ -503,6 +536,7 @@ async function adminLoadTalentWarehouse(showResult = false) {
         if (error) { showToast(`失败：${error.message || '天赋仓库读取失败'}`); return; }
         adminTalentPools = Array.isArray(data?.pools) ? data.pools : [];
         if (!adminTalentPoolSelected && adminTalentPools.length) adminTalentPoolSelected = adminTalentPools[0].poolKey;
+        adminPruneTalentDeleteSelection();
         if (showResult) showToast(`已读取 ${adminTalentPools.length} 个天赋池`);
     } finally {
         adminTalentWarehouseLoading = false;
@@ -510,6 +544,7 @@ async function adminLoadTalentWarehouse(showResult = false) {
         if (select) select.innerHTML = renderAdminTalentPoolOptions();
         const target = document.getElementById('adminTalentPoolRows');
         if (target) target.innerHTML = renderAdminTalentRows();
+        adminUpdateTalentDeleteSummary();
     }
 }
 
@@ -531,10 +566,12 @@ async function adminLoadFaithTraits(showResult = false) {
 
 function adminSelectTalentPool(poolKey) {
     adminTalentPoolSelected = String(poolKey || '');
+    adminTalentDeleteSelection.clear();
     const input = document.getElementById('adminTalentPoolKey');
     if (input) input.value = adminTalentPoolSelected;
     const rows = document.getElementById('adminTalentPoolRows');
     if (rows) rows.innerHTML = renderAdminTalentRows();
+    adminUpdateTalentDeleteSummary();
 }
 
 function adminInspectMember(_targetHash, displayName) {
@@ -552,6 +589,34 @@ function findAdminTalentPoolItem(poolKey, talentId) {
         if (item) return item;
     }
     return null;
+}
+
+function adminToggleTalentDeleteSelection(poolKey, talentId, checked) {
+    const key = getAdminTalentDeleteKey(poolKey, talentId);
+    if (checked) adminTalentDeleteSelection.add(key);
+    else adminTalentDeleteSelection.delete(key);
+    adminUpdateTalentDeleteSummary();
+}
+
+function adminSelectAllVisibleTalentsForDelete() {
+    const pool = getAdminTalentSelectedPool();
+    if (!pool) return;
+    (pool.items || []).forEach(item => adminTalentDeleteSelection.add(getAdminTalentDeleteKey(item.poolKey, item.talentId)));
+    const rows = document.getElementById('adminTalentPoolRows');
+    if (rows) rows.innerHTML = renderAdminTalentRows();
+    adminUpdateTalentDeleteSummary();
+}
+
+function adminClearTalentDeleteSelection() {
+    const pool = getAdminTalentSelectedPool();
+    if (pool) {
+        (pool.items || []).forEach(item => adminTalentDeleteSelection.delete(getAdminTalentDeleteKey(item.poolKey, item.talentId)));
+    } else {
+        adminTalentDeleteSelection.clear();
+    }
+    const rows = document.getElementById('adminTalentPoolRows');
+    if (rows) rows.innerHTML = renderAdminTalentRows();
+    adminUpdateTalentDeleteSummary();
 }
 
 async function adminSetMemberRole() {
@@ -924,6 +989,42 @@ async function adminBatchSaveTalentPoolItems() {
         await renderAdminPage();
     } catch (error) {
         const message = `批量保存失败：${error?.message || error || '未知错误'}`;
+        setAdminManagementStatus(message, 'error');
+        showToast(message);
+    }
+}
+
+async function adminBatchDeleteTalentPoolItems() {
+    const poolKey = document.getElementById('adminTalentPoolKey')?.value || adminTalentPoolSelected;
+    const selectedItems = getAdminTalentSelectedDeleteItems(poolKey);
+    const talentIds = selectedItems.map(item => Number(item.talentId || 0)).filter(Boolean);
+    if (!poolKey) { showToast('请先选择天赋池'); return; }
+    if (!talentIds.length) { showToast('请先勾选要删除的天赋'); return; }
+    const preview = selectedItems
+        .slice(0, 8)
+        .map(item => `#${Number(item.talentId || 0)} ${item.talentName || '未命名'}`)
+        .join('\n');
+    const more = selectedItems.length > 8 ? `\n...以及 ${selectedItems.length - 8} 个` : '';
+    if (!window.confirm(`确认从 ${poolKey} 删除 ${talentIds.length} 个天赋池条目？\n\n${preview}${more}\n\n只删除池子定义，不会删除玩家已拥有天赋。`)) return;
+    setAdminManagementStatus(`正在删除 ${talentIds.length} 个天赋池条目...`, 'pending');
+    try {
+        const { data, error } = await invokeDungeonAction('adminBatchDeleteTalentPoolItems', { poolKey, talentIds });
+        if (error) {
+            const message = `批量删除失败：${error.message || '后端未返回原因'}`;
+            setAdminManagementStatus(message, 'error');
+            showToast(message);
+            return;
+        }
+        talentIds.forEach(talentId => adminTalentDeleteSelection.delete(getAdminTalentDeleteKey(poolKey, talentId)));
+        const deletedCount = Number(data?.count || talentIds.length);
+        const missingCount = Array.isArray(data?.missingTalentIds) ? data.missingTalentIds.length : 0;
+        const message = missingCount ? `已删除 ${deletedCount} 个天赋，${missingCount} 个原本不存在` : `已删除 ${deletedCount} 个天赋`;
+        setAdminManagementStatus(message, 'success');
+        showToast(message);
+        await Promise.all([adminLoadTalentWarehouse(false), refreshAdminOperationLogs()]);
+        await renderAdminPage();
+    } catch (error) {
+        const message = `批量删除失败：${error?.message || error || '未知错误'}`;
         setAdminManagementStatus(message, 'error');
         showToast(message);
     }
