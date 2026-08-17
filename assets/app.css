@@ -4333,11 +4333,34 @@ button.is-action-ack {
     box-shadow: 0 18px 34px rgba(0,0,0,0.28);
 }
 .stele-monolith-pages {
+    width: min(90vw, 620px);
+    padding-top: 286px;
+    border-radius: 24px 24px 18px 18px;
+    border-color: rgba(229,238,255,0.22);
     background:
         linear-gradient(180deg, rgba(255,255,255,0.22), rgba(255,255,255,0.045)),
         radial-gradient(circle at 50% 12%, rgba(219,232,255,0.24), transparent 24%),
         radial-gradient(ellipse at 50% 40%, rgba(231,207,138,0.12), transparent 42%),
         linear-gradient(135deg, rgba(45,50,61,0.99), rgba(17,20,29,0.98));
+}
+.stele-monolith-pages::before {
+    inset: 20px 34px 42px;
+    border-radius: 18px;
+    border-color: rgba(229,238,255,0.2);
+    background:
+        linear-gradient(90deg, transparent 0 49%, rgba(229,238,255,0.1) 49.5% 50.5%, transparent 51% 100%),
+        repeating-linear-gradient(180deg, transparent 0 38px, rgba(229,238,255,0.045) 38px 39px, transparent 39px 74px),
+        radial-gradient(circle at 50% 0, rgba(229,238,255,0.2), transparent 34%),
+        linear-gradient(105deg, rgba(255,255,255,0.06), transparent 34%, rgba(231,207,138,0.04) 70%, transparent);
+}
+.stele-monolith-pages::after {
+    background:
+        linear-gradient(180deg, rgba(255,255,255,0.1), transparent 16%),
+        radial-gradient(circle at 36% 28%, rgba(229,238,255,0.16), transparent 14%),
+        radial-gradient(circle at 70% 62%, rgba(231,207,138,0.12), transparent 18%),
+        repeating-linear-gradient(92deg, transparent 0 26px, rgba(229,238,255,0.036) 26px 27px, transparent 27px 70px),
+        repeating-linear-gradient(0deg, transparent 0 54px, rgba(255,255,255,0.018) 54px 55px, transparent 55px 108px);
+    mix-blend-mode: screen;
 }
 .stele-monolith-pages .stele-crown-halo {
     border-top-color: rgba(210,228,255,0.38);
@@ -4348,17 +4371,17 @@ button.is-action-ack {
 .stele-monolith-pages .stele-crown-arc {
     border-color: rgba(211,226,255,0.3);
     background:
-        linear-gradient(180deg, rgba(229,238,255,0.28), rgba(210,228,255,0.11) 44%, rgba(22,24,31,0.95) 72%),
-        linear-gradient(110deg, rgba(231,207,138,0.12), rgba(122,174,194,0.18) 52%, rgba(0,0,0,0.1));
-    clip-path: polygon(7% 62%, 20% 30%, 36% 40%, 50% 10%, 64% 40%, 80% 30%, 93% 62%, 86% 100%, 14% 100%);
+        linear-gradient(180deg, rgba(245,240,218,0.42), rgba(210,228,255,0.22) 54%, rgba(57,66,82,0.72) 82%),
+        linear-gradient(110deg, rgba(231,207,138,0.18), rgba(122,174,194,0.2) 52%, rgba(255,255,255,0.04));
+    clip-path: polygon(4% 76%, 18% 42%, 36% 54%, 50% 24%, 64% 54%, 82% 42%, 96% 76%, 88% 100%, 12% 100%);
 }
 .stele-monolith-pages .stele-crown-panel {
     border-color: rgba(210,228,255,0.28);
-    border-radius: 34px 10px 10px 10px;
+    border-radius: 24px 8px 18px 8px;
     background:
-        linear-gradient(180deg, rgba(240,245,255,0.36), rgba(219,232,255,0.15) 48%, rgba(24,26,34,0.96)),
-        linear-gradient(110deg, rgba(255,255,255,0.18), transparent 40%);
-    clip-path: polygon(14% 100%, 18% 18%, 50% 0, 82% 18%, 86% 100%);
+        linear-gradient(180deg, rgba(252,247,222,0.44), rgba(219,232,255,0.24) 58%, rgba(70,78,94,0.78)),
+        repeating-linear-gradient(180deg, transparent 0 20px, rgba(60,67,84,0.12) 20px 21px, transparent 21px 42px);
+    clip-path: polygon(12% 100%, 20% 18%, 56% 0, 86% 22%, 88% 100%);
 }
 .stele-monolith-pages .panel-left,
 .stele-monolith-pages .panel-right {
@@ -4382,21 +4405,22 @@ button.is-action-ack {
         linear-gradient(115deg, transparent 0 42%, rgba(12,14,20,0.72) 42% 47%, transparent 47% 100%);
 }
 .stele-motif-pages {
-    top: 72px;
-    width: 262px;
-    height: 226px;
+    top: 56px;
+    width: 318px;
+    height: 238px;
 }
 .stele-page-sheet {
     position: absolute;
-    top: 42px;
-    width: 98px;
-    height: 142px;
+    top: 46px;
+    width: 118px;
+    height: 164px;
     border: 1px solid rgba(236,232,210,0.26);
-    border-radius: 18px 32px 14px 18px;
+    border-radius: 20px 38px 16px 20px;
     background:
-        linear-gradient(180deg, rgba(255,255,255,0.2), transparent 28%),
-        repeating-linear-gradient(180deg, transparent 0 22px, rgba(56,62,78,0.18) 22px 23px, transparent 23px 42px),
-        linear-gradient(135deg, rgba(233,228,204,0.9), rgba(146,163,185,0.82) 54%, rgba(55,62,77,0.96));
+        linear-gradient(180deg, rgba(255,255,255,0.24), transparent 30%),
+        radial-gradient(circle at 18% 22%, rgba(255,246,214,0.22), transparent 20%),
+        repeating-linear-gradient(180deg, transparent 0 20px, rgba(56,62,78,0.24) 20px 21px, transparent 21px 40px),
+        linear-gradient(135deg, rgba(239,233,205,0.96), rgba(172,187,205,0.88) 56%, rgba(63,72,90,0.96));
     box-shadow:
         0 24px 36px rgba(0,0,0,0.26),
         inset 0 1px 0 rgba(255,255,255,0.2),
@@ -4417,23 +4441,28 @@ button.is-action-ack {
         0 84px 0 rgba(33,38,52,0.12);
 }
 .page-left {
-    left: 30px;
-    transform: rotate(-17deg) skewY(-5deg);
-    opacity: 0.82;
+    left: 24px;
+    transform: rotate(-23deg) skewY(-7deg);
+    opacity: 0.9;
 }
 .page-center {
-    left: 82px;
-    top: 26px;
-    width: 112px;
-    height: 168px;
+    left: 100px;
+    top: 20px;
+    width: 126px;
+    height: 188px;
     transform: rotate(1deg);
     z-index: 2;
-    border-radius: 24px 34px 18px 18px;
+    border-radius: 28px 38px 20px 20px;
+    background:
+        linear-gradient(180deg, rgba(255,255,255,0.3), transparent 30%),
+        radial-gradient(circle at 50% 22%, rgba(255,246,214,0.28), transparent 22%),
+        repeating-linear-gradient(180deg, transparent 0 22px, rgba(56,62,78,0.22) 22px 23px, transparent 23px 44px),
+        linear-gradient(135deg, rgba(245,240,218,0.98), rgba(190,205,222,0.92) 58%, rgba(75,86,104,0.98));
 }
 .page-right {
-    right: 26px;
-    transform: rotate(16deg) skewY(5deg);
-    opacity: 0.82;
+    right: 20px;
+    transform: rotate(22deg) skewY(7deg);
+    opacity: 0.9;
 }
 .stele-page-thread {
     position: absolute;
@@ -4468,15 +4497,26 @@ button.is-action-ack {
 .stele-page-glow {
     position: absolute;
     left: 50%;
-    top: 38px;
-    width: 124px;
-    height: 162px;
+    top: 24px;
+    width: 180px;
+    height: 196px;
     transform: translateX(-50%);
     background:
         radial-gradient(ellipse at 50% 40%, rgba(224,236,255,0.34), transparent 48%),
         linear-gradient(180deg, rgba(231,207,138,0.14), transparent 74%);
     filter: blur(12px);
     opacity: 0.88;
+}
+.stele-monolith-pages .stele-monolith-base {
+    width: 112%;
+    height: 88px;
+    bottom: -58px;
+    border-radius: 10px 10px 22px 22px;
+    background:
+        linear-gradient(180deg, rgba(245,240,218,0.14), transparent 26%),
+        linear-gradient(90deg, rgba(0,0,0,0.2), transparent 18%, rgba(210,228,255,0.08) 50%, transparent 82%, rgba(0,0,0,0.28)),
+        linear-gradient(135deg, rgba(38,45,58,0.99), rgba(14,17,24,0.98));
+    clip-path: polygon(0 0, 48% 0, 50% 14%, 52% 0, 100% 0, 94% 100%, 54% 86%, 50% 100%, 46% 86%, 6% 100%);
 }
 .stele-monolith-base {
     position: absolute;
@@ -4596,6 +4636,15 @@ body.eternal-stele-view-open .profile-toolbar {
         padding: 214px 20px 90px;
         border-radius: 54px 54px 26px 26px;
     }
+    .stele-monolith-pages {
+        width: min(100%, 94vw);
+        padding-top: 236px;
+        border-radius: 18px;
+    }
+    .stele-monolith-pages::before {
+        inset: 18px 20px 34px;
+        border-radius: 14px;
+    }
     .stele-monolith-title {
         font-size: clamp(1.48rem, 8vw, 2rem);
         overflow-wrap: anywhere;
@@ -4668,13 +4717,13 @@ body.eternal-stele-view-open .profile-toolbar {
     }
     .stele-motif-pages {
         top: 54px;
-        width: 204px;
-        height: 178px;
+        width: 248px;
+        height: 194px;
     }
     .stele-page-sheet {
         top: 36px;
-        width: 74px;
-        height: 108px;
+        width: 90px;
+        height: 128px;
         border-radius: 14px 24px 12px 14px;
     }
     .stele-page-sheet::before {
@@ -4687,20 +4736,20 @@ body.eternal-stele-view-open .profile-toolbar {
             0 66px 0 rgba(33,38,52,0.12);
     }
     .page-left {
-        left: 24px;
+        left: 20px;
     }
     .page-center {
-        left: 66px;
-        top: 22px;
-        width: 84px;
-        height: 132px;
+        left: 76px;
+        top: 18px;
+        width: 100px;
+        height: 152px;
     }
     .page-right {
-        right: 20px;
+        right: 18px;
     }
     .stele-page-thread {
         top: 24px;
-        height: 140px;
+        height: 158px;
     }
     .stele-page-thread::before {
         width: 54px;
@@ -4712,8 +4761,13 @@ body.eternal-stele-view-open .profile-toolbar {
     }
     .stele-page-glow {
         top: 32px;
-        width: 100px;
-        height: 128px;
+        width: 136px;
+        height: 148px;
+    }
+    .stele-monolith-pages .stele-monolith-base {
+        height: 92px;
+        bottom: -48px;
+        border-radius: 10px 34px 18px 34px;
     }
     .stele-monolith-foot {
         flex-direction: column;
