@@ -5052,6 +5052,10 @@ body.visual-effects-muted .talent-pool-card {
     border-radius: 12px;
     background: rgba(0,0,0,0.18);
 }
+.profile-list-item,
+.profile-list-title {
+    min-width: 0;
+}
 .profile-list-item.clickable {
     cursor: pointer;
     transition: all var(--transition);
@@ -5068,6 +5072,11 @@ body.visual-effects-muted .talent-pool-card {
     gap: 12px;
     color: var(--text-bright);
     font-weight: 800;
+}
+.profile-list-title span {
+    min-width: 0;
+    overflow-wrap: anywhere;
+    word-break: break-word;
 }
 .profile-list-title small {
     color: var(--text-muted);
@@ -7669,6 +7678,15 @@ body.visual-effects-muted .profile-chronicle-card.is-rotating .profile-chronicle
     .talent-slot-card,
     .talent-card {
         min-width: 0;
+    }
+    .profile-list-item {
+        padding: 11px 12px;
+    }
+    .profile-list-title small {
+        white-space: normal;
+    }
+    .profile-panel[data-god="真理"] > div[style*="repeat(auto-fit,minmax(220px,1fr))"] {
+        grid-template-columns: 1fr !important;
     }
     .leaderboard-tabs,
     .leaderboard-path-tabs {
