@@ -174,11 +174,23 @@ function renderTalentOptionLabel(talent) {
 
 function getTalentEffectText(state, talent) {
     if (!talent) return '';
+    const poolItems = state.poolItems || [];
+    const poolKey = String(talent.pool_key || talent.poolKey || '');
+    const talentId = Number(talent.talent_id || talent.talentId || 0);
+    const talentName = String(talent.talent_name || talent.talentName || '').trim();
+    const rank = String(talent.rank || '').toUpperCase();
+    const byId = poolItems.find(item =>
+        item.pool_key === poolKey && Number(item.talent_id) === talentId
+    );
+    const byName = poolItems.find(item =>
+        item.pool_key === poolKey &&
+        String(item.talent_name || '').trim() === talentName &&
+        String(item.rank || '').toUpperCase() === rank
+    );
     return String(
         talent.effect ||
-        (state.poolItems || []).find(item =>
-            item.pool_key === talent.pool_key && Number(item.talent_id) === Number(talent.talent_id)
-        )?.effect ||
+        byId?.effect ||
+        byName?.effect ||
         ''
     ).trim();
 }
