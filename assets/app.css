@@ -4014,6 +4014,9 @@ button.is-action-ack {
     padding: 58px 0 92px;
     perspective: 1200px;
 }
+.stele-sanctum + .stele-sanctum {
+    margin-top: 34px;
+}
 .stele-sanctum::before {
     content: "";
     position: absolute;
@@ -4329,6 +4332,152 @@ button.is-action-ack {
     clip-path: polygon(9% 0, 91% 0, 100% 48%, 86% 100%, 14% 100%, 0 48%);
     box-shadow: 0 18px 34px rgba(0,0,0,0.28);
 }
+.stele-monolith-pages {
+    background:
+        linear-gradient(180deg, rgba(255,255,255,0.22), rgba(255,255,255,0.045)),
+        radial-gradient(circle at 50% 12%, rgba(219,232,255,0.24), transparent 24%),
+        radial-gradient(ellipse at 50% 40%, rgba(231,207,138,0.12), transparent 42%),
+        linear-gradient(135deg, rgba(45,50,61,0.99), rgba(17,20,29,0.98));
+}
+.stele-monolith-pages .stele-crown-halo {
+    border-top-color: rgba(210,228,255,0.38);
+    background:
+        radial-gradient(ellipse at 50% 4%, rgba(224,236,255,0.26), transparent 58%),
+        linear-gradient(90deg, transparent, rgba(231,207,138,0.1), transparent);
+}
+.stele-monolith-pages .stele-crown-arc {
+    border-color: rgba(211,226,255,0.3);
+    background:
+        linear-gradient(180deg, rgba(229,238,255,0.28), rgba(210,228,255,0.11) 44%, rgba(22,24,31,0.95) 72%),
+        linear-gradient(110deg, rgba(231,207,138,0.12), rgba(122,174,194,0.18) 52%, rgba(0,0,0,0.1));
+    clip-path: polygon(7% 62%, 20% 30%, 36% 40%, 50% 10%, 64% 40%, 80% 30%, 93% 62%, 86% 100%, 14% 100%);
+}
+.stele-monolith-pages .stele-crown-panel {
+    border-color: rgba(210,228,255,0.28);
+    border-radius: 34px 10px 10px 10px;
+    background:
+        linear-gradient(180deg, rgba(240,245,255,0.36), rgba(219,232,255,0.15) 48%, rgba(24,26,34,0.96)),
+        linear-gradient(110deg, rgba(255,255,255,0.18), transparent 40%);
+    clip-path: polygon(14% 100%, 18% 18%, 50% 0, 82% 18%, 86% 100%);
+}
+.stele-monolith-pages .panel-left,
+.stele-monolith-pages .panel-right {
+    opacity: 0.46;
+}
+.stele-monolith-pages .stele-crown-gem {
+    background:
+        radial-gradient(circle at 42% 24%, #fff8dc 0 16%, transparent 17%),
+        linear-gradient(180deg, #e8f1ff, #d2b76d);
+    box-shadow: 0 0 24px rgba(210,228,255,0.34);
+}
+.stele-monolith-pages .stele-crown-break {
+    left: 31%;
+    top: 86px;
+    width: 70px;
+    height: 96px;
+    transform: rotate(-18deg);
+    opacity: 0.72;
+    background:
+        linear-gradient(72deg, transparent 0 50%, rgba(221,232,255,0.22) 50% 53%, transparent 53% 100%),
+        linear-gradient(115deg, transparent 0 42%, rgba(12,14,20,0.72) 42% 47%, transparent 47% 100%);
+}
+.stele-motif-pages {
+    top: 72px;
+    width: 262px;
+    height: 226px;
+}
+.stele-page-sheet {
+    position: absolute;
+    top: 42px;
+    width: 98px;
+    height: 142px;
+    border: 1px solid rgba(236,232,210,0.26);
+    border-radius: 18px 32px 14px 18px;
+    background:
+        linear-gradient(180deg, rgba(255,255,255,0.2), transparent 28%),
+        repeating-linear-gradient(180deg, transparent 0 22px, rgba(56,62,78,0.18) 22px 23px, transparent 23px 42px),
+        linear-gradient(135deg, rgba(233,228,204,0.9), rgba(146,163,185,0.82) 54%, rgba(55,62,77,0.96));
+    box-shadow:
+        0 24px 36px rgba(0,0,0,0.26),
+        inset 0 1px 0 rgba(255,255,255,0.2),
+        inset -16px 0 24px rgba(20,22,30,0.18);
+    transform-origin: 50% 100%;
+}
+.stele-page-sheet::before {
+    content: "";
+    position: absolute;
+    left: 18px;
+    right: 18px;
+    top: 30px;
+    height: 1px;
+    background: rgba(33,38,52,0.24);
+    box-shadow:
+        0 28px 0 rgba(33,38,52,0.2),
+        0 56px 0 rgba(33,38,52,0.16),
+        0 84px 0 rgba(33,38,52,0.12);
+}
+.page-left {
+    left: 30px;
+    transform: rotate(-17deg) skewY(-5deg);
+    opacity: 0.82;
+}
+.page-center {
+    left: 82px;
+    top: 26px;
+    width: 112px;
+    height: 168px;
+    transform: rotate(1deg);
+    z-index: 2;
+    border-radius: 24px 34px 18px 18px;
+}
+.page-right {
+    right: 26px;
+    transform: rotate(16deg) skewY(5deg);
+    opacity: 0.82;
+}
+.stele-page-thread {
+    position: absolute;
+    left: 50%;
+    top: 28px;
+    width: 2px;
+    height: 178px;
+    transform: translateX(-50%) rotate(3deg);
+    background:
+        linear-gradient(180deg, transparent, rgba(255,241,195,0.74) 18%, rgba(122,174,194,0.46) 64%, transparent);
+    box-shadow: 0 0 22px rgba(210,228,255,0.2);
+    z-index: 3;
+}
+.stele-page-thread::before,
+.stele-page-thread::after {
+    content: "";
+    position: absolute;
+    left: 50%;
+    width: 72px;
+    height: 1px;
+    transform-origin: 0 50%;
+    background: rgba(255,239,190,0.34);
+}
+.stele-page-thread::before {
+    top: 64px;
+    transform: rotate(-20deg);
+}
+.stele-page-thread::after {
+    top: 106px;
+    transform: rotate(23deg);
+}
+.stele-page-glow {
+    position: absolute;
+    left: 50%;
+    top: 38px;
+    width: 124px;
+    height: 162px;
+    transform: translateX(-50%);
+    background:
+        radial-gradient(ellipse at 50% 40%, rgba(224,236,255,0.34), transparent 48%),
+        linear-gradient(180deg, rgba(231,207,138,0.14), transparent 74%);
+    filter: blur(12px);
+    opacity: 0.88;
+}
 .stele-monolith-base {
     position: absolute;
     left: 50%;
@@ -4447,6 +4596,10 @@ body.eternal-stele-view-open .profile-toolbar {
         padding: 214px 20px 90px;
         border-radius: 54px 54px 26px 26px;
     }
+    .stele-monolith-title {
+        font-size: clamp(1.48rem, 8vw, 2rem);
+        overflow-wrap: anywhere;
+    }
     .stele-sanctum {
         padding-top: 14px;
         min-height: 620px;
@@ -4512,6 +4665,55 @@ body.eternal-stele-view-open .profile-toolbar {
     .stele-motif-base {
         width: 166px;
         height: 42px;
+    }
+    .stele-motif-pages {
+        top: 54px;
+        width: 204px;
+        height: 178px;
+    }
+    .stele-page-sheet {
+        top: 36px;
+        width: 74px;
+        height: 108px;
+        border-radius: 14px 24px 12px 14px;
+    }
+    .stele-page-sheet::before {
+        left: 14px;
+        right: 14px;
+        top: 24px;
+        box-shadow:
+            0 22px 0 rgba(33,38,52,0.2),
+            0 44px 0 rgba(33,38,52,0.16),
+            0 66px 0 rgba(33,38,52,0.12);
+    }
+    .page-left {
+        left: 24px;
+    }
+    .page-center {
+        left: 66px;
+        top: 22px;
+        width: 84px;
+        height: 132px;
+    }
+    .page-right {
+        right: 20px;
+    }
+    .stele-page-thread {
+        top: 24px;
+        height: 140px;
+    }
+    .stele-page-thread::before {
+        width: 54px;
+        top: 52px;
+    }
+    .stele-page-thread::after {
+        width: 54px;
+        top: 84px;
+    }
+    .stele-page-glow {
+        top: 32px;
+        width: 100px;
+        height: 128px;
     }
     .stele-monolith-foot {
         flex-direction: column;

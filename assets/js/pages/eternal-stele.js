@@ -2,33 +2,51 @@
 
 const ETERNAL_STELE_RECORDS = [
     {
+        motif: 'tomb',
         title: '\u81ea\u7531\u4e4b\u795e--\u66e6',
         subtitle: '\u661f\u9014 \u00b7 \u521d\u94ed\u591c\u6b4c',
         summary: '\u4f5c\u4e3a\u4fe1\u4ef0\u4e4b\u5730\u7684\u521d\u521b\u8005\uff0c\u66e6\u5386\u7ecf\u9ed1\u6697\u65f6\u4ee3\u7684\u538b\u8feb\u4e0e\u8840\u706b\uff0c\u72ec\u7acb\u6210\u957f\uff0c\u6700\u7ec8\u6210\u4e3a\u81ea\u7531\u4e4b\u795e\uff0c\u53d7\u4e07\u6c11\u656c\u4ef0\u3002',
         note: '\u6c38\u94ed\u6b64\u540d',
+    },
+    {
+        motif: 'pages',
+        title: '\u5fe7\u853c\u4e4b\u795e--\u5357\u6cb3\u4e66\u6dee',
+        subtitle: '\u524d\u8eab \u00b7 \u8bb0\u5fc6\u4e4b\u795e',
+        summary: '\u5357\u6cb3\u4e66\u6dee\u66fe\u638c\u8bb0\u5fc6\u4e4b\u4f4d\uff0c\u4ee5\u4e66\u9875\u627f\u63a5\u65e7\u65e5\u7684\u56de\u58f0\u3002\u98ce\u7ffb\u8fc7\u7684\u540d\u5b57\u4e0d\u4f1a\u6563\u5c3d\uff0c\u5b83\u4eec\u5728\u51a0\u4e0b\u6536\u62e2\uff0c\u5316\u4f5c\u6e29\u548c\u800c\u957f\u4e45\u7684\u5fe7\u853c\u3002',
+        note: '\u4e66\u9875\u4e0d\u706d',
     }
 ];
 
 let eternalSteleScrollY = 0;
 
-function renderEternalStelePage() {
-    const container = document.getElementById('eternalSteleContent');
-    if (!container) return;
-    const record = ETERNAL_STELE_RECORDS[0];
-    container.innerHTML = `
-        <section class="stele-hero stele-hero-silent">
-            <div class="stele-hero-copy">
-                <div class="stele-kicker">\u591c\u6b4c\u94ed\u523b</div>
-                <h1 class="stele-title">\u6c38\u6052\u795e\u7891</h1>
-            </div>
-        </section>
-        <section class="stele-sanctum" aria-label="\u6c38\u6052\u795e\u7891\u4e3b\u7891">
+function renderEternalSteleMotif(record) {
+    if (record.motif === 'pages') {
+        return `
+            <span class="stele-page-sheet page-left"></span>
+            <span class="stele-page-sheet page-center"></span>
+            <span class="stele-page-sheet page-right"></span>
+            <span class="stele-page-thread"></span>
+            <span class="stele-page-glow"></span>
+        `;
+    }
+    return `
+        <span class="stele-motif-stone"></span>
+        <span class="stele-motif-crack"></span>
+        <span class="stele-motif-light"></span>
+        <span class="stele-motif-base"></span>
+    `;
+}
+
+function renderEternalSteleRecord(record) {
+    const motifClass = record.motif === 'pages' ? 'stele-monolith-pages' : 'stele-monolith-tomb';
+    return `
+        <section class="stele-sanctum stele-sanctum-${escapeHtml(record.motif)}" aria-label="${escapeHtml(record.title)}">
             <div class="stele-sanctum-pillars" aria-hidden="true">
                 <span class="stele-pillar stele-pillar-left"></span>
                 <span class="stele-pillar stele-pillar-right"></span>
                 <span class="stele-sanctum-arch"></span>
             </div>
-            <div class="stele-monolith">
+            <div class="stele-monolith ${motifClass}">
                 <div class="stele-monolith-crown" aria-hidden="true">
                     <span class="stele-crown-halo"></span>
                     <span class="stele-crown-arc"></span>
@@ -42,11 +60,8 @@ function renderEternalStelePage() {
                     <span class="stele-crown-gem gem-right"></span>
                     <span class="stele-crown-break"></span>
                 </div>
-                <div class="stele-monolith-motif" aria-hidden="true">
-                    <span class="stele-motif-stone"></span>
-                    <span class="stele-motif-crack"></span>
-                    <span class="stele-motif-light"></span>
-                    <span class="stele-motif-base"></span>
+                <div class="stele-monolith-motif stele-motif-${escapeHtml(record.motif)}" aria-hidden="true">
+                    ${renderEternalSteleMotif(record)}
                 </div>
                 <div class="stele-monolith-head">
                     <div class="stele-monolith-heading">
@@ -63,6 +78,20 @@ function renderEternalStelePage() {
                 <div class="stele-monolith-base" aria-hidden="true"></div>
             </div>
         </section>
+    `;
+}
+
+function renderEternalStelePage() {
+    const container = document.getElementById('eternalSteleContent');
+    if (!container) return;
+    container.innerHTML = `
+        <section class="stele-hero stele-hero-silent">
+            <div class="stele-hero-copy">
+                <div class="stele-kicker">\u591c\u6b4c\u94ed\u523b</div>
+                <h1 class="stele-title">\u6c38\u6052\u795e\u7891</h1>
+            </div>
+        </section>
+        ${ETERNAL_STELE_RECORDS.map(renderEternalSteleRecord).join('')}
     `;
 }
 
