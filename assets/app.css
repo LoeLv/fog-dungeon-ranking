@@ -5507,6 +5507,22 @@ body.visual-effects-muted .profile-chronicle-card.is-rotating .profile-chronicle
     gap: 10px;
     margin-top: 12px;
 }
+.talent-control-row select,
+.talent-exchange-row select,
+.talent-slot-card select,
+.talent-overflow-card select {
+    width: 100%;
+    min-width: 0;
+    max-width: 100%;
+    box-sizing: border-box;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    background: rgba(0,0,0,0.4);
+    color: var(--text-bright);
+    font: inherit;
+}
 .score-preview-table {
     width: 100%;
     border-collapse: collapse;
@@ -7581,7 +7597,9 @@ body.visual-effects-muted .profile-chronicle-card.is-rotating .profile-chronicle
     .profile-mobile-section .talent-inventory-grid,
     .profile-mobile-section .talent-overflow-list,
     .profile-mobile-section .talent-slot-card,
-    .profile-mobile-section .talent-overflow-card {
+    .profile-mobile-section .talent-overflow-card,
+    .profile-mobile-section select,
+    .profile-mobile-section .btn {
         width: 100%;
         max-width: 100%;
         min-width: 0;
