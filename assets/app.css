@@ -3909,8 +3909,8 @@ button.is-action-ack {
 }
 .stele-hero {
     display: grid;
-    grid-template-columns: minmax(0, 1.2fr) minmax(240px, 0.62fr);
-    gap: 18px;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 12px;
     padding: 30px;
     border: 1px solid rgba(231,207,138,0.25);
     border-radius: 20px;
@@ -3953,6 +3953,7 @@ button.is-action-ack {
 .stele-hero-copy {
     position: relative;
     z-index: 1;
+    max-width: 720px;
 }
 .stele-kicker {
     color: #f9e8bd;
@@ -4162,9 +4163,9 @@ button.is-action-ack {
 .stele-crown-arc {
     position: absolute;
     left: 50%;
-    top: 72px;
-    width: 74%;
-    height: 92px;
+    top: 82px;
+    width: 78%;
+    height: 82px;
     transform: translateX(-50%) rotate(-1deg);
     border: 1px solid rgba(243,222,160,0.34);
     border-bottom-color: rgba(255,255,255,0.08);
@@ -4177,7 +4178,7 @@ button.is-action-ack {
         0 18px 36px rgba(0,0,0,0.26),
         inset 0 1px 0 rgba(255,255,255,0.12),
         inset 0 -18px 28px rgba(0,0,0,0.24);
-    clip-path: polygon(8% 42%, 18% 8%, 34% 26%, 50% 0, 66% 26%, 82% 8%, 92% 42%, 86% 100%, 14% 100%);
+    clip-path: polygon(6% 58%, 18% 24%, 36% 30%, 50% 6%, 64% 30%, 82% 24%, 94% 58%, 86% 100%, 14% 100%);
 }
 .stele-crown-arc::before,
 .stele-crown-arc::after {
@@ -4197,26 +4198,27 @@ button.is-action-ack {
     right: 13%;
     transform: rotate(-12deg);
 }
-.stele-crown-spike {
+.stele-crown-panel {
     position: absolute;
-    bottom: 88px;
-    width: 54px;
-    height: 122px;
+    bottom: 96px;
+    width: 82px;
+    height: 92px;
     background:
-        linear-gradient(180deg, rgba(255,248,220,0.34), rgba(243,222,160,0.14) 44%, rgba(24,26,34,0.96)),
-        linear-gradient(115deg, rgba(255,255,255,0.2), transparent 38%);
-    border: 1px solid rgba(243,222,160,0.3);
+        linear-gradient(180deg, rgba(255,248,220,0.32), rgba(243,222,160,0.12) 52%, rgba(24,26,34,0.96)),
+        linear-gradient(115deg, rgba(255,255,255,0.18), transparent 42%);
+    border: 1px solid rgba(243,222,160,0.28);
+    border-radius: 44px 44px 8px 8px;
     box-shadow:
-        0 -18px 38px rgba(255,230,171,0.12),
+        0 -14px 34px rgba(255,230,171,0.1),
         inset 0 1px 0 rgba(255,255,255,0.12);
-    clip-path: polygon(50% 0, 100% 100%, 0 100%);
+    clip-path: polygon(10% 100%, 22% 34%, 50% 0, 78% 34%, 90% 100%);
     transform-origin: 50% 100%;
 }
-.spike-left { left: 12%; height: 88px; transform: rotate(-18deg); opacity: 0.74; }
-.spike-mid-left { left: 28%; height: 116px; transform: rotate(-8deg); opacity: 0.9; }
-.spike-mid { left: calc(50% - 33px); width: 66px; height: 154px; bottom: 80px; opacity: 1; }
-.spike-mid-right { right: 28%; height: 116px; transform: rotate(8deg); opacity: 0.9; }
-.spike-right { right: 12%; height: 88px; transform: rotate(18deg); opacity: 0.74; }
+.panel-left { left: 12%; height: 58px; transform: rotate(-19deg); opacity: 0.58; }
+.panel-mid-left { left: 27%; height: 80px; transform: rotate(-8deg); opacity: 0.82; }
+.panel-mid { left: calc(50% - 48px); width: 96px; height: 118px; bottom: 88px; opacity: 1; }
+.panel-mid-right { right: 27%; height: 80px; transform: rotate(8deg); opacity: 0.82; }
+.panel-right { right: 12%; height: 58px; transform: rotate(19deg); opacity: 0.58; }
 .stele-crown-gem {
     position: absolute;
     bottom: 106px;
@@ -4464,28 +4466,28 @@ body.eternal-stele-view-open .profile-toolbar {
         height: 138px;
     }
     .stele-crown-arc {
-        top: 62px;
-        width: 78%;
-        height: 78px;
+        top: 66px;
+        width: 82%;
+        height: 70px;
     }
-    .stele-crown-spike {
-        bottom: 76px;
-        width: 38px;
-        height: 92px;
-    }
-    .spike-left,
-    .spike-right {
+    .stele-crown-panel {
+        bottom: 82px;
+        width: 54px;
         height: 68px;
     }
-    .spike-mid-left,
-    .spike-mid-right {
-        height: 88px;
+    .panel-left,
+    .panel-right {
+        height: 42px;
     }
-    .spike-mid {
-        left: calc(50% - 24px);
-        width: 48px;
-        height: 116px;
-        bottom: 70px;
+    .panel-mid-left,
+    .panel-mid-right {
+        height: 58px;
+    }
+    .panel-mid {
+        left: calc(50% - 32px);
+        width: 64px;
+        height: 88px;
+        bottom: 76px;
     }
     .stele-crown-gem {
         bottom: 88px;

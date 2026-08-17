@@ -4,9 +4,8 @@ const ETERNAL_STELE_RECORDS = [
     {
         title: '\u81ea\u7531\u4e4b\u795e--\u66e6',
         subtitle: '\u661f\u9014 \u00b7 \u521d\u94ed\u591c\u6b4c',
-        summary: '\u4e0d\u662f\u6392\u540d\uff0c\u800c\u662f\u88ab\u8bb0\u4f4f\u7684\u5f62\u72b6\u3002\u66e6\u7684\u60c5\u666f\u4ee5\u201c\u65ad\u51a0 + \u5893\u7891\u201d\u4e3a\u6838\u5fc3\uff0c\u5c06\u81ea\u7531\u3001\u6253\u7834\u4e0e\u7acb\u4f4f\u540c\u65f6\u653e\u5728\u4e00\u4e2a\u7eaf\u7c8e\u7684\u7eaa\u5ff5\u56fe\u8c61\u91cc\u3002',
+        summary: '\u4f5c\u4e3a\u4fe1\u4ef0\u4e4b\u5730\u7684\u521d\u521b\u8005\uff0c\u66e6\u5386\u7ecf\u9ed1\u6697\u65f6\u4ee3\u7684\u538b\u8feb\u4e0e\u8840\u706b\uff0c\u72ec\u7acb\u6210\u957f\uff0c\u6700\u7ec8\u6210\u4e3a\u81ea\u7531\u4e4b\u795e\uff0c\u53d7\u4e07\u6c11\u656c\u4ef0\u3002',
         note: '\u6c38\u94ed\u6b64\u540d',
-        motif: '\u738b\u51a0 + \u5893\u7891',
     }
 ];
 
@@ -21,11 +20,6 @@ function renderEternalStelePage() {
             <div class="stele-hero-copy">
                 <div class="stele-kicker">\u591c\u6b4c\u94ed\u523b</div>
                 <h1 class="stele-title">\u6c38\u6052\u795e\u7891</h1>
-                <p class="stele-lead">\u8fd9\u91cc\u6ca1\u6709\u6392\u884c\uff0c\u53ea\u6709\u88ab\u4fdd\u7559\u7684\u56fe\u5f62\u3002\u6bcf\u4e00\u5757\u7891\u90fd\u6709\u81ea\u5df1\u7684\u738b\u51a0\u4e0e\u7269\u4ef6\uff0c\u8c61\u5f81\u4e00\u6bb5\u4e0d\u8be5\u88ab\u5fd8\u8bb0\u7684\u603b\u548c\u3002</p>
-            </div>
-            <div class="stele-meta">
-                <div class="stele-stat"><span>\u7eaa\u5ff5\u72b6\u6001</span><strong>\u5df2\u94ed\u523b</strong></div>
-                <div class="stele-stat"><span>\u56fe\u5f62\u6bcd\u9898</span><strong>${escapeHtml(record.motif)}</strong></div>
             </div>
         </section>
         <section class="stele-sanctum" aria-label="\u6c38\u6052\u795e\u7891\u4e3b\u7891">
@@ -38,11 +32,11 @@ function renderEternalStelePage() {
                 <div class="stele-monolith-crown" aria-hidden="true">
                     <span class="stele-crown-halo"></span>
                     <span class="stele-crown-arc"></span>
-                    <span class="stele-crown-spike spike-left"></span>
-                    <span class="stele-crown-spike spike-mid-left"></span>
-                    <span class="stele-crown-spike spike-mid"></span>
-                    <span class="stele-crown-spike spike-mid-right"></span>
-                    <span class="stele-crown-spike spike-right"></span>
+                    <span class="stele-crown-panel panel-left"></span>
+                    <span class="stele-crown-panel panel-mid-left"></span>
+                    <span class="stele-crown-panel panel-mid"></span>
+                    <span class="stele-crown-panel panel-mid-right"></span>
+                    <span class="stele-crown-panel panel-right"></span>
                     <span class="stele-crown-gem gem-left"></span>
                     <span class="stele-crown-gem gem-center"></span>
                     <span class="stele-crown-gem gem-right"></span>
@@ -64,7 +58,6 @@ function renderEternalStelePage() {
                     <p>${escapeHtml(record.summary)}</p>
                 </div>
                 <div class="stele-monolith-foot">
-                    <span>${escapeHtml(record.motif)}</span>
                     <span>${escapeHtml(record.note)}</span>
                 </div>
                 <div class="stele-monolith-base" aria-hidden="true"></div>
