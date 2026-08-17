@@ -4022,6 +4022,51 @@ Deno.serve(async (req) => {
       const nextIdResult = talentIdInput ? { data: talentIdInput, error: null as LooseError } : await getNextTalentId(supabase, poolKey);
       if (nextIdResult.error) return json({ error: nextIdResult.error.message || "天赋编号分配失败" }, 400);
       const talentId = Number(nextIdResult.data || 1);
+      const originalTalentId = cleanTalentId(payload.originalTalentId);
+      if (originalTalentId && originalTalentId !== talentId) {
+        const beforeOriginalResult = await supabase
+          .from("talent_pool_items")
+          .select("pool_key, talent_id, talent_name, rank, effect, cooldown, action_cost, is_enabled, admin_note")
+          .eq("pool_key", poolKey)
+          .eq("talent_id", originalTalentId)
+          .maybeSingle();
+        if (beforeOriginalResult.error) return json({ error: beforeOriginalResult.error.message }, 400);
+        if (!beforeOriginalResult.data) return json({ error: "原天赋编号不存在，请刷新后再试" }, 404);
+        const conflictResult = await supabase
+          .from("talent_pool_items")
+          .select("pool_key, talent_id")
+          .eq("pool_key", poolKey)
+          .eq("talent_id", talentId)
+          .maybeSingle();
+        if (conflictResult.error) return json({ error: conflictResult.error.message }, 400);
+        if (conflictResult.data) return json({ error: `编号 ${talentId} 已存在，不能覆盖另一个天赋` }, 409);
+        const { error: renameError } = await supabase
+          .from("talent_pool_items")
+          .update({
+            talent_id: talentId,
+            talent_name: talentName,
+            rank,
+            effect,
+            cooldown,
+            action_cost: actionCost,
+            is_enabled: isEnabled,
+            admin_note: adminNote,
+            updated_by_hash: identity.codeHash,
+            updated_at: new Date().toISOString(),
+          })
+          .eq("pool_key", poolKey)
+          .eq("talent_id", originalTalentId);
+        if (renameError) return json({ error: renameError.message }, 400);
+        await writeAdminOperationLog(supabase, identity, {
+          action: "talent_pool.renumber",
+          objectType: "talent_pool_item",
+          objectId: `${poolKey}:${originalTalentId}->${talentId}`,
+          summary: `重编号 ${poolKey} #${originalTalentId} -> #${talentId} 天赋`,
+          beforeState: beforeOriginalResult.data || {},
+          afterState: { poolKey, originalTalentId, talentId, talentName, rank, effect, cooldown, actionCost, isEnabled, adminNote },
+        });
+        return json({ role, name: identity.displayName, data: { poolKey, talentId, talentName, rank, effect, cooldown, actionCost, isEnabled, adminNote } });
+      }
       const beforeResult = await supabase
         .from("talent_pool_items")
         .select("pool_key, talent_id, talent_name, rank, effect, cooldown, action_cost, is_enabled, admin_note")

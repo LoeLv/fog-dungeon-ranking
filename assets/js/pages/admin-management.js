@@ -911,6 +911,7 @@ async function adminSaveTalentPoolItem() {
 
 async function adminSaveTalentPoolItemFromModal() {
     const payload = getAdminTalentPayloadFromFields('adminTalentModal');
+    payload.originalTalentId = adminTalentEditingItem?.talentId || payload.talentId;
     setAdminManagementStatus('天赋保存处理中...', 'pending');
     try {
         const { error } = await invokeDungeonAction('adminUpsertTalentPoolItem', payload);
