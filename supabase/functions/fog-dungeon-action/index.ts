@@ -3956,17 +3956,18 @@ Deno.serve(async (req) => {
 
       const talentReset = await resetTalentStateAfterIdentityChange(supabase, targetHash);
       if (talentReset.error) return json({ error: talentReset.error.message || "身份变更后的天赋重置失败，请联系馆主检查" }, 400);
+      const profileUpdate: Record<string, unknown> = {
+        faith_god: nextFaithGod,
+        faith_path: nextFaithPath,
+        original_faith_god: nextFaithGod,
+        original_faith_path: nextFaithPath,
+        profession: nextProfession,
+        updated_at: new Date().toISOString(),
+      };
+      if (!professionOnly) profileUpdate.audience_score = 0;
       const { data: updatedProfile, error: updateError } = await supabase
         .from("player_profiles")
-        .update({
-          faith_god: nextFaithGod,
-          faith_path: nextFaithPath,
-          original_faith_god: nextFaithGod,
-          original_faith_path: nextFaithPath,
-          profession: nextProfession,
-          audience_score: 0,
-          updated_at: new Date().toISOString(),
-        })
+        .update(profileUpdate)
         .eq("invite_code_hash", targetHash)
         .select(godBelieverProfileSelect)
         .single();
@@ -4290,7 +4291,7 @@ Deno.serve(async (req) => {
       if (talentReset.error) return json({ error: talentReset.error.message || "职业变更后的天赋重置失败，请联系馆主检查" }, 400);
       const { data: updatedProfile, error: updateError } = await supabase
         .from("player_profiles")
-        .update({ profession: nextProfession, audience_score: 0, talents: "", updated_at: new Date().toISOString() })
+        .update({ profession: nextProfession, talents: "", updated_at: new Date().toISOString() })
         .eq("invite_code_hash", beforeHash)
         .select(godBelieverProfileSelect)
         .single();
