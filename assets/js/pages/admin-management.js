@@ -12,6 +12,7 @@ let adminManagementLoading = false;
 let adminTalentWarehouseLoading = false;
 let adminManagementView = 'overview';
 let adminMemberSearchQuery = '';
+let adminIdentityTargetQuery = '';
 let adminMemberSortMode = 'oldest';
 let adminMemberPage = 1;
 const adminMemberPageSize = 18;
@@ -48,6 +49,10 @@ function getAdminMemberLastSeenTime(member) {
     return Number.isNaN(timestamp) ? 0 : timestamp;
 }
 
+function getAdminAdjustableMembers() {
+    return adminMembers.filter(member => member?.isActive && member.role !== 'god');
+}
+
 function getAdminFilteredMembers() {
     const query = adminMemberSearchQuery.trim().toLowerCase();
     const filtered = adminMembers.filter(member => {
@@ -73,12 +78,16 @@ function getAdminFilteredMembers() {
     });
 }
 
+function getAdminMemberTotalPages(filteredCount = getAdminFilteredMembers().length) {
+    return Math.max(1, Math.ceil(filteredCount / adminMemberPageSize));
+}
+
 function clampAdminMemberPage(totalPages) {
     adminMemberPage = Math.max(1, Math.min(adminMemberPage, Math.max(1, totalPages)));
 }
 
 function renderAdminMemberToolbar(filteredCount = adminMembers.length) {
-    const totalPages = Math.max(1, Math.ceil(filteredCount / adminMemberPageSize));
+    const totalPages = getAdminMemberTotalPages(filteredCount);
     return `<div class="profile-form-grid" style="margin-bottom:12px;">
         <div class="form-group full">
             <label>搜索成员</label>
@@ -94,24 +103,26 @@ function renderAdminMemberToolbar(filteredCount = adminMembers.length) {
         <div class="form-group">
             <label>分页</label>
             <div class="profile-tools">
-                <button class="btn btn-outline btn-sm" onclick="adminSetMemberPage(${adminMemberPage - 1})" ${adminMemberPage <= 1 ? 'disabled' : ''}>上一页</button>
-                <button class="btn btn-outline btn-sm" onclick="adminSetMemberPage(${adminMemberPage + 1})" ${adminMemberPage >= totalPages ? 'disabled' : ''}>下一页</button>
+                <button id="adminMemberPrevBtn" class="btn btn-outline btn-sm" onclick="adminSetMemberPage(${adminMemberPage - 1})" ${adminMemberPage <= 1 ? 'disabled' : ''}>上一页</button>
+                <button id="adminMemberNextBtn" class="btn btn-outline btn-sm" onclick="adminSetMemberPage(${adminMemberPage + 1})" ${adminMemberPage >= totalPages ? 'disabled' : ''}>下一页</button>
             </div>
         </div>
-    </div>
-    <div class="identity-help">共 ${filteredCount} / ${adminMembers.length} 位成员，第 ${adminMemberPage} / ${totalPages} 页。未绑定成员固定排在最后。</div>`;
+        <div class="form-group full">
+            <div id="adminMemberToolbarMeta" class="identity-help">共 ${filteredCount} / ${adminMembers.length} 位成员，第 ${adminMemberPage} / ${totalPages} 页。未绑定成员固定排在最后。</div>
+        </div>
+    </div>`;
 }
 
 function renderAdminMemberRows() {
     if (adminManagementLoading) return '<div class="profile-empty">正在读取成员状态...</div>';
     if (!adminMembers.length) return renderRitualEmpty('暂无成员记录。', '真理', '名单为空');
     const filtered = getAdminFilteredMembers();
-    const totalPages = Math.max(1, Math.ceil(filtered.length / adminMemberPageSize));
+    const totalPages = getAdminMemberTotalPages(filtered.length);
     clampAdminMemberPage(totalPages);
     const start = (adminMemberPage - 1) * adminMemberPageSize;
     const pageItems = filtered.slice(start, start + adminMemberPageSize);
-    if (!pageItems.length) return renderAdminMemberToolbar(filtered.length) + renderRitualEmpty('没有匹配的成员。', '真理', '查询为空');
-    return renderAdminMemberToolbar(filtered.length) + pageItems.map(member => {
+    if (!pageItems.length) return renderRitualEmpty('没有匹配的成员。', '真理', '查询为空');
+    return pageItems.map(member => {
         const status = formatAdminMemberStatus(member);
         const seen = member.lastSeenAt ? formatAdminTime(member.lastSeenAt) : '从未记录';
         const boundLabel = isAdminMemberBound(member) ? '已绑定' : '未绑定';
@@ -132,24 +143,45 @@ function renderAdminMemberRows() {
     }).join('');
 }
 
+function updateAdminMemberToolbar() {
+    const filteredCount = getAdminFilteredMembers().length;
+    const totalPages = getAdminMemberTotalPages(filteredCount);
+    clampAdminMemberPage(totalPages);
+    const meta = document.getElementById('adminMemberToolbarMeta');
+    if (meta) meta.textContent = `共 ${filteredCount} / ${adminMembers.length} 位成员，第 ${adminMemberPage} / ${totalPages} 页。未绑定成员固定排在最后。`;
+    const prevBtn = document.getElementById('adminMemberPrevBtn');
+    if (prevBtn) {
+        prevBtn.disabled = adminMemberPage <= 1;
+        prevBtn.setAttribute('onclick', `adminSetMemberPage(${Math.max(1, adminMemberPage - 1)})`);
+    }
+    const nextBtn = document.getElementById('adminMemberNextBtn');
+    if (nextBtn) {
+        nextBtn.disabled = adminMemberPage >= totalPages;
+        nextBtn.setAttribute('onclick', `adminSetMemberPage(${Math.min(totalPages, adminMemberPage + 1)})`);
+    }
+}
+
+function refreshAdminMemberRows() {
+    const rows = document.getElementById('adminMemberRows');
+    if (rows) rows.innerHTML = renderAdminMemberRows();
+    updateAdminMemberToolbar();
+}
+
 function adminSetMemberSearch(value) {
     adminMemberSearchQuery = String(value || '');
     adminMemberPage = 1;
-    const rows = document.getElementById('adminMemberRows');
-    if (rows) rows.innerHTML = renderAdminMemberRows();
+    refreshAdminMemberRows();
 }
 
 function adminSetMemberSort(value) {
     adminMemberSortMode = value === 'newest' ? 'newest' : 'oldest';
     adminMemberPage = 1;
-    const rows = document.getElementById('adminMemberRows');
-    if (rows) rows.innerHTML = renderAdminMemberRows();
+    refreshAdminMemberRows();
 }
 
 function adminSetMemberPage(page) {
     adminMemberPage = Number(page) || 1;
-    const rows = document.getElementById('adminMemberRows');
-    if (rows) rows.innerHTML = renderAdminMemberRows();
+    refreshAdminMemberRows();
 }
 
 async function adminSetManagementView(view) {
@@ -362,24 +394,62 @@ function renderAdminManagementPanels() {
         <div class="profile-tools" style="margin-bottom:12px;">
             <button class="btn btn-primary btn-sm" data-admin-members-refresh onclick="adminLoadMembers(true)">刷新成员</button>
         </div>
+        <div id="adminMemberToolbar">${renderAdminMemberToolbar()}</div>
         <div id="adminMemberRows" class="profile-list">${renderAdminMemberRows()}</div>
     </section>`;
 }
 
+function getAdminIdentityTargetMember() {
+    const query = cleanDisplayNameInput(adminIdentityTargetQuery || document.getElementById('adminIdentityTargetName')?.value || '');
+    if (!query) return null;
+    const members = getAdminAdjustableMembers();
+    return members.find(member => String(member.displayName || '').toLowerCase() === query.toLowerCase()) || null;
+}
+
 function renderAdminIdentityTargetOptions() {
-    return adminMembers
-        .filter(member => member.isActive && member.role !== 'god')
-        .map(member => `<option value="${escapeHtml(member.codeHash)}">${escapeHtml(member.displayName || '未命名')} · ${escapeHtml(member.faithGod || '未定信仰')} · ${escapeHtml(member.profession || '未定职业')}</option>`)
+    return getAdminAdjustableMembers()
+        .map(member => {
+            const label = `${member.displayName || '未命名'} · ${member.faithGod || '未定信仰'} · ${member.profession || '未定职业'}`;
+            return `<option value="${escapeHtml(member.displayName || '')}" label="${escapeHtml(label)}"></option>`;
+        })
         .join('');
 }
 
+function renderAdminIdentityFaithOptions(selected = '') {
+    const cleanSelected = cleanGodName(selected);
+    return `<option value="">请选择信仰</option>` + GOD_GROUPS.flatMap(group => group.gods).map(god =>
+        `<option value="${escapeHtml(god)}" ${god === cleanSelected ? 'selected' : ''}>${escapeHtml(god)} · ${escapeHtml(getGodInfo(god).path || '')}</option>`
+    ).join('');
+}
+
+function updateAdminIdentityTargetHint() {
+    const hint = document.getElementById('adminIdentityTargetHint');
+    if (!hint) return;
+    const target = getAdminIdentityTargetMember();
+    if (!adminIdentityTargetQuery.trim()) {
+        hint.textContent = `共 ${getAdminAdjustableMembers().length} 位可调整成员，可直接输入昵称搜索。`;
+        return;
+    }
+    if (!target) {
+        hint.textContent = `未找到 ${adminIdentityTargetQuery.trim()}，请从候选列表中选中完整昵称。`;
+        return;
+    }
+    hint.textContent = `${target.displayName} · ${target.faithGod || '未定信仰'} · ${target.profession || '未定职业'} · ${target.role || 'player'}`;
+}
+
 function renderAdminIdentityPanel() {
+    const target = getAdminIdentityTargetMember() || getAdminAdjustableMembers()[0] || null;
+    const targetName = target?.displayName || adminIdentityTargetQuery || '';
+    const targetFaith = target?.faithGod || '';
+    const targetProfession = target?.profession || '';
     return `<section class="profile-panel" data-god="真理" style="${getGodSkinStyle('真理')}">
         <div class="profile-panel-title"><span>信仰与职业调整</span><small>调整后会清空天赋、碎片并返还已用抽数</small></div>
         <div class="profile-form-grid">
             <div class="form-group full">
                 <label>目标成员</label>
-                <select id="adminIdentityTarget" onchange="syncAdminIdentitySelection()">${renderAdminIdentityTargetOptions() || '<option value="">暂无可调整成员</option>'}</select>
+                <input id="adminIdentityTargetName" list="adminIdentityTargetList" maxlength="40" value="${escapeHtml(targetName)}" placeholder="输入昵称搜索信徒" oninput="adminIdentityTargetQuery = this.value; syncAdminIdentitySelection();">
+                <datalist id="adminIdentityTargetList">${renderAdminIdentityTargetOptions()}</datalist>
+                <div id="adminIdentityTargetHint" class="identity-help"></div>
             </div>
             <div class="form-group">
                 <label>调整方式</label>
@@ -390,11 +460,11 @@ function renderAdminIdentityPanel() {
             </div>
             <div class="form-group">
                 <label>新信仰</label>
-                <select id="adminIdentityFaith" onchange="updateAdminIdentityProfessionOptions()">${renderGodSelectOptions()}</select>
+                <select id="adminIdentityFaith" onchange="updateAdminIdentityProfessionOptions()">${renderAdminIdentityFaithOptions(targetFaith)}</select>
             </div>
             <div class="form-group">
                 <label>新职业</label>
-                <select id="adminIdentityProfession">${renderProfileProfessionOptions(adminMembers[0]?.profession || '', adminMembers[0]?.faithGod || '')}</select>
+                <select id="adminIdentityProfession">${renderProfileProfessionOptions(targetProfession || '', targetFaith || '')}</select>
             </div>
         </div>
         <div class="profile-tools">
@@ -404,17 +474,20 @@ function renderAdminIdentityPanel() {
 }
 
 function syncAdminIdentitySelection() {
-    const target = adminMembers.find(member => member.codeHash === document.getElementById('adminIdentityTarget')?.value);
+    const target = getAdminIdentityTargetMember();
     const mode = document.getElementById('adminIdentityMode')?.value || 'faith_and_profession';
     const faithSelect = document.getElementById('adminIdentityFaith');
-    if (target && mode === 'profession' && faithSelect) faithSelect.value = target.faithGod || '';
+    const targetNameInput = document.getElementById('adminIdentityTargetName');
+    if (targetNameInput && target && target.displayName !== targetNameInput.value) targetNameInput.value = target.displayName || '';
+    if (target && faithSelect && (mode === 'profession' || !faithSelect.value)) faithSelect.value = target.faithGod || '';
     if (faithSelect) faithSelect.disabled = mode === 'profession';
     updateAdminIdentityProfessionOptions();
+    updateAdminIdentityTargetHint();
 }
 
 function updateAdminIdentityProfessionOptions() {
-    const faith = cleanGodName(document.getElementById('adminIdentityFaith')?.value || '');
-    const target = adminMembers.find(member => member.codeHash === document.getElementById('adminIdentityTarget')?.value);
+    const target = getAdminIdentityTargetMember();
+    const faith = cleanGodName(document.getElementById('adminIdentityFaith')?.value || '') || cleanGodName(target?.faithGod || '');
     const current = target?.profession || '';
     const select = document.getElementById('adminIdentityProfession');
     if (!select) return;
@@ -424,8 +497,8 @@ function updateAdminIdentityProfessionOptions() {
 
 async function adminChangeMemberIdentityUI() {
     if (!isAdmin()) { showToast('只有馆主可以调整成员信仰和职业'); return; }
-    const targetHash = document.getElementById('adminIdentityTarget')?.value || '';
-    const target = adminMembers.find(member => member.codeHash === targetHash);
+    const target = getAdminIdentityTargetMember();
+    const targetHash = target?.codeHash || '';
     const changeMode = document.getElementById('adminIdentityMode')?.value === 'profession' ? 'profession' : 'faith_and_profession';
     const faithGod = cleanGodName(document.getElementById('adminIdentityFaith')?.value || '');
     const profession = normalizeProfession(document.getElementById('adminIdentityProfession')?.value || '');
@@ -514,8 +587,14 @@ async function adminLoadMembers(showResult = false) {
         if (showResult) showToast(`已读取 ${adminMembers.length} 位成员`);
     } finally {
         adminManagementLoading = false;
+        const toolbar = document.getElementById('adminMemberToolbar');
+        if (toolbar) toolbar.innerHTML = renderAdminMemberToolbar();
         const target = document.getElementById('adminMemberRows');
         if (target) target.innerHTML = renderAdminMemberRows();
+        updateAdminMemberToolbar();
+        updateAdminIdentityTargetHint();
+        const identityList = document.getElementById('adminIdentityTargetList');
+        if (identityList) identityList.innerHTML = renderAdminIdentityTargetOptions();
         const roleTarget = document.getElementById('adminRoleTarget');
         if (roleTarget) {
             roleTarget.innerHTML = adminMembers
