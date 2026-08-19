@@ -188,11 +188,21 @@ function getTalentEffectText(state, talent) {
         String(item.rank || '').toUpperCase() === rank
     );
     return String(
-        talent.effect ||
         byId?.effect ||
+        talent.effect ||
         byName?.effect ||
         ''
     ).trim();
+}
+
+function getCanonicalTalent(state, talent) {
+    if (!talent) return talent;
+    const poolKey = String(talent.pool_key || talent.poolKey || '');
+    const talentId = Number(talent.talent_id || talent.talentId || 0);
+    const canonical = (state.poolItems || []).find(item =>
+        item.pool_key === poolKey && Number(item.talent_id) === talentId
+    );
+    return canonical ? { ...talent, talent_name: canonical.talent_name, rank: canonical.rank } : talent;
 }
 
 function formatTalentEffectSummary(effect, maxLength = 28) {
@@ -357,7 +367,7 @@ function renderTalentWarehouse(state, god = getProfileFaithGod(getCurrentProfile
         </div>
         <div class="talent-inventory-grid">${Array.from({ length: limit }, (_, index) => {
         const slot = index + 1;
-        const talent = byStorageSlot.get(slot);
+        const talent = getCanonicalTalent(state, byStorageSlot.get(slot));
         if (!talent) {
             return `
                 <div class="talent-slot-card empty">
@@ -604,13 +614,16 @@ function getProfileExportPayload() {
     const equippedTalents = (state.ownedTalents || [])
         .filter(talent => Number(talent.equipped_slot || 0) > 0)
         .sort((a, b) => Number(a.equipped_slot || 0) - Number(b.equipped_slot || 0))
-        .map(talent => ({
-            slot: Number(talent.equipped_slot || 0),
-            name: String(talent.talent_name || ''),
-            rank: String(talent.rank || ''),
-            pool: formatTalentPoolLabel(talent.pool_key),
-            effect: getTalentEffectText(state, talent),
-        }));
+        .map(talent => {
+            const canonical = getCanonicalTalent(state, talent);
+            return {
+                slot: Number(canonical.equipped_slot || 0),
+                name: String(canonical.talent_name || ''),
+                rank: String(canonical.rank || ''),
+                pool: formatTalentPoolLabel(canonical.pool_key),
+                effect: getTalentEffectText(state, canonical),
+            };
+        });
     return {
         displayName,
         faithGod,

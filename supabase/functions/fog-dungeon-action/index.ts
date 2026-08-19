@@ -2169,7 +2169,20 @@ async function buildTalentState(
     .order("storage_slot", { ascending: true });
   if (ownedResult.error?.code === "42703") return { error: { ...ownedResult.error, message: "请先运行 talent_s_choice_slot_20260817.sql" } };
   if (ownedResult.error) return { error: ownedResult.error };
-  ownedTalents = (ownedResult.data || []).filter((item) => item.storage_slot || item.equipped_slot || item.s_slot);
+  const canonicalTalentByKey = new Map(
+    poolItems.map((item) => [`${item.pool_key}:${Number(item.talent_id)}`, item]),
+  );
+  ownedTalents = (ownedResult.data || [])
+    .filter((item) => item.storage_slot || item.equipped_slot || item.s_slot)
+    .map((item) => {
+      const canonical = canonicalTalentByKey.get(`${item.pool_key}:${Number(item.talent_id)}`);
+      if (!canonical) return item;
+      return {
+        ...item,
+        talent_name: canonical.talent_name,
+        rank: canonical.rank,
+      };
+    });
 
   let drawLogs: {
     pool_key: string;
