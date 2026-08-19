@@ -3,7 +3,8 @@
 --   - clears all owned talents, overflow choices, S choices, draw logs,
 --     exchange logs, and pool counters for current 欺诈 believers;
 --   - refunds every spent draw by resetting draw-state spent counters;
---   - preserves faith, profession, ascension score, audience score, and fragments.
+--   - clears fragments;
+--   - preserves faith, profession, ascension score, and audience score.
 -- Run the whole script from the top in Supabase SQL Editor.
 
 -- Preview the exact accounts and talent state that will be affected.
@@ -23,7 +24,7 @@ select
   coalesce(s.advanced_spent_draws, 0) as advanced_spent_draws,
   coalesce(s.event_basic_spent_draws, 0) as event_basic_spent_draws,
   coalesce(s.event_advanced_spent_draws, 0) as event_advanced_spent_draws,
-  coalesce(f.fragment_total, 0) as fragments_preserved
+  coalesce(f.fragment_total, 0) as fragments_before_reset
 from public.player_profiles p
 left join public.talent_draw_state s on s.invite_code_hash = p.invite_code_hash
 left join public.user_fragments f on f.invite_code_hash = p.invite_code_hash
@@ -85,9 +86,17 @@ set
 where p.faith_god = '欺诈'
    or p.original_faith_god = '欺诈';
 
+update public.user_fragments f
+set
+  fragment_total = 0,
+  updated_at = now()
+from public.player_profiles p
+where f.invite_code_hash = p.invite_code_hash
+  and (p.faith_god = '欺诈' or p.original_faith_god = '欺诈');
+
 commit;
 
--- Verify that talent state is empty and scores/fragments were not modified here.
+-- Verify that talent state and fragments are empty while scores remain.
 select
   p.display_name,
   coalesce((select count(*) from public.owned_talents o
@@ -101,7 +110,7 @@ select
   coalesce(s.advanced_spent_draws, 0) as advanced_spent_draws_remaining,
   p.ascension_score,
   p.audience_score,
-  coalesce(f.fragment_total, 0) as fragments_preserved
+  coalesce(f.fragment_total, 0) as fragments_remaining
 from public.player_profiles p
 left join public.talent_draw_state s on s.invite_code_hash = p.invite_code_hash
 left join public.user_fragments f on f.invite_code_hash = p.invite_code_hash
