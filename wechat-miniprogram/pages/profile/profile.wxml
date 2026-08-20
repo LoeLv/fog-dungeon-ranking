@@ -1,0 +1,94 @@
+<view class="page profile-page">
+  <view class="section profile-hero">
+    <view class="hero-mark">信徒档案</view>
+    <text class="title">{{profile.displayName}}</text>
+    <view class="hero-meta">
+      <text class="pill">{{profile.roleLabel}}</text>
+      <text class="muted">{{profile.faithPath}} · {{profile.faithGod}}</text>
+    </view>
+  </view>
+
+  <view wx:if="{{loading}}" class="empty">正在读取云端档案...</view>
+
+  <view wx:elif="{{errorMessage}}" class="panel error-panel">
+    <text class="muted">{{errorMessage}}</text>
+    <view class="button-row">
+      <button class="btn btn-primary" bindtap="loadProfile">重试</button>
+      <button class="btn btn-ghost" bindtap="logout">重新验证</button>
+    </view>
+  </view>
+
+  <block wx:elif="{{profile}}">
+    <view wx:if="{{!profile.hasProfile}}" class="section empty">
+      你还没有在主站保存个人档案。小程序一期只负责展示，资料请回主站完善。
+    </view>
+
+    <view class="section score-grid">
+      <view class="score-card">
+        <text class="score-label">登神之路</text>
+        <text class="score-value">{{profile.ascensionScore}}</text>
+      </view>
+      <view class="score-card">
+        <text class="score-label">觐见之梯</text>
+        <text class="score-value">{{profile.audienceScore}}</text>
+      </view>
+    </view>
+
+    <view class="section panel">
+      <view class="section-heading">
+        <text class="panel-title">信仰与职业</text>
+        <text class="muted">{{profile.profession}}</text>
+      </view>
+      <view class="detail-row">
+        <text class="detail-label">信仰命途</text>
+        <text class="detail-value">{{profile.faithPath}}</text>
+      </view>
+      <view class="detail-row">
+        <text class="detail-label">信仰神明</text>
+        <text class="detail-value">{{profile.faithGod}}</text>
+      </view>
+      <view class="detail-row">
+        <text class="detail-label">当前职业</text>
+        <text class="detail-value">{{profile.profession}}</text>
+      </view>
+    </view>
+
+    <view class="section panel">
+      <view class="section-heading">
+        <text class="panel-title">称号与诅咒</text>
+        <text class="muted">只读展示</text>
+      </view>
+      <view wx:if="{{profile.titles.length}}" class="tag-line">
+        <text wx:for="{{profile.titles}}" wx:key="*this" class="honor-tag title-tag">{{item}}</text>
+      </view>
+      <text wx:else class="muted">暂无生效称号</text>
+      <view wx:if="{{profile.curses.length}}" class="tag-line curse-line">
+        <text wx:for="{{profile.curses}}" wx:key="*this" class="honor-tag curse-tag">{{item}}</text>
+      </view>
+      <text wx:else class="muted curse-empty">暂无生效诅咒</text>
+    </view>
+
+    <view class="section panel">
+      <view class="section-heading">
+        <text class="panel-title">道具</text>
+        <text class="muted">主站档案</text>
+      </view>
+      <text class="record-text">{{profile.items}}</text>
+    </view>
+
+    <view class="section panel">
+      <view class="section-heading">
+        <text class="panel-title">天赋记录</text>
+        <text class="muted">主站档案</text>
+      </view>
+      <text class="record-text">{{profile.talents}}</text>
+    </view>
+
+    <view wx:if="{{profile.updatedAt}}" class="updated-note">档案更新时间：{{profile.updatedAt}}</view>
+  </block>
+
+  <view class="button-row profile-actions">
+    <button class="btn btn-ghost" loading="{{refreshing}}" bindtap="loadProfile">刷新档案</button>
+    <button class="btn btn-primary" bindtap="backToMatch">回到召集</button>
+  </view>
+</view>

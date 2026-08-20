@@ -1,4 +1,5 @@
 const config = require("./config");
+const sessionStore = require("./session");
 
 function normalizeError(error) {
   if (!error) return "请求失败";
@@ -8,11 +9,29 @@ function normalizeError(error) {
   return "请求失败";
 }
 
+function createResponseError(body, statusCode) {
+  const error = new Error(body.error || body.message || ("请求失败：" + statusCode));
+  error.code = body.code || "";
+  error.statusCode = statusCode;
+  return error;
+}
+
 function invokeDungeonAction(action, inviteCode, payload) {
   return new Promise(function(resolve, reject) {
     if (!inviteCode) {
       reject(new Error("请先输入入局邀请码"));
       return;
+    }
+
+    const currentSession = sessionStore.getSession();
+    const requestBody = {
+      action: action,
+      inviteCode: inviteCode,
+      payload: payload || {},
+      deviceKind: sessionStore.DEVICE_KIND
+    };
+    if (currentSession && currentSession.sessionId) {
+      requestBody.sessionId = currentSession.sessionId;
     }
 
     wx.request({
@@ -23,11 +42,7 @@ function invokeDungeonAction(action, inviteCode, payload) {
         "apikey": config.SUPABASE_ANON_KEY,
         "Authorization": "Bearer " + config.SUPABASE_ANON_KEY
       },
-      data: {
-        action: action,
-        inviteCode: inviteCode,
-        payload: payload || {}
-      },
+      data: requestBody,
       success: function(response) {
         const body = response.data || {};
         const statusCode = Number(response.statusCode || 0);
@@ -35,7 +50,11 @@ function invokeDungeonAction(action, inviteCode, payload) {
           resolve(body);
           return;
         }
-        reject(new Error(body.error || body.message || ("请求失败：" + statusCode)));
+        const error = createResponseError(body, statusCode);
+        if (error.code === "session_invalid") {
+          sessionStore.clearSession();
+        }
+        reject(error);
       },
       fail: function(error) {
         reject(new Error(normalizeError(error)));
@@ -48,8 +67,15 @@ function verifyInvite(inviteCode) {
   return invokeDungeonAction("verifyInvite", inviteCode, {});
 }
 
-function listMatchDungeons(inviteCode, limit) {
-  return invokeDungeonAction("listMatchDungeons", inviteCode, { limit: limit || 80 });
+function getMyProfile(inviteCode) {
+  return invokeDungeonAction("getMyProfile", inviteCode, {});
+}
+
+function listMatchDungeons(inviteCode, limit, keyword) {
+  return invokeDungeonAction("listMatchDungeons", inviteCode, {
+    limit: limit || 80,
+    keyword: keyword || ""
+  });
 }
 
 function getMatchState(inviteCode, dungeonId) {
@@ -64,10 +90,20 @@ function cancelMatchQueue(inviteCode, dungeonId) {
   return invokeDungeonAction("cancelMatchQueue", inviteCode, { dungeonId: dungeonId });
 }
 
-function startMatchMuster(inviteCode, dungeonId, durationSeconds) {
+function startMatchMuster(inviteCode, dungeonId, durationSeconds, options) {
+  const config = options || {};
   return invokeDungeonAction("startMatchMuster", inviteCode, {
     dungeonId: dungeonId,
-    durationSeconds: durationSeconds || 60
+    durationSeconds: durationSeconds || 60,
+    targetPlayerCount: config.targetPlayerCount || null,
+    requiredPlayerNames: config.requiredPlayerNames || []
+  });
+}
+
+function searchMusterPlayers(inviteCode, keyword, limit) {
+  return invokeDungeonAction("searchMusterPlayers", inviteCode, {
+    keyword: keyword || "",
+    limit: limit || 20
   });
 }
 
@@ -90,11 +126,13 @@ function drawMatchMuster(inviteCode, musterId) {
 module.exports = {
   invokeDungeonAction: invokeDungeonAction,
   verifyInvite: verifyInvite,
+  getMyProfile: getMyProfile,
   listMatchDungeons: listMatchDungeons,
   getMatchState: getMatchState,
   joinMatchQueue: joinMatchQueue,
   cancelMatchQueue: cancelMatchQueue,
   startMatchMuster: startMatchMuster,
+  searchMusterPlayers: searchMusterPlayers,
   getMatchMuster: getMatchMuster,
   joinMatchMuster: joinMatchMuster,
   cancelMatchMuster: cancelMatchMuster,

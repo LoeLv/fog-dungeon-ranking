@@ -1,6 +1,8 @@
 {
   "pages": [
     "pages/match/match",
+    "pages/room/room",
+    "pages/profile/profile",
     "pages/login/login"
   ],
   "window": {

@@ -33,6 +33,9 @@ Page({
           code: code,
           role: result.role,
           name: result.name || "入局信徒",
+          permissions: result.permissions || [],
+          sessionId: result.sessionId || "",
+          deviceKind: result.deviceKind || session.DEVICE_KIND,
           savedAt: Date.now()
         };
         session.setSession(nextSession);

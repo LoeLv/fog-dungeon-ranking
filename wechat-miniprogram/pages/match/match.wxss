@@ -6,6 +6,16 @@
   padding: 18rpx 2rpx 6rpx;
 }
 
+.hero > view:first-child {
+  flex: 1;
+  min-width: 0;
+}
+
+.hero-actions {
+  display: flex;
+  gap: 10rpx;
+}
+
 .hero .title {
   margin-bottom: 8rpx;
 }
@@ -58,33 +68,62 @@
   line-height: 1.5;
 }
 
+.search-panel {
+  background: #fffaf0;
+}
+
+.search-row {
+  display: flex;
+  gap: 14rpx;
+  margin-top: 18rpx;
+}
+
+.search-input {
+  flex: 1;
+}
+
+.search-button {
+  min-width: 128rpx;
+}
+
+.search-note {
+  display: block;
+  margin-top: 14rpx;
+}
+
+.search-tools {
+  margin-top: 18rpx;
+}
+
 .list-head {
   margin-top: 8rpx;
   margin-bottom: 14rpx;
-}
-
-.dungeon-scroll {
-  width: 100%;
-  white-space: nowrap;
-}
-
-.dungeon-row {
-  display: flex;
-  gap: 18rpx;
-  padding: 2rpx 2rpx 12rpx;
 }
 
 .dungeon-card {
   display: inline-flex;
   flex-direction: column;
   justify-content: space-between;
-  width: 520rpx;
   min-height: 190rpx;
   padding: 22rpx;
   border: 1rpx solid rgba(72, 45, 25, 0.18);
   border-radius: 8rpx;
   background: #fffaf0;
   vertical-align: top;
+}
+
+.dungeon-list {
+  display: grid;
+  gap: 18rpx;
+}
+
+.dungeon-card-block {
+  display: block;
+  width: 100%;
+}
+
+.dungeon-card-head {
+  align-items: flex-start;
 }
 
 .dungeon-card.active {

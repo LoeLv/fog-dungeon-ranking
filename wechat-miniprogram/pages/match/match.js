@@ -8,7 +8,7 @@ const ROLE_LABELS = {
   admin: "神谕馆主"
 };
 
-const MUSTER_DURATION_SECONDS = 60;
+const MUSTER_DURATION_SECONDS = 120;
 
 function toNumber(value, fallback) {
   const number = Number(value);
@@ -109,6 +109,10 @@ Page({
     sessionName: "",
     sessionRoleLabel: "",
     dungeons: [],
+    searchKeyword: "",
+    searchedKeyword: "",
+    searchedOnce: false,
+    searching: false,
     selectedDungeonId: "",
     selectedDungeon: null,
     activeMusterId: "",
@@ -138,6 +142,17 @@ Page({
     errorMessage: ""
   },
 
+  handleRequestError: function(error, fallbackMessage) {
+    if (error && error.code === "session_invalid") {
+      this.stopTimer();
+      wx.showToast({ title: "登录已失效，请重新验证", icon: "none" });
+      wx.redirectTo({ url: "/pages/login/login" });
+      return true;
+    }
+    this.setData({ errorMessage: (error && error.message) || fallbackMessage });
+    return false;
+  },
+
   onLoad: function(options) {
     const current = sessionStore.getSession();
     const sharedMusterId = options && options.musterId ? String(options.musterId) : "";
@@ -161,7 +176,7 @@ Page({
     if (sharedMusterId) {
       this.loadMuster(sharedMusterId);
     } else {
-      this.loadDungeons();
+      this.resetSearchState();
     }
   },
 
@@ -188,20 +203,80 @@ Page({
     };
   },
 
-  refreshCurrent: function() {
-    if (this.data.activeMusterId) return this.loadMuster(this.data.activeMusterId);
-    return this.loadDungeons();
+  openProfile: function() {
+    wx.navigateTo({ url: "/pages/profile/profile" });
   },
 
-  loadDungeons: function() {
+  refreshCurrent: function() {
+    if (this.data.activeMusterId) return this.loadMuster(this.data.activeMusterId);
+    if (!this.data.searchKeyword) return Promise.resolve();
+    return this.searchDungeons();
+  },
+
+  resetSearchState: function() {
+    this.stopTimer();
+    this.setData({
+      loading: false,
+      refreshing: false,
+      searching: false,
+      dungeons: [],
+      searchedOnce: false,
+      searchedKeyword: "",
+      selectedDungeonId: "",
+      selectedDungeon: null,
+      activeMusterId: "",
+      activeMuster: null,
+      activeDungeon: null,
+      participants: [],
+      joinedParticipants: [],
+      selectedPlayers: [],
+      notSelectedPlayers: [],
+      roomPlayers: [],
+      joinedCount: 0,
+      selectedCount: 0,
+      myStatus: "none",
+      isCreator: false,
+      myStatusLabel: "未报名",
+      musterStatusLabel: "未发起",
+      canJoin: false,
+      canCancel: false,
+      canShare: false,
+      canDraw: false,
+      errorMessage: ""
+    });
+  },
+
+  onSearchInput: function(event) {
+    this.setData({ searchKeyword: event.detail.value || "" });
+  },
+
+  clearSearch: function() {
+    this.setData({
+      searchKeyword: "",
+      searchedKeyword: "",
+      searchedOnce: false,
+      dungeons: [],
+      selectedDungeonId: "",
+      selectedDungeon: null,
+      errorMessage: ""
+    });
+  },
+
+  searchDungeons: function() {
     if (!this.currentSession || !this.currentSession.code) {
       wx.redirectTo({ url: "/pages/login/login" });
       return Promise.resolve();
     }
 
+    const keyword = String(this.data.searchKeyword || "").trim();
+    if (!keyword) {
+      wx.showToast({ title: "请输入副本名称", icon: "none" });
+      return Promise.resolve();
+    }
+
     this.stopTimer();
-    this.setData({ loading: !this.data.dungeons.length, refreshing: true, errorMessage: "" });
-    return api.listMatchDungeons(this.currentSession.code, 80)
+    this.setData({ loading: false, searching: true, refreshing: true, errorMessage: "" });
+    return api.listMatchDungeons(this.currentSession.code, 30, keyword)
       .then(function(result) {
         const dungeons = (result.data || []).map(normalizeDungeon);
         const selectedDungeonId = this.data.selectedDungeonId && dungeons.some(function(item) {
@@ -213,6 +288,8 @@ Page({
 
         this.setData({
           dungeons: dungeons,
+          searchedOnce: true,
+          searchedKeyword: keyword,
           selectedDungeonId: selectedDungeonId,
           selectedDungeon: selectedDungeon,
           activeMusterId: "",
@@ -236,10 +313,10 @@ Page({
         });
       }.bind(this))
       .catch(function(error) {
-        this.setData({ errorMessage: error.message || "试炼列表读取失败" });
+        this.handleRequestError(error, "试炼列表读取失败");
       }.bind(this))
       .finally(function() {
-        this.setData({ loading: false, refreshing: false });
+        this.setData({ loading: false, refreshing: false, searching: false });
       }.bind(this));
   },
 
@@ -251,7 +328,7 @@ Page({
         this.applyMusterState(normalizeMusterState(result.data));
       }.bind(this))
       .catch(function(error) {
-        this.setData({ errorMessage: error.message || "召集读取失败" });
+        this.handleRequestError(error, "召集读取失败");
       }.bind(this))
       .finally(function() {
         this.setData({ loading: false, stateLoading: false });
@@ -316,7 +393,17 @@ Page({
     const selectedDungeon = this.data.dungeons.find(function(item) {
       return item.id === dungeonId;
     }) || null;
-    this.setData({ selectedDungeonId: dungeonId, selectedDungeon: selectedDungeon });
+    if (!selectedDungeon) return;
+    const query = [
+      "dungeonId=" + encodeURIComponent(selectedDungeon.id),
+      "name=" + encodeURIComponent(selectedDungeon.name || ""),
+      "creator=" + encodeURIComponent(selectedDungeon.creator || ""),
+      "type=" + encodeURIComponent(selectedDungeon.typeLabel || ""),
+      "difficulty=" + encodeURIComponent(selectedDungeon.difficultyLabel || ""),
+      "targetCount=" + encodeURIComponent(String(selectedDungeon.targetCount || 1)),
+      "isOneShot=" + encodeURIComponent(selectedDungeon.isOneShot ? "1" : "0")
+    ].join("&");
+    wx.navigateTo({ url: "/pages/room/room?" + query });
   },
 
   startMuster: function() {
@@ -331,8 +418,9 @@ Page({
         wx.showToast({ title: "召集已发起，点分享发到群", icon: "none" });
       }.bind(this))
       .catch(function(error) {
+        if (this.handleRequestError(error, "发起失败")) return;
         wx.showToast({ title: error.message || "发起失败", icon: "none" });
-      })
+      }.bind(this))
       .finally(function() {
         this.setData({ actionLoading: false });
       }.bind(this));
@@ -349,8 +437,9 @@ Page({
         wx.showToast({ title: "已参与本场召集", icon: "none" });
       }.bind(this))
       .catch(function(error) {
+        if (this.handleRequestError(error, "报名失败")) return;
         wx.showToast({ title: error.message || "报名失败", icon: "none" });
-      })
+      }.bind(this))
       .finally(function() {
         this.setData({ actionLoading: false });
       }.bind(this));
@@ -367,8 +456,9 @@ Page({
         wx.showToast({ title: "已取消本场报名", icon: "none" });
       }.bind(this))
       .catch(function(error) {
+        if (this.handleRequestError(error, "取消失败")) return;
         wx.showToast({ title: error.message || "取消失败", icon: "none" });
-      })
+      }.bind(this))
       .finally(function() {
         this.setData({ actionLoading: false });
       }.bind(this));
@@ -386,10 +476,11 @@ Page({
         wx.showToast({ title: "抽选完成", icon: "none" });
       }.bind(this))
       .catch(function(error) {
+        if (this.handleRequestError(error, "抽选失败")) return;
         if (String(error.message || "").indexOf("尚未截止") === -1) {
           wx.showToast({ title: error.message || "抽选失败", icon: "none" });
         }
-      })
+      }.bind(this))
       .finally(function() {
         this.drawInFlight = false;
         this.setData({ actionLoading: false });
@@ -423,7 +514,7 @@ Page({
 
   backToCreate: function() {
     this.stopTimer();
-    this.loadDungeons();
+    this.resetSearchState();
   },
 
   logout: function() {

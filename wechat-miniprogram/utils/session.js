@@ -1,4 +1,5 @@
 const SESSION_KEY = "fog_dungeon_invite_session_v1";
+const DEVICE_KIND = "mobile";
 
 function getSession() {
   try {
@@ -25,5 +26,6 @@ module.exports = {
   getSession: getSession,
   setSession: setSession,
   clearSession: clearSession,
-  hasSession: hasSession
+  hasSession: hasSession,
+  DEVICE_KIND: DEVICE_KIND
 };

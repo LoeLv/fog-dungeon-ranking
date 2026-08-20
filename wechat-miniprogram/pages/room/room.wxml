@@ -1,0 +1,94 @@
+<view class="page room-page">
+  <view class="section hero hero-card">
+    <view class="hero-copy">
+      <text class="kicker">MUSTER ROOM</text>
+      <text class="title">开匹配房间</text>
+      <text class="muted hero-summary">设定人数，再发起 2 分钟群聊召集。</text>
+      <view class="hero-chips">
+        <text class="hero-chip">人数</text>
+        <text class="hero-chip">召集</text>
+      </view>
+    </view>
+    <view class="hero-aside">
+      <text class="hero-aside-label">试炼</text>
+      <text class="hero-aside-value">2 分钟</text>
+    </view>
+  </view>
+
+  <view wx:if="{{dungeon}}" class="section panel dungeon-panel">
+    <view class="row state-head">
+      <view>
+        <text class="panel-title">{{dungeon.name}}</text>
+        <text class="muted">{{dungeon.typeLabel}} · {{dungeon.difficultyLabel}} · {{dungeon.creator}}</text>
+      </view>
+      <view class="pill">{{dungeon.targetCount}} 人默认</view>
+    </view>
+    <view class="one-shot-note" wx:if="{{dungeon.isOneShot}}">绝响试炼限制仍由后端校验。</view>
+  </view>
+
+  <view class="section panel">
+    <text class="panel-title">房间人数</text>
+    <input
+      class="input room-input"
+      type="number"
+      placeholder="不填则使用副本默认人数"
+      value="{{targetPlayerCountInput}}"
+      bindinput="onTargetInput"
+    />
+  </view>
+
+  <view class="section panel search-panel">
+    <text class="panel-title">搜索信徒</text>
+    <view class="search-row">
+      <input
+        class="input search-input"
+        placeholder="输入信徒昵称"
+        value="{{playerKeyword}}"
+        bindinput="onPlayerKeywordInput"
+        confirm-type="search"
+        bindconfirm="searchPlayers"
+      />
+      <button class="mini-action search-button" loading="{{searchingPlayers}}" bindtap="searchPlayers">搜索</button>
+    </view>
+      <text class="muted search-note">搜索结果仅用于发起匹配。</text>
+  </view>
+
+  <view wx:if="{{playerResults.length}}" class="section player-list">
+    <view
+      wx:for="{{playerResults}}"
+      wx:key="display_name"
+      class="panel player-card"
+      data-name="{{item.display_name}}"
+      bindtap="addRequiredPlayer"
+    >
+      <view>
+        <text class="player-name">{{item.display_name}}</text>
+        <text class="muted">{{item.faithLabel}} · {{item.professionLabel}}</text>
+      </view>
+       <view class="pill">加入</view>
+    </view>
+  </view>
+
+  <view class="section panel">
+    <view class="row subhead">
+      <text class="panel-title">当前设置</text>
+      <text class="muted">{{requiredPlayers.length}} 人</text>
+    </view>
+      <view wx:if="{{!requiredPlayers.length}}" class="empty queue-empty">暂未添加设置。</view>
+    <view
+      wx:for="{{requiredPlayers}}"
+      wx:key="display_name"
+      class="player-row"
+    >
+      <view>
+        <text>{{item.display_name}}</text>
+        <text class="muted required-note">已加入当前设置</text>
+      </view>
+      <button class="mini-action remove-button" data-name="{{item.display_name}}" bindtap="removeRequiredPlayer">移除</button>
+    </view>
+  </view>
+
+  <view wx:if="{{errorMessage}}" class="section empty">{{errorMessage}}</view>
+
+  <button class="btn btn-primary start-button" loading="{{actionLoading}}" bindtap="startMuster">开始匹配</button>
+</view>

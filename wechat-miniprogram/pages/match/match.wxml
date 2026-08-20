@@ -3,9 +3,12 @@
     <view>
       <text class="kicker">TRIAL MUSTER</text>
       <text class="title">试炼召集厅</text>
-      <text class="muted">发起者选择副本并分享到群；1 分钟后从报名池随机抽选。</text>
+      <text class="muted">搜索副本，开房间，设定人数后分享到群。</text>
     </view>
-    <button class="mini-action" bindtap="logout">退出</button>
+    <view class="hero-actions">
+      <button class="mini-action" bindtap="openProfile">个人</button>
+      <button class="mini-action" bindtap="logout">退出</button>
+    </view>
   </view>
 
   <view class="section panel identity-panel">
@@ -30,49 +33,62 @@
     <view class="section panel flow-panel">
       <text class="panel-title">发起流程</text>
       <view class="flow-list">
-        <text>1. 选择要开的试炼</text>
-        <text>2. 发起 1 分钟召集</text>
-        <text>3. 分享到微信群，发起者不占报名名额</text>
-        <text>4. 到点从报名池随机抽出固定人数</text>
+        <text>1. 输入副本名称关键词</text>
+        <text>2. 点入命中的副本开房间</text>
+        <text>3. 可自定义房间人数</text>
+        <text>4. 开始匹配后分享到微信群</text>
+        <text>5. 到点从报名池随机抽出固定人数</text>
       </view>
     </view>
 
-    <view class="section row list-head">
-      <text class="panel-title">选择要发起的试炼</text>
-      <button class="mini-action" loading="{{refreshing}}" bindtap="loadDungeons">刷新</button>
+    <view class="section panel search-panel">
+      <text class="panel-title">搜索试炼名称</text>
+      <view class="search-row">
+        <input
+          class="input search-input"
+          placeholder="输入副本名关键词"
+          value="{{searchKeyword}}"
+          bindinput="onSearchInput"
+          confirm-type="search"
+          bindconfirm="searchDungeons"
+        />
+        <button class="mini-action search-button" loading="{{searching}}" bindtap="searchDungeons">搜索</button>
+      </view>
+      <text class="muted search-note">只会显示命中的副本，不再展开整批列表。</text>
+      <view class="button-row search-tools">
+        <button class="btn btn-ghost" loading="{{refreshing}}" bindtap="searchDungeons">重新搜索</button>
+        <button class="btn btn-ghost" bindtap="clearSearch">清空</button>
+      </view>
     </view>
 
-    <scroll-view class="dungeon-scroll section" scroll-x enhanced show-scrollbar="{{false}}">
-      <view class="dungeon-row">
-        <view
-          wx:for="{{dungeons}}"
-          wx:key="id"
-          class="dungeon-card {{item.id === selectedDungeonId ? 'active' : ''}}"
-          data-id="{{item.id}}"
-          bindtap="selectDungeon"
-        >
-          <text class="dungeon-name">{{item.name}}</text>
-          <text class="dungeon-meta">{{item.typeLabel}} · {{item.difficultyLabel}}</text>
-          <view class="metric-row">
-            <text class="metric">{{item.targetCount}} 人</text>
-            <text class="metric">{{item.isOneShot ? "绝响试炼" : "轮回试炼"}}</text>
+    <view wx:if="{{searchedOnce}}" class="section row list-head">
+      <text class="panel-title">命中副本</text>
+      <text class="muted">{{dungeons.length}} 个</text>
+    </view>
+
+    <view wx:if="{{searchedOnce && !dungeons.length}}" class="empty">没有找到对应名称的副本。</view>
+
+    <view wx:if="{{dungeons.length}}" class="section dungeon-list">
+      <view
+        wx:for="{{dungeons}}"
+        wx:key="id"
+        class="dungeon-card dungeon-card-block {{item.id === selectedDungeonId ? 'active' : ''}}"
+        data-id="{{item.id}}"
+        bindtap="selectDungeon"
+      >
+        <view class="row dungeon-card-head">
+          <view>
+            <text class="dungeon-name">{{item.name}}</text>
+            <text class="dungeon-meta">{{item.typeLabel}} · {{item.difficultyLabel}}</text>
           </view>
+          <view class="pill">{{item.targetCount}} 人</view>
+        </view>
+        <view class="metric-row">
+          <text class="metric">{{item.isOneShot ? "绝响试炼" : "轮回试炼"}}</text>
+          <text class="metric">{{item.creator}}</text>
+          <text class="metric">点入开房间</text>
         </view>
       </view>
-    </scroll-view>
-
-    <view wx:if="{{!dungeons.length}}" class="empty">暂无可召集的试炼。</view>
-
-    <view wx:if="{{selectedDungeon}}" class="section panel state-panel">
-      <view class="row state-head">
-        <view>
-          <text class="panel-title">{{selectedDungeon.name}}</text>
-          <text class="muted">{{selectedDungeon.typeLabel}} · {{selectedDungeon.difficultyLabel}} · {{selectedDungeon.creator}}</text>
-        </view>
-        <view class="pill">{{selectedDungeon.targetCount}} 人</view>
-      </view>
-      <view class="one-shot-note" wx:if="{{selectedDungeon.isOneShot}}">绝响试炼：被抽中参与过的玩家不能再次报名该试炼。</view>
-      <button class="btn btn-primary full-button" loading="{{actionLoading}}" bindtap="startMuster">发起 1 分钟召集</button>
     </view>
   </view>
 
@@ -124,7 +140,7 @@
       </view>
       <block wx:if="{{isCreator}}">
         <text class="muted">你是本场召集发起者，只主持召集，不进入报名池，也不参与抽选。</text>
-        <text class="muted" wx:if="{{activeMuster.status === 'drawn'}}">本场结果已生成，下方「成功参与试炼」就是最终入局名单。</text>
+        <text class="muted" wx:if="{{activeMuster.status === 'drawn'}}">本场结果已生成，下方显示最终参与者。</text>
       </block>
       <block wx:else>
         <text class="muted" wx:if="{{myStatus === 'none'}}">你还没有参与这场召集。</text>
