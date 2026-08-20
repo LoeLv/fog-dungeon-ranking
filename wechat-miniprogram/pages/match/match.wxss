@@ -1,19 +1,23 @@
 .hero {
-  display: flex;
-  align-items: flex-end;
-  justify-content: space-between;
-  gap: 20rpx;
+  display: block;
   padding: 18rpx 2rpx 6rpx;
 }
 
-.hero > view:first-child {
-  flex: 1;
-  min-width: 0;
+.hero-copy {
+  display: block;
+  width: 100%;
 }
 
 .hero-actions {
   display: flex;
+  width: 100%;
   gap: 10rpx;
+  margin-top: 18rpx;
+}
+
+.hero-actions button {
+  flex: 1;
+  min-width: 0;
 }
 
 .hero .title {

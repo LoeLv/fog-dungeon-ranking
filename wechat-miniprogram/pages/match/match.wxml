@@ -1,6 +1,6 @@
 <view class="page match-page">
   <view class="section hero">
-    <view>
+    <view class="hero-copy">
       <text class="kicker">TRIAL MUSTER</text>
       <text class="title">试炼召集厅</text>
       <text class="muted">搜索副本，开房间，设定人数后分享到群。</text>
