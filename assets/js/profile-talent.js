@@ -117,6 +117,7 @@ function renderTalentCards(talents, emptyText = '还没有抽到天赋。') {
         const name = talent.talentName || talent.talent_name || '未知天赋';
         const rank = talent.rank || 'C';
         const effect = talent.effect || talent.talent_effect || '';
+        const cooldown = talent.cooldown || talent.cooldownText || talent.cooldown_text || '无';
         const actionCost = Number(talent.actionCost ?? talent.action_cost ?? 0);
         const pool = formatTalentPoolLabel(talent.poolKey || talent.pool_key);
         const repeat = talent.isRepeat || talent.is_repeat;
@@ -134,7 +135,7 @@ function renderTalentCards(talents, emptyText = '还没有抽到天赋。') {
         return `
             <div class="talent-card rank-${escapeHtml(rank)} ${repeat ? 'repeat' : ''} ${overflow ? 'pending' : ''}">
                 <strong>${escapeHtml(name)}</strong>
-                <small>${escapeHtml(rank)}级 · ${escapeHtml(pool || source)} · 行动点 ${actionCost}${guarantee ? ' · 保底' : ''}${repeat ? ` · 重复转化 +${fragment} 碎片` : ''}${escapeHtml(place)}</small>
+                <small>${escapeHtml(rank)}级 · ${escapeHtml(pool || source)} · 行动点 ${actionCost}${cooldown ? ` · 冷却 ${escapeHtml(cooldown)}` : ''}${guarantee ? ' · 保底' : ''}${repeat ? ` · 重复转化 +${fragment} 碎片` : ''}${escapeHtml(place)}</small>
                 ${effect ? `<span class="talent-effect-text">${escapeHtml(effect)}</span>` : ''}
             </div>`;
     }).join('')}</div>`;
@@ -220,6 +221,17 @@ function getTalentActionCost(state, talent) {
         item.pool_key === talent.pool_key && Number(item.talent_id) === Number(talent.talent_id)
     );
     return Number(poolItem?.action_cost ?? poolItem?.actionCost ?? 0) || 0;
+}
+
+function getTalentCooldownText(state, talent) {
+    if (!talent) return '';
+    const direct = talent.cooldown ?? talent.cooldownText ?? talent.cooldown_text ?? talent.cooldownRounds;
+    if (direct !== undefined && direct !== null && String(direct).trim() !== '') return String(direct).trim();
+    const poolItem = (state.poolItems || []).find(item =>
+        item.pool_key === talent.pool_key && Number(item.talent_id) === Number(talent.talent_id)
+    );
+    const value = poolItem?.cooldown ?? poolItem?.cooldownText ?? poolItem?.cooldown_text ?? poolItem?.cooldownRounds;
+    return value === undefined || value === null ? '' : String(value).trim();
 }
 
 function getTalentDismantleGain(state, rank) {
@@ -616,11 +628,15 @@ function getProfileExportPayload() {
         .sort((a, b) => Number(a.equipped_slot || 0) - Number(b.equipped_slot || 0))
         .map(talent => {
             const canonical = getCanonicalTalent(state, talent);
+            const actionCost = getTalentActionCost(state, canonical);
+            const cooldown = getTalentCooldownText(state, canonical);
             return {
                 slot: Number(canonical.equipped_slot || 0),
                 name: String(canonical.talent_name || ''),
                 rank: String(canonical.rank || ''),
                 pool: formatTalentPoolLabel(canonical.pool_key),
+                actionCost,
+                cooldown,
                 effect: getTalentEffectText(state, canonical),
             };
         });
@@ -634,6 +650,7 @@ function getProfileExportPayload() {
         audienceScore: Number(profile.audienceScore || 0),
         items: splitProfileLines(profile.items).slice(0, 20),
         health: {
+            currentHp: Number(profile.currentHp ?? profile.current_hp ?? healthSummary.maxHp ?? 0),
             maxHp: healthSummary.maxHp,
             baseHp: healthSummary.rule.baseHp,
             tableHp: healthSummary.tableHp,
@@ -696,7 +713,10 @@ function drawProfileCardImage(payload) {
         const nameLines = wrapCanvasText(measureCtx, name, 880, Infinity);
         measureCtx.font = '600 22px "Microsoft YaHei", sans-serif';
         const meta = [talent.pool ? `${talent.pool}池` : '', talent.effect || ''].filter(Boolean).join(' · ');
-        const metaLines = wrapCanvasText(measureCtx, meta, 880, Infinity);
+        const actionText = Number.isFinite(Number(talent.actionCost)) ? `行动点 ${Number(talent.actionCost) || 0}` : '';
+        const cooldownText = `冷却 ${talent.cooldown || '无'}`;
+        const metaWithTiming = [talent.pool ? `${talent.pool}池` : '', actionText, cooldownText, talent.effect || ''].filter(Boolean).join(' · ');
+        const metaLines = wrapCanvasText(measureCtx, metaWithTiming || meta, 880, Infinity);
         const cardHeight = Math.max(138, 104 + nameLines.length * 38 + metaLines.length * 29);
         return { talent, nameLines, metaLines, cardHeight };
     });
@@ -825,20 +845,11 @@ function drawProfileCardImage(payload) {
     ctx.globalAlpha = 1;
     ctx.fillStyle = 'rgba(234,234,242,0.62)';
     ctx.font = '800 24px "Microsoft YaHei", sans-serif';
-    ctx.fillText('血量上限', 136, battleTop + 44);
+    ctx.fillText('当前血量', 136, battleTop + 44);
     ctx.fillStyle = '#f4f0df';
     ctx.font = '900 70px "Microsoft YaHei", sans-serif';
-    ctx.fillText(payload.health.maxHp ? String(payload.health.maxHp) : '未定', 136, battleTop + 118);
-    ctx.fillStyle = 'rgba(234,234,242,0.62)';
-    ctx.font = '600 21px "Microsoft YaHei", sans-serif';
-    const healthParts = payload.health.maxHp
-        ? [`基础 ${payload.health.baseHp}`, `${payload.health.healthBand}档 ${payload.health.tableHp}`, `成长 +${payload.health.growthHp}`]
-        : ['请选择职业后查看血量成长'];
-    ctx.fillText(healthParts.join(' / '), 136, battleTop + 156);
-    const healthRuleText = payload.health.maxHp
-        ? `信仰 +${payload.health.faithBonus || 0} / ${payload.health.resistanceSkinName || '暂无分数档被动'}`
-        : '';
-    if (healthRuleText) ctx.fillText(healthRuleText, 136, battleTop + 188);
+    const currentHpText = Number.isFinite(Number(payload.health.currentHp)) ? String(Number(payload.health.currentHp)) : '未定';
+    ctx.fillText(currentHpText, 136, battleTop + 118);
 
     drawRoundRect(ctx, 444, battleTop, 648, battleHeight, 20);
     ctx.fillStyle = 'rgba(255,255,255,0.045)';
