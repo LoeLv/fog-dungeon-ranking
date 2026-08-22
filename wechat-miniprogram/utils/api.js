@@ -123,6 +123,87 @@ function drawMatchMuster(inviteCode, musterId) {
   return invokeDungeonAction("drawMatchMuster", inviteCode, { musterId: musterId });
 }
 
+function createBattleRoom(inviteCode, dungeonId) {
+  return invokeDungeonAction("createBattleRoom", inviteCode, { dungeonId: dungeonId });
+}
+
+function createBattleRoomFromMatchRoom(inviteCode, matchRoomId) {
+  return invokeDungeonAction("createBattleRoomFromMatchRoom", inviteCode, { matchRoomId: matchRoomId });
+}
+
+function getBattleRoom(inviteCode, options) {
+  const config = options || {};
+  return invokeDungeonAction("getBattleRoom", inviteCode, {
+    battleRoomId: config.battleRoomId || "",
+    matchRoomId: config.matchRoomId || "",
+    dungeonId: config.dungeonId || ""
+  });
+}
+
+function joinBattleRoom(inviteCode, battleRoomId) {
+  return invokeDungeonAction("joinBattleRoom", inviteCode, { battleRoomId: battleRoomId });
+}
+
+function updateBattleRoomRound(inviteCode, battleRoomId, currentRound, note) {
+  return invokeDungeonAction("updateBattleRoomRound", inviteCode, {
+    battleRoomId: battleRoomId,
+    currentRound: currentRound,
+    note: note || ""
+  });
+}
+
+function submitBattleRoomAction(inviteCode, battleRoomId, playerId, actionText, abilityKey) {
+  return invokeDungeonAction("submitBattleRoomAction", inviteCode, {
+    battleRoomId: battleRoomId,
+    playerId: playerId,
+    actionText: actionText,
+    abilityKey: abilityKey || ""
+  });
+}
+
+function resolveBattleRoomAction(inviteCode, battleRoomId, actionId, decision, dmNote) {
+  return invokeDungeonAction("resolveBattleRoomAction", inviteCode, {
+    battleRoomId: battleRoomId,
+    actionId: actionId,
+    decision: decision || "resolved",
+    dmNote: dmNote || ""
+  });
+}
+
+function applyBattlePlayerAction(inviteCode, battleRoomId, playerId, actionType, amount, note) {
+  return invokeDungeonAction("applyBattlePlayerAction", inviteCode, {
+    battleRoomId: battleRoomId,
+    playerId: playerId,
+    actionType: actionType,
+    amount: amount,
+    note: note || ""
+  });
+}
+
+function updateBattlePlayerTeam(inviteCode, battleRoomId, playerId, teamName) {
+  return invokeDungeonAction("updateBattlePlayerTeam", inviteCode, {
+    battleRoomId: battleRoomId,
+    playerId: playerId,
+    teamName: teamName
+  });
+}
+
+function updateBattleAbilityCooldown(inviteCode, battleRoomId, playerId, abilityKey) {
+  return invokeDungeonAction("updateBattleAbilityCooldown", inviteCode, {
+    battleRoomId: battleRoomId,
+    playerId: playerId,
+    abilityKey: abilityKey
+  });
+}
+
+function finishBattleRoom(inviteCode, battleRoomId, status, note) {
+  return invokeDungeonAction("finishBattleRoom", inviteCode, {
+    battleRoomId: battleRoomId,
+    status: status || "finished",
+    note: note || ""
+  });
+}
+
 module.exports = {
   invokeDungeonAction: invokeDungeonAction,
   verifyInvite: verifyInvite,
@@ -136,5 +217,16 @@ module.exports = {
   getMatchMuster: getMatchMuster,
   joinMatchMuster: joinMatchMuster,
   cancelMatchMuster: cancelMatchMuster,
-  drawMatchMuster: drawMatchMuster
+  drawMatchMuster: drawMatchMuster,
+  createBattleRoom: createBattleRoom,
+  createBattleRoomFromMatchRoom: createBattleRoomFromMatchRoom,
+  getBattleRoom: getBattleRoom,
+  joinBattleRoom: joinBattleRoom,
+  updateBattleRoomRound: updateBattleRoomRound,
+  submitBattleRoomAction: submitBattleRoomAction,
+  resolveBattleRoomAction: resolveBattleRoomAction,
+  applyBattlePlayerAction: applyBattlePlayerAction,
+  updateBattlePlayerTeam: updateBattlePlayerTeam,
+  updateBattleAbilityCooldown: updateBattleAbilityCooldown,
+  finishBattleRoom: finishBattleRoom
 };

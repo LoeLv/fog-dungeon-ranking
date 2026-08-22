@@ -1,6 +1,7 @@
 {
   "pages": [
     "pages/match/match",
+    "pages/battle/battle",
     "pages/room/room",
     "pages/profile/profile",
     "pages/login/login"

@@ -1,0 +1,182 @@
+<view class="page battle-page">
+  <view wx:if="{{loading}}" class="section empty">正在读取战斗房间...</view>
+
+  <block wx:else>
+    <view wx:if="{{errorMessage}}" class="section empty error">{{errorMessage}}</view>
+
+    <view wx:if="{{room}}" class="section hero panel">
+      <view>
+        <text class="kicker">PUBLIC BATTLEFIELD</text>
+        <text class="title">{{dungeon.name || '未命名试炼'}}</text>
+        <text class="muted">{{room.roundLabel}} · {{room.statusLabel}} · DM {{room.host_name || '未记录'}}</text>
+      </view>
+      <view class="hero-actions">
+        <button class="mini-action" loading="{{refreshing}}" bindtap="loadBattle">刷新</button>
+        <button wx:if="{{canJoin}}" class="mini-action" loading="{{actionLoading}}" bindtap="joinBattle">加入</button>
+      </view>
+    </view>
+
+    <view class="section panel">
+      <view class="row subhead">
+        <text class="panel-title">公开战场信息</text>
+        <text class="muted">{{players.length}} 人</text>
+      </view>
+      <view wx:if="{{!players.length}}" class="empty">暂无战斗成员。</view>
+      <view wx:for="{{players}}" wx:key="id" class="battle-player {{item.is_self ? 'self' : ''}}">
+        <view class="row player-head">
+          <view>
+            <text class="player-name">{{item.player_name}}</text>
+            <text class="muted">{{item.teamLabel}} 队 · {{item.classLabel}} · {{item.statusLabel}}</text>
+          </view>
+          <view class="pill">{{item.hpText}}</view>
+        </view>
+        <view class="hp-track">
+          <view class="hp-fill" style="width: {{item.hpPercent}}%;"></view>
+        </view>
+        <view class="public-tags">
+          <text class="tag">护盾 {{item.shieldText}}</text>
+          <text class="tag">攻击 {{item.attack_value || 0}}</text>
+          <text class="tag">{{item.faithLabel}}</text>
+        </view>
+        <view wx:if="{{item.abilities.length}}" class="public-abilities">
+          <view
+            wx:for="{{item.abilities}}"
+            wx:for-item="ability"
+            wx:key="key"
+            class="public-ability {{ability.ready ? '' : 'disabled'}}"
+          >
+            <view class="row ability-head">
+              <view>
+                <text class="ability-name">{{ability.displayName}}</text>
+                <text class="muted">{{ability.detail}}</text>
+              </view>
+              <view class="ability-side">
+                <text class="pill">{{ability.cooldownLabel}}</text>
+                <button
+                  wx:if="{{canOperate}}"
+                  class="mini-action cooldown-button"
+                  data-player-id="{{item.id}}"
+                  data-key="{{ability.key}}"
+                  loading="{{actionLoading}}"
+                  bindtap="putAbilityOnCooldown"
+                >冷却</button>
+              </view>
+            </view>
+          </view>
+        </view>
+        <text wx:if="{{item.publicNote}}" class="muted player-note">{{item.publicNote}}</text>
+      </view>
+    </view>
+
+    <view class="section panel">
+      <view class="row subhead">
+        <text class="panel-title">我的可操作信息</text>
+        <text class="muted">{{selfPlayer ? selfPlayer.player_name : '未入场'}}</text>
+      </view>
+      <view wx:if="{{!selfPlayer}}" class="empty">你还不是这个战斗房间成员，只能查看公开战场。</view>
+      <block wx:else>
+        <view class="self-summary">
+          <text class="self-stat">{{selfPlayer.hpText}}</text>
+          <text class="muted">{{selfPlayer.teamLabel}} 队 · {{selfPlayer.classLabel}}</text>
+        </view>
+
+        <view class="ability-list">
+          <view class="ability-card {{!selectedAbilityKey ? 'selected' : ''}}" bindtap="clearAbility">
+            <text class="ability-name">普通行动</text>
+            <text class="muted">不绑定职业技能或天赋，由 DM 结算。</text>
+          </view>
+          <view
+            wx:for="{{selfPlayer.abilities}}"
+            wx:key="key"
+            class="ability-card {{item.key === selectedAbilityKey ? 'selected' : ''}} {{item.ready ? '' : 'disabled'}}"
+            data-key="{{item.key}}"
+            data-name="{{item.displayName}}"
+            data-ready="{{item.ready ? '1' : '0'}}"
+            bindtap="selectAbility"
+          >
+            <view class="row ability-head">
+              <text class="ability-name">{{item.displayName}}</text>
+              <text class="pill">{{item.cooldownLabel}}</text>
+            </view>
+            <text class="muted">{{item.detail}}</text>
+          </view>
+        </view>
+
+        <view class="action-box">
+          <text class="muted">当前选择：{{selectedAbilityName}}</text>
+          <textarea class="textarea" value="{{actionText}}" maxlength="1200" placeholder="写下本回合行动，目标、方式、消耗和期望效果都放这里。" bindinput="onActionTextInput"></textarea>
+          <button class="btn btn-primary" disabled="{{!canSubmitAction}}" loading="{{actionLoading}}" bindtap="submitAction">提交行动</button>
+        </view>
+      </block>
+    </view>
+
+    <view class="section panel">
+      <view class="row subhead">
+        <text class="panel-title">{{actionListLabel}}</text>
+        <text class="muted">{{visibleActionCountText}}</text>
+      </view>
+      <view wx:if="{{canOperate && !pendingActions.length}}" class="empty">暂无待处理行动。</view>
+      <view wx:if="{{!canOperate && !selfActions.length}}" class="empty">你还没有提交过行动。</view>
+      <view wx:for="{{visibleActions}}" wx:key="id" class="action-card">
+        <view class="row action-head">
+          <text class="action-title">{{item.actor_name}} · {{item.roundLabel}}</text>
+          <text class="pill">{{item.statusLabel}}</text>
+        </view>
+        <text class="action-text">{{item.action_text}}</text>
+        <text wx:if="{{item.cooldownLabel}}" class="muted">{{item.cooldownLabel}}</text>
+        <text wx:if="{{item.hasDmNote}}" class="muted">DM：{{item.dm_note}}</text>
+        <view wx:if="{{canOperate && item.action_status === 'submitted'}}" class="button-row action-tools">
+          <button class="btn btn-primary" data-id="{{item.id}}" data-decision="resolved" loading="{{actionLoading}}" bindtap="resolveAction">结算</button>
+          <button class="btn btn-danger" data-id="{{item.id}}" data-decision="dismissed" loading="{{actionLoading}}" bindtap="resolveAction">驳回</button>
+        </view>
+      </view>
+    </view>
+
+    <view wx:if="{{canOperate}}" class="section panel dm-panel">
+      <text class="panel-title">DM 操作</text>
+      <view class="dm-grid">
+        <picker mode="selector" range="{{players}}" range-key="player_name" bindchange="onDmTargetChange">
+          <view class="input picker-input">目标：{{dmTargetPlayerId || '请选择'}}</view>
+        </picker>
+        <picker mode="selector" range="{{dmActionTypeLabels}}" bindchange="onDmActionTypeChange">
+          <view class="input picker-input">操作：{{dmActionTypeLabel}}</view>
+        </picker>
+      </view>
+      <input class="input" type="number" placeholder="数值" value="{{dmAmount}}" bindinput="onDmAmountInput" />
+      <textarea class="textarea compact" value="{{dmNote}}" maxlength="500" placeholder="结算备注" bindinput="onDmNoteInput"></textarea>
+      <button class="btn btn-primary" loading="{{actionLoading}}" bindtap="applyDmAction">应用到目标</button>
+
+      <view class="round-tools">
+        <input class="input round-input" type="number" value="{{roundInput}}" bindinput="onRoundInput" />
+        <input class="input" placeholder="回合备注，可空" value="{{roundNote}}" bindinput="onRoundNoteInput" />
+        <button class="btn btn-ghost" loading="{{actionLoading}}" bindtap="updateRound">推进/调整回合</button>
+      </view>
+
+      <view class="team-list">
+        <view wx:for="{{players}}" wx:key="id" class="team-row">
+          <text>{{item.player_name}}</text>
+          <input class="input team-input" data-id="{{item.id}}" value="{{item.teamInputValue}}" placeholder="队伍" bindinput="onTeamInput" />
+          <button class="mini-action" data-id="{{item.id}}" loading="{{actionLoading}}" bindtap="updateTeam">分队</button>
+        </view>
+      </view>
+
+      <view class="button-row">
+        <button class="btn btn-ghost" data-status="finished" loading="{{actionLoading}}" bindtap="finishBattle">结束战斗</button>
+        <button class="btn btn-danger" data-status="cancelled" loading="{{actionLoading}}" bindtap="finishBattle">取消战斗</button>
+      </view>
+    </view>
+
+    <view class="section panel">
+      <view class="row subhead">
+        <text class="panel-title">公开战斗日志</text>
+        <text class="muted">{{logs.length}} 条</text>
+      </view>
+      <view wx:if="{{!logs.length}}" class="empty">暂无日志。</view>
+      <view wx:for="{{logs}}" wx:key="id" class="log-row">
+        <text class="log-title">{{item.roundLabel}} · {{item.typeLabel}}{{item.targetLabel}}{{item.amountLabel}}</text>
+        <text class="muted">{{item.actor_name || '系统'}} · {{item.timeLabel}}</text>
+        <text wx:if="{{item.note}}" class="log-note">{{item.note}}</text>
+      </view>
+    </view>
+  </block>
+</view>

@@ -135,6 +135,7 @@ Page({
     canCancel: false,
     canShare: false,
     canDraw: false,
+    battleLoading: false,
     loading: true,
     refreshing: false,
     stateLoading: false,
@@ -242,6 +243,7 @@ Page({
       canCancel: false,
       canShare: false,
       canDraw: false,
+      battleLoading: false,
       errorMessage: ""
     });
   },
@@ -309,7 +311,8 @@ Page({
           canJoin: false,
           canCancel: false,
           canShare: false,
-          canDraw: false
+          canDraw: false,
+          battleLoading: false
         });
       }.bind(this))
       .catch(function(error) {
@@ -484,6 +487,31 @@ Page({
       .finally(function() {
         this.drawInFlight = false;
         this.setData({ actionLoading: false });
+      }.bind(this));
+  },
+
+  openBattleRoom: function() {
+    if (!this.data.activeMuster || !this.data.activeMuster.room_id || this.data.battleLoading) return;
+
+    this.setData({ battleLoading: true, errorMessage: "" });
+    const request = this.data.isCreator
+      ? api.createBattleRoomFromMatchRoom(this.currentSession.code, this.data.activeMuster.room_id)
+      : api.getBattleRoom(this.currentSession.code, { matchRoomId: this.data.activeMuster.room_id });
+
+    request
+      .then(function(result) {
+        const battleRoomId = result.data && result.data.room && result.data.room.id;
+        if (!battleRoomId) {
+          throw new Error(this.data.isCreator ? "战斗房间创建失败" : "请等待召集者开启战斗房间");
+        }
+        wx.navigateTo({ url: "/pages/battle/battle?battleRoomId=" + encodeURIComponent(battleRoomId) });
+      }.bind(this))
+      .catch(function(error) {
+        if (this.handleRequestError(error, "战斗房间打开失败")) return;
+        wx.showToast({ title: error.message || "战斗房间打开失败", icon: "none" });
+      }.bind(this))
+      .finally(function() {
+        this.setData({ battleLoading: false });
       }.bind(this));
   },
 

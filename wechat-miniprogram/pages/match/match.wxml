@@ -38,6 +38,7 @@
         <text>3. 可自定义房间人数</text>
         <text>4. 开始匹配后分享到微信群</text>
         <text>5. 到点从报名池随机抽出固定人数</text>
+        <text>6. 可以创简易战斗房间</text>
       </view>
     </view>
 
@@ -173,6 +174,7 @@
         <text>{{index + 1}}. {{item.player_name}}</text>
         <text class="muted">入选</text>
       </view>
+      <button wx:if="{{activeMuster.room_id && selectedPlayers.length}}" class="btn btn-primary battle-entry" loading="{{battleLoading}}" bindtap="openBattleRoom">进入战斗页</button>
     </view>
 
     <view wx:if="{{activeMuster.status === 'drawn' && notSelectedPlayers.length}}" class="section panel">
