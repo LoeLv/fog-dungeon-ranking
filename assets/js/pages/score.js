@@ -65,7 +65,7 @@ async function renderScorePage() {
                     <div class="profile-panel-title"><span>批量结算</span></div>
                     <div class="form-group"><label>搜索副本</label><input id="scoreDungeonSearch" maxlength="80" placeholder="输入副本名过滤，或在结算文本第一行写副本名" oninput="filterScoreDungeonOptions('scoreDungeonSearch', 'scoreDungeonId')"><div class="identity-help" id="scoreDungeonSearchStatus"></div></div>
                     <div class="form-group"><label>副本圣名</label><select id="scoreDungeonId">${dungeonOptions}</select></div>
-                    <div class="form-group"><label>结算文本</label><textarea id="scoreBatchText" maxlength="20000" placeholder="修弥斯的钟，一人（棺材板）胜利，其余人失败&#10;1. 羔羊:+8+0&#10;2. 棺材板:+9+2"></textarea></div>
+                    <div class="form-group"><label>结算文本</label><textarea id="scoreBatchText" maxlength="20000" placeholder="修弥斯的钟，一人（棺材板）胜利，其余人失败&#10;1. 腐朽 羔羊+8+0&#10;2. 欺诈 无我+2+1"></textarea></div>
                     <div class="form-group"><label>备注</label><input id="scoreBatchRemark" maxlength="500" placeholder="可选，写结算来源或说明"></div>
                     <div class="profile-tools">
                         <button class="btn btn-outline btn-sm" onclick="checkScorePreviewUI()">预览校验</button>
