@@ -311,6 +311,11 @@ function renderTalentSlotRuleText(state) {
     return `${slotText}；品阶组合 ${ranks.join('')}`;
 }
 
+function formatTalentPercent(value) {
+    const number = Math.max(0, Number(value) || 0) * 100;
+    return `${Math.round(number * 10) / 10}%`;
+}
+
 function getTalentSlotKindLabel(kind) {
     if (kind === 'faith') return '信仰槽';
     if (kind === 'profession') return '职业槽';
@@ -499,54 +504,38 @@ function renderTalentPoolPanel(state, error, profile) {
     const equippedCount = (state.ownedTalents || []).filter(talent => talent.equipped_slot).length;
     const exchangeCost = Number(state.targetTalentExchangeCost || 180);
     const aExchangeCost = Number(state.aTalentExchangeCost || 260);
-    const ascensionScore = Number(state.profile?.ascension_score || profile?.ascensionScore || 0);
-    const advancedDraw = ascensionScore >= Number(state.advancedTalentDrawScore || 1500);
     const basicAvailableDraws = Number(state.basicAvailableDraws || 0);
     const advancedAvailableDraws = Number(state.advancedAvailableDraws || 0);
-    const bRateText = `${Math.round(Number(advancedDraw ? state.advancedBTalentDrawRate : state.bTalentDrawRate || 0.2) * 100)}%`;
-    const aRateText = `${Math.round(Number(state.aTalentDrawRate || 0.02) * 10000) / 100}%`;
-    const sRateText = `${Math.round(Number(state.sTalentDrawRate || 0.001) * 10000) / 100}%`;
+    const bRate = Number(state.advancedBTalentDrawRate || 0.25);
+    const aRate = Number(state.aTalentDrawRate || 0.02);
+    const sRate = Number(state.sTalentDrawRate || 0.001);
+    const cRate = Math.max(0, 1 - sRate - aRate - bRate);
+    const probabilityText = `S ${formatTalentPercent(sRate)} / A ${formatTalentPercent(aRate)} / B ${formatTalentPercent(bRate)} / C ${formatTalentPercent(cRate)}`;
     const guaranteeDraws = Number(state.bTalentGuaranteeDraws || 10);
     const sGuaranteeDraws = Number(state.sTalentGuaranteeDraws || 60);
     const currentMisses = Math.min(guaranteeDraws - 1, getTalentPoolCounter(state, selectedPool));
     const sCounter = Number((state.counters || []).find(counter => counter.pool_key === selectedPool)?.s_continue_draw || 0);
-    const drawRuleText = advancedDraw
-        ? `1500+：S ${sRateText}（${sGuaranteeDraws}抽保底）/ A ${aRateText}（无保底）/ B ${bRateText}（${guaranteeDraws}抽保底）`
-        : `1500前：仅 B/C，B ${bRateText}（${guaranteeDraws}抽保底）`;
     return `
         <section class="profile-panel" id="talentPoolPanel" data-god="${escapeHtml(profileGod)}" style="${profileGodStyle}">
             <div class="profile-panel-title">
                 <span>${escapeHtml(selectedPoolTitle)}</span>
             </div>
             <div class="talent-pool-card" data-god="${escapeHtml(profileGod)}" style="${profileGodStyle}">
-                <div class="profile-score-row">
-                    <div class="profile-stat-card"><span>可用抽数</span><strong>${Number(state.availableDraws || 0)}</strong></div>
-                    <div class="profile-stat-card"><span>天赋碎片</span><strong>${Number(state.fragmentTotal || 0)}</strong></div>
-                </div>
                 <div class="metric-strip">
                     <span class="metric-pill">累计获得抽数 <strong>${Number(state.totalDrawsEarned || 0)}</strong></span>
                     <span class="metric-pill">已用抽数 <strong>${Number(state.spentDraws || 0)}</strong></span>
-                    ${Number(state.eventBasicDraws || 0) ? `<span class="metric-pill">腐朽登神 B/C <strong>${Number(state.eventBasicDraws || 0)}</strong></span>` : ''}
-                    ${Number(state.eventAdvancedDraws || 0) ? `<span class="metric-pill">腐朽登神 S/A/B/C <strong>${Number(state.eventAdvancedDraws || 0)}</strong></span>` : ''}
-                    <span class="metric-pill">基础 B/C 抽 <strong>${basicAvailableDraws}</strong></span>
-                    <span class="metric-pill">进阶 S/A/B/C 抽 <strong>${advancedAvailableDraws}</strong></span>
-                    <span class="metric-pill">B级概率 <strong>${escapeHtml(bRateText)}</strong></span>
-                    <span class="metric-pill">保底进度 <strong>${currentMisses}/${guaranteeDraws - 1}</strong></span>
-                    ${advancedDraw ? `<span class="metric-pill">S保底 <strong>${Math.min(sGuaranteeDraws - 1, sCounter)}/${sGuaranteeDraws - 1}</strong></span>` : ''}
+                    <span class="metric-pill">基础抽 <strong>${basicAvailableDraws}</strong></span>
+                    <span class="metric-pill">进阶抽 <strong>${advancedAvailableDraws}</strong></span>
+                    <span class="metric-pill">B级保底 <strong>${currentMisses}/${guaranteeDraws - 1}</strong></span>
+                    <span class="metric-pill">S级保底 <strong>${Math.min(sGuaranteeDraws - 1, sCounter)}/${sGuaranteeDraws - 1}</strong></span>
                     <span class="metric-pill">仓库 <strong>${inventoryCount}/${inventoryLimit}</strong></span>
                     <span class="metric-pill">携带 <strong>${equippedCount}/${Number(state.equippedSlotLimit || 3)}</strong></span>
                     <span class="metric-pill">可选池 <strong>${escapeHtml(allowedPoolText)}</strong></span>
                 </div>
                 <div class="talent-rule-strip">
-                    <span>新手赠送 <strong>${Number(state.starterTalentDrawGrant || 15)}</strong> 抽，不计保底</span>
-                    ${Number(state.eventBasicDraws || 0) ? `<span>庆祝腐朽登神活动 <strong>${Number(state.eventBasicDraws || 0)}</strong> 抽，属于基础 B/C 抽</span>` : ''}
-                    ${Number(state.eventAdvancedDraws || 0) ? `<span>庆祝腐朽登神活动 <strong>${Number(state.eventAdvancedDraws || 0)}</strong> 抽，属于进阶 S/A/B/C 抽</span>` : ''}
-                    <span>${escapeHtml(drawRuleText)}</span>
-                    <span>基础抽数优先消耗，1500 前获得的抽数不会转化为进阶抽数</span>
-                    <span>重复 C/B：<strong>+${Number(state.cTalentFragmentGain || 5)} / +${Number(state.bTalentFragmentGain || 10)}</strong> 碎片</span>
-                    <span>分解 C/B/A：<strong>+${Number(state.cTalentFragmentGain || 5)} / +${Number(state.bTalentFragmentGain || 10)} / +200</strong> 碎片，S不可分解</span>
+                    <span>S/A/B/C 概率：<strong>${escapeHtml(probabilityText)}</strong></span>
+                    <span>A/B/C 分解：<strong>+200 / +${Number(state.bTalentFragmentGain || 10)} / +${Number(state.cTalentFragmentGain || 5)}</strong> 碎片</span>
                     <span>携带上限：<strong>${escapeHtml(renderTalentSlotRuleText(state))}</strong></span>
-                    <span>指定 B/A 兑换：<strong>${exchangeCost} / ${aExchangeCost}</strong> 碎片</span>
                 </div>
                 <div class="talent-control-row">
                     <div class="form-group" style="margin:0;">
