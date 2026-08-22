@@ -12,6 +12,18 @@ function cleanText(value) {
   return String(value || "").trim();
 }
 
+function cleanRouteText(value) {
+  let text = cleanText(value);
+  for (let i = 0; i < 2 && /%[0-9a-fA-F]{2}/.test(text); i += 1) {
+    try {
+      text = decodeURIComponent(text);
+    } catch (error) {
+      break;
+    }
+  }
+  return cleanText(text);
+}
+
 Page({
   data: {
     dungeon: null,
@@ -42,10 +54,10 @@ Page({
     this.setData({
       dungeon: {
         id: dungeonId,
-        name: cleanText(options.name) || "未命名试炼",
-        creator: cleanText(options.creator),
-        typeLabel: cleanText(options.type) || "未定神系",
-        difficultyLabel: cleanText(options.difficulty) || "未定难度",
+        name: cleanRouteText(options.name) || "未命名试炼",
+        creator: cleanRouteText(options.creator),
+        typeLabel: cleanRouteText(options.type) || "未定神系",
+        difficultyLabel: cleanRouteText(options.difficulty) || "未定难度",
         targetCount: Math.max(1, toNumber(options.targetCount, 1)),
         isOneShot: cleanText(options.isOneShot) === "1"
       }
