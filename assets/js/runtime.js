@@ -252,11 +252,11 @@ function updateInviteUI() {
         mobileScoreButton.title = '神明称号敕令台';
     }
     if (permissionButton) {
-        permissionButton.style.display = 'none';
+        permissionButton.style.display = canUsePermissionDesk() ? '' : 'none';
         permissionButton.title = '按已分配职责处理权限事务';
     }
     if (mobilePermissionButton) {
-        mobilePermissionButton.hidden = true;
+        mobilePermissionButton.hidden = !canUsePermissionDesk();
         mobilePermissionButton.title = '按已分配职责处理权限事务';
     }
     if (adminButton) {
