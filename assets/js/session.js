@@ -6,7 +6,7 @@ function getInvitePermissions() {
     return Array.isArray(inviteSession?.permissions) ? inviteSession.permissions : [];
 }
 
-const STAFF_ADMIN_NAMES = ['羔羊', '槐柏', '南河书淮', '慕辞', '棺材板', '我不想死', '情忆浮生', '知更', '变态', '墨染流年'];
+const STAFF_ADMIN_NAMES = ['羔羊', '槐柏', '南河书淮', '慕辞', '棺材板', '我不想死', '情忆浮生', '知更', '变态', '墨染流年', '洛泽攸'];
 const TALENT_MANAGER_NAMES = ['羔羊'];
 const SCORE_SETTLER_NAMES = ['慕辞', '情忆浮生', '知更'];
 

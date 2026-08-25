@@ -157,6 +157,10 @@ async function mobileQuickAction(action) {
         openSubmitModal();
         return;
     }
+    if (action === 'permission') {
+        openPermissionDesk();
+        return;
+    }
     if (action === 'save') {
         if (document.getElementById('profilePage')?.style.display !== 'none') await saveProfilePage();
         else showToast('请先进入个人档案');
@@ -221,6 +225,7 @@ function updateInviteUI() {
     const mobileScoreButton = document.getElementById('mobileScoreButton');
     const permissionButton = document.getElementById('permissionDeskButton');
     const mobilePermissionButton = document.getElementById('mobilePermissionButton');
+    const mobilePermissionFabButton = document.getElementById('mobilePermissionFabButton');
     const adminButton = document.getElementById('adminDeskButton');
     const mobileAdminButton = document.getElementById('mobileAdminButton');
     const mobileActionStrip = document.getElementById('mobileActionStrip');
@@ -258,6 +263,10 @@ function updateInviteUI() {
     if (mobilePermissionButton) {
         mobilePermissionButton.hidden = !canUsePermissionDesk();
         mobilePermissionButton.title = '按已分配职责处理权限事务';
+    }
+    if (mobilePermissionFabButton) {
+        mobilePermissionFabButton.hidden = !canUsePermissionDesk();
+        mobilePermissionFabButton.title = '打开权限工作台';
     }
     if (adminButton) {
         adminButton.style.display = canUseAdminConsole() ? '' : 'none';
