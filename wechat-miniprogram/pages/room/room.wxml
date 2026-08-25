@@ -38,6 +38,18 @@
     />
   </view>
 
+  <view class="section panel">
+    <text class="panel-title">预估时间</text>
+    <input
+      class="input room-input"
+      maxlength="40"
+      placeholder="例如 2小时 / 约3-4小时 / 一晚"
+      value="{{estimatedDurationInput}}"
+      bindinput="onEstimatedDurationInput"
+    />
+    <text class="muted duration-hint">会显示给正在准备加入匹配的玩家。</text>
+  </view>
+
   <view class="section panel search-panel">
     <text class="panel-title">搜索信徒</text>
     <view class="search-row">

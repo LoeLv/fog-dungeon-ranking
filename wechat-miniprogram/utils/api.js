@@ -96,7 +96,8 @@ function startMatchMuster(inviteCode, dungeonId, durationSeconds, options) {
     dungeonId: dungeonId,
     durationSeconds: durationSeconds || 60,
     targetPlayerCount: config.targetPlayerCount || null,
-    requiredPlayerNames: config.requiredPlayerNames || []
+    requiredPlayerNames: config.requiredPlayerNames || [],
+    estimatedDuration: config.estimatedDuration || ""
   });
 }
 

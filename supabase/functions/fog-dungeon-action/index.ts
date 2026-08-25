@@ -683,6 +683,8 @@ function toPublicDungeonSummary(dungeon: Record<string, unknown> | null | undefi
     run_count: Number(dungeon.run_count || 0),
     clear_count: Number(dungeon.clear_count || 0),
     clear_rate: Number(dungeon.clear_rate || 0),
+    estimated_duration: cleanText(dungeon.estimated_duration, 40),
+    estimatedDuration: getDungeonEstimatedDuration(dungeon),
     avg_rating: Number(dungeon.avg_rating || 0),
     rating_count: Number(dungeon.rating_count || 0),
     comment_count: Number(dungeon.comment_count || 0),
@@ -2467,11 +2469,20 @@ async function getMatchState(
   supabase: SupabaseClientAny,
   dungeonId: string,
 ) {
-  const { data: dungeon, error: dungeonError } = await supabase
+  let { data: dungeon, error: dungeonError } = await supabase
     .from("dungeons")
-    .select("id, name, creator, co_creators, difficulty, type, participant_count, run_count, clear_rate, avg_rating, rating_count")
+    .select("id, name, creator, co_creators, difficulty, type, participant_count, estimated_duration, run_count, clear_rate, avg_rating, rating_count")
     .eq("id", dungeonId)
     .single();
+  if (isMissingEstimatedDurationColumn(dungeonError)) {
+    const fallback = await supabase
+      .from("dungeons")
+      .select("id, name, creator, co_creators, difficulty, type, participant_count, run_count, clear_rate, avg_rating, rating_count")
+      .eq("id", dungeonId)
+      .single();
+    dungeon = fallback.data as typeof dungeon;
+    dungeonError = fallback.error;
+  }
   if (dungeonError) return { error: dungeonError };
 
   const { data: queue, error: queueError } = await supabase
@@ -2520,18 +2531,29 @@ async function getMatchMusterState(
   musterId: string,
   identity: InviteIdentity,
 ) {
-  const readMuster = () => supabase
+  const readMusterWithDuration = () => supabase
     .from("match_musters")
-    .select("id, dungeon_id, creator_code_hash, creator_name, target_player_count, status, opens_at, closes_at, room_id, created_at, drawn_at")
+    .select("id, dungeon_id, creator_code_hash, creator_name, target_player_count, estimated_duration, status, opens_at, closes_at, room_id, created_at, drawn_at")
     .eq("id", musterId)
     .single();
+
+  const readMuster = async () => {
+    const result = await readMusterWithDuration();
+    if (!isMissingEstimatedDurationColumn(result.error)) return result;
+    return supabase
+      .from("match_musters")
+      .select("id, dungeon_id, creator_code_hash, creator_name, target_player_count, status, opens_at, closes_at, room_id, created_at, drawn_at")
+      .eq("id", musterId)
+      .single();
+  };
 
   let { data: muster, error: musterError } = await readMuster();
   if (musterError) return { error: musterError };
   if (!muster) return { error: { message: "召集不存在" } };
 
-  const closesAt = new Date(String(muster.closes_at || "")).getTime();
-  if (muster.status === "open" && Number.isFinite(closesAt) && closesAt <= Date.now()) {
+  const musterRecord = muster as Record<string, unknown>;
+  const closesAt = new Date(String(musterRecord.closes_at || "")).getTime();
+  if (musterRecord.status === "open" && Number.isFinite(closesAt) && closesAt <= Date.now()) {
     const { error: drawError } = await supabase.rpc("draw_match_muster", {
       p_muster_id: musterId,
     });
@@ -2544,12 +2566,21 @@ async function getMatchMusterState(
     if (!muster) return { error: { message: "召集不存在" } };
   }
 
-  const dungeonId = String(muster.dungeon_id || "");
-  const { data: dungeon, error: dungeonError } = await supabase
+  const dungeonId = String(musterRecord.dungeon_id || "");
+  let { data: dungeon, error: dungeonError } = await supabase
     .from("dungeons")
-    .select("id, name, creator, co_creators, difficulty, type, participant_count, run_count, clear_rate, avg_rating, rating_count, comment_count, is_one_shot")
+    .select("id, name, creator, co_creators, difficulty, type, participant_count, estimated_duration, run_count, clear_rate, avg_rating, rating_count, comment_count, is_one_shot")
     .eq("id", dungeonId)
     .single();
+  if (isMissingEstimatedDurationColumn(dungeonError)) {
+    const fallback = await supabase
+      .from("dungeons")
+      .select("id, name, creator, co_creators, difficulty, type, participant_count, run_count, clear_rate, avg_rating, rating_count, comment_count, is_one_shot")
+      .eq("id", dungeonId)
+      .single();
+    dungeon = fallback.data as typeof dungeon;
+    dungeonError = fallback.error;
+  }
   if (dungeonError) return { error: dungeonError };
 
   const { data: participants, error: participantError } = await supabase
@@ -2585,24 +2616,29 @@ async function getMatchMusterState(
   const selectedCount = participantRows.filter((player) => player.status === "selected").length;
   const myName = identity.displayName.trim().toLowerCase();
   const myParticipant = participantRows.find((player) => String(player.player_name || "").trim().toLowerCase() === myName);
-  const isCreator = String(muster.creator_code_hash || "") === identity.codeHash;
-  const secondsRemaining = Math.max(0, Math.ceil((new Date(String(muster.closes_at || "")).getTime() - Date.now()) / 1000));
+  const isCreator = String(musterRecord.creator_code_hash || "") === identity.codeHash;
+  const secondsRemaining = Math.max(0, Math.ceil((new Date(String(musterRecord.closes_at || "")).getTime() - Date.now()) / 1000));
+  const musterEstimatedDuration = cleanText(musterRecord.estimated_duration, 40);
 
   return {
     data: {
       muster: {
-        id: muster.id,
-        dungeon_id: muster.dungeon_id,
-        creator_name: muster.creator_name,
-        target_player_count: muster.target_player_count,
-        status: muster.status,
-        opens_at: muster.opens_at,
-        closes_at: muster.closes_at,
-        room_id: muster.room_id,
-        created_at: muster.created_at,
-        drawn_at: muster.drawn_at,
+        id: musterRecord.id,
+        dungeon_id: musterRecord.dungeon_id,
+        creator_name: musterRecord.creator_name,
+        target_player_count: musterRecord.target_player_count,
+        estimated_duration: musterEstimatedDuration,
+        status: musterRecord.status,
+        opens_at: musterRecord.opens_at,
+        closes_at: musterRecord.closes_at,
+        room_id: musterRecord.room_id,
+        created_at: musterRecord.created_at,
+        drawn_at: musterRecord.drawn_at,
       },
-      dungeon,
+      dungeon: dungeon ? {
+        ...dungeon,
+        estimatedDuration: musterEstimatedDuration || getDungeonEstimatedDuration(dungeon as Record<string, unknown>),
+      } : null,
       participants: participantRows,
       joinedCount,
       selectedCount,
@@ -7309,6 +7345,7 @@ Deno.serve(async (req) => {
       const requiredPlayerNames = Array.isArray(payload.requiredPlayerNames)
         ? [...new Set(payload.requiredPlayerNames.map((item) => cleanText(item, 40)).filter(Boolean))].slice(0, 99)
         : [];
+      const estimatedDuration = cleanText(payload.estimatedDuration ?? payload.estimated_duration, 40);
       const { data: result, error } = await supabase.rpc("start_match_muster", {
         p_dungeon_id: dungeonId,
         p_creator_code_hash: identity.codeHash,
@@ -7322,6 +7359,14 @@ Deno.serve(async (req) => {
 
       const musterId = cleanText((result as Record<string, unknown> | null)?.musterId, 80);
       if (!isUuid(musterId)) return json({ error: "召集创建失败" }, 400);
+      if (estimatedDuration) {
+        const durationUpdate = await supabase
+          .from("match_musters")
+          .update({ estimated_duration: estimatedDuration })
+          .eq("id", musterId);
+        if (isMissingEstimatedDurationColumn(durationUpdate.error)) return json({ error: "请先运行 match_muster_estimated_duration_hotfix_20260825.sql" }, 400);
+        if (durationUpdate.error) return json({ error: durationUpdate.error.message }, 400);
+      }
       const state = await getMatchMusterState(supabase, musterId, identity);
       if (isMissingMatchMusterSystem(state.error)) return json({ error: "请先运行 match_muster_migration.sql" }, 400);
       if (state.error) return json({ error: state.error.message }, 400);

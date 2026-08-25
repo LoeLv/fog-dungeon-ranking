@@ -28,6 +28,7 @@ Page({
   data: {
     dungeon: null,
     targetPlayerCountInput: "",
+    estimatedDurationInput: "",
     playerKeyword: "",
     playerResults: [],
     requiredPlayers: [],
@@ -51,6 +52,7 @@ Page({
     }
 
     this.currentSession = current;
+    const estimatedDurationLabel = cleanRouteText(options.estimatedDuration) || "约2-4小时";
     this.setData({
       dungeon: {
         id: dungeonId,
@@ -58,15 +60,20 @@ Page({
         creator: cleanRouteText(options.creator),
         typeLabel: cleanRouteText(options.type) || "未定神系",
         difficultyLabel: cleanRouteText(options.difficulty) || "未定难度",
-        estimatedDurationLabel: cleanRouteText(options.estimatedDuration) || "约2-4小时",
+        estimatedDurationLabel: estimatedDurationLabel,
         targetCount: Math.max(1, toNumber(options.targetCount, 1)),
         isOneShot: cleanText(options.isOneShot) === "1"
-      }
+      },
+      estimatedDurationInput: estimatedDurationLabel
     });
   },
 
   onTargetInput: function(event) {
     this.setData({ targetPlayerCountInput: event.detail.value || "" });
+  },
+
+  onEstimatedDurationInput: function(event) {
+    this.setData({ estimatedDurationInput: event.detail.value || "" });
   },
 
   onPlayerKeywordInput: function(event) {
@@ -144,7 +151,8 @@ Page({
     this.setData({ actionLoading: true, errorMessage: "" });
     api.startMatchMuster(this.currentSession.code, this.data.dungeon.id, MUSTER_DURATION_SECONDS, {
       targetPlayerCount: targetPlayerCount,
-      requiredPlayerNames: requiredPlayerNames
+      requiredPlayerNames: requiredPlayerNames,
+      estimatedDuration: cleanText(this.data.estimatedDurationInput) || this.data.dungeon.estimatedDurationLabel
     })
       .then(function(result) {
         const state = result.data && result.data.state;

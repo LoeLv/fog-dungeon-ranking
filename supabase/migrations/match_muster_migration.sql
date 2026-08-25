@@ -12,6 +12,7 @@ create table if not exists public.match_musters (
   creator_code_hash text not null check (char_length(creator_code_hash) = 64),
   creator_name text not null check (char_length(trim(creator_name)) between 1 and 40),
   target_player_count integer not null default 6 check (target_player_count >= 1 and target_player_count <= 99),
+  estimated_duration text not null default '',
   status text not null default 'open' check (status in ('open', 'drawn', 'cancelled')),
   opens_at timestamptz not null default now(),
   closes_at timestamptz not null,
