@@ -9,7 +9,7 @@
         <text class="kicker">PUBLIC BATTLEFIELD</text>
         <text class="title">{{dungeon.name || '未命名试炼'}}</text>
         <text class="muted">{{room.roundLabel}} · {{room.statusLabel}} · DM {{room.host_name || '未记录'}}</text>
-        <text wx:if="{{room.expiresLabel && room.room_status === 'active'}}" class="muted">自动结束：{{room.expiresLabel}}</text>
+        <text wx:if="{{room.expiresNote && room.room_status === 'active'}}" class="muted">{{room.expiresNote}}</text>
       </view>
       <view class="hero-actions">
         <button class="mini-action" loading="{{refreshing}}" bindtap="loadBattle">刷新</button>
@@ -18,84 +18,134 @@
       </view>
     </view>
 
-    <view class="section panel">
+    <view wx:if="{{room}}" class="section battle-overview">
+      <view wx:for="{{overviewCards}}" wx:key="label" class="overview-card">
+        <text class="overview-label">{{item.label}}</text>
+        <text class="overview-value">{{item.value}}</text>
+      </view>
+    </view>
+
+    <view class="section panel battle-panel">
       <view class="row subhead">
         <text class="panel-title">公开战场信息</text>
         <text class="muted">{{players.length}} 人</text>
       </view>
       <view wx:if="{{!players.length}}" class="empty">暂无战斗成员。</view>
-      <view wx:for="{{players}}" wx:key="id" class="battle-player {{item.is_self ? 'self' : ''}}">
-        <view class="row player-head">
-          <view>
-            <text class="player-name">{{item.player_name}}</text>
-            <text class="muted">{{item.teamLabel}} · {{item.classLabel}} · {{item.statusLabel}}</text>
+      <view wx:if="{{spectatorPlayers.length}}" class="crowd-strip crowd-top">
+        <text class="crowd-label">观战席</text>
+        <view class="crowd-list">
+          <view wx:for="{{spectatorTopPlayers}}" wx:key="id" class="crowd-chip">{{item.player_name}}</view>
+        </view>
+      </view>
+
+      <view class="battle-core">
+        <view wx:for="{{frontPlayerGroups}}" wx:key="key" class="team-section team-{{item.kind}}">
+          <view class="row team-section-head">
+            <text class="team-section-title">{{item.label}}</text>
+            <text class="pill">{{item.count}} 人</text>
           </view>
-          <view class="pill">{{item.hpText}}</view>
-        </view>
-        <view class="hp-track">
-          <view class="hp-fill" style="width: {{item.hpPercent}}%;"></view>
-        </view>
-        <view class="public-tags">
-          <text class="tag team-tag team-{{item.teamKind}}">{{item.teamLabel}}</text>
-          <text class="tag">护盾 {{item.shieldText}}</text>
-          <text class="tag">攻击 {{item.attack_value || 0}}</text>
-          <text class="tag">{{item.faithLabel}}</text>
-        </view>
-        <view class="status-list">
-          <text class="status-empty" wx:if="{{!item.statuses.length}}">暂无状态</text>
-          <view wx:for="{{item.statuses}}" wx:for-item="status" wx:key="id" class="status-chip {{status.is_public ? '' : 'private'}}">
-            <view class="status-main">
-              <text class="status-name">{{status.status_name}}</text>
-              <text class="status-meta">{{status.stackText}} · {{status.visibleText}}</text>
-            </view>
-            <view wx:if="{{canManageBattle}}" class="status-tools">
-              <input class="input status-layer-input" type="number" data-id="{{status.id}}" value="{{status.stackInputValue}}" bindinput="onStatusLayerInput" />
-              <button class="mini-action status-button" data-id="{{status.id}}" loading="{{actionLoading}}" bindtap="updateStatusLayer">改</button>
-              <button class="mini-action status-button" data-id="{{status.id}}" data-public="{{status.is_public ? '1' : '0'}}" loading="{{actionLoading}}" bindtap="toggleStatusPublic">{{status.is_public ? '隐藏' : '公开'}}</button>
-              <button class="mini-action status-button danger" data-id="{{status.id}}" loading="{{actionLoading}}" bindtap="deleteStatus">删</button>
-            </view>
-          </view>
-        </view>
-        <view wx:if="{{item.abilities.length}}" class="public-abilities">
-          <view
-            wx:for="{{item.abilities}}"
-            wx:for-item="ability"
-            wx:key="key"
-            class="public-ability {{ability.ready ? '' : 'disabled'}}"
-          >
-            <view class="row ability-head">
+          <view wx:if="{{item.isEmpty}}" class="empty compact">这一组还没有人。</view>
+          <view wx:for="{{item.players}}" wx:for-item="member" wx:key="id" class="battle-player {{member.is_self ? 'self' : ''}}">
+            <view class="row player-head">
               <view>
-                <text class="ability-name">{{ability.displayName}}</text>
-                <text class="muted">{{ability.detail}}</text>
+                <text class="player-name">{{member.player_name}}</text>
+                <text class="muted">{{member.classLabel}} · {{member.statusLabel}} · {{member.faithLabel}}</text>
               </view>
-              <view class="ability-side">
-                <text class="pill">{{ability.cooldownLabel}}</text>
-                <button
-                  wx:if="{{canOperate}}"
-                  class="mini-action cooldown-button"
-                  data-player-id="{{item.id}}"
-                  data-key="{{ability.key}}"
-                  loading="{{actionLoading}}"
-                  bindtap="putAbilityOnCooldown"
-                >冷却</button>
+              <view class="player-head-meta">
+                <text class="pill life-pill life-{{member.lifeTone}}">{{member.lifeLabel}}</text>
+                <text class="pill hp-pill hp-{{member.hpTone}}">{{member.hpText}}</text>
               </view>
             </view>
+            <view class="hp-track">
+              <view class="hp-fill" style="width: {{member.hpPercent}}%;"></view>
+            </view>
+            <view class="public-tags">
+              <text class="tag team-tag team-{{member.teamKind}}">{{member.teamLabel}}</text>
+              <text class="tag">护盾 {{member.shieldText}}</text>
+              <text class="tag">攻击 {{member.attack_value || 0}}</text>
+              <text class="tag">{{member.faithLabel}}</text>
+            </view>
+            <view class="status-list">
+              <text class="status-empty" wx:if="{{!member.statuses.length}}">暂无状态</text>
+              <view wx:for="{{member.statuses}}" wx:for-item="status" wx:key="id" class="status-chip {{status.is_public ? '' : 'private'}}">
+                <view class="status-main">
+                  <text class="status-name">{{status.status_name}}</text>
+                  <text class="status-meta">{{status.stackText}} · {{status.visibleText}}</text>
+                </view>
+                <view wx:if="{{canManageBattle}}" class="status-tools">
+                  <input class="input status-layer-input" type="number" data-id="{{status.id}}" value="{{status.stackInputValue}}" bindinput="onStatusLayerInput" />
+                  <button class="mini-action status-button" data-id="{{status.id}}" loading="{{actionLoading}}" bindtap="updateStatusLayer">改</button>
+                  <button class="mini-action status-button" data-id="{{status.id}}" data-public="{{status.is_public ? '1' : '0'}}" loading="{{actionLoading}}" bindtap="toggleStatusPublic">{{status.is_public ? '隐藏' : '公开'}}</button>
+                  <button class="mini-action status-button danger" data-id="{{status.id}}" loading="{{actionLoading}}" bindtap="deleteStatus">删</button>
+                </view>
+              </view>
+            </view>
+            <view wx:if="{{member.abilities.length}}" class="public-abilities">
+              <view
+                wx:for="{{member.abilities}}"
+                wx:for-item="ability"
+                wx:key="key"
+                class="public-ability {{ability.ready ? '' : 'disabled'}}"
+              >
+                <view class="row ability-head">
+                  <view>
+                    <text class="ability-name">{{ability.displayName}}</text>
+                    <text class="muted">{{ability.detail}}</text>
+                  </view>
+                  <view class="ability-side">
+                    <text class="pill">{{ability.cooldownLabel}}</text>
+                    <button
+                      wx:if="{{canOperate}}"
+                      class="mini-action cooldown-button"
+                      data-player-id="{{member.id}}"
+                      data-key="{{ability.key}}"
+                      loading="{{actionLoading}}"
+                      bindtap="putAbilityOnCooldown"
+                    >冷却</button>
+                  </view>
+                </view>
+              </view>
+            </view>
+            <text wx:if="{{member.publicNote}}" class="muted player-note">{{member.publicNote}}</text>
           </view>
         </view>
-        <text wx:if="{{item.publicNote}}" class="muted player-note">{{item.publicNote}}</text>
+      </view>
+
+      <view wx:if="{{reservePlayerGroups.length}}" class="reserve-strip">
+        <view wx:for="{{reservePlayerGroups}}" wx:key="key" class="reserve-group">
+          <view class="row team-section-head">
+            <text class="team-section-title">{{item.label}}</text>
+            <text class="pill">{{item.count}} 人</text>
+          </view>
+          <view wx:if="{{item.isEmpty}}" class="empty compact">这一组还没有人。</view>
+          <view wx:for="{{item.players}}" wx:for-item="member" wx:key="id" class="reserve-chip">{{member.player_name}}</view>
+        </view>
+      </view>
+
+      <view wx:if="{{spectatorPlayers.length}}" class="crowd-strip crowd-bottom">
+        <text class="crowd-label">观战席</text>
+        <view class="crowd-list">
+          <view wx:for="{{spectatorBottomPlayers}}" wx:key="id" class="crowd-chip">{{item.player_name}}</view>
+        </view>
       </view>
     </view>
 
     <view class="section panel">
       <view class="row subhead">
-        <text class="panel-title">我的可操作信息</text>
+        <text class="panel-title">我的行动卡</text>
         <text class="muted">{{selfPlayer ? selfPlayer.player_name : '未入场'}}</text>
       </view>
       <view wx:if="{{!selfPlayer}}" class="empty">你还不是这个战斗房间成员，只能查看公开战场。</view>
       <block wx:else>
-        <view class="self-summary">
-          <text class="self-stat">{{selfPlayer.hpText}}</text>
-          <text class="muted">{{selfPlayer.teamLabel}} 队 · {{selfPlayer.classLabel}}</text>
+        <view class="self-banner">
+          <view>
+            <text class="self-stat">{{selfPlayer.hpText}}</text>
+            <text class="muted">{{selfPlayer.teamLabel}} · {{selfPlayer.classLabel}} · {{selfPlayer.faithLabel}}</text>
+          </view>
+          <view class="self-life">
+            <text class="pill life-pill life-{{selfPlayer.lifeTone}}">{{selfPlayer.lifeLabel}}</text>
+            <text class="pill">{{selfPlayer.lifeHint}}</text>
+          </view>
         </view>
 
         <view class="ability-list">
@@ -120,7 +170,11 @@
           </view>
         </view>
 
-        <view class="action-box">
+        <view class="action-box action-shell">
+          <view class="row action-shell-head">
+            <text class="tool-title">本回合行动</text>
+            <text class="tool-note">写清目标、方式、消耗和想要的结果。</text>
+          </view>
           <text class="muted">当前选择：{{selectedAbilityName}}</text>
           <textarea class="textarea" value="{{actionText}}" maxlength="1200" placeholder="写下本回合行动，目标、方式、消耗和期望效果都放这里。" bindinput="onActionTextInput"></textarea>
           <button class="btn btn-primary" disabled="{{!canSubmitAction}}" loading="{{actionLoading}}" bindtap="submitAction">提交行动</button>
@@ -135,7 +189,7 @@
       </view>
       <view wx:if="{{canOperate && !pendingActions.length}}" class="empty">暂无待处理行动。</view>
       <view wx:if="{{!canOperate && !selfActions.length}}" class="empty">你还没有提交过行动。</view>
-      <view wx:for="{{visibleActions}}" wx:key="id" class="action-card">
+      <view wx:for="{{visibleActions}}" wx:key="id" class="action-card action-stage">
         <view class="row action-head">
           <text class="action-title">{{item.actor_name}} · {{item.roundLabel}}</text>
           <text class="pill">{{item.statusLabel}}</text>
@@ -151,21 +205,47 @@
     </view>
 
     <view wx:if="{{canManageBattle}}" class="section panel dm-panel">
-      <text class="panel-title">DM 操作</text>
-      <view class="dm-grid">
-        <picker mode="selector" range="{{players}}" range-key="player_name" bindchange="onDmTargetChange">
-          <view class="input picker-input">目标：{{dmTargetPlayerId || '请选择'}}</view>
-        </picker>
-        <picker mode="selector" range="{{dmActionTypeLabels}}" bindchange="onDmActionTypeChange">
-          <view class="input picker-input">操作：{{dmActionTypeLabel}}</view>
-        </picker>
+      <view class="row subhead dm-header">
+        <view>
+          <text class="panel-title">DM 操作台</text>
+          <text class="muted">结算、状态、分队和房间收束都在这里处理。</text>
+        </view>
+        <text class="pill">主持模式</text>
       </view>
-      <input class="input" type="number" placeholder="数值" value="{{dmAmount}}" bindinput="onDmAmountInput" />
-      <textarea class="textarea compact" value="{{dmNote}}" maxlength="500" placeholder="结算备注" bindinput="onDmNoteInput"></textarea>
-      <button class="btn btn-primary" loading="{{actionLoading}}" bindtap="applyDmAction">应用到目标</button>
 
-      <view class="status-editor">
-        <text class="panel-title small-title">状态编辑</text>
+      <view class="dm-tabs">
+        <button
+          wx:for="{{dmToolTabs}}"
+          wx:key="key"
+          class="dm-tab {{activeDmTool === item.key ? 'active' : ''}}"
+          data-key="{{item.key}}"
+          bindtap="setActiveDmTool"
+        >{{item.label}}</button>
+      </view>
+
+      <view wx:if="{{activeDmTool === 'settle'}}" class="dm-tool">
+        <view class="tool-heading">
+          <text class="tool-title">即时结算</text>
+          <text class="tool-note">调整生命、护盾、备注或击倒。</text>
+        </view>
+        <view class="dm-grid">
+          <picker mode="selector" range="{{players}}" range-key="player_name" bindchange="onDmTargetChange">
+            <view class="input picker-input">目标：{{dmTargetPlayerId || '请选择'}}</view>
+          </picker>
+          <picker mode="selector" range="{{dmActionTypeLabels}}" bindchange="onDmActionTypeChange">
+            <view class="input picker-input">操作：{{dmActionTypeLabel}}</view>
+          </picker>
+        </view>
+        <input class="input" type="number" placeholder="数值" value="{{dmAmount}}" bindinput="onDmAmountInput" />
+        <textarea class="textarea compact" value="{{dmNote}}" maxlength="500" placeholder="结算备注" bindinput="onDmNoteInput"></textarea>
+        <button class="btn btn-primary" loading="{{actionLoading}}" bindtap="applyDmAction">应用到目标</button>
+      </view>
+
+      <view wx:if="{{activeDmTool === 'status'}}" class="dm-tool status-editor">
+        <view class="tool-heading">
+          <text class="tool-title">状态编辑</text>
+          <text class="tool-note">层数为 0 时也保留，删除由 DM 决定。</text>
+        </view>
         <picker mode="selector" range="{{players}}" range-key="player_name" bindchange="onStatusPlayerChange">
           <view class="input picker-input">玩家：{{statusPlayerName || '请选择'}}</view>
         </picker>
@@ -180,15 +260,22 @@
         <button class="btn btn-primary" loading="{{actionLoading}}" bindtap="addStatus">添加状态</button>
       </view>
 
-      <view class="round-tools">
+      <view wx:if="{{activeDmTool === 'room'}}" class="dm-tool round-tools">
+        <view class="tool-heading round-heading">
+          <text class="tool-title">回合推进</text>
+          <text class="tool-note">需要跨回合时在这里调整。</text>
+        </view>
         <input class="input round-input" type="number" value="{{roundInput}}" bindinput="onRoundInput" />
         <input class="input" placeholder="回合备注，可空" value="{{roundNote}}" bindinput="onRoundNoteInput" />
         <button class="btn btn-ghost" loading="{{actionLoading}}" bindtap="updateRound">推进/调整回合</button>
       </view>
 
-      <view class="team-board">
+      <view wx:if="{{activeDmTool === 'team'}}" class="dm-tool team-board">
         <view class="row subhead team-summary">
-          <text class="panel-title small-title">房内组队</text>
+          <view>
+            <text class="tool-title">房内组队</text>
+            <text class="tool-note">红蓝两队不限制人数，未分配的人可保持观众。</text>
+          </view>
           <view class="team-stats">
             <text class="tag team-tag team-red">红队 {{teamStats.red}}</text>
             <text class="tag team-tag team-blue">蓝队 {{teamStats.blue}}</text>
@@ -217,10 +304,16 @@
         </view>
       </view>
 
-      <view class="button-row">
-        <button wx:if="{{canExtend}}" class="btn btn-ghost" loading="{{actionLoading}}" bindtap="extendBattle">延长6小时</button>
-        <button class="btn btn-ghost" data-status="finished" loading="{{actionLoading}}" bindtap="finishBattle">结束战斗</button>
-        <button class="btn btn-danger" data-status="cancelled" loading="{{actionLoading}}" bindtap="finishBattle">取消战斗</button>
+      <view wx:if="{{activeDmTool === 'room'}}" class="dm-tool danger-zone">
+        <view class="tool-heading">
+          <text class="tool-title">房间时间</text>
+          <text class="tool-note">{{room.expiresNote}}</text>
+        </view>
+        <view class="button-row">
+          <button wx:if="{{canExtend}}" class="btn btn-ghost" loading="{{actionLoading}}" bindtap="extendBattle">延长6小时</button>
+          <button class="btn btn-ghost" data-status="finished" loading="{{actionLoading}}" bindtap="finishBattle">结束战斗</button>
+          <button class="btn btn-danger" data-status="cancelled" loading="{{actionLoading}}" bindtap="finishBattle">取消战斗</button>
+        </view>
       </view>
     </view>
 

@@ -69,6 +69,9 @@ function normalizePlayer(player, currentRound) {
   const maxHp = Math.max(1, toNumber(player.max_hp, 1));
   const currentHp = Math.max(0, toNumber(player.current_hp, 0));
   const percent = Math.max(0, Math.min(100, Math.round((currentHp / maxHp) * 100)));
+  const isDefeated = !!player.is_defeated;
+  const hpTone = isDefeated || currentHp <= 0 ? "down" : percent <= 30 ? "low" : percent <= 60 ? "mid" : "high";
+  const lifeTone = isDefeated || currentHp <= 0 ? "dead" : "alive";
   const statuses = Array.isArray(player.statuses) ? player.statuses.map(function(status) {
     return Object.assign({}, status, {
       stackText: "层数 " + Math.max(0, toNumber(status.stack_count, 0)),
@@ -99,9 +102,14 @@ function normalizePlayer(player, currentRound) {
     teamInputValue: teamProfile.kind === "unassigned" ? "" : teamProfile.label,
     classLabel: cleanText(player.class_name) || cleanText(player.profession) || "未定职业",
     faithLabel: cleanText(player.faith_god) || "未定信仰",
-    statusLabel: player.is_defeated ? "倒地" : "行动中",
+    statusLabel: isDefeated ? "死亡" : "行动中",
+    lifeLabel: isDefeated ? "死亡" : "行动中",
+    lifeHint: isDefeated ? "可被复苏" : "正常行动",
+    lifeTone: lifeTone,
+    hpTone: hpTone,
     publicNote: cleanText(player.note),
     statuses: statuses,
+    statusCount: statuses.length,
     abilities: abilities
   });
 }
@@ -164,12 +172,52 @@ function normalizeBattleState(raw) {
     else if (player.teamKind === "custom") teamStats.custom += 1;
     else teamStats.unassigned += 1;
   });
+  const playerGroups = [
+    { key: "red", label: "红队", kind: "red", players: players.filter(function(player) { return player.teamKind === "red"; }) },
+    { key: "blue", label: "蓝队", kind: "blue", players: players.filter(function(player) { return player.teamKind === "blue"; }) },
+    { key: "spectator", label: "观众", kind: "spectator", players: players.filter(function(player) { return player.teamKind === "spectator"; }) },
+    { key: "custom", label: "其他队伍", kind: "custom", players: players.filter(function(player) { return player.teamKind === "custom"; }) },
+    { key: "unassigned", label: "未分队", kind: "unassigned", players: players.filter(function(player) { return player.teamKind === "unassigned"; }) }
+  ].map(function(group) {
+    return Object.assign({}, group, {
+      count: group.players.length,
+      isEmpty: group.players.length === 0,
+      visible: group.players.length > 0 || group.key === "red" || group.key === "blue"
+    });
+  });
+  const visiblePlayerGroups = playerGroups.filter(function(group) {
+    return group.visible;
+  });
+  const frontPlayerGroups = playerGroups.filter(function(group) {
+    return group.visible && (group.kind === "red" || group.kind === "blue" || group.kind === "custom");
+  });
+  const spectatorPlayers = players.filter(function(player) {
+    return player.teamKind === "spectator";
+  });
+  const spectatorTopPlayers = spectatorPlayers.filter(function(_player, index) {
+    return index % 2 === 0;
+  });
+  const spectatorBottomPlayers = spectatorPlayers.filter(function(_player, index) {
+    return index % 2 === 1;
+  });
+  const reservePlayerGroups = playerGroups.filter(function(group) {
+    return group.visible && group.kind === "unassigned";
+  });
+  const overviewCards = [
+    { label: "当前回合", value: "第" + currentRound + "回合" },
+    { label: "房间状态", value: normalizeRoomStatus(room.room_status) },
+    { label: "成员人数", value: String(players.length) + " 人" },
+    { label: "待处理行动", value: String(pendingActions.length) + " 条" },
+    { label: "自动结束", value: room.expiresAt ? formatTime(room.expiresAt) : "未设置" },
+    { label: "队伍概览", value: "红 " + teamStats.red + " / 蓝 " + teamStats.blue + " / 观众 " + teamStats.spectator }
+  ];
 
   return {
     room: Object.assign({}, room, {
       statusLabel: normalizeRoomStatus(room.room_status),
       roundLabel: "第 " + currentRound + " 回合",
-      expiresLabel: room.expiresAt ? formatTime(room.expiresAt) : ""
+      expiresLabel: room.expiresAt ? formatTime(room.expiresAt) : "",
+      expiresNote: room.expiresAt ? "当前自动结束：" + formatTime(room.expiresAt) : "当前没有自动结束时间。"
     }),
     dungeon: raw.dungeon || {},
     players: players,
@@ -182,6 +230,14 @@ function normalizeBattleState(raw) {
     actionListLabel: canOperate ? "行动结算" : "我的行动记录",
     selfPlayer: selfPlayer,
     teamStats: teamStats,
+    playerGroups: playerGroups,
+    visiblePlayerGroups: visiblePlayerGroups,
+    frontPlayerGroups: frontPlayerGroups,
+    spectatorPlayers: spectatorPlayers,
+    spectatorTopPlayers: spectatorTopPlayers,
+    spectatorBottomPlayers: spectatorBottomPlayers,
+    reservePlayerGroups: reservePlayerGroups,
+    overviewCards: overviewCards,
     isHost: !!raw.isHost,
     isParticipant: !!raw.isParticipant,
     canOperate: canOperate,
@@ -213,6 +269,13 @@ Page({
     dmActionTypeLabels: ["伤害", "治疗", "护盾", "设定生命", "复苏", "击倒", "备注"],
     dmActionTypes: ["damage", "heal", "shield", "set_hp", "revive", "defeat", "note"],
     dmActionTypeLabel: "伤害",
+    dmToolTabs: [
+      { key: "settle", label: "结算" },
+      { key: "status", label: "状态" },
+      { key: "team", label: "分队" },
+      { key: "room", label: "房间" }
+    ],
+    activeDmTool: "settle",
     selectedAbilityKey: "",
     selectedAbilityName: "普通行动",
     actionText: "",
@@ -236,6 +299,14 @@ Page({
       custom: 0,
       unassigned: 0
     },
+    overviewCards: [],
+    playerGroups: [],
+    visiblePlayerGroups: [],
+    frontPlayerGroups: [],
+    spectatorPlayers: [],
+    spectatorTopPlayers: [],
+    spectatorBottomPlayers: [],
+    reservePlayerGroups: [],
     loading: true,
     refreshing: false,
     actionLoading: false,
@@ -318,6 +389,14 @@ Page({
       roundInput: String(state.room.current_round || 1),
       teamInputs: teamInputs,
       teamStats: state.teamStats,
+      playerGroups: state.playerGroups,
+      visiblePlayerGroups: state.visiblePlayerGroups,
+      frontPlayerGroups: state.frontPlayerGroups,
+      spectatorPlayers: state.spectatorPlayers,
+      spectatorTopPlayers: state.spectatorTopPlayers,
+      spectatorBottomPlayers: state.spectatorBottomPlayers,
+      reservePlayerGroups: state.reservePlayerGroups,
+      overviewCards: state.overviewCards,
       statusInputs: statusInputs,
       loading: false,
       refreshing: false,
@@ -431,6 +510,12 @@ Page({
   onDmTargetChange: function(event) {
     const player = this.data.players[Number(event.detail.value || 0)] || null;
     this.setData({ dmTargetPlayerId: player ? String(player.id) : "" });
+  },
+
+  setActiveDmTool: function(event) {
+    const key = cleanText(event.currentTarget.dataset.key);
+    if (!key) return;
+    this.setData({ activeDmTool: key });
   },
 
   onDmActionTypeChange: function(event) {
