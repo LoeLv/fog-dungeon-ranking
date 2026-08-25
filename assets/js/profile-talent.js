@@ -524,6 +524,7 @@ function renderTalentPoolPanel(state, error, profile) {
                 <div class="metric-strip">
                     <span class="metric-pill">累计获得抽数 <strong>${Number(state.totalDrawsEarned || 0)}</strong></span>
                     <span class="metric-pill">已用抽数 <strong>${Number(state.spentDraws || 0)}</strong></span>
+                    <span class="metric-pill">天赋碎片 <strong>${Number(state.fragmentTotal || 0)}</strong></span>
                     <span class="metric-pill">基础抽 <strong>${basicAvailableDraws}</strong></span>
                     <span class="metric-pill">进阶抽 <strong>${advancedAvailableDraws}</strong></span>
                     <span class="metric-pill">B级保底 <strong>${currentMisses}/${guaranteeDraws - 1}</strong></span>
