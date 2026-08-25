@@ -30,7 +30,7 @@ type InviteIdentity = {
 type LooseError = { code?: string; message?: string } | null | undefined;
 type BattleActionResult = { data?: any; error?: any };
 
-const staffAdminNames = new Set(["羔羊", "槐柏", "南河书淮", "慕辞", "棺材板", "我不想死", "情忆浮生", "知更", "变态", "墨染流年"]);
+const staffAdminNames = new Set(["羔羊", "槐柏", "南河书淮", "慕辞", "棺材板", "我不想死", "情忆浮生", "知更", "变态", "墨染流年", "洛泽攸"]);
 const talentManagerNames = new Set(["羔羊"]);
 const scoreSettlerNames = new Set(["慕辞", "情忆浮生", "知更"]);
 
