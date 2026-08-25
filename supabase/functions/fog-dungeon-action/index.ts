@@ -949,6 +949,10 @@ function isMissingCoCreatorsColumn(error: LooseError) {
   return error?.code === "42703" && !!error.message?.includes("co_creators");
 }
 
+function isMissingEstimatedDurationColumn(error: LooseError) {
+  return error?.code === "42703" && !!error.message?.includes("estimated_duration");
+}
+
 function isMissingDungeonReviewColumn(error: LooseError) {
   return error?.code === "42703" && (
     !!error.message?.includes("review_status") ||
@@ -2503,7 +2507,7 @@ async function getMatchState(
 
   return {
     data: {
-      dungeon,
+      dungeon: dungeon ? { ...dungeon, estimatedDuration: getDungeonEstimatedDuration(dungeon as Record<string, unknown>) } : null,
       queue: queue || [],
       queuedCount: queue?.length || 0,
       rooms: rooms || [],
@@ -2702,6 +2706,16 @@ function cleanBattleAmount(value: unknown, fallback = 0) {
   return Math.max(-9999, Math.min(9999, amount));
 }
 
+function getDungeonEstimatedDuration(dungeon: Record<string, unknown> | null | undefined) {
+  const explicit = cleanText(dungeon?.estimated_duration, 40);
+  if (explicit) return explicit;
+  const difficulty = cleanText(dungeon?.difficulty, 20);
+  if (["低", "low"].includes(difficulty)) return "约1-2小时";
+  if (["中", "medium"].includes(difficulty)) return "约2-3小时";
+  if (["高", "high"].includes(difficulty)) return "约3-4小时";
+  return "约2-4小时";
+}
+
 const battleRoomLifetimeMs = 6 * 60 * 60 * 1000;
 
 function getDefaultBattleExpiresAt() {
@@ -2815,11 +2829,20 @@ async function getBattleRoomState(
     }
   }
 
-  const { data: dungeon, error: dungeonError } = await supabase
+  let { data: dungeon, error: dungeonError } = await supabase
     .from("dungeons")
-    .select("id, name, creator, difficulty, type, participant_count")
+    .select("id, name, creator, difficulty, type, participant_count, estimated_duration")
     .eq("id", String(room.dungeon_id))
     .maybeSingle();
+  if (isMissingEstimatedDurationColumn(dungeonError)) {
+    const fallback = await supabase
+      .from("dungeons")
+      .select("id, name, creator, difficulty, type, participant_count")
+      .eq("id", String(room.dungeon_id))
+      .maybeSingle();
+    dungeon = fallback.data as typeof dungeon;
+    dungeonError = fallback.error;
+  }
   if (dungeonError) return { error: dungeonError };
 
   const { data: players, error: playerError } = await supabase
@@ -2829,6 +2852,14 @@ async function getBattleRoomState(
     .order("seat_order", { ascending: true })
     .order("id", { ascending: true });
   if (playerError) return { error: playerError };
+
+  const { data: statusRows, error: statusError } = await supabase
+    .from("battle_room_player_statuses")
+    .select("id, battle_room_player_id, status_name, stack_count, is_public, created_at, updated_at")
+    .eq("battle_room_id", battleRoomId)
+    .order("created_at", { ascending: true })
+    .order("id", { ascending: true });
+  if (statusError && statusError.code !== "42P01") return { error: statusError };
 
   const { data: logs, error: logError } = await supabase
     .from("battle_room_logs")
@@ -2852,11 +2883,18 @@ async function getBattleRoomState(
   const isHost = String(room.host_code_hash || "") === identity.codeHash;
   const isParticipant = playerRows.some((player) => String(player.player_code_hash || "") === identity.codeHash);
   const canOperate = isHost || hasRole(identity.role, ["reviewer", "admin"]);
+  const statusByPlayerId = new Map<string, Record<string, unknown>[]>();
+  for (const status of statusRows || []) {
+    if (!canOperate && status.is_public !== true) continue;
+    const playerId = String(status.battle_room_player_id || "");
+    statusByPlayerId.set(playerId, [...(statusByPlayerId.get(playerId) || []), status]);
+  }
   const visiblePlayers = playerRows.map((player) => {
     const isSelf = String(player.player_code_hash || "") === identity.codeHash;
     const visible = { ...player } as Record<string, unknown>;
     delete visible.player_code_hash;
     visible.is_self = isSelf;
+    visible.statuses = statusByPlayerId.get(String(player.id)) || [];
     if (!canOperate && !isSelf) visible.abilities = [];
     return visible;
   });
@@ -3377,6 +3415,100 @@ async function updateBattleAbilityCooldown(
     round_no: currentRound,
   });
 
+  return getBattleRoomState(supabase, battleRoomId, identity);
+}
+
+async function addBattlePlayerStatus(
+  supabase: SupabaseClientAny,
+  battleRoomId: string,
+  playerId: number,
+  identity: InviteIdentity,
+  statusNameInput: unknown,
+  stackCountInput: unknown,
+  isPublicInput: unknown,
+): Promise<BattleActionResult> {
+  const state = await getBattleRoomState(supabase, battleRoomId, identity);
+  if (state.error) return state;
+  if (!state.data?.canOperate) return { error: { message: "只有 DM、审核员或馆主可以添加状态" } };
+  if (String((state.data.room as Record<string, unknown>).room_status || "") !== "active") return { error: { message: "战斗房间已结束，不能添加状态" } };
+  const player = (state.data.players as Record<string, unknown>[]).find((item) => Number(item.id) === playerId);
+  if (!player) return { error: { message: "战斗成员不存在" } };
+
+  const statusName = cleanText(statusNameInput, 40);
+  if (!statusName) return { error: { message: "请填写状态名" } };
+  const stackCount = Math.max(0, Math.min(999, Math.round(Number(stackCountInput) || 0)));
+  const isPublic = isPublicInput === true;
+
+  const { error } = await supabase.from("battle_room_player_statuses").insert({
+    battle_room_id: battleRoomId,
+    battle_room_player_id: playerId,
+    status_name: statusName,
+    stack_count: stackCount,
+    is_public: isPublic,
+    created_by_hash: identity.codeHash,
+    created_by_name: identity.displayName,
+  });
+  if (error) return { error };
+
+  await supabase.from("battle_room_logs").insert({
+    battle_room_id: battleRoomId,
+    actor_code_hash: identity.codeHash,
+    actor_name: identity.displayName,
+    action_type: "note",
+    target_player_id: playerId,
+    target_player_name: cleanText(player.player_name, 40),
+    note: `添加状态：${statusName} ${stackCount}层${isPublic ? "（公开）" : "（DM可见）"}`,
+    round_no: Number((state.data.room as Record<string, unknown>).current_round || 1),
+  });
+  return getBattleRoomState(supabase, battleRoomId, identity);
+}
+
+async function updateBattlePlayerStatus(
+  supabase: SupabaseClientAny,
+  battleRoomId: string,
+  statusId: number,
+  identity: InviteIdentity,
+  stackCountInput: unknown,
+  isPublicInput: unknown,
+): Promise<BattleActionResult> {
+  const state = await getBattleRoomState(supabase, battleRoomId, identity);
+  if (state.error) return state;
+  if (!state.data?.canOperate) return { error: { message: "只有 DM、审核员或馆主可以调整状态" } };
+  if (String((state.data.room as Record<string, unknown>).room_status || "") !== "active") return { error: { message: "战斗房间已结束，不能调整状态" } };
+
+  const stackCount = Math.max(0, Math.min(999, Math.round(Number(stackCountInput) || 0)));
+  const update: Record<string, unknown> = {
+    stack_count: stackCount,
+    updated_at: new Date().toISOString(),
+  };
+  if (isPublicInput === true || isPublicInput === false) update.is_public = isPublicInput === true;
+
+  const { error } = await supabase
+    .from("battle_room_player_statuses")
+    .update(update)
+    .eq("id", statusId)
+    .eq("battle_room_id", battleRoomId);
+  if (error) return { error };
+  return getBattleRoomState(supabase, battleRoomId, identity);
+}
+
+async function deleteBattlePlayerStatus(
+  supabase: SupabaseClientAny,
+  battleRoomId: string,
+  statusId: number,
+  identity: InviteIdentity,
+): Promise<BattleActionResult> {
+  const state = await getBattleRoomState(supabase, battleRoomId, identity);
+  if (state.error) return state;
+  if (!state.data?.canOperate) return { error: { message: "只有 DM、审核员或馆主可以删除状态" } };
+  if (String((state.data.room as Record<string, unknown>).room_status || "") !== "active") return { error: { message: "战斗房间已结束，不能删除状态" } };
+
+  const { error } = await supabase
+    .from("battle_room_player_statuses")
+    .delete()
+    .eq("id", statusId)
+    .eq("battle_room_id", battleRoomId);
+  if (error) return { error };
   return getBattleRoomState(supabase, battleRoomId, identity);
 }
 
@@ -6821,12 +6953,12 @@ Deno.serve(async (req) => {
         const limit = Math.max(1, Math.min(Number(payload.limit) || (keyword ? 30 : 80), 200));
         let dungeonQuery = supabase
           .from("dungeons")
-          .select("id, name, creator, co_creators, difficulty, type, participant_count, run_count, clear_rate, avg_rating, rating_count, comment_count, created_at, is_one_shot");
+          .select("id, name, creator, co_creators, difficulty, type, participant_count, estimated_duration, run_count, clear_rate, avg_rating, rating_count, comment_count, created_at, is_one_shot");
         if (keyword) dungeonQuery = dungeonQuery.ilike("name", `%${keyword}%`);
         let { data: dungeons, error: dungeonError } = await dungeonQuery
           .order("created_at", { ascending: false })
           .limit(limit);
-        if (isMissingCoCreatorsColumn(dungeonError)) {
+        if (isMissingCoCreatorsColumn(dungeonError) || isMissingEstimatedDurationColumn(dungeonError)) {
           let fallbackQuery = supabase
             .from("dungeons")
             .select("id, name, creator, difficulty, type, participant_count, run_count, clear_rate, avg_rating, rating_count, comment_count, created_at, is_one_shot");
@@ -6879,6 +7011,7 @@ Deno.serve(async (req) => {
           const dungeonId = String(dungeon.id);
           return {
             ...dungeon,
+            estimatedDuration: getDungeonEstimatedDuration(dungeon as Record<string, unknown>),
             queuedCount: queueCountByDungeon.get(dungeonId) || 0,
             runningRoomCount: roomCountByDungeon.get(dungeonId) || 0,
           };
@@ -7092,6 +7225,42 @@ Deno.serve(async (req) => {
       if (!playerId) return json({ error: "战斗成员 ID 不正确" }, 400);
       const state = await updateBattleAbilityCooldown(supabase, battleRoomId, playerId, identity, payload.abilityKey);
       if (isMissingBattleSystem(state.error)) return json({ error: "请先运行 battle_room_system_20260810.sql" }, 400);
+      if (state.error) return json({ error: state.error.message }, 400);
+      return json({ role, name: identity.displayName, data: state.data });
+    }
+
+    if (action === "addBattlePlayerStatus") {
+      if (!hasRole(role, ["player", "author", "reviewer", "admin"])) return json({ error: "需要入局谕令" }, 403);
+      const battleRoomId = cleanText(payload.battleRoomId, 80);
+      const playerId = cleanBigIntId(payload.playerId);
+      if (!isUuid(battleRoomId)) return json({ error: "战斗房间 ID 不正确" }, 400);
+      if (!playerId) return json({ error: "战斗成员 ID 不正确" }, 400);
+      const state = await addBattlePlayerStatus(supabase, battleRoomId, playerId, identity, payload.statusName, payload.stackCount, payload.isPublic);
+      if (isMissingBattleSystem(state.error)) return json({ error: "请先运行 battle_room_status_hotfix_20260825.sql" }, 400);
+      if (state.error) return json({ error: state.error.message }, 400);
+      return json({ role, name: identity.displayName, data: state.data });
+    }
+
+    if (action === "updateBattlePlayerStatus") {
+      if (!hasRole(role, ["player", "author", "reviewer", "admin"])) return json({ error: "需要入局谕令" }, 403);
+      const battleRoomId = cleanText(payload.battleRoomId, 80);
+      const statusId = cleanBigIntId(payload.statusId);
+      if (!isUuid(battleRoomId)) return json({ error: "战斗房间 ID 不正确" }, 400);
+      if (!statusId) return json({ error: "状态 ID 不正确" }, 400);
+      const state = await updateBattlePlayerStatus(supabase, battleRoomId, statusId, identity, payload.stackCount, payload.isPublic);
+      if (isMissingBattleSystem(state.error)) return json({ error: "请先运行 battle_room_status_hotfix_20260825.sql" }, 400);
+      if (state.error) return json({ error: state.error.message }, 400);
+      return json({ role, name: identity.displayName, data: state.data });
+    }
+
+    if (action === "deleteBattlePlayerStatus") {
+      if (!hasRole(role, ["player", "author", "reviewer", "admin"])) return json({ error: "需要入局谕令" }, 403);
+      const battleRoomId = cleanText(payload.battleRoomId, 80);
+      const statusId = cleanBigIntId(payload.statusId);
+      if (!isUuid(battleRoomId)) return json({ error: "战斗房间 ID 不正确" }, 400);
+      if (!statusId) return json({ error: "状态 ID 不正确" }, 400);
+      const state = await deleteBattlePlayerStatus(supabase, battleRoomId, statusId, identity);
+      if (isMissingBattleSystem(state.error)) return json({ error: "请先运行 battle_room_status_hotfix_20260825.sql" }, 400);
       if (state.error) return json({ error: state.error.message }, 400);
       return json({ role, name: identity.displayName, data: state.data });
     }

@@ -20,6 +20,7 @@
       <view>
         <text class="panel-title">{{dungeon.name}}</text>
         <text class="muted">{{dungeon.typeLabel}} · {{dungeon.difficultyLabel}} · {{dungeon.creator}}</text>
+        <text class="muted duration-line">预估时间：{{dungeon.estimatedDurationLabel}}</text>
       </view>
       <view class="pill">{{dungeon.targetCount}} 人默认</view>
     </view>

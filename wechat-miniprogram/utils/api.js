@@ -196,6 +196,32 @@ function updateBattleAbilityCooldown(inviteCode, battleRoomId, playerId, ability
   });
 }
 
+function addBattlePlayerStatus(inviteCode, battleRoomId, playerId, statusName, stackCount, isPublic) {
+  return invokeDungeonAction("addBattlePlayerStatus", inviteCode, {
+    battleRoomId: battleRoomId,
+    playerId: playerId,
+    statusName: statusName,
+    stackCount: stackCount,
+    isPublic: isPublic === true
+  });
+}
+
+function updateBattlePlayerStatus(inviteCode, battleRoomId, statusId, stackCount, isPublic) {
+  return invokeDungeonAction("updateBattlePlayerStatus", inviteCode, {
+    battleRoomId: battleRoomId,
+    statusId: statusId,
+    stackCount: stackCount,
+    isPublic: isPublic
+  });
+}
+
+function deleteBattlePlayerStatus(inviteCode, battleRoomId, statusId) {
+  return invokeDungeonAction("deleteBattlePlayerStatus", inviteCode, {
+    battleRoomId: battleRoomId,
+    statusId: statusId
+  });
+}
+
 function finishBattleRoom(inviteCode, battleRoomId, status, note) {
   return invokeDungeonAction("finishBattleRoom", inviteCode, {
     battleRoomId: battleRoomId,
@@ -236,6 +262,9 @@ module.exports = {
   applyBattlePlayerAction: applyBattlePlayerAction,
   updateBattlePlayerTeam: updateBattlePlayerTeam,
   updateBattleAbilityCooldown: updateBattleAbilityCooldown,
+  addBattlePlayerStatus: addBattlePlayerStatus,
+  updateBattlePlayerStatus: updateBattlePlayerStatus,
+  deleteBattlePlayerStatus: deleteBattlePlayerStatus,
   finishBattleRoom: finishBattleRoom,
   extendBattleRoom: extendBattleRoom,
   getBattleOverview: getBattleOverview

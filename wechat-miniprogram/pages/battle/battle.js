@@ -51,6 +51,13 @@ function normalizePlayer(player, currentRound) {
   const maxHp = Math.max(1, toNumber(player.max_hp, 1));
   const currentHp = Math.max(0, toNumber(player.current_hp, 0));
   const percent = Math.max(0, Math.min(100, Math.round((currentHp / maxHp) * 100)));
+  const statuses = Array.isArray(player.statuses) ? player.statuses.map(function(status) {
+    return Object.assign({}, status, {
+      stackText: "层数 " + Math.max(0, toNumber(status.stack_count, 0)),
+      visibleText: status.is_public ? "公开" : "DM可见",
+      stackInputValue: String(Math.max(0, toNumber(status.stack_count, 0)))
+    });
+  }) : [];
   const abilities = Array.isArray(player.abilities) ? player.abilities.map(function(ability) {
     const availableRound = Math.max(1, toNumber(ability.availableRound, 1));
     const ready = availableRound <= currentRound;
@@ -73,6 +80,7 @@ function normalizePlayer(player, currentRound) {
     faithLabel: cleanText(player.faith_god) || "未定信仰",
     statusLabel: player.is_defeated ? "倒地" : "行动中",
     publicNote: cleanText(player.note),
+    statuses: statuses,
     abilities: abilities
   });
 }
@@ -176,6 +184,12 @@ Page({
     dmActionType: "damage",
     dmAmount: "",
     dmNote: "",
+    statusPlayerId: "",
+    statusPlayerName: "",
+    statusName: "",
+    statusStackCount: "1",
+    statusIsPublic: true,
+    statusInputs: {},
     roundInput: "",
     roundNote: "",
     teamInputs: {},
@@ -227,8 +241,15 @@ Page({
       return;
     }
     const teamInputs = {};
+    const statusInputs = {};
+    const currentStatusPlayer = state.players.find(function(player) {
+      return String(player.id) === String(this.data.statusPlayerId || "");
+    }.bind(this)) || state.players[0] || null;
     state.players.forEach(function(player) {
       teamInputs[player.id] = player.teamLabel === "未分队" ? "" : player.teamLabel;
+      (player.statuses || []).forEach(function(status) {
+        statusInputs[status.id] = status.stackInputValue;
+      });
     });
     this.setData({
       battleRoomId: state.room.id,
@@ -249,8 +270,11 @@ Page({
       canExtend: state.canOperate && state.room.room_status === "active",
       canManageBattle: state.canOperate && state.room.room_status === "active",
       dmTargetPlayerId: this.data.dmTargetPlayerId || (state.players[0] && String(state.players[0].id)) || "",
+      statusPlayerId: currentStatusPlayer ? String(currentStatusPlayer.id) : "",
+      statusPlayerName: currentStatusPlayer ? currentStatusPlayer.player_name : "",
       roundInput: String(state.room.current_round || 1),
       teamInputs: teamInputs,
+      statusInputs: statusInputs,
       loading: false,
       refreshing: false,
       errorMessage: ""
@@ -383,6 +407,55 @@ Page({
     this.setData({ dmNote: event.detail.value || "" });
   },
 
+  onStatusPlayerChange: function(event) {
+    const player = this.data.players[Number(event.detail.value || 0)] || null;
+    this.setData({
+      statusPlayerId: player ? String(player.id) : "",
+      statusPlayerName: player ? player.player_name : ""
+    });
+  },
+
+  onStatusNameInput: function(event) {
+    this.setData({ statusName: event.detail.value || "" });
+  },
+
+  onStatusStackInput: function(event) {
+    this.setData({ statusStackCount: event.detail.value || "" });
+  },
+
+  onStatusPublicChange: function(event) {
+    this.setData({ statusIsPublic: !!event.detail.value });
+  },
+
+  addStatus: function() {
+    if (!this.data.canManageBattle || !this.data.statusPlayerId || this.data.actionLoading) return;
+    const statusName = cleanText(this.data.statusName);
+    if (!statusName) {
+      wx.showToast({ title: "请填写状态名", icon: "none" });
+      return;
+    }
+    this.setData({ actionLoading: true, errorMessage: "" });
+    api.addBattlePlayerStatus(
+      this.currentSession.code,
+      this.data.battleRoomId,
+      this.data.statusPlayerId,
+      statusName,
+      this.data.statusStackCount || 0,
+      this.data.statusIsPublic
+    )
+      .then(function(result) {
+        this.setData({ statusName: "", statusStackCount: "1" });
+        this.applyBattleState(normalizeBattleState(result.data));
+      }.bind(this))
+      .catch(function(error) {
+        if (this.handleRequestError(error, "添加状态失败")) return;
+        wx.showToast({ title: error.message || "添加状态失败", icon: "none" });
+      }.bind(this))
+      .finally(function() {
+        this.setData({ actionLoading: false });
+      }.bind(this));
+  },
+
   applyDmAction: function() {
     if (!this.data.canOperate || !this.data.dmTargetPlayerId || this.data.actionLoading) return;
     this.setData({ actionLoading: true, errorMessage: "" });
@@ -456,6 +529,65 @@ Page({
     const teamInputs = Object.assign({}, this.data.teamInputs);
     teamInputs[playerId] = event.detail.value || "";
     this.setData({ teamInputs: teamInputs });
+  },
+
+  onStatusLayerInput: function(event) {
+    const statusId = event.currentTarget.dataset.id;
+    const statusInputs = Object.assign({}, this.data.statusInputs);
+    statusInputs[statusId] = event.detail.value || "";
+    this.setData({ statusInputs: statusInputs });
+  },
+
+  updateStatusLayer: function(event) {
+    const statusId = event.currentTarget.dataset.id;
+    if (!this.data.canManageBattle || !statusId || this.data.actionLoading) return;
+    this.setData({ actionLoading: true, errorMessage: "" });
+    api.updateBattlePlayerStatus(this.currentSession.code, this.data.battleRoomId, statusId, this.data.statusInputs[statusId] || 0)
+      .then(function(result) {
+        this.applyBattleState(normalizeBattleState(result.data));
+      }.bind(this))
+      .catch(function(error) {
+        if (this.handleRequestError(error, "调整状态失败")) return;
+        wx.showToast({ title: error.message || "调整状态失败", icon: "none" });
+      }.bind(this))
+      .finally(function() {
+        this.setData({ actionLoading: false });
+      }.bind(this));
+  },
+
+  toggleStatusPublic: function(event) {
+    const statusId = event.currentTarget.dataset.id;
+    const isPublic = event.currentTarget.dataset.public === "1";
+    if (!this.data.canManageBattle || !statusId || this.data.actionLoading) return;
+    this.setData({ actionLoading: true, errorMessage: "" });
+    api.updateBattlePlayerStatus(this.currentSession.code, this.data.battleRoomId, statusId, this.data.statusInputs[statusId] || 0, !isPublic)
+      .then(function(result) {
+        this.applyBattleState(normalizeBattleState(result.data));
+      }.bind(this))
+      .catch(function(error) {
+        if (this.handleRequestError(error, "切换公开失败")) return;
+        wx.showToast({ title: error.message || "切换公开失败", icon: "none" });
+      }.bind(this))
+      .finally(function() {
+        this.setData({ actionLoading: false });
+      }.bind(this));
+  },
+
+  deleteStatus: function(event) {
+    const statusId = event.currentTarget.dataset.id;
+    if (!this.data.canManageBattle || !statusId || this.data.actionLoading) return;
+    this.setData({ actionLoading: true, errorMessage: "" });
+    api.deleteBattlePlayerStatus(this.currentSession.code, this.data.battleRoomId, statusId)
+      .then(function(result) {
+        this.applyBattleState(normalizeBattleState(result.data));
+      }.bind(this))
+      .catch(function(error) {
+        if (this.handleRequestError(error, "删除状态失败")) return;
+        wx.showToast({ title: error.message || "删除状态失败", icon: "none" });
+      }.bind(this))
+      .finally(function() {
+        this.setData({ actionLoading: false });
+      }.bind(this));
   },
 
   updateTeam: function(event) {

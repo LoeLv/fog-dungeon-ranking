@@ -83,6 +83,7 @@ function normalizeDungeon(dungeon) {
     targetCount: Math.max(1, participantCount),
     typeLabel: dungeon.type || "未定神系",
     difficultyLabel: formatDifficulty(dungeon.difficulty),
+    estimatedDurationLabel: dungeon.estimatedDuration || dungeon.estimated_duration || "约2-4小时",
     isOneShot: !!(dungeon.is_one_shot || dungeon.isOneShot)
   });
 }
@@ -485,6 +486,7 @@ Page({
       "creator=" + encodeURIComponent(selectedDungeon.creator || ""),
       "type=" + encodeURIComponent(selectedDungeon.typeLabel || ""),
       "difficulty=" + encodeURIComponent(selectedDungeon.difficultyLabel || ""),
+      "estimatedDuration=" + encodeURIComponent(selectedDungeon.estimatedDurationLabel || ""),
       "targetCount=" + encodeURIComponent(String(selectedDungeon.targetCount || 1)),
       "isOneShot=" + encodeURIComponent(selectedDungeon.isOneShot ? "1" : "0")
     ].join("&");

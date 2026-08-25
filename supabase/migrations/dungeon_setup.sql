@@ -7,6 +7,7 @@ create table if not exists public.dungeons (
   type text not null default '综合',
   description text not null check (char_length(trim(description)) between 1 and 1800),
   pinned_note text not null default '',
+  estimated_duration text not null default '',
   participant_count integer not null default 1 check (participant_count >= 1),
   run_count integer not null default 1 check (run_count >= 1),
   clear_count integer not null default 0 check (clear_count >= 0),

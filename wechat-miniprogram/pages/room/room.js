@@ -58,6 +58,7 @@ Page({
         creator: cleanRouteText(options.creator),
         typeLabel: cleanRouteText(options.type) || "未定神系",
         difficultyLabel: cleanRouteText(options.difficulty) || "未定难度",
+        estimatedDurationLabel: cleanRouteText(options.estimatedDuration) || "约2-4小时",
         targetCount: Math.max(1, toNumber(options.targetCount, 1)),
         isOneShot: cleanText(options.isOneShot) === "1"
       }

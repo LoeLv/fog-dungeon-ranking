@@ -40,6 +40,21 @@
           <text class="tag">攻击 {{item.attack_value || 0}}</text>
           <text class="tag">{{item.faithLabel}}</text>
         </view>
+        <view class="status-list">
+          <text class="status-empty" wx:if="{{!item.statuses.length}}">暂无状态</text>
+          <view wx:for="{{item.statuses}}" wx:for-item="status" wx:key="id" class="status-chip {{status.is_public ? '' : 'private'}}">
+            <view class="status-main">
+              <text class="status-name">{{status.status_name}}</text>
+              <text class="status-meta">{{status.stackText}} · {{status.visibleText}}</text>
+            </view>
+            <view wx:if="{{canManageBattle}}" class="status-tools">
+              <input class="input status-layer-input" type="number" data-id="{{status.id}}" value="{{status.stackInputValue}}" bindinput="onStatusLayerInput" />
+              <button class="mini-action status-button" data-id="{{status.id}}" loading="{{actionLoading}}" bindtap="updateStatusLayer">改</button>
+              <button class="mini-action status-button" data-id="{{status.id}}" data-public="{{status.is_public ? '1' : '0'}}" loading="{{actionLoading}}" bindtap="toggleStatusPublic">{{status.is_public ? '隐藏' : '公开'}}</button>
+              <button class="mini-action status-button danger" data-id="{{status.id}}" loading="{{actionLoading}}" bindtap="deleteStatus">删</button>
+            </view>
+          </view>
+        </view>
         <view wx:if="{{item.abilities.length}}" class="public-abilities">
           <view
             wx:for="{{item.abilities}}"
@@ -147,6 +162,22 @@
       <input class="input" type="number" placeholder="数值" value="{{dmAmount}}" bindinput="onDmAmountInput" />
       <textarea class="textarea compact" value="{{dmNote}}" maxlength="500" placeholder="结算备注" bindinput="onDmNoteInput"></textarea>
       <button class="btn btn-primary" loading="{{actionLoading}}" bindtap="applyDmAction">应用到目标</button>
+
+      <view class="status-editor">
+        <text class="panel-title small-title">状态编辑</text>
+        <picker mode="selector" range="{{players}}" range-key="player_name" bindchange="onStatusPlayerChange">
+          <view class="input picker-input">玩家：{{statusPlayerName || '请选择'}}</view>
+        </picker>
+        <view class="status-form">
+          <input class="input" placeholder="状态名字" value="{{statusName}}" bindinput="onStatusNameInput" />
+          <input class="input status-count-input" type="number" placeholder="层数" value="{{statusStackCount}}" bindinput="onStatusStackInput" />
+        </view>
+        <view class="switch-row">
+          <text class="muted">公开给所有人</text>
+          <switch checked="{{statusIsPublic}}" bindchange="onStatusPublicChange" />
+        </view>
+        <button class="btn btn-primary" loading="{{actionLoading}}" bindtap="addStatus">添加状态</button>
+      </view>
 
       <view class="round-tools">
         <input class="input round-input" type="number" value="{{roundInput}}" bindinput="onRoundInput" />

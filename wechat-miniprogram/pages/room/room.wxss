@@ -95,6 +95,11 @@
   align-items: flex-start;
 }
 
+.duration-line {
+  display: block;
+  margin-top: 8rpx;
+}
+
 .one-shot-note {
   margin-top: 18rpx;
   padding: 16rpx 18rpx;
