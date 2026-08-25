@@ -586,7 +586,7 @@ Page({
       .then(function(result) {
         const battleRoomId = result.data && result.data.room && result.data.room.id;
         if (!battleRoomId) {
-          throw new Error(this.data.isCreator ? "战斗房间创建失败" : "请等待召集者开启战斗房间");
+          throw new Error(this.data.isCreator ? "战斗房间创建失败" : "请等待召集者或房主开启战斗房间");
         }
         wx.navigateTo({ url: "/pages/battle/battle?battleRoomId=" + encodeURIComponent(battleRoomId) });
       }.bind(this))

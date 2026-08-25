@@ -2994,8 +2994,6 @@ async function createBattleRoomFromMatchRoom(
 
   const matchPlayers = Array.isArray(matchRoom.match_room_players) ? matchRoom.match_room_players : [];
   if (!matchPlayers.length) return { error: { message: "组队房间没有成员" } };
-  const isParticipant = matchPlayers.some((player) => String(player.player_code_hash || "") === identity.codeHash);
-  if (!isParticipant && !hasRole(identity.role, ["reviewer", "admin"])) return { error: { message: "只有本房间成员、审核员或馆主可以开启战斗房间" } };
 
   const { data: sourceMusters, error: sourceMusterError } = await supabase
     .from("match_musters")
@@ -3007,6 +3005,11 @@ async function createBattleRoomFromMatchRoom(
     return { error: sourceMusterError };
   }
   const sourceMuster = Array.isArray(sourceMusters) ? sourceMusters[0] : null;
+  const isParticipant = matchPlayers.some((player) => String(player.player_code_hash || "") === identity.codeHash);
+  const isMusterCreator = cleanText(sourceMuster?.creator_code_hash, 64) === identity.codeHash;
+  if (!isParticipant && !isMusterCreator && !hasRole(identity.role, ["reviewer", "admin"])) {
+    return { error: { message: "只有召集者、本房间成员、审核员或馆主可以开启战斗房间" } };
+  }
   const hostCodeHash = cleanText(sourceMuster?.creator_code_hash, 64) || identity.codeHash;
   const hostName = cleanText(sourceMuster?.creator_name, 40) || identity.displayName;
 
