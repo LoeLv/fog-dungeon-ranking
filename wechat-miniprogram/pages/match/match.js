@@ -69,9 +69,14 @@ function normalizeBattleRoom(room) {
 
 function normalizeActiveMuster(muster) {
   const dungeon = muster && Array.isArray(muster.dungeons) ? (muster.dungeons[0] || {}) : (muster && muster.dungeons ? muster.dungeons : {});
+  const targetCount = Math.max(1, toNumber(
+    muster && (muster.target_player_count || muster.targetPlayerCount),
+    toNumber(dungeon.participant_count || dungeon.participantCount, 1)
+  ));
   return Object.assign({}, muster, {
     dungeonName: dungeon.name || "未命名试炼",
     dungeonMeta: (dungeon.type || "未定神系") + " · " + formatDifficulty(dungeon.difficulty),
+    targetCount: targetCount,
     statusLabel: muster.status === "drawn" ? "已抽选" : "报名中",
     timeLabel: muster.status === "drawn" ? formatTime(muster.drawn_at) : formatTime(muster.closes_at)
   });
@@ -116,11 +121,16 @@ function normalizeMusterState(rawState) {
   });
   const roomPlayers = rawState.room && rawState.room.players ? rawState.room.players.map(normalizeParticipant) : [];
   const dungeon = normalizeDungeon(rawState.dungeon);
+  const musterTargetCount = Math.max(1, toNumber(
+    rawState.muster.target_player_count || rawState.muster.targetPlayerCount,
+    toNumber(rawState.room && (rawState.room.target_player_count || rawState.room.targetPlayerCount), dungeon.targetCount)
+  ));
   const secondsRemaining = Math.max(0, toNumber(rawState.secondsRemaining, 0));
 
   return {
     muster: rawState.muster,
     dungeon: dungeon,
+    musterTargetCount: musterTargetCount,
     participants: participants,
     joinedParticipants: joinedParticipants,
     selectedPlayers: selectedPlayers,
@@ -157,6 +167,7 @@ Page({
     roomPlayers: [],
     joinedCount: 0,
     selectedCount: 0,
+    musterTargetCount: 1,
     secondsRemaining: 0,
     countdownText: "1:00",
     myStatus: "none",
@@ -273,6 +284,7 @@ Page({
       roomPlayers: [],
       joinedCount: 0,
       selectedCount: 0,
+      musterTargetCount: 1,
       myStatus: "none",
       isCreator: false,
       myStatusLabel: "未报名",
@@ -346,6 +358,7 @@ Page({
           roomPlayers: [],
           joinedCount: 0,
           selectedCount: 0,
+          musterTargetCount: 1,
           myStatus: "none",
           isCreator: false,
           myStatusLabel: "未报名",
@@ -457,6 +470,7 @@ Page({
       roomPlayers: state.roomPlayers,
       joinedCount: state.joinedCount,
       selectedCount: state.selectedCount,
+      musterTargetCount: state.musterTargetCount,
       secondsRemaining: state.secondsRemaining,
       countdownText: state.countdownText,
       myStatus: myStatus,

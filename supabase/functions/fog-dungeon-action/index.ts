@@ -955,6 +955,10 @@ function isMissingEstimatedDurationColumn(error: LooseError) {
   return error?.code === "42703" && !!error.message?.includes("estimated_duration");
 }
 
+function isMissingBattleRoomExpiresColumn(error: LooseError) {
+  return error?.code === "42703" && !!error.message?.includes("expires_at");
+}
+
 function isMissingDungeonReviewColumn(error: LooseError) {
   return error?.code === "42703" && (
     !!error.message?.includes("review_status") ||
@@ -1894,6 +1898,7 @@ async function updateProfileTalentText(
       : `槽位${item.equipped_slot}：${item.talent_name}（${item.rank}）`)
     .join("\n")
     .slice(0, 800);
+
   const { error: updateError } = await supabase
     .from("player_profiles")
     .update({ talents: talentText, updated_at: new Date().toISOString() })
@@ -2766,19 +2771,34 @@ function getBattleRoomExpiresAt(room: Record<string, unknown>) {
   return new Date(createdAt.getTime() + battleRoomLifetimeMs).toISOString();
 }
 
-async function expireStaleBattleRooms(supabase: SupabaseClientAny) {
-  const now = new Date().toISOString();
-  const { error } = await supabase
+async function expireStaleBattleRooms(supabase: SupabaseClientAny): Promise<BattleActionResult> {
+  const now = new Date();
+  const { data: activeRooms, error } = await supabase
     .from("battle_rooms")
-    .update({
-      room_status: "finished",
-      note: "战斗房间已超过6小时自动结束",
-      finished_at: now,
-      updated_at: now,
-    })
+    .select("*")
     .eq("room_status", "active")
-    .lte("expires_at", now);
-  if (error && !["42P01", "42703", "PGRST204"].includes(String(error.code || ""))) return { error };
+    .order("created_at", { ascending: true })
+    .limit(100);
+  if (error) return { error };
+
+  for (const room of activeRooms || []) {
+    const expiresAt = new Date(getBattleRoomExpiresAt(room as Record<string, unknown>)).getTime();
+    if (!Number.isFinite(expiresAt) || expiresAt > now.getTime()) continue;
+    const finishAt = now.toISOString();
+    const { error: updateError } = await supabase
+      .from("battle_rooms")
+      .update({
+        room_status: "finished",
+        note: cleanText((room as Record<string, unknown>).note, 800) || "战斗房间已超过6小时自动结束",
+        finished_at: finishAt,
+        updated_at: finishAt,
+      })
+      .eq("id", String((room as Record<string, unknown>).id || ""))
+      .eq("room_status", "active");
+    if (updateError && !["42P01", "42703", "PGRST204"].includes(String(updateError.code || ""))) {
+      return { error: updateError };
+    }
+  }
   return { data: true };
 }
 
@@ -2830,7 +2850,7 @@ async function getBattleRoomState(
 ): Promise<BattleActionResult> {
   let { data: room, error: roomError } = await supabase
     .from("battle_rooms")
-    .select("id, source_match_room_id, dungeon_id, host_code_hash, host_name, room_status, current_round, note, created_at, updated_at, finished_at, expires_at")
+    .select("*")
     .eq("id", battleRoomId)
     .maybeSingle();
   if (roomError) return { error: roomError };
@@ -2849,7 +2869,7 @@ async function getBattleRoomState(
       })
       .eq("id", battleRoomId)
       .eq("room_status", "active")
-      .select("id, source_match_room_id, dungeon_id, host_code_hash, host_name, room_status, current_round, note, created_at, updated_at, finished_at, expires_at")
+      .select("*")
       .maybeSingle();
     if (expireError) return { error: expireError };
     if (expiredRoom) {
@@ -3022,7 +3042,6 @@ async function createBattleRoomFromMatchRoom(
       host_name: hostName,
       room_status: "active",
       current_round: 1,
-      expires_at: getDefaultBattleExpiresAt(),
     })
     .select("id")
     .single();
@@ -3116,7 +3135,6 @@ async function createBattleRoomFromDungeon(
       host_name: identity.displayName,
       room_status: "active",
       current_round: 1,
-      expires_at: getDefaultBattleExpiresAt(),
     })
     .select("id")
     .single();
@@ -3599,7 +3617,12 @@ async function extendBattleRoom(
     .update({ expires_at: nextExpiresAt, updated_at: new Date().toISOString() })
     .eq("id", battleRoomId)
     .eq("room_status", "active");
-  if (updateError) return { error: updateError };
+  if (updateError) {
+    if (isMissingBattleRoomExpiresColumn(updateError)) {
+      return { error: { message: "战斗房间缺少 expires_at 列，请先运行 supabase/current/battle_room_lifecycle_hotfix_20260822.sql" } };
+    }
+    return { error: updateError };
+  }
 
   await supabase.from("battle_room_logs").insert({
     battle_room_id: battleRoomId,
@@ -3631,16 +3654,7 @@ async function getMyBattleOverview(
       battle_room_id,
       updated_at,
       battle_rooms (
-        id,
-        source_match_room_id,
-        dungeon_id,
-        host_name,
-        room_status,
-        current_round,
-        created_at,
-        updated_at,
-        finished_at,
-        expires_at,
+        *,
         dungeons (
           id,
           name,
@@ -3662,16 +3676,7 @@ async function getMyBattleOverview(
   const { data: hostRooms, error: hostRoomError } = await supabase
     .from("battle_rooms")
     .select(`
-      id,
-      source_match_room_id,
-      dungeon_id,
-      host_name,
-      room_status,
-      current_round,
-      created_at,
-      updated_at,
-      finished_at,
-      expires_at,
+      *,
       dungeons (
         id,
         name,

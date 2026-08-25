@@ -151,7 +151,7 @@
 
       <view class="countdown-box">
         <text class="countdown-label">{{activeMuster.status === "open" ? "报名倒计时" : "抽选结果"}}</text>
-        <text class="countdown-number">{{activeMuster.status === "open" ? countdownText : selectedCount + "/" + activeDungeon.targetCount}}</text>
+        <text class="countdown-number">{{activeMuster.status === "open" ? countdownText : selectedCount + "/" + musterTargetCount}}</text>
       </view>
 
       <view class="state-grid">
@@ -161,7 +161,7 @@
         </view>
         <view class="state-tile">
           <text>固定人数</text>
-          <text class="state-number">{{activeDungeon.targetCount}}</text>
+          <text class="state-number">{{musterTargetCount}}</text>
         </view>
       </view>
 
@@ -213,7 +213,7 @@
     <view wx:if="{{activeMuster.status === 'drawn'}}" class="section panel">
       <view class="row subhead">
         <text class="panel-title">成功参与试炼</text>
-        <text class="muted">{{selectedCount}}/{{activeDungeon.targetCount}}</text>
+        <text class="muted">{{selectedCount}}/{{musterTargetCount}}</text>
       </view>
       <view wx:if="{{!selectedPlayers.length}}" class="empty queue-empty">本场没有可抽选玩家。</view>
       <view wx:for="{{selectedPlayers}}" wx:key="id" class="player-row me">
