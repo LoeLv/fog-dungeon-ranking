@@ -61,7 +61,7 @@ function canManageTalentPoolUI() { return isAdmin() || hasInvitePermission('tale
 
 function canManageAccountRolesUI() { return isAdmin() || hasInvitePermission('account_role_manage'); }
 
-function canUseAdminConsole() { return isAdmin() || canUsePermissionDesk(); }
+function canUseAdminConsole() { return isAdmin(); }
 
 function isInitialDisplayNameBinding() {
     if (!inviteSession?.code || !inviteSession?.name || isGodRole()) return false;
