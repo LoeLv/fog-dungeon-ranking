@@ -25,6 +25,24 @@ function cleanText(value) {
   return String(value || "").trim();
 }
 
+function getTeamProfile(value) {
+  const raw = cleanText(value);
+  if (!raw) {
+    return { label: "未分队", kind: "unassigned" };
+  }
+  const normalized = raw.toLowerCase();
+  if (raw === "A" || raw === "红队" || raw === "红" || raw === "红组" || normalized === "red" || normalized === "team red") {
+    return { label: "红队", kind: "red" };
+  }
+  if (raw === "B" || raw === "蓝队" || raw === "蓝" || raw === "蓝组" || normalized === "blue" || normalized === "team blue") {
+    return { label: "蓝队", kind: "blue" };
+  }
+  if (raw === "C" || raw === "观众" || raw === "观战" || raw === "旁观" || normalized === "observer" || normalized === "spectator") {
+    return { label: "观众", kind: "spectator" };
+  }
+  return { label: raw, kind: "custom" };
+}
+
 function toNumber(value, fallback) {
   const number = Number(value);
   return Number.isFinite(number) ? number : fallback;
@@ -70,12 +88,15 @@ function normalizePlayer(player, currentRound) {
     });
   }) : [];
 
+  const teamProfile = getTeamProfile(player.team_name);
   return Object.assign({}, player, {
     hpText: currentHp + "/" + maxHp,
     hpPercent: percent,
     shieldText: Math.max(0, toNumber(player.shield, 0)),
-    teamLabel: cleanText(player.team_name) || "未分队",
-    teamInputValue: cleanText(player.team_name),
+    teamLabel: teamProfile.label,
+    teamKind: teamProfile.kind,
+    teamRawName: cleanText(player.team_name),
+    teamInputValue: teamProfile.kind === "unassigned" ? "" : teamProfile.label,
     classLabel: cleanText(player.class_name) || cleanText(player.profession) || "未定职业",
     faithLabel: cleanText(player.faith_god) || "未定信仰",
     statusLabel: player.is_defeated ? "倒地" : "行动中",
@@ -129,6 +150,20 @@ function normalizeBattleState(raw) {
   });
   const canOperate = !!raw.canOperate;
   const visibleActions = canOperate ? pendingActions : selfActions;
+  const teamStats = {
+    red: 0,
+    blue: 0,
+    spectator: 0,
+    custom: 0,
+    unassigned: 0
+  };
+  players.forEach(function(player) {
+    if (player.teamKind === "red") teamStats.red += 1;
+    else if (player.teamKind === "blue") teamStats.blue += 1;
+    else if (player.teamKind === "spectator") teamStats.spectator += 1;
+    else if (player.teamKind === "custom") teamStats.custom += 1;
+    else teamStats.unassigned += 1;
+  });
 
   return {
     room: Object.assign({}, room, {
@@ -146,6 +181,7 @@ function normalizeBattleState(raw) {
     visibleActionCountText: canOperate ? pendingActions.length + " 待处理" : selfActions.length + " 条",
     actionListLabel: canOperate ? "行动结算" : "我的行动记录",
     selfPlayer: selfPlayer,
+    teamStats: teamStats,
     isHost: !!raw.isHost,
     isParticipant: !!raw.isParticipant,
     canOperate: canOperate,
@@ -193,6 +229,13 @@ Page({
     roundInput: "",
     roundNote: "",
     teamInputs: {},
+    teamStats: {
+      red: 0,
+      blue: 0,
+      spectator: 0,
+      custom: 0,
+      unassigned: 0
+    },
     loading: true,
     refreshing: false,
     actionLoading: false,
@@ -246,7 +289,7 @@ Page({
       return String(player.id) === String(this.data.statusPlayerId || "");
     }.bind(this)) || state.players[0] || null;
     state.players.forEach(function(player) {
-      teamInputs[player.id] = player.teamLabel === "未分队" ? "" : player.teamLabel;
+      teamInputs[player.id] = player.teamInputValue;
       (player.statuses || []).forEach(function(status) {
         statusInputs[status.id] = status.stackInputValue;
       });
@@ -274,6 +317,7 @@ Page({
       statusPlayerName: currentStatusPlayer ? currentStatusPlayer.player_name : "",
       roundInput: String(state.room.current_round || 1),
       teamInputs: teamInputs,
+      teamStats: state.teamStats,
       statusInputs: statusInputs,
       loading: false,
       refreshing: false,
@@ -531,6 +575,26 @@ Page({
     this.setData({ teamInputs: teamInputs });
   },
 
+  setTeamPreset: function(event) {
+    const playerId = event.currentTarget.dataset.id;
+    const teamName = cleanText(event.currentTarget.dataset.team);
+    if (!this.data.canOperate || !playerId || !teamName || this.data.actionLoading) return;
+    const teamInputs = Object.assign({}, this.data.teamInputs);
+    teamInputs[playerId] = teamName;
+    this.setData({ teamInputs: teamInputs, actionLoading: true, errorMessage: "" });
+    api.updateBattlePlayerTeam(this.currentSession.code, this.data.battleRoomId, playerId, teamName)
+      .then(function(result) {
+        this.applyBattleState(normalizeBattleState(result.data));
+      }.bind(this))
+      .catch(function(error) {
+        if (this.handleRequestError(error, "分队失败")) return;
+        wx.showToast({ title: error.message || "分队失败", icon: "none" });
+      }.bind(this))
+      .finally(function() {
+        this.setData({ actionLoading: false });
+      }.bind(this));
+  },
+
   onStatusLayerInput: function(event) {
     const statusId = event.currentTarget.dataset.id;
     const statusInputs = Object.assign({}, this.data.statusInputs);
@@ -593,7 +657,7 @@ Page({
   updateTeam: function(event) {
     const playerId = event.currentTarget.dataset.id;
     if (!this.data.canOperate || !playerId || this.data.actionLoading) return;
-    const teamName = cleanText(this.data.teamInputs[playerId]) || "A";
+    const teamName = cleanText(this.data.teamInputs[playerId]) || "观众";
     this.setData({ actionLoading: true, errorMessage: "" });
     api.updateBattlePlayerTeam(this.currentSession.code, this.data.battleRoomId, playerId, teamName)
       .then(function(result) {

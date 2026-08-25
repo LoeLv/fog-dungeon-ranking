@@ -28,7 +28,7 @@
         <view class="row player-head">
           <view>
             <text class="player-name">{{item.player_name}}</text>
-            <text class="muted">{{item.teamLabel}} 队 · {{item.classLabel}} · {{item.statusLabel}}</text>
+            <text class="muted">{{item.teamLabel}} · {{item.classLabel}} · {{item.statusLabel}}</text>
           </view>
           <view class="pill">{{item.hpText}}</view>
         </view>
@@ -36,6 +36,7 @@
           <view class="hp-fill" style="width: {{item.hpPercent}}%;"></view>
         </view>
         <view class="public-tags">
+          <text class="tag team-tag team-{{item.teamKind}}">{{item.teamLabel}}</text>
           <text class="tag">护盾 {{item.shieldText}}</text>
           <text class="tag">攻击 {{item.attack_value || 0}}</text>
           <text class="tag">{{item.faithLabel}}</text>
@@ -185,11 +186,34 @@
         <button class="btn btn-ghost" loading="{{actionLoading}}" bindtap="updateRound">推进/调整回合</button>
       </view>
 
-      <view class="team-list">
+      <view class="team-board">
+        <view class="row subhead team-summary">
+          <text class="panel-title small-title">房内组队</text>
+          <view class="team-stats">
+            <text class="tag team-tag team-red">红队 {{teamStats.red}}</text>
+            <text class="tag team-tag team-blue">蓝队 {{teamStats.blue}}</text>
+            <text class="tag team-tag team-spectator">观众 {{teamStats.spectator}}</text>
+            <text class="tag team-tag team-custom">其他 {{teamStats.custom}}</text>
+            <text class="tag">未分队 {{teamStats.unassigned}}</text>
+          </view>
+        </view>
         <view wx:for="{{players}}" wx:key="id" class="team-row">
-          <text>{{item.player_name}}</text>
-          <input class="input team-input" data-id="{{item.id}}" value="{{item.teamInputValue}}" placeholder="队伍" bindinput="onTeamInput" />
-          <button class="mini-action" data-id="{{item.id}}" loading="{{actionLoading}}" bindtap="updateTeam">分队</button>
+          <view class="team-main">
+            <view class="row team-head">
+              <text class="team-name">{{item.player_name}}</text>
+              <text class="pill team-pill team-{{item.teamKind}}">{{item.teamLabel}}</text>
+            </view>
+            <text class="muted">{{item.classLabel}} · {{item.faithLabel}} · {{item.statusLabel}}</text>
+            <view class="team-presets">
+              <button class="mini-action team-preset red" data-id="{{item.id}}" data-team="红队" loading="{{actionLoading}}" bindtap="setTeamPreset">红队</button>
+              <button class="mini-action team-preset blue" data-id="{{item.id}}" data-team="蓝队" loading="{{actionLoading}}" bindtap="setTeamPreset">蓝队</button>
+              <button class="mini-action team-preset gray" data-id="{{item.id}}" data-team="观众" loading="{{actionLoading}}" bindtap="setTeamPreset">观众</button>
+            </view>
+          </view>
+          <view class="team-custom-box">
+            <input class="input team-input" data-id="{{item.id}}" value="{{teamInputs[item.id]}}" placeholder="自定义队伍" bindinput="onTeamInput" />
+            <button class="mini-action" data-id="{{item.id}}" loading="{{actionLoading}}" bindtap="updateTeam">保存</button>
+          </view>
         </view>
       </view>
 

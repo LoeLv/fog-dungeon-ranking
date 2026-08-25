@@ -2814,7 +2814,7 @@ async function buildBattlePlayerSnapshot(
       max_hp: maxHp,
       current_hp: maxHp,
       shield: 0,
-      team_name: "A",
+      team_name: "观众",
       attack_value: getBattleAttack(profession),
       abilities: abilitiesResult.data || [],
       is_defeated: false,
@@ -3397,7 +3397,7 @@ async function updateBattlePlayerTeam(
   const state = await getBattleRoomState(supabase, battleRoomId, identity);
   if (state.error) return state;
   if (!state.data?.canOperate) return { error: { message: "只有 DM、审核员或馆主可以分配队伍" } };
-  const teamName = cleanText(teamNameInput, 20) || "A";
+  const teamName = cleanText(teamNameInput, 20) || "观众";
   const { error } = await supabase
     .from("battle_room_players")
     .update({ team_name: teamName, updated_at: new Date().toISOString() })

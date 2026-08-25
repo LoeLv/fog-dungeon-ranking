@@ -96,6 +96,40 @@
   margin-top: 14rpx;
 }
 
+.team-tag {
+  font-weight: 700;
+}
+
+.team-red,
+.team-pill.team-red {
+  background: #f5d4d0;
+  color: #8f2d24;
+}
+
+.team-blue,
+.team-pill.team-blue {
+  background: #d6e4f6;
+  color: #275082;
+}
+
+.team-spectator,
+.team-pill.team-spectator {
+  background: #e8e4dd;
+  color: #5f5247;
+}
+
+.team-custom,
+.team-pill.team-custom {
+  background: #efe1c8;
+  color: #7a4a18;
+}
+
+.team-unassigned,
+.team-pill.team-unassigned {
+  background: #ebe1d2;
+  color: #6a5a4a;
+}
+
 .status-list {
   display: grid;
   gap: 10rpx;
@@ -336,17 +370,93 @@
 
 .team-row {
   display: grid;
-  grid-template-columns: 1fr 120rpx 112rpx;
-  align-items: center;
+  grid-template-columns: minmax(0, 1fr) 260rpx;
   gap: 12rpx;
-  color: #2b1c12;
-  font-size: 26rpx;
+  align-items: start;
+  padding: 16rpx;
+  border: 1rpx solid rgba(72, 45, 25, 0.12);
+  border-radius: 8rpx;
+  background: #fffdf7;
+}
+
+.team-main {
+  display: grid;
+  gap: 12rpx;
+  min-width: 0;
+}
+
+.team-head {
+  align-items: center;
+}
+
+.team-name {
+  color: #2c1a10;
+  font-size: 27rpx;
+  font-weight: 700;
+  line-height: 1.35;
+}
+
+.team-presets {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10rpx;
+}
+
+.team-preset {
+  min-width: 92rpx;
+  height: 52rpx;
+  padding: 0 14rpx;
+  line-height: 50rpx;
+}
+
+.team-preset.red {
+  border-color: rgba(143, 45, 36, 0.24);
+  background: #f8e0dd;
+  color: #8f2d24;
+}
+
+.team-preset.blue {
+  border-color: rgba(39, 80, 130, 0.24);
+  background: #e2ebf7;
+  color: #275082;
+}
+
+.team-preset.gray {
+  border-color: rgba(95, 82, 71, 0.2);
+  background: #ede8e2;
+  color: #5f5247;
+}
+
+.team-custom-box {
+  display: grid;
+  gap: 10rpx;
 }
 
 .team-input {
   height: 62rpx;
   padding: 0 12rpx;
   font-size: 24rpx;
+}
+
+.team-board {
+  display: grid;
+  gap: 14rpx;
+  padding: 16rpx;
+  border: 1rpx solid rgba(72, 45, 25, 0.12);
+  border-radius: 8rpx;
+  background: #fffcf6;
+}
+
+.team-summary {
+  align-items: flex-start;
+  gap: 12rpx;
+}
+
+.team-stats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10rpx;
+  justify-content: flex-end;
 }
 
 .log-row {
