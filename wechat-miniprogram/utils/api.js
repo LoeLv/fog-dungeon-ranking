@@ -204,6 +204,14 @@ function finishBattleRoom(inviteCode, battleRoomId, status, note) {
   });
 }
 
+function extendBattleRoom(inviteCode, battleRoomId) {
+  return invokeDungeonAction("extendBattleRoom", inviteCode, { battleRoomId: battleRoomId });
+}
+
+function getBattleOverview(inviteCode) {
+  return invokeDungeonAction("getBattleOverview", inviteCode, {});
+}
+
 module.exports = {
   invokeDungeonAction: invokeDungeonAction,
   verifyInvite: verifyInvite,
@@ -228,5 +236,7 @@ module.exports = {
   applyBattlePlayerAction: applyBattlePlayerAction,
   updateBattlePlayerTeam: updateBattlePlayerTeam,
   updateBattleAbilityCooldown: updateBattleAbilityCooldown,
-  finishBattleRoom: finishBattleRoom
+  finishBattleRoom: finishBattleRoom,
+  extendBattleRoom: extendBattleRoom,
+  getBattleOverview: getBattleOverview
 };

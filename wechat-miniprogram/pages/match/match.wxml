@@ -19,6 +19,51 @@
     <view class="pill">{{sessionRoleLabel}}</view>
   </view>
 
+  <view wx:if="{{overviewLoading}}" class="section empty">正在读取战斗概览...</view>
+
+  <view wx:elif="{{lastBattleRoom || battleRooms.length || activeMusters.length}}" class="section panel overview-panel">
+    <view class="row subhead">
+      <text class="panel-title">战斗概览</text>
+      <button class="mini-action" bindtap="loadBattleOverview">刷新</button>
+    </view>
+
+    <view wx:if="{{lastBattleRoom}}" class="overview-card">
+      <view class="row overview-head">
+        <view>
+          <text class="overview-title">继续上次战斗</text>
+          <text class="muted">{{lastBattleRoom.dungeonName}} · {{lastBattleRoom.statusLabel}} · {{lastBattleRoom.remainingLabel}}</text>
+        </view>
+        <button class="mini-action" bindtap="openLastBattle">继续</button>
+      </view>
+    </view>
+
+    <view wx:if="{{battleRooms.length}}" class="overview-group">
+      <text class="overview-subtitle">当前战斗房间 {{battleRooms.length}} 场</text>
+      <view wx:for="{{battleRooms}}" wx:key="id" class="overview-card">
+        <view class="row overview-head">
+          <view>
+            <text class="overview-title">{{item.dungeonName}}</text>
+            <text class="muted">{{item.dungeonMeta}} · {{item.host_name}} · {{item.remainingLabel}}</text>
+          </view>
+          <button class="mini-action" data-id="{{item.id}}" bindtap="openBattleFromOverview">进入</button>
+        </view>
+      </view>
+    </view>
+
+    <view wx:if="{{activeMusters.length}}" class="overview-group">
+      <text class="overview-subtitle">当前试炼召集 {{activeMusters.length}} 场</text>
+      <view wx:for="{{activeMusters}}" wx:key="id" class="overview-card">
+        <view class="row overview-head">
+          <view>
+            <text class="overview-title">{{item.dungeonName}}</text>
+            <text class="muted">{{item.dungeonMeta}} · {{item.creator_name}} · {{item.statusLabel}}</text>
+          </view>
+          <button class="mini-action" data-id="{{item.id}}" bindtap="openMusterFromOverview">查看</button>
+        </view>
+      </view>
+    </view>
+  </view>
+
   <view wx:if="{{loading}}" class="empty">正在监听试炼召集...</view>
 
   <view wx:elif="{{errorMessage}}" class="panel">

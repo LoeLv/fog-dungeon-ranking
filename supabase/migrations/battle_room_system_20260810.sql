@@ -13,6 +13,7 @@ create table if not exists public.battle_rooms (
   room_status text not null default 'active' check (room_status in ('active', 'finished', 'cancelled')),
   current_round integer not null default 1 check (current_round >= 1 and current_round <= 999),
   note text not null default '',
+  expires_at timestamptz not null default (now() + interval '6 hours'),
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now(),
   finished_at timestamptz
@@ -42,7 +43,7 @@ create table if not exists public.battle_room_logs (
   battle_room_id uuid not null references public.battle_rooms(id) on delete cascade,
   actor_code_hash text not null check (char_length(actor_code_hash) = 64),
   actor_name text not null check (char_length(trim(actor_name)) between 1 and 40),
-  action_type text not null check (action_type in ('create', 'round', 'damage', 'heal', 'shield', 'set_hp', 'revive', 'defeat', 'note', 'finish', 'cancel')),
+  action_type text not null check (action_type in ('create', 'round', 'damage', 'heal', 'shield', 'set_hp', 'revive', 'defeat', 'note', 'finish', 'cancel', 'cooldown')),
   target_player_id bigint references public.battle_room_players(id) on delete set null,
   target_player_name text not null default '',
   amount integer,

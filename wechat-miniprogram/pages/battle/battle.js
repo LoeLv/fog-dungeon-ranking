@@ -125,7 +125,8 @@ function normalizeBattleState(raw) {
   return {
     room: Object.assign({}, room, {
       statusLabel: normalizeRoomStatus(room.room_status),
-      roundLabel: "第 " + currentRound + " 回合"
+      roundLabel: "第 " + currentRound + " 回合",
+      expiresLabel: room.expiresAt ? formatTime(room.expiresAt) : ""
     }),
     dungeon: raw.dungeon || {},
     players: players,
@@ -163,6 +164,8 @@ Page({
     canOperate: false,
     canSubmitAction: false,
     canJoin: false,
+    canExtend: false,
+    canManageBattle: false,
     dmActionTypeLabels: ["伤害", "治疗", "护盾", "设定生命", "复苏", "击倒", "备注"],
     dmActionTypes: ["damage", "heal", "shield", "set_hp", "revive", "defeat", "note"],
     dmActionTypeLabel: "伤害",
@@ -243,6 +246,8 @@ Page({
       canOperate: state.canOperate,
       canSubmitAction: state.canSubmitAction,
       canJoin: state.canJoin,
+      canExtend: state.canOperate && state.room.room_status === "active",
+      canManageBattle: state.canOperate && state.room.room_status === "active",
       dmTargetPlayerId: this.data.dmTargetPlayerId || (state.players[0] && String(state.players[0].id)) || "",
       roundInput: String(state.room.current_round || 1),
       teamInputs: teamInputs,
@@ -279,6 +284,28 @@ Page({
       .catch(function(error) {
         if (this.handleRequestError(error, "加入战场失败")) return;
         wx.showToast({ title: error.message || "加入战场失败", icon: "none" });
+      }.bind(this))
+      .finally(function() {
+        this.setData({ actionLoading: false });
+      }.bind(this));
+  },
+
+  continueBattle: function() {
+    if (!this.data.room || !this.data.room.id) return;
+    this.loadBattle();
+  },
+
+  extendBattle: function() {
+    if (!this.data.canExtend || this.data.actionLoading) return;
+    this.setData({ actionLoading: true, errorMessage: "" });
+    api.extendBattleRoom(this.currentSession.code, this.data.battleRoomId)
+      .then(function(result) {
+        this.applyBattleState(normalizeBattleState(result.data));
+        wx.showToast({ title: "已延长6小时", icon: "none" });
+      }.bind(this))
+      .catch(function(error) {
+        if (this.handleRequestError(error, "延长失败")) return;
+        wx.showToast({ title: error.message || "延长失败", icon: "none" });
       }.bind(this))
       .finally(function() {
         this.setData({ actionLoading: false });
@@ -470,17 +497,24 @@ Page({
   finishBattle: function(event) {
     const status = event.currentTarget.dataset.status || "finished";
     if (!this.data.canOperate || this.data.actionLoading) return;
-    this.setData({ actionLoading: true, errorMessage: "" });
-    api.finishBattleRoom(this.currentSession.code, this.data.battleRoomId, status, this.data.roundNote)
-      .then(function(result) {
-        this.applyBattleState(normalizeBattleState(result.data));
-      }.bind(this))
-      .catch(function(error) {
-        if (this.handleRequestError(error, "结束战斗失败")) return;
-        wx.showToast({ title: error.message || "结束战斗失败", icon: "none" });
-      }.bind(this))
-      .finally(function() {
-        this.setData({ actionLoading: false });
-      }.bind(this));
+    wx.showModal({
+      title: status === "cancelled" ? "取消战斗" : "结束战斗",
+      content: status === "cancelled" ? "确定取消这个战斗房间吗？" : "确定结束这个战斗房间吗？",
+      success: function(result) {
+        if (!result.confirm) return;
+        this.setData({ actionLoading: true, errorMessage: "" });
+        api.finishBattleRoom(this.currentSession.code, this.data.battleRoomId, status, this.data.roundNote)
+          .then(function(response) {
+            this.applyBattleState(normalizeBattleState(response.data));
+          }.bind(this))
+          .catch(function(error) {
+            if (this.handleRequestError(error, "结束战斗失败")) return;
+            wx.showToast({ title: error.message || "结束战斗失败", icon: "none" });
+          }.bind(this))
+          .finally(function() {
+            this.setData({ actionLoading: false });
+          }.bind(this));
+      }.bind(this)
+    });
   }
 });

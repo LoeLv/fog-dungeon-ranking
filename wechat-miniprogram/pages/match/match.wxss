@@ -248,6 +248,42 @@
   margin-bottom: 16rpx;
 }
 
+.overview-panel {
+  display: grid;
+  gap: 16rpx;
+  background: #fffaf0;
+}
+
+.overview-group {
+  display: grid;
+  gap: 12rpx;
+}
+
+.overview-subtitle {
+  color: #60412b;
+  font-size: 24rpx;
+  font-weight: 700;
+}
+
+.overview-card {
+  padding: 16rpx;
+  border: 1rpx solid rgba(72, 45, 25, 0.14);
+  border-radius: 8rpx;
+  background: #fffdf7;
+}
+
+.overview-head {
+  align-items: center;
+}
+
+.overview-title {
+  display: block;
+  color: #2c1a10;
+  font-size: 28rpx;
+  font-weight: 700;
+  line-height: 1.35;
+}
+
 .queue-empty {
   margin-top: 8rpx;
 }

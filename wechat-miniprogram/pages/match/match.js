@@ -46,6 +46,37 @@ function formatCountdown(seconds) {
   return minute + ":" + second;
 }
 
+function formatBattleRemaining(value) {
+  if (!value) return "未设定";
+  const expiresAt = new Date(value).getTime();
+  if (!Number.isFinite(expiresAt)) return "未设定";
+  const seconds = Math.max(0, Math.ceil((expiresAt - Date.now()) / 1000));
+  if (!seconds) return "已到期";
+  const hours = Math.floor(seconds / 3600);
+  const minutes = Math.ceil((seconds % 3600) / 60);
+  return hours > 0 ? hours + "小时" + minutes + "分钟" : minutes + "分钟";
+}
+
+function normalizeBattleRoom(room) {
+  const dungeon = room && Array.isArray(room.dungeons) ? (room.dungeons[0] || {}) : (room && room.dungeons ? room.dungeons : {});
+  return Object.assign({}, room, {
+    dungeonName: dungeon.name || "未命名试炼",
+    dungeonMeta: (dungeon.type || "未定神系") + " · " + formatDifficulty(dungeon.difficulty),
+    statusLabel: room.room_status === "finished" ? "已结束" : room.room_status === "cancelled" ? "已取消" : "进行中",
+    remainingLabel: formatBattleRemaining(room.expiresAt || room.expires_at)
+  });
+}
+
+function normalizeActiveMuster(muster) {
+  const dungeon = muster && Array.isArray(muster.dungeons) ? (muster.dungeons[0] || {}) : (muster && muster.dungeons ? muster.dungeons : {});
+  return Object.assign({}, muster, {
+    dungeonName: dungeon.name || "未命名试炼",
+    dungeonMeta: (dungeon.type || "未定神系") + " · " + formatDifficulty(dungeon.difficulty),
+    statusLabel: muster.status === "drawn" ? "已抽选" : "报名中",
+    timeLabel: muster.status === "drawn" ? formatTime(muster.drawn_at) : formatTime(muster.closes_at)
+  });
+}
+
 function normalizeDungeon(dungeon) {
   const participantCount = toNumber(dungeon.participant_count || dungeon.participantCount, 1);
   return Object.assign({}, dungeon, {
@@ -136,6 +167,10 @@ Page({
     canShare: false,
     canDraw: false,
     battleLoading: false,
+    overviewLoading: false,
+    lastBattleRoom: null,
+    battleRooms: [],
+    activeMusters: [],
     loading: true,
     refreshing: false,
     stateLoading: false,
@@ -173,6 +208,8 @@ Page({
     if (wx.showShareMenu) {
       wx.showShareMenu({ withShareTicket: true, menus: ["shareAppMessage"] });
     }
+
+    this.loadBattleOverview();
 
     if (sharedMusterId) {
       this.loadMuster(sharedMusterId);
@@ -244,6 +281,10 @@ Page({
       canShare: false,
       canDraw: false,
       battleLoading: false,
+      overviewLoading: false,
+      lastBattleRoom: null,
+      battleRooms: [],
+      activeMusters: [],
       errorMessage: ""
     });
   },
@@ -321,6 +362,47 @@ Page({
       .finally(function() {
         this.setData({ loading: false, refreshing: false, searching: false });
       }.bind(this));
+  },
+
+  loadBattleOverview: function() {
+    if (!this.currentSession || !this.currentSession.code) return Promise.resolve();
+    this.setData({ overviewLoading: true });
+    return api.getBattleOverview(this.currentSession.code)
+      .then(function(result) {
+        const data = result.data || {};
+        this.setData({
+          lastBattleRoom: data.lastBattleRoom ? normalizeBattleRoom(data.lastBattleRoom) : null,
+          battleRooms: (data.battleRooms || []).filter(function(room) {
+            return room && room.room_status === "active";
+          }).map(normalizeBattleRoom),
+          activeMusters: (data.activeMusters || []).map(normalizeActiveMuster)
+        });
+      }.bind(this))
+      .catch(function(error) {
+        if (!this.handleRequestError(error, "")) {
+          this.setData({ errorMessage: "" });
+        }
+      }.bind(this))
+      .finally(function() {
+        this.setData({ overviewLoading: false });
+      }.bind(this));
+  },
+
+  openLastBattle: function() {
+    if (!this.data.lastBattleRoom || !this.data.lastBattleRoom.id) return;
+    wx.navigateTo({ url: "/pages/battle/battle?battleRoomId=" + encodeURIComponent(this.data.lastBattleRoom.id) });
+  },
+
+  openBattleFromOverview: function(event) {
+    const battleRoomId = event.currentTarget.dataset.id;
+    if (!battleRoomId) return;
+    wx.navigateTo({ url: "/pages/battle/battle?battleRoomId=" + encodeURIComponent(battleRoomId) });
+  },
+
+  openMusterFromOverview: function(event) {
+    const musterId = event.currentTarget.dataset.id;
+    if (!musterId) return;
+    wx.navigateTo({ url: "/pages/match/match?musterId=" + encodeURIComponent(musterId) });
   },
 
   loadMuster: function(musterId) {

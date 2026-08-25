@@ -9,9 +9,11 @@
         <text class="kicker">PUBLIC BATTLEFIELD</text>
         <text class="title">{{dungeon.name || '未命名试炼'}}</text>
         <text class="muted">{{room.roundLabel}} · {{room.statusLabel}} · DM {{room.host_name || '未记录'}}</text>
+        <text wx:if="{{room.expiresLabel && room.room_status === 'active'}}" class="muted">自动结束：{{room.expiresLabel}}</text>
       </view>
       <view class="hero-actions">
         <button class="mini-action" loading="{{refreshing}}" bindtap="loadBattle">刷新</button>
+        <button class="mini-action" bindtap="continueBattle">继续</button>
         <button wx:if="{{canJoin}}" class="mini-action" loading="{{actionLoading}}" bindtap="joinBattle">加入</button>
       </view>
     </view>
@@ -132,7 +134,7 @@
       </view>
     </view>
 
-    <view wx:if="{{canOperate}}" class="section panel dm-panel">
+    <view wx:if="{{canManageBattle}}" class="section panel dm-panel">
       <text class="panel-title">DM 操作</text>
       <view class="dm-grid">
         <picker mode="selector" range="{{players}}" range-key="player_name" bindchange="onDmTargetChange">
@@ -161,6 +163,7 @@
       </view>
 
       <view class="button-row">
+        <button wx:if="{{canExtend}}" class="btn btn-ghost" loading="{{actionLoading}}" bindtap="extendBattle">延长6小时</button>
         <button class="btn btn-ghost" data-status="finished" loading="{{actionLoading}}" bindtap="finishBattle">结束战斗</button>
         <button class="btn btn-danger" data-status="cancelled" loading="{{actionLoading}}" bindtap="finishBattle">取消战斗</button>
       </view>
