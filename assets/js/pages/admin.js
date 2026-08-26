@@ -66,7 +66,7 @@ function renderAdminSnapshot(snapshot) {
 async function renderAdminPage() {
     const container = document.getElementById('adminContent');
     if (!container) return;
-    if (!canUseAdminConsole()) { container.innerHTML = renderRitualEmpty('此处只对神谕馆主与管理席开放。', '真理', '权限不足'); return; }
+    if (!canOpenAdminWorkspace()) { container.innerHTML = renderRitualEmpty('此处只对神谕馆主与管理席开放。', '真理', '权限不足'); return; }
     if (!isAdmin()) {
         container.innerHTML = typeof renderPermissionDeskContent === 'function'
             ? renderPermissionDeskContent()
@@ -168,7 +168,7 @@ async function adminRestoreHonor(type, id, targetName, label) {
 }
 
 async function openAdminPage() {
-    if (!canUseAdminConsole()) { showToast('只有馆主或管理席可以进入后台'); return; }
+    if (!canOpenAdminWorkspace()) { showToast('只有馆主或管理席可以进入后台'); return; }
     adminScrollY = window.scrollY || document.documentElement.scrollTop || 0;
     ['profilePage', 'leaderboardPage', 'scorePage', 'matchPage', 'permissionPage'].forEach(id => { const page = document.getElementById(id); if (page) page.style.display = 'none'; });
     document.body.classList.remove('profile-view-open', 'leaderboard-view-open', 'score-view-open', 'match-view-open');

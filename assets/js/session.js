@@ -63,6 +63,8 @@ function canManageAccountRolesUI() { return isAdmin() || hasInvitePermission('ac
 
 function canUseAdminConsole() { return isAdmin(); }
 
+function canOpenAdminWorkspace() { return isAdmin() || canManageTalentPoolUI(); }
+
 function isInitialDisplayNameBinding() {
     if (!inviteSession?.code || !inviteSession?.name || isGodRole()) return false;
     return String(inviteSession.name).trim().toLowerCase() === String(inviteSession.code).trim().toLowerCase();

@@ -1162,7 +1162,7 @@ if (typeof renderAdminPage === 'function') {
     const renderAdminPageBase = renderAdminPage;
     renderAdminPage = async function renderAdminPageWithManagement() {
         const container = document.getElementById('adminContent');
-        if (!container || !canUseAdminConsole()) {
+        if (!container || !canOpenAdminWorkspace()) {
             await renderAdminPageBase();
             return;
         }
