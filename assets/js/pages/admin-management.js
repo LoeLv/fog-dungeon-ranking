@@ -15,6 +15,8 @@ let adminMemberSearchQuery = '';
 let adminIdentityTargetQuery = '';
 let adminMemberSortMode = 'oldest';
 let adminMemberPage = 1;
+let adminRenamingMemberHash = '';
+let adminClickFeedbackTimer = null;
 const adminMemberPageSize = 18;
 let adminManagementStatus = null;
 
@@ -30,6 +32,16 @@ function setAdminManagementStatus(message, type = 'success') {
     el.hidden = false;
     el.className = `profile-action-status ${type === 'error' ? 'error' : (type === 'pending' ? 'pending' : 'success')}`;
     el.textContent = message;
+}
+
+function flashAdminClickFeedback(label) {
+    const text = String(label || '').trim();
+    if (!text) return;
+    window.clearTimeout(adminClickFeedbackTimer);
+    setAdminManagementStatus(`已点击：${text}`, 'success');
+    adminClickFeedbackTimer = window.setTimeout(() => {
+        if (adminManagementStatus?.message === `已点击：${text}`) setAdminManagementStatus('', 'success');
+    }, 900);
 }
 
 function formatAdminMemberStatus(member) {
@@ -394,11 +406,28 @@ function renderAdminManagementPanels() {
         <div class="profile-tools" style="margin-bottom:12px;">
             <button class="btn btn-primary btn-sm" data-admin-members-refresh onclick="adminLoadMembers(true)">刷新成员</button>
         </div>
+        ${renderAdminRenameMemberPanel()}
         <div id="adminMemberToolbar">${renderAdminMemberToolbar()}</div>
         <div id="adminMemberRows" class="profile-list">${renderAdminMemberRows()}</div>
     </section>`;
 }
 
+function renderAdminRenameMemberPanel() {
+    const target = adminMembers.find(member => String(member.codeHash || '') === String(adminRenamingMemberHash || '')) || null;
+    if (!target) return '';
+    const codeHash = escapeHtml(jsString(target.codeHash || ''));
+    return `<div class="profile-form-grid" style="margin-bottom:12px;">
+        <div class="form-group full">
+            <label>改名目标</label>
+            <input id="adminRenameInput" maxlength="40" value="${escapeHtml(target.displayName || '')}" placeholder="输入新昵称" onkeydown="if(event.key==='Enter') adminSubmitRenameMember(${codeHash})">
+            <div class="identity-help">当前账号：${escapeHtml(target.displayName || '未命名')} · 保存后会同步档案、称号和诅咒记录。</div>
+        </div>
+        <div class="profile-tools">
+            <button class="btn btn-primary btn-sm" onclick="adminSubmitRenameMember(${codeHash})">保存改名</button>
+            <button class="btn btn-outline btn-sm" onclick="adminCancelRenameMember()">取消</button>
+        </div>
+    </div>`;
+}
 function getAdminIdentityTargetMember() {
     const query = cleanDisplayNameInput(adminIdentityTargetQuery || document.getElementById('adminIdentityTargetName')?.value || '');
     if (!query) return null;
@@ -733,11 +762,30 @@ async function adminSetMemberRole() {
 }
 
 async function adminRenameMember(targetHash, currentName) {
-    const nextName = window.prompt(`给 ${currentName || '该玩家'} 改成什么名字？`, currentName || '');
-    if (!nextName) return;
+    adminRenamingMemberHash = String(targetHash || '');
+    adminMemberPage = Math.max(1, adminMemberPage);
+    setAdminManagementStatus(`准备给 ${currentName || '该玩家'} 改名`, 'success');
+    await renderAdminPage();
+    window.setTimeout(() => document.getElementById('adminRenameInput')?.focus(), 50);
+}
+
+async function adminCancelRenameMember() {
+    adminRenamingMemberHash = '';
+    setAdminManagementStatus('', 'success');
+    await renderAdminPage();
+}
+
+async function adminSubmitRenameMember(targetHash) {
+    const hash = String(targetHash || adminRenamingMemberHash || '');
+    const input = document.getElementById('adminRenameInput');
+    const nextName = cleanDisplayNameInput(input?.value || '');
+    if (!hash || !nextName) {
+        showToast('请先输入新昵称');
+        return;
+    }
     setAdminManagementStatus('改名处理中...', 'pending');
     try {
-        const { error } = await invokeDungeonAction('adminRenameAccount', { targetHash, displayName: nextName });
+        const { error } = await invokeDungeonAction('adminRenameAccount', { targetHash: hash, displayName: nextName });
         if (error) {
             const message = `改名失败：${error.message || '后端未返回原因'}`;
             setAdminManagementStatus(message, 'error');
@@ -747,6 +795,7 @@ async function adminRenameMember(targetHash, currentName) {
         setAdminManagementStatus('改名完成', 'success');
         showToast('改名完成');
         await Promise.all([adminLoadMembers(false), refreshAdminOperationLogs()]);
+        adminRenamingMemberHash = '';
         await renderAdminPage();
     } catch (error) {
         const message = `改名失败：${error?.message || error || '未知错误'}`;
@@ -1158,6 +1207,21 @@ async function adminToggleTalentPoolItem(poolKey, talentId, enabled) {
     }
 }
 
+function bindAdminButtonFeedback() {
+    const container = document.getElementById('adminContent');
+    if (!container || container.dataset.adminFeedbackBound === '1') return;
+    container.dataset.adminFeedbackBound = '1';
+    container.addEventListener('click', (event) => {
+        const button = event.target.closest('button');
+        if (!button || !container.contains(button)) return;
+        const label = button.dataset.feedback || button.textContent || button.getAttribute('aria-label') || button.id || '';
+        button.classList.remove('is-action-ack');
+        void button.offsetWidth;
+        button.classList.add('is-action-ack');
+        window.setTimeout(() => button.classList.remove('is-action-ack'), 650);
+        flashAdminClickFeedback(label);
+    }, true);
+}
 if (typeof renderAdminPage === 'function') {
     const renderAdminPageBase = renderAdminPage;
     renderAdminPage = async function renderAdminPageWithManagement() {
@@ -1170,11 +1234,13 @@ if (typeof renderAdminPage === 'function') {
         if (!canManageTalentPoolUI() && adminManagementView === 'talents') adminManagementView = 'overview';
         if (adminManagementView === 'members') {
             container.innerHTML = `${renderAdminManagementNav()}${renderAdminMembersPage()}`;
+            bindAdminButtonFeedback();
             if (!adminMembers.length && !adminManagementLoading) await adminLoadMembers(false);
             return;
         }
         if (adminManagementView === 'talents') {
             container.innerHTML = `${renderAdminManagementNav()}${renderAdminTalentPoolPage()}`;
+            bindAdminButtonFeedback();
             const loads = [];
             if (!adminTalentPools.length && !adminTalentWarehouseLoading) loads.push(adminLoadTalentWarehouse(false));
             if (!adminFaithTraits.length && !adminFaithTraitsLoading) loads.push(adminLoadFaithTraits(false));
@@ -1183,5 +1249,38 @@ if (typeof renderAdminPage === 'function') {
         }
         await renderAdminPageBase();
         container.insertAdjacentHTML('afterbegin', renderAdminManagementNav());
+        bindAdminButtonFeedback();
     };
 }
+
+Object.assign(window, {
+    adminSetManagementView,
+    adminSetMemberSearch,
+    adminSetMemberSort,
+    adminSetMemberPage,
+    adminLoadMembers,
+    adminInspectMember,
+    adminChangeMemberIdentityUI,
+    adminSetMemberRole,
+    adminSelectTalentPool,
+    adminRenameMember,
+    adminCancelRenameMember,
+    adminSubmitRenameMember,
+    adminResetMember,
+    adminDeleteMember,
+    adminLoadTalentWarehouse,
+    adminLoadFaithTraits,
+    adminSaveTalentPoolItem,
+    adminSaveTalentPoolItemFromModal,
+    adminBatchSaveTalentPoolItems,
+    adminBatchDeleteTalentPoolItems,
+    adminToggleTalentPoolItem,
+    adminToggleTalentDeleteSelection,
+    adminEditFaithTrait,
+    adminSaveFaithTraitFromModal,
+    adminSelectAllVisibleTalentsForDelete,
+    adminClearTalentDeleteSelection,
+    adminClearTalentPoolForm,
+    adminEditTalentPoolItem,
+    adminEditTalentPoolItemByKey
+});

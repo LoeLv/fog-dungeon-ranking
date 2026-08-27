@@ -185,3 +185,13 @@ function closeAdminPage(restoreScroll = true) {
     document.body.classList.remove('profile-view-open');
     if (restoreScroll !== false) requestAnimationFrame(() => window.scrollTo(0, adminScrollY || 0));
 }
+
+Object.assign(window, {
+    adminLookupPlayer,
+    adminScanTalentState,
+    adminRepairTalentState,
+    adminRevokeHonor,
+    adminRestoreHonor,
+    openAdminPage,
+    closeAdminPage
+});
