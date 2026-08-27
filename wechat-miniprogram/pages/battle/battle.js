@@ -83,10 +83,12 @@ function normalizePlayer(player, currentRound) {
     const availableRound = Math.max(1, toNumber(ability.availableRound, 1));
     const ready = availableRound <= currentRound;
     const rank = cleanText(ability.rank);
+    const cooldownActionKey = String(player.id || "") + ":" + cleanText(ability.key);
     return Object.assign({}, ability, {
       displayName: (rank ? rank + " · " : "") + (cleanText(ability.name) || "未命名能力"),
       detail: cleanText(ability.effect) || "由 DM 判断具体效果",
       cooldownLabel: ready ? "可用" : "第 " + availableRound + " 回合可用",
+      cooldownActionKey: cooldownActionKey,
       ready: ready
     });
   }) : [];
@@ -292,6 +294,9 @@ Page({
     roundInput: "",
     roundNote: "",
     teamInputs: {},
+    activeDmPage: "field",
+    expandedAbilityPlayers: {},
+    cooldownLoadingKey: "",
     teamStats: {
       red: 0,
       blue: 0,
@@ -330,6 +335,7 @@ Page({
 
     this.currentSession = current;
     this.setData({ battleRoomId: battleRoomId, matchRoomId: matchRoomId });
+    wx.setNavigationBarTitle({ title: "战场" });
     this.loadBattle();
   },
 
@@ -398,10 +404,13 @@ Page({
       reservePlayerGroups: state.reservePlayerGroups,
       overviewCards: state.overviewCards,
       statusInputs: statusInputs,
+      expandedAbilityPlayers: this.data.expandedAbilityPlayers || {},
+      cooldownLoadingKey: "",
       loading: false,
       refreshing: false,
       errorMessage: ""
     });
+    wx.setNavigationBarTitle({ title: cleanText(state.dungeon && state.dungeon.name) || "战场" });
   },
 
   loadBattle: function() {
@@ -516,6 +525,28 @@ Page({
     const key = cleanText(event.currentTarget.dataset.key);
     if (!key) return;
     this.setData({ activeDmTool: key });
+  },
+
+  setActiveDmPage: function(event) {
+    const page = cleanText(event.currentTarget.dataset.page) || "field";
+    const toolByPage = {
+      settle: "settle",
+      status: "status",
+      team: "team",
+      room: "room"
+    };
+    this.setData({
+      activeDmPage: page,
+      activeDmTool: toolByPage[page] || this.data.activeDmTool
+    });
+  },
+
+  togglePlayerAbilities: function(event) {
+    const playerId = String(event.currentTarget.dataset.playerId || "");
+    if (!playerId) return;
+    const expanded = Object.assign({}, this.data.expandedAbilityPlayers || {});
+    expanded[playerId] = !expanded[playerId];
+    this.setData({ expandedAbilityPlayers: expanded });
   },
 
   onDmActionTypeChange: function(event) {
@@ -760,8 +791,9 @@ Page({
   putAbilityOnCooldown: function(event) {
     const playerId = event.currentTarget.dataset.playerId;
     const abilityKey = event.currentTarget.dataset.key;
-    if (!this.data.canOperate || !playerId || !abilityKey || this.data.actionLoading) return;
-    this.setData({ actionLoading: true, errorMessage: "" });
+    const loadingKey = String(playerId || "") + ":" + String(abilityKey || "");
+    if (!this.data.canOperate || !playerId || !abilityKey || this.data.cooldownLoadingKey) return;
+    this.setData({ cooldownLoadingKey: loadingKey, errorMessage: "" });
     api.updateBattleAbilityCooldown(this.currentSession.code, this.data.battleRoomId, playerId, abilityKey)
       .then(function(result) {
         this.applyBattleState(normalizeBattleState(result.data));
@@ -771,7 +803,7 @@ Page({
         wx.showToast({ title: error.message || "冷却调整失败", icon: "none" });
       }.bind(this))
       .finally(function() {
-        this.setData({ actionLoading: false });
+        this.setData({ cooldownLoadingKey: "" });
       }.bind(this));
   },
 

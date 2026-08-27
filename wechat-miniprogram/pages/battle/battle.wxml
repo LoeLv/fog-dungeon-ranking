@@ -1,10 +1,10 @@
-<view class="page battle-page">
+<view class="page battle-page {{canManageBattle ? 'battle-mode-dm' : 'battle-mode-player'}} {{canManageBattle ? activeDmPage : 'player-field'}}">
   <view wx:if="{{loading}}" class="section empty">正在读取战斗房间...</view>
 
   <block wx:else>
     <view wx:if="{{errorMessage}}" class="section empty error">{{errorMessage}}</view>
 
-    <view wx:if="{{room}}" class="section hero panel">
+    <view wx:if="{{room}}" class="section battle-topbar panel">
       <view>
         <text class="kicker">PUBLIC BATTLEFIELD</text>
         <text class="title">{{dungeon.name || '未命名试炼'}}</text>
@@ -18,14 +18,25 @@
       </view>
     </view>
 
-    <view wx:if="{{room}}" class="section battle-overview">
+    <view wx:if="{{room}}" class="section battle-overview compact-overview">
       <view wx:for="{{overviewCards}}" wx:key="label" class="overview-card">
         <text class="overview-label">{{item.label}}</text>
         <text class="overview-value">{{item.value}}</text>
       </view>
     </view>
 
-    <view class="section panel battle-panel">
+    <view wx:if="{{!canManageBattle || activeDmPage === 'field'}}" class="section panel battle-panel battlefield-panel">
+      <view class="battlefield-heading">
+        <view>
+          <text class="kicker">LIVE FIELD</text>
+          <text class="panel-title">战场</text>
+          <text class="muted">中央是红队和蓝队，外围是观众席。</text>
+        </view>
+        <view class="field-counters">
+          <text class="field-counter">{{players.length}} 人</text>
+          <text class="field-counter">{{room.roundLabel}}</text>
+        </view>
+      </view>
       <view class="row subhead">
         <text class="panel-title">公开战场信息</text>
         <text class="muted">{{players.length}} 人</text>
@@ -38,7 +49,7 @@
         </view>
       </view>
 
-      <view class="battle-core">
+      <view class="battle-core battlefield-core">
         <view wx:for="{{frontPlayerGroups}}" wx:key="key" class="team-section team-{{item.kind}}">
           <view class="row team-section-head">
             <text class="team-section-title">{{item.label}}</text>
@@ -57,7 +68,7 @@
               </view>
             </view>
             <view class="hp-track">
-              <view class="hp-fill" style="width: {{member.hpPercent}}%;"></view>
+              <view class="hp-fill hp-{{member.hpTone}}" style="width: {{member.hpPercent}}%;"></view>
             </view>
             <view class="public-tags">
               <text class="tag team-tag team-{{member.teamKind}}">{{member.teamLabel}}</text>
@@ -80,7 +91,12 @@
                 </view>
               </view>
             </view>
-            <view wx:if="{{member.abilities.length}}" class="public-abilities">
+            <view wx:if="{{member.abilities.length && !member.is_self}}" class="public-abilities">
+              <view wx:if="{{canManageBattle}}" class="ability-fold-head" data-player-id="{{member.id}}" bindtap="togglePlayerAbilities">
+                <text class="ability-fold-title">天赋技能 {{member.abilities.length}}</text>
+                <text class="ability-fold-action">{{expandedAbilityPlayers[member.id] ? '收起' : '展开'}}</text>
+              </view>
+              <view wx:if="{{!canManageBattle || expandedAbilityPlayers[member.id]}}" class="ability-fold-body">
               <view
                 wx:for="{{member.abilities}}"
                 wx:for-item="ability"
@@ -99,11 +115,12 @@
                       class="mini-action cooldown-button"
                       data-player-id="{{member.id}}"
                       data-key="{{ability.key}}"
-                      loading="{{actionLoading}}"
+                      loading="{{cooldownLoadingKey === ability.cooldownActionKey}}"
                       bindtap="putAbilityOnCooldown"
                     >冷却</button>
                   </view>
                 </view>
+              </view>
               </view>
             </view>
             <text wx:if="{{member.publicNote}}" class="muted player-note">{{member.publicNote}}</text>
@@ -130,7 +147,7 @@
       </view>
     </view>
 
-    <view class="section panel">
+    <view wx:if="{{!canManageBattle}}" class="section panel player-action-panel">
       <view class="row subhead">
         <text class="panel-title">我的行动卡</text>
         <text class="muted">{{selfPlayer ? selfPlayer.player_name : '未入场'}}</text>
@@ -182,7 +199,7 @@
       </block>
     </view>
 
-    <view class="section panel">
+    <view wx:if="{{!canManageBattle || activeDmPage === 'settle'}}" class="section panel battle-log-panel">
       <view class="row subhead">
         <text class="panel-title">{{actionListLabel}}</text>
         <text class="muted">{{visibleActionCountText}}</text>
@@ -204,23 +221,13 @@
       </view>
     </view>
 
-    <view wx:if="{{canManageBattle}}" class="section panel dm-panel">
+    <view wx:if="{{canManageBattle && activeDmPage !== 'field'}}" class="section panel dm-panel">
       <view class="row subhead dm-header">
         <view>
           <text class="panel-title">DM 操作台</text>
           <text class="muted">结算、状态、分队和房间收束都在这里处理。</text>
         </view>
         <text class="pill">主持模式</text>
-      </view>
-
-      <view class="dm-tabs">
-        <button
-          wx:for="{{dmToolTabs}}"
-          wx:key="key"
-          class="dm-tab {{activeDmTool === item.key ? 'active' : ''}}"
-          data-key="{{item.key}}"
-          bindtap="setActiveDmTool"
-        >{{item.label}}</button>
       </view>
 
       <view wx:if="{{activeDmTool === 'settle'}}" class="dm-tool">
@@ -317,7 +324,30 @@
       </view>
     </view>
 
-    <view class="section panel">
+    <view wx:if="{{canManageBattle}}" class="dm-navigation">
+      <button class="dm-navigation-item {{activeDmPage === 'field' ? 'active' : ''}}" data-page="field" bindtap="setActiveDmPage">
+        <text class="dm-navigation-icon">场</text>
+        <text>战场</text>
+      </button>
+      <button class="dm-navigation-item {{activeDmPage === 'settle' ? 'active' : ''}}" data-page="settle" bindtap="setActiveDmPage">
+        <text class="dm-navigation-icon">判</text>
+        <text>结算</text>
+      </button>
+      <button class="dm-navigation-item {{activeDmPage === 'status' ? 'active' : ''}}" data-page="status" bindtap="setActiveDmPage">
+        <text class="dm-navigation-icon">态</text>
+        <text>状态</text>
+      </button>
+      <button class="dm-navigation-item {{activeDmPage === 'team' ? 'active' : ''}}" data-page="team" bindtap="setActiveDmPage">
+        <text class="dm-navigation-icon">队</text>
+        <text>分队</text>
+      </button>
+      <button class="dm-navigation-item {{activeDmPage === 'room' ? 'active' : ''}}" data-page="room" bindtap="setActiveDmPage">
+        <text class="dm-navigation-icon">室</text>
+        <text>房间</text>
+      </button>
+    </view>
+
+    <view wx:if="{{!canManageBattle || activeDmPage === 'settle'}}" class="section panel battle-history-panel">
       <view class="row subhead">
         <text class="panel-title">公开战斗日志</text>
         <text class="muted">{{logs.length}} 条</text>
