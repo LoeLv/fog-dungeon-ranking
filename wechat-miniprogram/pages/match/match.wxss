@@ -175,6 +175,15 @@
   align-items: flex-start;
 }
 
+.estimate-line {
+  display: block;
+  margin-top: 10rpx;
+  color: #8a4b20;
+  font-size: 24rpx;
+  font-weight: 700;
+  line-height: 1.45;
+}
+
 .full-button {
   margin-top: 22rpx;
   width: 100%;

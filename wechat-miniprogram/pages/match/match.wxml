@@ -145,6 +145,7 @@
         <view>
           <text class="panel-title">{{activeDungeon.name}}</text>
           <text class="muted">{{activeDungeon.typeLabel}} · {{activeDungeon.difficultyLabel}} · {{activeDungeon.creator}}</text>
+          <text class="muted estimate-line">预估时间：{{activeDungeon.estimatedDurationLabel}}</text>
         </view>
         <view class="pill">{{musterStatusLabel}}</view>
       </view>

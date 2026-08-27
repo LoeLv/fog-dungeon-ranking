@@ -57,6 +57,23 @@ function formatBattleRemaining(value) {
   return hours > 0 ? hours + "小时" + minutes + "分钟" : minutes + "分钟";
 }
 
+function isFutureTime(value) {
+  const timestamp = new Date(value || "").getTime();
+  return Number.isFinite(timestamp) && timestamp > Date.now();
+}
+
+function isActiveBattleRoom(room) {
+  return !!room &&
+    room.room_status === "active" &&
+    isFutureTime(room.expiresAt || room.expires_at);
+}
+
+function isOpenMuster(muster) {
+  return !!muster &&
+    muster.status === "open" &&
+    isFutureTime(muster.closes_at);
+}
+
 function normalizeBattleRoom(room) {
   const dungeon = room && Array.isArray(room.dungeons) ? (room.dungeons[0] || {}) : (room && room.dungeons ? room.dungeons : {});
   return Object.assign({}, room, {
@@ -77,6 +94,7 @@ function normalizeActiveMuster(muster) {
     dungeonName: dungeon.name || "未命名试炼",
     dungeonMeta: (dungeon.type || "未定神系") + " · " + formatDifficulty(dungeon.difficulty),
     targetCount: targetCount,
+    estimatedDurationLabel: muster.estimatedDuration || muster.estimated_duration || dungeon.estimatedDuration || dungeon.estimated_duration || "约2-4小时",
     statusLabel: muster.status === "drawn" ? "已抽选" : "报名中",
     timeLabel: muster.status === "drawn" ? formatTime(muster.drawn_at) : formatTime(muster.closes_at)
   });
@@ -385,11 +403,9 @@ Page({
       .then(function(result) {
         const data = result.data || {};
         this.setData({
-          lastBattleRoom: data.lastBattleRoom ? normalizeBattleRoom(data.lastBattleRoom) : null,
-          battleRooms: (data.battleRooms || []).filter(function(room) {
-            return room && room.room_status === "active";
-          }).map(normalizeBattleRoom),
-          activeMusters: (data.activeMusters || []).map(normalizeActiveMuster)
+          lastBattleRoom: isActiveBattleRoom(data.lastBattleRoom) ? normalizeBattleRoom(data.lastBattleRoom) : null,
+          battleRooms: (data.battleRooms || []).filter(isActiveBattleRoom).map(normalizeBattleRoom),
+          activeMusters: (data.activeMusters || []).filter(isOpenMuster).map(normalizeActiveMuster)
         });
       }.bind(this))
       .catch(function(error) {
