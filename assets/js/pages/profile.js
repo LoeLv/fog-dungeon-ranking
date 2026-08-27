@@ -159,7 +159,7 @@ async function renderProfilePage() {
                             <label for="promoCodeInput">兑换码</label>
                             <div class="profile-tools">
                                 <input id="promoCodeInput" maxlength="80" placeholder="输入兑换码" style="flex:1;min-width:220px;">
-                                <button class="btn btn-outline btn-sm" data-promo-redeem-button onclick="redeemPromoCode()">立即兑换</button>
+                                <button type="button" class="btn btn-outline btn-sm" data-promo-redeem-button onclick="window.redeemPromoCode()">立即兑换</button>
                             </div>
                         </div>
                     </div>
@@ -452,6 +452,8 @@ async function redeemPromoCode() {
         releaseUiActionLock('redeemPromoCode');
     }
 }
+
+window.redeemPromoCode = redeemPromoCode;
 
 async function markProfileNoticesRead() {
     const { notices } = await getAuthorCommentNotices();
