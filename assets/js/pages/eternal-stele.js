@@ -14,6 +14,13 @@ const ETERNAL_STELE_RECORDS = [
         subtitle: '\u524d\u8eab \u00b7 \u8bb0\u5fc6\u4e4b\u795e',
         summary: '\u7942\u5386\u7ecf\u9ed1\u6697\u65f6\u4ee3\u7684\u5927\u706d\u7edd\uff0c\u4eb2\u624b\u5efa\u7acb\u66d9\u5149\uff0c\u66fe\u638c\u8bb0\u5fc6\u4e4b\u4f4d\uff0c\u4ee5\u4e66\u9875\u627f\u63a5\u65e7\u65e5\u7684\u56de\u58f0\u3002\u98ce\u7ffb\u8fc7\u7684\u540d\u5b57\u4e0d\u4f1a\u6563\u5c3d\uff0c\u5b83\u4eec\u5728\u51a0\u4e0b\u6536\u62e2\uff0c\u5316\u4f5c\u6e29\u548c\u800c\u957f\u4e45\u7684\u5fe7\u853c\u3002',
         note: '\u4e66\u9875\u4e0d\u706d',
+    },
+    {
+        motif: 'luck',
+        title: '\u6b22\u6109\u4e4b\u795e--incredible luck',
+        subtitle: '\u524d\u8eab \u00b7 \u6c61\u5815\u4e4b\u795e',
+        summary: '\u9f99\u9f99\u662f\u4e16\u4e0a\u6700\u5f3a\u5927\u7684\u6c61\u5815\u9f99\u79cd\uff0c\u7942\u82f1\u52c7\uff0c\u667a\u6167\uff0c\u4e50\u5584\u597d\u65bd\u3002\u4e24\u4ee3\u53f2\u8bd7\u90fd\u66fe\u7559\u4e0b\u7942\u7684\u4f20\u5947\u3002\u7942\u5386\u7ecf\u4e86\u4e24\u4e2a\u65f6\u4ee3\u7684\u8bde\u751f\u4e0e\u8fdb\u7a0b\uff0c\u4e5f\u662f\u5e74\u5c81\u6700\u957f\u7684\u795e\u8bdd\u4e4b\u9f99\u3002\u4f5c\u4e3a\u6c61\u5815\u4e4b\u795e\uff0c\u7942\u7ed9\u4eba\u4eec\u7684\u5f62\u8c61\u603b\u662f\u4ece\u4e0d\u62d2\u7edd\uff0c\u4ece\u5e0c\u671b\u4e4b\u5dde\u5230\u4fe1\u4ef0\u4e4b\u5730\uff0c\u6240\u6709\u4fe1\u5f92\u90fd\u559c\u6b22\u8fd9\u6761\u4f1f\u5927\u4e4b\u9f99\uff0c\u7942\u603b\u662f\u80fd\u5e26\u7ed9\u6240\u6709\u4eba\u6b22\u4e50\u3002\u62e5\u62b1\u81ea\u6211\uff0c\u8ffd\u5df1\u6c42\u65b0--\u6c38\u5ff5\u52ff\u5fd8\u3002',
+        note: '\u6b22\u610f\u4e0d\u62d2',
     }
 ];
 
@@ -29,6 +36,22 @@ function renderEternalSteleMotif(record) {
             <span class="stele-page-glow"></span>
         `;
     }
+    if (record.motif === 'luck') {
+        return `
+            <span class="stele-luck-wheel"></span>
+            <span class="stele-luck-wheel-track"></span>
+            <span class="stele-luck-wheel-rune rune-top"></span>
+            <span class="stele-luck-wheel-rune rune-right"></span>
+            <span class="stele-luck-wheel-rune rune-bottom"></span>
+            <span class="stele-luck-wheel-rune rune-left"></span>
+            <span class="stele-luck-dragon-arc arc-left"></span>
+            <span class="stele-luck-dragon-arc arc-right"></span>
+            <span class="stele-luck-scale scale-1"></span>
+            <span class="stele-luck-scale scale-2"></span>
+            <span class="stele-luck-scale scale-3"></span>
+            <span class="stele-luck-gold-trail"></span>
+        `;
+    }
     return `
         <span class="stele-motif-stone"></span>
         <span class="stele-motif-crack"></span>
@@ -38,7 +61,10 @@ function renderEternalSteleMotif(record) {
 }
 
 function renderEternalSteleRecord(record) {
-    const motifClass = record.motif === 'pages' ? 'stele-monolith-pages' : 'stele-monolith-tomb';
+    const motifClass =
+        record.motif === 'pages' ? 'stele-monolith-pages' :
+        record.motif === 'luck' ? 'stele-monolith-luck' :
+        'stele-monolith-tomb';
     return `
         <section class="stele-sanctum stele-sanctum-${escapeHtml(record.motif)}" aria-label="${escapeHtml(record.title)}">
             <div class="stele-sanctum-pillars" aria-hidden="true">
@@ -47,18 +73,40 @@ function renderEternalSteleRecord(record) {
                 <span class="stele-sanctum-arch"></span>
             </div>
             <div class="stele-monolith ${motifClass}">
-                <div class="stele-monolith-crown" aria-hidden="true">
-                    <span class="stele-crown-halo"></span>
-                    <span class="stele-crown-arc"></span>
-                    <span class="stele-crown-panel panel-left"></span>
-                    <span class="stele-crown-panel panel-mid-left"></span>
-                    <span class="stele-crown-panel panel-mid"></span>
-                    <span class="stele-crown-panel panel-mid-right"></span>
-                    <span class="stele-crown-panel panel-right"></span>
-                    <span class="stele-crown-gem gem-left"></span>
-                    <span class="stele-crown-gem gem-center"></span>
-                    <span class="stele-crown-gem gem-right"></span>
-                    <span class="stele-crown-break"></span>
+                <div class="stele-monolith-crown stele-crown-${escapeHtml(record.motif)}" aria-hidden="true">
+                    ${record.motif === 'pages' ? `
+                        <span class="stele-crown-halo"></span>
+                        <span class="stele-crown-arc"></span>
+                        <span class="stele-crown-panel panel-left"></span>
+                        <span class="stele-crown-panel panel-mid-left"></span>
+                        <span class="stele-crown-panel panel-mid"></span>
+                        <span class="stele-crown-panel panel-mid-right"></span>
+                        <span class="stele-crown-panel panel-right"></span>
+                        <span class="stele-crown-gem gem-left"></span>
+                        <span class="stele-crown-gem gem-center"></span>
+                        <span class="stele-crown-gem gem-right"></span>
+                        <span class="stele-crown-break"></span>
+                    ` : record.motif === 'luck' ? `
+                        <span class="stele-luck-crown-ring"></span>
+                        <span class="stele-luck-crown-ring-ring"></span>
+                        <span class="stele-luck-crown-horn horn-left"></span>
+                        <span class="stele-luck-crown-horn horn-right"></span>
+                        <span class="stele-luck-crown-bead bead-left"></span>
+                        <span class="stele-luck-crown-bead bead-right"></span>
+                        <span class="stele-luck-crown-bead bead-center"></span>
+                    ` : `
+                        <span class="stele-crown-halo"></span>
+                        <span class="stele-crown-arc"></span>
+                        <span class="stele-crown-panel panel-left"></span>
+                        <span class="stele-crown-panel panel-mid-left"></span>
+                        <span class="stele-crown-panel panel-mid"></span>
+                        <span class="stele-crown-panel panel-mid-right"></span>
+                        <span class="stele-crown-panel panel-right"></span>
+                        <span class="stele-crown-gem gem-left"></span>
+                        <span class="stele-crown-gem gem-center"></span>
+                        <span class="stele-crown-gem gem-right"></span>
+                        <span class="stele-crown-break"></span>
+                    `}
                 </div>
                 <div class="stele-monolith-motif stele-motif-${escapeHtml(record.motif)}" aria-hidden="true">
                     ${renderEternalSteleMotif(record)}
