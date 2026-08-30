@@ -4574,6 +4574,14 @@ button.is-action-ack {
 .stele-monolith-luck .stele-monolith-body {
     border-top-color: rgba(255,223,143,0.14);
 }
+.stele-monolith-luck .stele-monolith-body p {
+    max-width: 40ch;
+    line-height: 2.02;
+}
+.stele-luck-motto {
+    display: block;
+    margin-top: 10px;
+}
 .stele-monolith-luck .stele-monolith-foot {
     border-top-color: rgba(255,223,143,0.12);
 }
@@ -5116,6 +5124,13 @@ body.eternal-stele-view-open .profile-toolbar {
     .stele-monolith-luck .stele-monolith-base {
         height: 90px;
         bottom: -50px;
+    }
+    .stele-monolith-luck .stele-monolith-body p {
+        max-width: 42ch;
+        line-height: 1.95;
+    }
+    .stele-luck-motto {
+        margin-top: 8px;
     }
     .stele-monolith-foot {
         flex-direction: column;
