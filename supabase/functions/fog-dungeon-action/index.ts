@@ -122,6 +122,7 @@ const roleLabels: Record<InviteRole, string> = {
   astral: "星途",
 };
 const specialAccountRoles = new Set<InviteRole>(["god", "astral"]);
+const HASH_FILTER_BATCH_SIZE = 40;
 const dungeonReviewerNames = new Set(["羔羊", "槐柏"]);
 
 const godNames = new Set([
@@ -500,18 +501,21 @@ async function getActiveTitlesByHashes(
   const hashes = [...new Set(inviteCodeHashes.map((hash) => cleanText(hash, 64)).filter(Boolean))];
   const titles = new Map<string, Record<string, unknown>[]>();
   if (!hashes.length) return { titles };
-  const { data, error } = await supabase
-    .from("profile_titles")
-    .select("id, invite_code_hash, title_text, title_god, title_note, granted_by_type, granted_by_name, granted_at")
-    .in("invite_code_hash", hashes)
-    .eq("is_active", true)
-    .order("granted_at", { ascending: false });
-  if (isMissingTitleTable(error)) return { titles };
-  if (error) return { titles, error };
-  for (const title of data || []) {
-    const hash = cleanText((title as Record<string, unknown>).invite_code_hash, 64);
-    const publicTitle = toPublicTitle(title as Record<string, unknown>) as Record<string, unknown> | null;
-    if (hash && publicTitle) titles.set(hash, [...(titles.get(hash) || []), publicTitle]);
+  for (let index = 0; index < hashes.length; index += HASH_FILTER_BATCH_SIZE) {
+    const batch = hashes.slice(index, index + HASH_FILTER_BATCH_SIZE);
+    const { data, error } = await supabase
+      .from("profile_titles")
+      .select("id, invite_code_hash, title_text, title_god, title_note, granted_by_type, granted_by_name, granted_at")
+      .in("invite_code_hash", batch)
+      .eq("is_active", true)
+      .order("granted_at", { ascending: false });
+    if (isMissingTitleTable(error)) return { titles };
+    if (error) return { titles, error };
+    for (const title of data || []) {
+      const hash = cleanText((title as Record<string, unknown>).invite_code_hash, 64);
+      const publicTitle = toPublicTitle(title as Record<string, unknown>) as Record<string, unknown> | null;
+      if (hash && publicTitle) titles.set(hash, [...(titles.get(hash) || []), publicTitle]);
+    }
   }
   return { titles };
 }
@@ -533,18 +537,21 @@ async function getActiveCursesByHashes(
   const hashes = [...new Set(inviteCodeHashes.map((hash) => cleanText(hash, 64)).filter(Boolean))];
   const curses = new Map<string, Record<string, unknown>[]>();
   if (!hashes.length) return { curses };
-  const { data, error } = await supabase
-    .from("profile_curses")
-    .select("id, invite_code_hash, curse_text, curse_god, curse_note, curse_type, granted_by_type, granted_by_name, granted_at")
-    .in("invite_code_hash", hashes)
-    .eq("is_active", true)
-    .order("granted_at", { ascending: false });
-  if (isMissingTitleTable(error)) return { curses };
-  if (error) return { curses, error };
-  for (const curse of data || []) {
-    const hash = cleanText((curse as Record<string, unknown>).invite_code_hash, 64);
-    const publicCurse = toPublicCurse(curse as Record<string, unknown>) as Record<string, unknown> | null;
-    if (hash && publicCurse) curses.set(hash, [...(curses.get(hash) || []), publicCurse]);
+  for (let index = 0; index < hashes.length; index += HASH_FILTER_BATCH_SIZE) {
+    const batch = hashes.slice(index, index + HASH_FILTER_BATCH_SIZE);
+    const { data, error } = await supabase
+      .from("profile_curses")
+      .select("id, invite_code_hash, curse_text, curse_god, curse_note, curse_type, granted_by_type, granted_by_name, granted_at")
+      .in("invite_code_hash", batch)
+      .eq("is_active", true)
+      .order("granted_at", { ascending: false });
+    if (isMissingTitleTable(error)) return { curses };
+    if (error) return { curses, error };
+    for (const curse of data || []) {
+      const hash = cleanText((curse as Record<string, unknown>).invite_code_hash, 64);
+      const publicCurse = toPublicCurse(curse as Record<string, unknown>) as Record<string, unknown> | null;
+      if (hash && publicCurse) curses.set(hash, [...(curses.get(hash) || []), publicCurse]);
+    }
   }
   return { curses };
 }
