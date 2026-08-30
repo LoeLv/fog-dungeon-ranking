@@ -4575,7 +4575,9 @@ button.is-action-ack {
     border-top-color: rgba(255,223,143,0.14);
 }
 .stele-monolith-luck .stele-monolith-body p {
-    max-width: 40ch;
+    width: min(46ch, 92%);
+    max-width: 46ch;
+    margin: 0 auto;
     line-height: 2.02;
 }
 .stele-luck-motto {
@@ -5126,7 +5128,9 @@ body.eternal-stele-view-open .profile-toolbar {
         bottom: -50px;
     }
     .stele-monolith-luck .stele-monolith-body p {
-        max-width: 42ch;
+        width: min(48ch, 94%);
+        max-width: 48ch;
+        margin: 0 auto;
         line-height: 1.95;
     }
     .stele-luck-motto {
