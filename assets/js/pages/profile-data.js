@@ -67,14 +67,14 @@ async function fetchMyClearRecords(dungeons) {
                 .select('id,dungeon_id,run_number,invite_name,feedback_tags,feedback_note,created_at')
                 .eq('invite_code_hash', codeHash)
                 .order('created_at', { ascending: false });
-            if (error) return localRecords;
+            if (error) return skipShortReadCache(localRecords);
             const dungeonMap = new Map((dungeons || []).map(d => [String(d.id), d]));
             return (data || []).map(record => ({
                 ...record,
                 dungeon: dungeonMap.get(String(record.dungeon_id)) || null
             }));
         } catch {
-            return localRecords;
+            return skipShortReadCache(localRecords);
         }
     });
 }

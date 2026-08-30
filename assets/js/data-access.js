@@ -121,7 +121,7 @@ async function fetchComments(dungeonId) {
             data = fallback.data || [];
             error = fallback.error;
         }
-        if (error) return [];
+        if (error) return skipShortReadCache([]);
         const comments = (data || []).map(c => ({
             ...c,
             parent_comment_id: c.parent_comment_id || c.parentCommentId || null,
@@ -157,7 +157,7 @@ async function fetchLatestComments(limit = 3) {
             data = fallback.data || [];
             error = fallback.error;
         }
-        if (error) return [];
+        if (error) return skipShortReadCache([]);
         const dungeons = await fetchDungeons();
         return await enrichCommentsWithHonors((data || []).map(c => ({
             ...c,
@@ -179,7 +179,7 @@ async function fetchClearFeedbackSummary(dungeonId) {
             .select('tag,tag_count')
             .eq('dungeon_id', dungeonId)
             .order('tag_count', { ascending: false });
-        return error ? [] : data || [];
+        return error ? skipShortReadCache([]) : data || [];
     });
 }
 

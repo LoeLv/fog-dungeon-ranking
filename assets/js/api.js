@@ -4,8 +4,9 @@
 // per invite identity and is cleared immediately after a write succeeds.
 const DUNGEON_LIST_CACHE_TTL_MS = 3 * 60 * 1000;
 const SHORT_READ_CACHE_TTL_MS = 90 * 1000;
-const DUNGEON_LIST_CACHE_PREFIX = 'fog-dungeon-list-v3';
-const SHORT_READ_CACHE_PREFIX = 'fog-read-cache-v3';
+const DUNGEON_LIST_CACHE_PREFIX = 'fog-dungeon-list-v4';
+const SHORT_READ_CACHE_PREFIX = 'fog-read-cache-v4';
+const UNCACHED_READ_MARKER = '__fogSkipShortReadCache';
 let dungeonListRequest = null;
 let dungeonListCacheVersion = 0;
 const shortReadRequests = new Map();
@@ -15,7 +16,14 @@ function purgeLegacyReadCaches() {
     try {
         for (let index = sessionStorage.length - 1; index >= 0; index -= 1) {
             const key = sessionStorage.key(index);
-            if (key?.startsWith('fog-dungeon-list-v2:') || key?.startsWith('fog-read-cache-v2:')) {
+            if (
+                key?.startsWith('fog-dungeon-list-v1:') ||
+                key?.startsWith('fog-dungeon-list-v2:') ||
+                key?.startsWith('fog-dungeon-list-v3:') ||
+                key?.startsWith('fog-read-cache-v1:') ||
+                key?.startsWith('fog-read-cache-v2:') ||
+                key?.startsWith('fog-read-cache-v3:')
+            ) {
                 sessionStorage.removeItem(key);
             }
         }
@@ -72,6 +80,26 @@ function invalidateShortReadCache(name = '') {
     shortReadCacheVersion += 1;
 }
 
+function clearFrontendReadCaches() {
+    try {
+        for (let index = sessionStorage.length - 1; index >= 0; index -= 1) {
+            const key = sessionStorage.key(index);
+            if (key?.startsWith('fog-dungeon-list-') || key?.startsWith('fog-read-cache-')) {
+                sessionStorage.removeItem(key);
+            }
+        }
+    } catch (_) {}
+    dungeonListRequest = null;
+    shortReadRequests.clear();
+    dungeonListCacheVersion += 1;
+    shortReadCacheVersion += 1;
+    archivePageMeta = null;
+}
+
+function skipShortReadCache(data) {
+    return { [UNCACHED_READ_MARKER]: true, data };
+}
+
 async function getShortCachedRead(name, loader, ttl = SHORT_READ_CACHE_TTL_MS) {
     const key = getShortReadCacheKey(name);
     try {
@@ -83,6 +111,9 @@ async function getShortCachedRead(name, loader, ttl = SHORT_READ_CACHE_TTL_MS) {
     const request = Promise.resolve()
         .then(loader)
         .then(data => {
+            if (data && typeof data === 'object' && data[UNCACHED_READ_MARKER]) {
+                return data.data;
+            }
             if (cacheVersion === shortReadCacheVersion) {
                 try { sessionStorage.setItem(key, JSON.stringify({ savedAt: Date.now(), data })); } catch (_) {}
             }

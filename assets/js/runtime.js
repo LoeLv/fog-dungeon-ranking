@@ -167,6 +167,7 @@ async function mobileQuickAction(action) {
         return;
     }
     if (action === 'refresh') {
+        clearFrontendReadCaches();
         if (document.getElementById('profilePage')?.style.display !== 'none') await renderProfilePage();
         else if (document.getElementById('leaderboardPage')?.style.display !== 'none') await renderLeaderboardPage();
         else await renderDungeonList();

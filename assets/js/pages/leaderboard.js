@@ -79,12 +79,12 @@ async function fetchLeaderboardEntries() {
             const { data, error } = await invokeDungeonAction('listProfiles', {});
             if (error || !Array.isArray(data)) {
                 console.warn('云端榜单读取失败，使用本地榜单:', error);
-                return { entries: localEntries, source: 'local', error };
+                return skipShortReadCache({ entries: localEntries, source: 'local', error });
             }
             return { entries: data.map(mapCloudLeaderboardEntry), source: 'cloud' };
         } catch (error) {
             console.warn('云端榜单读取异常，使用本地榜单:', error);
-            return { entries: localEntries, source: 'local', error };
+            return skipShortReadCache({ entries: localEntries, source: 'local', error });
         }
     });
 }
