@@ -418,7 +418,15 @@ function renderSTalentSlotPanel(state, god = getProfileFaithGod(getCurrentProfil
     const pendingChoices = state.pendingSChoices || [];
     const pendingPools = new Set(pendingChoices.map(choice => String(choice.pool_key || '')).filter(Boolean));
     const hasSlot = !!current;
-    const options = (state.sTalentOptions || [])
+    const ownedSOptions = (state.ownedTalents || []).filter(item => String(item.rank || '').toUpperCase() === 'S');
+    const optionMap = new Map();
+    [...(state.sTalentOptions || []), ...ownedSOptions].forEach(item => {
+        if (!item) return;
+        const key = `${String(item.pool_key || '')}::${Number(item.talent_id || 0)}`;
+        if (!key || key === '::0') return;
+        if (!optionMap.has(key)) optionMap.set(key, item);
+    });
+    const options = [...optionMap.values()]
         .filter(item => String(item.rank || '').toUpperCase() === 'S')
         .filter(item => hasSlot || pendingPools.has(String(item.pool_key || '')))
         .sort((a, b) => String(a.pool_key || '').localeCompare(String(b.pool_key || ''), 'zh-CN') || Number(a.talent_id || 0) - Number(b.talent_id || 0));

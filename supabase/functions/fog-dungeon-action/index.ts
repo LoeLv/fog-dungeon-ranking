@@ -1137,7 +1137,7 @@ function getTalentRankAllowance(ascensionScore: unknown) {
   return getTalentSlotRule(ascensionScore).ranks || ["C", "C"];
 }
 
-function canEquipTalentRanks(ranks: unknown[], allowance: string[]) {
+function canEquipTalentRanks(ranks: unknown[], allowance: readonly string[]) {
   const sortedRanks = ranks.map((rank) => String(rank || "").toUpperCase()).sort((a, b) => (talentRankOrder[b] || 0) - (talentRankOrder[a] || 0));
   const sortedAllowance = allowance.map((rank) => String(rank || "").toUpperCase()).sort((a, b) => (talentRankOrder[b] || 0) - (talentRankOrder[a] || 0));
   if (sortedRanks.length > sortedAllowance.length) return false;
@@ -2327,7 +2327,10 @@ async function buildTalentState(
   if (pendingSChoiceResult.error) return { error: pendingSChoiceResult.error };
   const pendingSChoices = pendingSChoiceResult.pendingChoices || [];
   const sTalentSlot = ownedTalents.find((item) => item.s_slot) || null;
-  const sTalentOptions = poolItems.filter((item) => item.rank === "S");
+  const sTalentOptions = [
+    ...poolItems.filter((item) => item.rank === "S"),
+    ...ownedTalents.filter((item) => String(item.rank || "").toUpperCase() === "S"),
+  ];
   const settledFragmentTotal = fragmentState.fragmentTotal + Number(overflowSettlement.fragmentGain || 0);
 
   return {
@@ -2961,7 +2964,7 @@ async function getBattleRoomState(
   const playerRows = players || [];
   const isHost = String(room.host_code_hash || "") === identity.codeHash;
   const isParticipant = playerRows.some((player) => String(player.player_code_hash || "") === identity.codeHash);
-  const canOperate = isHost || hasRole(identity.role, ["reviewer", "admin"]);
+  const canOperate = isHost;
   const statusByPlayerId = new Map<string, Record<string, unknown>[]>();
   for (const status of statusRows || []) {
     if (!canOperate && status.is_public !== true) continue;
@@ -6804,7 +6807,7 @@ Deno.serve(async (req) => {
 
       const { data: currentEquipped, error: currentEquippedError } = await supabase
         .from("owned_talents")
-        .select("id, rank, equipped_slot, storage_slot")
+        .select("id, pool_key, rank, equipped_slot, storage_slot, s_slot")
         .eq("invite_code_hash", identity.codeHash)
         .not("equipped_slot", "is", null);
       if (currentEquippedError) return json({ error: currentEquippedError.message }, 400);
@@ -6843,10 +6846,11 @@ Deno.serve(async (req) => {
       if (ownedTalentId && currentSlotTalent && Number(currentSlotTalent.id) === ownedTalentId) {
         // No state change needed; the request kept the current equipped talent selected.
       } else if (ownedTalentId) {
-                const sourceStorageSlot = Number(owned?.storage_slot || 0);
+        const sourceStorageSlot = Number(owned?.storage_slot || 0);
         const isSpecialSOwned = String(owned?.rank || "").toUpperCase() === "S" && Number(owned?.s_slot || 0) === 1;
+        const currentSlotIsSpecialS = String(currentSlotTalent?.rank || "").toUpperCase() === "S" && Number(currentSlotTalent?.s_slot || 0) === 1;
         let previousStorageSlot = sourceStorageSlot;
-        if (currentSlotTalent && !previousStorageSlot) {
+        if (currentSlotTalent && !currentSlotIsSpecialS && !previousStorageSlot) {
           const slotResult = await getAvailableStorageSlot(supabase, identity.codeHash);
           if (slotResult.error) return json({ error: slotResult.error.message }, 400);
           if (!slotResult.slot) return json({ error: "仓库已满，无法替换当前天赋" }, 409);
@@ -6855,9 +6859,11 @@ Deno.serve(async (req) => {
         if (!sourceStorageSlot && !isSpecialSOwned) return json({ error: "仓库位状态异常，请刷新后重试" }, 400);
 
         if (currentSlotTalent) {
+          const clearCurrentSlotUpdate: Record<string, unknown> = { equipped_slot: null };
+          if (!currentSlotIsSpecialS) clearCurrentSlotUpdate.storage_slot = null;
           const { error: clearCurrentSlotError } = await supabase
             .from("owned_talents")
-            .update({ equipped_slot: null })
+            .update(clearCurrentSlotUpdate)
             .eq("id", currentSlotTalent.id)
             .eq("invite_code_hash", identity.codeHash);
           if (clearCurrentSlotError) return json({ error: clearCurrentSlotError.message }, 400);
@@ -6872,7 +6878,7 @@ Deno.serve(async (req) => {
           .eq("invite_code_hash", identity.codeHash);
         if (equipError) return json({ error: equipError.message }, 400);
 
-        if (currentSlotTalent) {
+        if (currentSlotTalent && !currentSlotIsSpecialS) {
           const { error: storePreviousError } = await supabase
             .from("owned_talents")
             .update({ storage_slot: previousStorageSlot, equipped_slot: null })
@@ -6881,16 +6887,26 @@ Deno.serve(async (req) => {
           if (storePreviousError) return json({ error: storePreviousError.message }, 400);
         }
       } else if (currentSlotTalent) {
-        const slotResult = await getAvailableStorageSlot(supabase, identity.codeHash);
-        if (slotResult.error) return json({ error: slotResult.error.message }, 400);
-        if (!slotResult.slot) return json({ error: "仓库已满，无法卸下该天赋；请先分解一个仓库天赋" }, 409);
+        const currentSlotIsSpecialS = String(currentSlotTalent.rank || "").toUpperCase() === "S" && Number(currentSlotTalent.s_slot || 0) === 1;
+        if (currentSlotIsSpecialS) {
+          const { error: unequipSError } = await supabase
+            .from("owned_talents")
+            .update({ equipped_slot: null })
+            .eq("id", currentSlotTalent.id)
+            .eq("invite_code_hash", identity.codeHash);
+          if (unequipSError) return json({ error: unequipSError.message }, 400);
+        } else {
+          const slotResult = await getAvailableStorageSlot(supabase, identity.codeHash);
+          if (slotResult.error) return json({ error: slotResult.error.message }, 400);
+          if (!slotResult.slot) return json({ error: "仓库已满，无法卸下该天赋；请先分解一个仓库天赋" }, 409);
 
-        const { error: unequipError } = await supabase
-          .from("owned_talents")
-          .update({ storage_slot: slotResult.slot, equipped_slot: null })
-          .eq("id", currentSlotTalent.id)
-          .eq("invite_code_hash", identity.codeHash);
-        if (unequipError) return json({ error: unequipError.message }, 400);
+          const { error: unequipError } = await supabase
+            .from("owned_talents")
+            .update({ storage_slot: slotResult.slot, equipped_slot: null })
+            .eq("id", currentSlotTalent.id)
+            .eq("invite_code_hash", identity.codeHash);
+          if (unequipError) return json({ error: unequipError.message }, 400);
+        }
       }
 
       const talentTextUpdate = await updateProfileTalentText(supabase, identity.codeHash);
