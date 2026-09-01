@@ -160,7 +160,7 @@ const bTalentFragmentGain = 10;
 const targetTalentExchangeCost = 80;
 const aTalentExchangeCost = 260;
 const inventorySlotLimit = 10;
-const equippedSlotLimit = 4;
+const equippedSlotLimit = 5;
 const talentSlotScoreRules = [
   { minScore: 1000, ranks: ["C", "C"], summary: "CC" },
   { minScore: 1100, ranks: ["B", "C", "C"], summary: "BCC" },
@@ -175,7 +175,13 @@ const talentSlotScoreRules = [
   { minScore: 2000, ranks: ["A", "A", "A", "A"], summary: "AAAA" },
   { minScore: 2100, ranks: ["S", "A", "A", "A"], summary: "SAAA" },
 ];
-const talentSlotKinds = ["faith", "profession", "any", "any"];
+const talentSlot5ScoreRules = [
+  { minScore: 2200, ranks: ["S", "A", "A", "A", "C"], summary: "SAAAC", kind: "profession" },
+  { minScore: 2300, ranks: ["S", "A", "A", "A", "B"], summary: "SAAAB", kind: "profession" },
+  { minScore: 2400, ranks: ["S", "A", "A", "A", "A"], summary: "SAAAA", kind: "profession" },
+  { minScore: 2500, ranks: ["S", "A", "A", "A", "A"], summary: "SAAAA", kind: "any" },
+  { minScore: 2600, ranks: ["S", "A", "A", "A", "A"], summary: "SAAAA", kind: "fusion" },
+] as const;
 const talentRankOrder: Record<string, number> = { C: 1, B: 2, A: 3, S: 4 };
 const scoreDengMin = -30;
 const scoreDengMax = 30;
@@ -1115,14 +1121,16 @@ function getAdvancedDrawsEarned(ascensionScore: unknown) {
 
 function getTalentSlotRule(ascensionScore: unknown) {
   const score = cleanScore(ascensionScore);
-  return talentSlotScoreRules.reduce((active, rule) => (score >= rule.minScore ? rule : active), talentSlotScoreRules[0]);
+  const slotRules = [...talentSlotScoreRules, ...talentSlot5ScoreRules];
+  return slotRules.reduce((active, rule) => (score >= rule.minScore ? rule : active), slotRules[0]);
 }
 
 function getTalentSlotLimit(ascensionScore: unknown) {
   const score = cleanScore(ascensionScore);
   if (score < 1100) return 2;
   if (score < 1200) return 3;
-  return 4;
+  if (score < 2200) return 4;
+  return 5;
 }
 
 function getTalentRankAllowance(ascensionScore: unknown) {
@@ -1179,17 +1187,25 @@ function hasTrickeryFaithPrivilege(profile: Record<string, unknown> | null | und
   return getProfessionGod(profile.profession) === "欺诈";
 }
 
-function getTalentSlotKind(slot: number) {
-  return talentSlotKinds[slot - 1] || "any";
+function getTalentSlotKinds(ascensionScore: unknown) {
+  const score = cleanScore(ascensionScore);
+  if (score >= 2600) return ["faith", "profession", "any", "any", "fusion"];
+  if (score >= 2500) return ["faith", "profession", "any", "any", "any"];
+  if (score >= 2200) return ["faith", "profession", "any", "any", "profession"];
+  return ["faith", "profession", "any", "any"];
+}
+
+function getTalentSlotKind(ascensionScore: unknown, slot: number) {
+  return getTalentSlotKinds(ascensionScore)[slot - 1] || "any";
 }
 
 function getTalentSlotRequirement(profile: Record<string, unknown>, slot: number) {
-  const kind = getTalentSlotKind(slot);
-  if (kind === "faith") return { kind, poolKey: getFaithTalentPoolKey(profile), label: "信仰" };
-  if (kind === "profession") return { kind, poolKey: getProfessionTalentPoolKey(profile), label: "职业" };
-  return { kind, poolKey: "", label: "任意" };
+  const kind = getTalentSlotKind(profile.ascension_score, slot);
+  if (kind === "faith") return { kind, poolKey: getFaithTalentPoolKey(profile), label: "???" };
+  if (kind === "profession") return { kind, poolKey: getProfessionTalentPoolKey(profile), label: "???" };
+  if (kind === "fusion") return { kind, poolKey: "", label: "??????" };
+  return { kind, poolKey: "", label: "???" };
 }
-
 function canEquipTalentPool(poolKey: unknown, requirement: { kind: string; poolKey: string }) {
   if (requirement.kind === "any") return true;
   return !!requirement.poolKey && String(poolKey || "") === requirement.poolKey;
@@ -2322,7 +2338,7 @@ async function buildTalentState(
       maxEquippedSlotLimit: equippedSlotLimit,
       talentSlotRule,
       talentSlotScoreRules,
-      talentSlotKinds,
+      talentSlotKinds: getTalentSlotKinds(profile.ascension_score),
       faithTalentPoolKey: getFaithTalentPoolKey(profile),
       professionTalentPoolKey: getProfessionTalentPoolKey(profile),
       starterTalentDrawGrant,
