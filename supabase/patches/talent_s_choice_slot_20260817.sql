@@ -17,10 +17,14 @@ alter table public.owned_talents
 alter table public.owned_talents
   add constraint owned_talents_storage_equipment_split_check
   check (
-    (case when storage_slot is null then 0 else 1 end)
-    + (case when equipped_slot is null then 0 else 1 end)
-    + (case when s_slot is null then 0 else 1 end)
-    <= 1
+    (
+      s_slot is null
+      and (case when storage_slot is null then 0 else 1 end) + (case when equipped_slot is null then 0 else 1 end) <= 1
+    )
+    or (
+      s_slot is not null
+      and storage_slot is null
+    )
   );
 
 with first_s as (
