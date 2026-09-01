@@ -6295,7 +6295,7 @@ Deno.serve(async (req) => {
         const isGuarantee = drawResult.isGuarantee && (isB || isS);
         if (!isStarterDraw) {
           continueDraw = isB ? 0 : continueDraw + 1;
-          if (!isBasicDraw) sContinueDraw = isS ? 0 : sContinueDraw + 1;
+          if (!isBasicDraw) sContinueDraw = isS ? sTalentGuaranteeDraws - 1 : sContinueDraw + 1;
         }
         if (isBasicDraw && !isEventDraw) baseBasicIndex += 1;
 
@@ -6801,17 +6801,18 @@ Deno.serve(async (req) => {
         } else {
           const { data: ownedRow, error: ownedError } = await supabase
             .from("owned_talents")
-            .select("id, pool_key, rank, storage_slot, equipped_slot")
+            .select("id, pool_key, rank, storage_slot, equipped_slot, s_slot")
             .eq("id", ownedTalentId)
             .eq("invite_code_hash", identity.codeHash)
-            .not("storage_slot", "is", null)
-            .is("equipped_slot", null)
             .maybeSingle();
           if (ownedError) return json({ error: ownedError.message }, 400);
-          if (!ownedRow) return json({ error: "只能携带仓库中的未佩戴天赋" }, 404);
+          if (!ownedRow) return json({ error: "owned talent not found" }, 404);
           owned = ownedRow as Record<string, unknown>;
+          if (String(owned.rank || "").toUpperCase() !== "S" && !Number(owned.storage_slot || 0)) {
+            return json({ error: "仓库位状态异常，请刷新后重试" }, 400);
+          }
           if (!canEquipTalentPool(owned.pool_key, slotRequirement)) {
-            return json({ error: `${slotRequirement.label}槽只能嵌入${slotRequirement.label}池天赋` }, 403);
+            return json({ error: "slot pool mismatch" }, 403);
           }
         }
         const prospectiveRanks = (currentEquipped || [])
@@ -6826,8 +6827,16 @@ Deno.serve(async (req) => {
       if (ownedTalentId && currentSlotTalent && Number(currentSlotTalent.id) === ownedTalentId) {
         // No state change needed; the request kept the current equipped talent selected.
       } else if (ownedTalentId) {
-        const sourceStorageSlot = Number(owned?.storage_slot || 0);
-        if (!sourceStorageSlot) return json({ error: "仓库位状态异常，请刷新后重试" }, 400);
+                const sourceStorageSlot = Number(owned?.storage_slot || 0);
+        const isSpecialSOwned = String(owned?.rank || "").toUpperCase() === "S" && Number(owned?.s_slot || 0) === 1;
+        let previousStorageSlot = sourceStorageSlot;
+        if (currentSlotTalent && !previousStorageSlot) {
+          const slotResult = await getAvailableStorageSlot(supabase, identity.codeHash);
+          if (slotResult.error) return json({ error: slotResult.error.message }, 400);
+          if (!slotResult.slot) return json({ error: "仓库已满，无法替换当前天赋" }, 409);
+          previousStorageSlot = slotResult.slot;
+        }
+        if (!sourceStorageSlot && !isSpecialSOwned) return json({ error: "仓库位状态异常，请刷新后重试" }, 400);
 
         if (currentSlotTalent) {
           const { error: clearCurrentSlotError } = await supabase
@@ -6838,9 +6847,11 @@ Deno.serve(async (req) => {
           if (clearCurrentSlotError) return json({ error: clearCurrentSlotError.message }, 400);
         }
 
+        const equipUpdate: Record<string, unknown> = { equipped_slot: equippedSlot };
+        if (!isSpecialSOwned) equipUpdate.storage_slot = null;
         const { error: equipError } = await supabase
           .from("owned_talents")
-          .update({ storage_slot: null, equipped_slot: equippedSlot })
+          .update(equipUpdate)
           .eq("id", ownedTalentId)
           .eq("invite_code_hash", identity.codeHash);
         if (equipError) return json({ error: equipError.message }, 400);
@@ -6848,7 +6859,7 @@ Deno.serve(async (req) => {
         if (currentSlotTalent) {
           const { error: storePreviousError } = await supabase
             .from("owned_talents")
-            .update({ storage_slot: sourceStorageSlot, equipped_slot: null })
+            .update({ storage_slot: previousStorageSlot, equipped_slot: null })
             .eq("id", currentSlotTalent.id)
             .eq("invite_code_hash", identity.codeHash);
           if (storePreviousError) return json({ error: storePreviousError.message }, 400);

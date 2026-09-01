@@ -347,7 +347,7 @@ function renderEquippedTalentSlots(state, god = getProfileFaithGod(getCurrentPro
         const slotLabel = getTalentSlotKindLabel(requirement.kind);
         const optionHtml = [
             '<option value="">卸下到仓库</option>',
-            ...talents.filter(item => item.storage_slot || Number(item.id) === Number(talent?.id || 0)).map(item => {
+            ...talents.filter(item => item.storage_slot || Number(item.s_slot) === 1 || Number(item.id) === Number(talent?.id || 0)).map(item => {
                 const id = Number(item.id);
                 const isCurrent = id === Number(talent?.id || 0);
                 const rankBlocked = !canTalentFitCurrentRankRule(state, item, slot, talent);
