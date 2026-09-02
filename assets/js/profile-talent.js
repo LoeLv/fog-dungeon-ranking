@@ -38,14 +38,14 @@ function normalizeTalentState(rawState) {
         advancedAvailableDraws: Number(state.advancedAvailableDraws || 0),
         advancedTalentDrawScore: Number(state.advancedTalentDrawScore || 1500),
         fragmentTotal: Number(state.fragmentTotal || 0),
+        sTalentWarehouseSlotLimit: Number(state.sTalentWarehouseSlotLimit || 5),
+        sTalentWarehouseCount: Number(state.sTalentWarehouseCount || 0),
+        sTalentExchangeCost: Number(state.sTalentExchangeCost || 800),
         pools: Array.isArray(state.pools) ? state.pools : [],
         allowedPoolKeys: Array.isArray(state.allowedPoolKeys) ? state.allowedPoolKeys : [],
         poolItems: Array.isArray(state.poolItems) ? state.poolItems : [],
         counters: Array.isArray(state.counters) ? state.counters : [],
         ownedTalents: Array.isArray(state.ownedTalents) ? state.ownedTalents : [],
-        sTalentSlot: state.sTalentSlot || null,
-        sTalentOptions: Array.isArray(state.sTalentOptions) ? state.sTalentOptions : [],
-        pendingSChoices: Array.isArray(state.pendingSChoices) ? state.pendingSChoices : [],
         overflowChoices: Array.isArray(state.overflowChoices) ? state.overflowChoices : [],
         settledOverflowChoices: Array.isArray(state.settledOverflowChoices) ? state.settledOverflowChoices : [],
         drawLogs: Array.isArray(state.drawLogs) ? state.drawLogs : [],
@@ -123,15 +123,11 @@ function renderTalentCards(talents, emptyText = '还没有抽到天赋。') {
         const repeat = talent.isRepeat || talent.is_repeat;
         const guarantee = talent.isGuarantee || talent.is_guarantee;
         const overflow = talent.isOverflow || talent.is_overflow;
-        const isSChoice = talent.isSChoice || talent.is_s_choice;
-        const sChoiceCreated = talent.sChoiceCreated || talent.s_choice_created;
-        const sTalentSlotUnlocked = talent.sTalentSlotUnlocked || talent.s_talent_slot_unlocked;
         const fragment = Number(talent.fragmentGain ?? talent.fragment_gain ?? 0);
         const storageSlot = Number(talent.storageSlot ?? talent.storage_slot ?? 0);
+        const sStorageSlot = Number(talent.sStorageSlot ?? talent.s_storage_slot ?? talent.s_slot ?? 0);
         const source = talent.acquired_from === 'exchange' ? '碎片兑换' : (talent.acquired_from === 'draw' ? '天赋池抽取' : pool);
-        const place = isSChoice
-            ? (sChoiceCreated ? ' · S级自选机会已开启' : (sTalentSlotUnlocked ? ' · S级专属槽可切换' : ' · S级自选机会已存在'))
-            : (overflow ? ' · 仓库已满，待取舍' : (storageSlot ? ` · 入库${storageSlot}号位` : ''));
+        const place = overflow ? ' · 仓库已满，待取舍' : (sStorageSlot ? ` · S仓库${sStorageSlot}号位` : (storageSlot ? ` · 入库${storageSlot}号位` : ''));
         return `
             <div class="talent-card rank-${escapeHtml(rank)} ${repeat ? 'repeat' : ''} ${overflow ? 'pending' : ''}">
                 <strong>${escapeHtml(name)}</strong>
@@ -155,17 +151,17 @@ function renderTalentLogs(state, god = '命运') {
 function renderTalentExchangeOptions(state, poolKey) {
     const ownedKeys = new Set((state.ownedTalents || []).map(t => `${t.pool_key}:${t.talent_id}`));
     const advancedDraw = Number(state.profile?.ascension_score || 0) >= Number(state.advancedTalentDrawScore || 1500);
-    const allowedRanks = advancedDraw ? ['A', 'B'] : ['B'];
+    const allowedRanks = advancedDraw ? ['S', 'A', 'B'] : ['S', 'B'];
     const options = (state.poolItems || [])
         .filter(item => item.pool_key === poolKey && allowedRanks.includes(item.rank))
         .map(item => {
             const owned = ownedKeys.has(`${item.pool_key}:${item.talent_id}`);
-            const cost = item.rank === 'A' ? Number(state.aTalentExchangeCost || 260) : Number(state.targetTalentExchangeCost || 80);
+            const cost = item.rank === 'S' ? Number(state.sTalentExchangeCost || 800) : (item.rank === 'A' ? Number(state.aTalentExchangeCost || 260) : Number(state.targetTalentExchangeCost || 80));
             const actionCost = Number(item.action_cost ?? item.actionCost ?? 0);
             const effect = formatTalentEffectSummary(getTalentEffectText(state, item), 26);
             return `<option value="${Number(item.talent_id)}" data-rank="${escapeHtml(item.rank)}" data-cost="${cost}" data-name="${escapeHtml(item.talent_name)}" data-effect="${escapeHtml(effect)}" ${owned ? 'disabled' : ''}>${escapeHtml(item.rank)} · ${escapeHtml(item.talent_name)} · 行动点 ${actionCost} · 效果 ${escapeHtml(effect || '无')}（${cost}碎片）${owned ? '（已拥有）' : ''}</option>`;
         });
-    return options.length ? options.join('') : '<option value="">该池暂无可兑换 B/A 天赋</option>';
+    return options.length ? options.join('') : '<option value="">该池暂无可兑换 B/A/S 天赋</option>';
 }
 
 function renderTalentOptionLabel(talent) {
@@ -236,6 +232,7 @@ function getTalentCooldownText(state, talent) {
 
 function getTalentDismantleGain(state, rank) {
     const normalizedRank = String(rank || '').toUpperCase();
+    if (normalizedRank === 'S') return 500;
     if (normalizedRank === 'A') return 200;
     if (normalizedRank === 'B') return Number(state.bTalentFragmentGain || 10);
     if (normalizedRank === 'C') return Number(state.cTalentFragmentGain || 5);
@@ -347,7 +344,7 @@ function renderEquippedTalentSlots(state, god = getProfileFaithGod(getCurrentPro
         const slotLabel = getTalentSlotKindLabel(requirement.kind);
         const optionHtml = [
             '<option value="">卸下到仓库</option>',
-            ...talents.filter(item => item.storage_slot || Number(item.s_slot) === 1 || Number(item.id) === Number(talent?.id || 0)).map(item => {
+            ...talents.filter(item => item.storage_slot || Number(item.s_slot || 0) > 0 || Number(item.id) === Number(talent?.id || 0)).map(item => {
                 const id = Number(item.id);
                 const isCurrent = id === Number(talent?.id || 0);
                 const rankBlocked = !canTalentFitCurrentRankRule(state, item, slot, talent);
@@ -372,7 +369,7 @@ function renderTalentWarehouse(state, god = getProfileFaithGod(getCurrentProfile
     const talents = state.ownedTalents || [];
     const byStorageSlot = new Map(talents.filter(t => t.storage_slot).map(t => [Number(t.storage_slot), t]));
     const limit = Number(state.inventorySlotLimit || 10);
-    const selectableCount = talents.filter(t => t.storage_slot && String(t.rank || '').toUpperCase() !== 'S').length;
+    const selectableCount = talents.filter(t => t.storage_slot).length;
     return `
         <div class="talent-warehouse-toolbar">
             <div class="talent-warehouse-batch-note">勾选多个仓库天赋后可一次性分解，避免逐个处理。</div>
@@ -395,84 +392,67 @@ function renderTalentWarehouse(state, god = getProfileFaithGod(getCurrentProfile
         const effect = getTalentEffectText(state, talent);
         const actionCost = getTalentActionCost(state, talent);
         const fragmentGain = getTalentDismantleGain(state, talent.rank);
-        const canDismantle = String(talent.rank || '').toUpperCase() !== 'S';
         return `
             <div class="talent-slot-card">
                 <div class="talent-slot-head"><span>仓库位 ${slot}</span><span>未佩戴</span></div>
                 <label class="talent-slot-select">
-                    <input type="checkbox" ${talentWarehouseBatchSelections.has(Number(talent.id)) ? 'checked' : ''} ${talentManageInFlight || talentWarehouseBatchInFlight || !canDismantle ? 'disabled' : ''} onchange="toggleWarehouseTalentSelection(${Number(talent.id)}, this.checked)">
+                    <input type="checkbox" ${talentWarehouseBatchSelections.has(Number(talent.id)) ? 'checked' : ''} ${talentManageInFlight || talentWarehouseBatchInFlight ? 'disabled' : ''} onchange="toggleWarehouseTalentSelection(${Number(talent.id)}, this.checked)">
                     <span>批量分解</span>
                 </label>
                 <div class="talent-slot-name">${escapeHtml(talent.talent_name)}</div>
                 <div class="talent-slot-meta">${escapeHtml(talent.rank)}级 · ${escapeHtml(formatTalentPoolLabel(talent.pool_key))}池 · 行动点 ${actionCost}</div>
                 ${effect ? `<div class="talent-effect-text">${escapeHtml(effect)}</div>` : ''}
                 <div class="talent-slot-actions">
-                    <button type="button" class="btn btn-outline btn-sm" onclick="discardOwnedTalentUI(${Number(talent.id)})" ${talentManageInFlight || !canDismantle ? 'disabled' : ''}>${talentManageInFlight ? '处理中' : (canDismantle ? `分解 +${fragmentGain}` : 'S级不可分解')}</button>
+                    <button type="button" class="btn btn-outline btn-sm" onclick="discardOwnedTalentUI(${Number(talent.id)})" ${talentManageInFlight ? 'disabled' : ''}>${talentManageInFlight ? '处理中' : `分解 +${fragmentGain}`}</button>
                 </div>
             </div>`;
     }).join('')}</div>`;
 }
 
-function renderSTalentSlotPanel(state, god = getProfileFaithGod(getCurrentProfile()) || '命运') {
-    const current = state.sTalentSlot || null;
-    const pendingChoices = state.pendingSChoices || [];
-    const pendingPools = new Set(pendingChoices.map(choice => String(choice.pool_key || '')).filter(Boolean));
-    const hasSlot = !!current;
-    const ownedSOptions = (state.ownedTalents || []).filter(item => String(item.rank || '').toUpperCase() === 'S');
-    const optionMap = new Map();
-    [...(state.sTalentOptions || []), ...ownedSOptions].forEach(item => {
-        if (!item) return;
-        const key = `${String(item.pool_key || '')}::${Number(item.talent_id || 0)}`;
-        if (!key || key === '::0') return;
-        if (!optionMap.has(key)) optionMap.set(key, item);
-    });
-    const options = [...optionMap.values()]
-        .filter(item => String(item.rank || '').toUpperCase() === 'S')
-        .filter(item => hasSlot || pendingPools.has(String(item.pool_key || '')))
-        .sort((a, b) => String(a.pool_key || '').localeCompare(String(b.pool_key || ''), 'zh-CN') || Number(a.talent_id || 0) - Number(b.talent_id || 0));
-    const currentKey = current ? `${current.pool_key}::${Number(current.talent_id || 0)}` : '';
-    const optionHtml = options.length
-        ? options.map(item => {
-            const key = `${item.pool_key}::${Number(item.talent_id || 0)}`;
-            const actionCost = Number(item.action_cost ?? item.actionCost ?? 0);
-            const effect = formatTalentEffectSummary(getTalentEffectText(state, item), 32);
-            return `<option value="${escapeHtml(key)}" ${key === currentKey ? 'selected' : ''}>${escapeHtml(formatTalentPoolLabel(item.pool_key))} · #${Number(item.talent_id || 0)} ${escapeHtml(item.talent_name || '未命名')} · 行动点 ${actionCost}${effect ? ` · ${escapeHtml(effect)}` : ''}</option>`;
-        }).join('')
-        : '<option value="">暂无可选择的 S 级天赋</option>';
-    const currentEffect = getTalentEffectText(state, current);
-    const currentActionCost = getTalentActionCost(state, current);
-    const pendingText = pendingChoices.length ? `待选择 ${pendingChoices.length} 次` : (hasSlot ? '已开启，可自由切换' : '尚未开启');
+function renderSTalentWarehouse(state, god = getProfileFaithGod(getCurrentProfile()) || '命运') {
+    const talents = state.ownedTalents || [];
+    const bySlot = new Map(talents.filter(t => String(t.rank || '').toUpperCase() === 'S' && Number(t.s_slot || 0) > 0).map(t => [Number(t.s_slot), t]));
+    const limit = Number(state.sTalentWarehouseSlotLimit || 5);
     return `
-        <div class="profile-panel-title" style="margin-top:16px;"><span>S级专属栏位</span><small>${escapeHtml(pendingText)}</small></div>
-        <div class="talent-overflow-card">
-            <div class="talent-slot-head"><span>${hasSlot ? '当前 S 级天赋' : '等待 S 级自选'}</span><span>S</span></div>
-            ${hasSlot ? `
-                <div class="talent-slot-name">${escapeHtml(current.talent_name || '未命名')}</div>
-                <div class="talent-slot-meta">${escapeHtml(formatTalentPoolLabel(current.pool_key))}池 · 行动点 ${currentActionCost}</div>
-                ${currentEffect ? `<div class="talent-effect-text">${escapeHtml(currentEffect)}</div>` : ''}
-            ` : renderMiniRitualEmpty(pendingChoices.length ? '抽到了 S 级天赋，请从对应池子的 S 级天赋中选择一个。' : '抽到 S 级天赋后会开启此专属栏位。', god, 'S级栏位')}
-            <div class="talent-exchange-row">
-                <select id="sTalentSelect" ${!options.length ? 'disabled' : ''}>${optionHtml}</select>
-                <button type="button" class="btn btn-primary btn-sm" onclick="selectSTalentUI()" ${talentManageInFlight || !options.length ? 'disabled' : ''}>${talentManageInFlight ? '处理中' : (hasSlot ? '切换S级天赋' : '选择S级天赋')}</button>
-            </div>
-            <div class="identity-help">S级天赋不进入普通仓库，不可分解；开启后可在当前允许池子的 S 级天赋中切换。</div>
-        </div>`;
+        <div class="profile-panel-title" style="margin-top:16px;"><span>S级天赋仓库</span><small>${bySlot.size}/${limit} 个槽位</small></div>
+        <div class="talent-inventory-grid">${Array.from({ length: limit }, (_, index) => {
+        const slot = index + 1;
+        const talent = getCanonicalTalent(state, bySlot.get(slot));
+        if (!talent) {
+            return `
+                <div class="talent-slot-card empty">
+                    <div class="talent-slot-head"><span>S仓库位 ${slot}</span><span>空</span></div>
+                    ${renderMiniRitualEmpty('S级天赋抽取或兑换后进入这里，可佩戴到普通携带槽。', god, 'S仓库空置')}
+                </div>`;
+        }
+        const effect = getTalentEffectText(state, talent);
+        const actionCost = getTalentActionCost(state, talent);
+        const fragmentGain = getTalentDismantleGain(state, talent.rank);
+        return `
+            <div class="talent-slot-card">
+                <div class="talent-slot-head"><span>S仓库位 ${slot}</span><span>${talent.equipped_slot ? `携带槽 ${Number(talent.equipped_slot)}` : '未佩戴'}</span></div>
+                <div class="talent-slot-name">${escapeHtml(talent.talent_name)}</div>
+                <div class="talent-slot-meta">S级 · ${escapeHtml(formatTalentPoolLabel(talent.pool_key))}池 · 行动点 ${actionCost}</div>
+                ${effect ? `<div class="talent-effect-text">${escapeHtml(effect)}</div>` : ''}
+                <div class="talent-slot-actions">
+                    <button type="button" class="btn btn-outline btn-sm" onclick="discardOwnedTalentUI(${Number(talent.id)})" ${talentManageInFlight ? 'disabled' : ''}>${talentManageInFlight ? '处理中' : `分解 +${fragmentGain}`}</button>
+                </div>
+            </div>`;
+    }).join('')}</div>`;
 }
 
 function renderOverflowChoices(state) {
     const choices = state.overflowChoices || [];
     if (!choices.length) return '';
     const replacementOptions = (state.ownedTalents || [])
-        .filter(talent => talent.storage_slot)
-        .filter(talent => String(talent.rank || '').toUpperCase() !== 'S')
-        .map(talent => `<option value="${Number(talent.id)}">仓库${Number(talent.storage_slot || 0)} · ${escapeHtml(renderTalentOptionLabel(talent))}</option>`)
+        .filter(talent => talent.storage_slot || Number(talent.s_slot || 0) > 0)
+        .map(talent => `<option value="${Number(talent.id)}">${Number(talent.s_slot || 0) > 0 ? `S仓库${Number(talent.s_slot || 0)}` : `仓库${Number(talent.storage_slot || 0)}`} · ${escapeHtml(renderTalentOptionLabel(talent))}</option>`)
         .join('');
     return `
         <div class="profile-panel-title" style="margin-top:16px;"><span>待取舍天赋</span><small>${choices.length} 个溢出</small></div>
         <div class="talent-overflow-list">${choices.map(choice => {
             const id = Number(choice.id);
             const actionCost = getTalentActionCost(state, choice);
-            const canDiscardChoice = String(choice.rank || '').toUpperCase() !== 'S';
             return `
                 <div class="talent-overflow-card">
                     <div class="talent-slot-head"><span>新天赋溢出</span><span>${escapeHtml(choice.source || 'draw')}</span></div>
@@ -484,7 +464,7 @@ function renderOverflowChoices(state) {
                         <button type="button" class="btn btn-primary btn-sm" onclick="resolveTalentOverflowUI(${id}, 'replace')" ${talentManageInFlight || !replacementOptions ? 'disabled' : ''}>${talentManageInFlight ? '处理中' : '保留并分解旧天赋'}</button>
                     </div>
                     <div class="talent-slot-actions">
-                        <button type="button" class="btn btn-outline btn-sm" onclick="resolveTalentOverflowUI(${id}, 'discard')" ${talentManageInFlight || !canDiscardChoice ? 'disabled' : ''}>${talentManageInFlight ? '处理中' : (canDiscardChoice ? `分解新天赋 +${getTalentDismantleGain(state, choice.rank)}` : 'S级不可分解')}</button>
+                        <button type="button" class="btn btn-outline btn-sm" onclick="resolveTalentOverflowUI(${id}, 'discard')" ${talentManageInFlight ? 'disabled' : ''}>${talentManageInFlight ? '处理中' : `分解新天赋 +${getTalentDismantleGain(state, choice.rank)}`}</button>
                     </div>
                 </div>`;
         }).join('')}</div>`;
@@ -509,9 +489,12 @@ function renderTalentPoolPanel(state, error, profile) {
     const allowedPoolText = (state.pools || []).map(pool => formatTalentPoolLabel(pool.poolKey)).join(' / ') || '未绑定';
     const inventoryCount = (state.ownedTalents || []).filter(talent => talent.storage_slot).length;
     const inventoryLimit = Number(state.inventorySlotLimit || 10);
+    const sWarehouseCount = Number(state.sTalentWarehouseCount || (state.ownedTalents || []).filter(talent => String(talent.rank || '').toUpperCase() === 'S' && Number(talent.s_slot || 0) > 0).length);
+    const sWarehouseLimit = Number(state.sTalentWarehouseSlotLimit || 5);
     const equippedCount = (state.ownedTalents || []).filter(talent => talent.equipped_slot).length;
     const exchangeCost = Number(state.targetTalentExchangeCost || 180);
     const aExchangeCost = Number(state.aTalentExchangeCost || 260);
+    const sExchangeCost = Number(state.sTalentExchangeCost || 800);
     const basicAvailableDraws = Number(state.basicAvailableDraws || 0);
     const advancedAvailableDraws = Number(state.advancedAvailableDraws || 0);
     const bRate = Number(state.advancedBTalentDrawRate || 0.25);
@@ -538,12 +521,13 @@ function renderTalentPoolPanel(state, error, profile) {
                     <span class="metric-pill">B级保底 <strong>${currentMisses}/${guaranteeDraws - 1}</strong></span>
                     <span class="metric-pill">S级保底 <strong>${Math.min(sGuaranteeDraws - 1, sCounter)}/${sGuaranteeDraws - 1}</strong></span>
                     <span class="metric-pill">仓库 <strong>${inventoryCount}/${inventoryLimit}</strong></span>
+                    <span class="metric-pill">S仓库 <strong>${sWarehouseCount}/${sWarehouseLimit}</strong></span>
                     <span class="metric-pill">携带 <strong>${equippedCount}/${Number(state.equippedSlotLimit || 3)}</strong></span>
                     <span class="metric-pill">可选池 <strong>${escapeHtml(allowedPoolText)}</strong></span>
                 </div>
                 <div class="talent-rule-strip">
                     <span>S/A/B/C 概率：<strong>${escapeHtml(probabilityText)}</strong></span>
-                    <span>A/B/C 分解：<strong>+200 / +${Number(state.bTalentFragmentGain || 10)} / +${Number(state.cTalentFragmentGain || 5)}</strong> 碎片</span>
+                    <span>A/B/C/S 分解：<strong>+200 / +${Number(state.bTalentFragmentGain || 10)} / +${Number(state.cTalentFragmentGain || 5)} / +500</strong> 碎片</span>
                     <span>携带上限：<strong>${escapeHtml(renderTalentSlotRuleText(state))}</strong></span>
                 </div>
                 <div class="talent-control-row">
@@ -558,13 +542,13 @@ function renderTalentPoolPanel(state, error, profile) {
                 ${selectedPoolReady ? '' : '<div class="identity-help">当前天赋池暂无配置，等补完池子后就能抽取。</div>'}
                 ${latestResults ? `<div class="profile-list-meta" style="margin-top:12px;">本次抽取</div>${latestResults}` : ''}
             </div>
-            ${renderSTalentSlotPanel(state, profileGod)}
+            ${renderSTalentWarehouse(state, profileGod)}
             ${renderOverflowChoices(state)}
             <div class="profile-panel-title" style="margin-top:16px;"><span>天赋仓库</span><small>${inventoryCount}/${inventoryLimit} 个槽位</small></div>
             ${renderTalentWarehouse(state, profileGod)}
             <div class="talent-exchange-row">
                 <select id="talentExchangeSelect">${renderTalentExchangeOptions(state, selectedPool)}</select>
-                <button type="button" class="btn btn-outline btn-sm" onclick="exchangeTalentUI()" ${!selectedPoolReady ? 'disabled' : ''}>B${exchangeCost} / A${aExchangeCost} 碎片赎取</button>
+                <button type="button" class="btn btn-outline btn-sm" onclick="exchangeTalentUI()" ${!selectedPoolReady ? 'disabled' : ''}>B${exchangeCost} / A${aExchangeCost} / S${sExchangeCost} 碎片赎取</button>
             </div>
             <div class="profile-panel-title" style="margin-top:16px;"><span>抽取记录</span></div>
             ${renderTalentLogs(state, profileGod)}
@@ -1039,7 +1023,7 @@ async function exchangeTalentUI() {
     const poolKey = document.getElementById('talentPoolSelect')?.value || selectedTalentPool;
     const exchangeSelect = document.getElementById('talentExchangeSelect');
     const targetTalentId = Number(exchangeSelect?.value || 0);
-    if (!targetTalentId) { showToast('请选择可兑换的 B/A 级天赋'); return; }
+    if (!targetTalentId) { showToast('请选择可兑换的 B/A/S 级天赋'); return; }
     const selectedOption = exchangeSelect?.selectedOptions?.[0];
     const optionRank = selectedOption?.dataset?.rank || '';
     const optionName = selectedOption?.dataset?.name || selectedOption?.textContent || '该天赋';
@@ -1062,33 +1046,6 @@ async function exchangeTalentUI() {
         if (document.getElementById('leaderboardPage')?.style.display !== 'none') await renderLeaderboardPage();
     } finally {
         releaseUiActionLock('exchangeTalent');
-    }
-}
-
-async function selectSTalentUI() {
-    if (!inviteSession?.code) { openInviteModal('先验入局谕令后可选择 S 级天赋。'); return; }
-    if (talentManageInFlight) { showToast('天赋正在处理中，请勿重复点击'); return; }
-    const rawValue = document.getElementById('sTalentSelect')?.value || '';
-    const [poolKey, talentIdRaw] = rawValue.split('::');
-    const targetTalentId = Number(talentIdRaw || 0);
-    if (!poolKey || !targetTalentId) { showToast('请选择一个 S 级天赋'); return; }
-    const optionText = document.getElementById('sTalentSelect')?.selectedOptions?.[0]?.textContent || '该 S 级天赋';
-    if (!window.confirm(`确认将 S级专属栏位切换为「${optionText}」吗？`)) return;
-    if (!acquireUiActionLock('selectSTalent', 'S级天赋正在切换，请勿重复点击')) return;
-    talentManageInFlight = true;
-    const inviteSnapshot = getInviteSnapshot();
-    replaceTalentPoolPanel();
-    try {
-        const { data, error } = await invokeDungeonAction('selectSTalent', { poolKey, targetTalentId });
-        if (!isInviteSnapshotCurrent(inviteSnapshot)) return;
-        if (error) { showToast(`❌ ${error.message || 'S级天赋选择失败'}`); return; }
-        lastTalentDrawResult = [];
-        applyTalentActionState(data);
-        showToast('S级天赋已更新');
-    } finally {
-        talentManageInFlight = false;
-        releaseUiActionLock('selectSTalent');
-        if (isInviteSnapshotCurrent(inviteSnapshot)) replaceTalentPoolPanel();
     }
 }
 
