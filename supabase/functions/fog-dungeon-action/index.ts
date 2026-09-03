@@ -6761,10 +6761,14 @@ Deno.serve(async (req) => {
         let previousSStorageSlot = 0;
         const currentSlotIsS = String(currentSlotTalent?.rank || "").toUpperCase() === "S";
         if (currentSlotTalent && currentSlotIsS) {
-          const sSlotResult = await getAvailableSTalentSlot(supabase, identity.codeHash);
-          if (sSlotResult.error) return json({ error: sSlotResult.error.message }, 400);
-          if (!sSlotResult.slot) return json({ error: "S仓库已满，无法替换当前天赋" }, 409);
-          previousSStorageSlot = sSlotResult.slot;
+          if (isSpecialSOwned) {
+            previousSStorageSlot = sourceSStorageSlot;
+          } else {
+            const sSlotResult = await getAvailableSTalentSlot(supabase, identity.codeHash);
+            if (sSlotResult.error) return json({ error: sSlotResult.error.message }, 400);
+            if (!sSlotResult.slot) return json({ error: "S仓库已满，无法替换当前天赋" }, 409);
+            previousSStorageSlot = sSlotResult.slot;
+          }
         }
         if (currentSlotTalent && !currentSlotIsS && !previousStorageSlot) {
           const slotResult = await getAvailableStorageSlot(supabase, identity.codeHash);
@@ -6800,7 +6804,7 @@ Deno.serve(async (req) => {
           .eq("invite_code_hash", identity.codeHash);
         if (equipError) return json({ error: equipError.message }, 400);
 
-        if (currentSlotTalent && !currentSlotIsSpecialS) {
+        if (currentSlotTalent && !currentSlotIsS) {
           const { error: storePreviousError } = await supabase
             .from("owned_talents")
             .update({ storage_slot: previousStorageSlot, equipped_slot: null })
