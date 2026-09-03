@@ -124,6 +124,7 @@ function renderTalentCards(talents, emptyText = '还没有抽到天赋。') {
         const guarantee = talent.isGuarantee || talent.is_guarantee;
         const overflow = talent.isOverflow || talent.is_overflow;
         const fragment = Number(talent.fragmentGain ?? talent.fragment_gain ?? 0);
+        const sGuaranteeFragment = Number(talent.sGuaranteeFragmentGain ?? talent.s_guarantee_fragment_gain ?? 0);
         const storageSlot = Number(talent.storageSlot ?? talent.storage_slot ?? 0);
         const sStorageSlot = Number(talent.sStorageSlot ?? talent.s_storage_slot ?? talent.s_slot ?? 0);
         const source = talent.acquired_from === 'exchange' ? '碎片兑换' : (talent.acquired_from === 'draw' ? '天赋池抽取' : pool);
@@ -131,7 +132,7 @@ function renderTalentCards(talents, emptyText = '还没有抽到天赋。') {
         return `
             <div class="talent-card rank-${escapeHtml(rank)} ${repeat ? 'repeat' : ''} ${overflow ? 'pending' : ''}">
                 <strong>${escapeHtml(name)}</strong>
-                <small>${escapeHtml(rank)}级 · ${escapeHtml(pool || source)} · 行动点 ${actionCost}${cooldown ? ` · 冷却 ${escapeHtml(cooldown)}` : ''}${guarantee ? ' · 保底' : ''}${repeat ? ` · 重复转化 +${fragment} 碎片` : ''}${escapeHtml(place)}</small>
+                <small>${escapeHtml(rank)}级 · ${escapeHtml(pool || source)} · 行动点 ${actionCost}${cooldown ? ` · 冷却 ${escapeHtml(cooldown)}` : ''}${guarantee ? ' · 保底' : ''}${repeat ? ` · 重复转化 +${fragment} 碎片` : ''}${sGuaranteeFragment ? ` · S保底补偿 +${sGuaranteeFragment} 碎片` : ''}${escapeHtml(place)}</small>
                 ${effect ? `<span class="talent-effect-text">${escapeHtml(effect)}</span>` : ''}
             </div>`;
     }).join('')}</div>`;

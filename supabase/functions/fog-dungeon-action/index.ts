@@ -6294,6 +6294,7 @@ Deno.serve(async (req) => {
       const eventAdvancedDrawsToUse = Math.min(advancedDrawsToUse, eventAdvancedAvailableDraws);
       const results: Record<string, unknown>[] = [];
       let fragmentGainTotal = 0;
+      const sItems = talentItems.filter((item) => item.rank === "S");
       const nextBasicSpentDraws = basicSpentDraws + basicDrawsToUse;
       const nextAdvancedSpentDraws = advancedSpentDraws + advancedDrawsToUse;
       const nextEventBasicSpentDraws = eventBasicSpentDraws + eventBasicDrawsToUse;
@@ -6367,19 +6368,25 @@ Deno.serve(async (req) => {
         const isStarterDraw = isBasicDraw
           && !isEventDraw
           && (basicSpentDraws - eventBasicSpentDraws + baseBasicIndex < starterTalentDrawGrant);
-        const drawResult = pickDrawTalentWithGuarantee(talentItems, continueDraw, sContinueDraw, !isStarterDraw, !isBasicDraw);
+        const shouldAwardSGuaranteeFragments = !isBasicDraw
+          && !isStarterDraw
+          && sItems.length === 0
+          && sContinueDraw >= sTalentGuaranteeDraws - 1;
+        const drawResult = pickDrawTalentWithGuarantee(talentItems, continueDraw, sContinueDraw, !isStarterDraw && !shouldAwardSGuaranteeFragments, !isBasicDraw);
         const target = drawResult.talent;
         const isB = target.rank === "B";
         const isS = target.rank === "S";
         const isGuarantee = drawResult.isGuarantee && (isB || isS);
         if (!isStarterDraw) {
           continueDraw = isB ? 0 : continueDraw + 1;
-          if (!isBasicDraw) sContinueDraw = isS ? sTalentGuaranteeDraws - 1 : sContinueDraw + 1;
+          if (!isBasicDraw) sContinueDraw = (isS || shouldAwardSGuaranteeFragments) ? 0 : sContinueDraw + 1;
         }
         if (isBasicDraw && !isEventDraw) baseBasicIndex += 1;
 
         let isRepeat = false;
         let fragmentGain = 0;
+        const sGuaranteeFragmentGain = shouldAwardSGuaranteeFragments ? getTalentExchangeCost("S") : 0;
+        if (sGuaranteeFragmentGain > 0) fragmentGainTotal += sGuaranteeFragmentGain;
         let storageSlot = 0;
         let sStorageSlot = 0;
         let overflowChoice: Record<string, unknown> | null = null;
@@ -6437,6 +6444,7 @@ Deno.serve(async (req) => {
           isGuarantee,
           isRepeat,
           fragmentGain,
+          sGuaranteeFragmentGain,
           storageSlot,
           sStorageSlot,
           isOverflow: !!overflowChoice,
