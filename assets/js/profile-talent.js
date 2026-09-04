@@ -690,7 +690,7 @@ function drawProfileCardImage(payload) {
         return { curse, nameLines, effectLines, cardHeight };
     });
     const talents = payload.equippedTalents.length ? payload.equippedTalents : [{ slot: 0, name: '尚未携带天赋', rank: '', pool: '', effect: '打开个人面板后可在天赋仓库配置携带槽。' }];
-    const talentLayouts = talents.slice(0, 4).map(talent => {
+    const talentLayouts = talents.slice(0, 5).map(talent => {
         measureCtx.font = '900 34px "Microsoft YaHei", sans-serif';
         const name = `${talent.name}${talent.rank ? `（${talent.rank}）` : ''}`;
         const nameLines = wrapCanvasText(measureCtx, name, 880, Infinity);
