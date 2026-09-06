@@ -138,12 +138,8 @@ function renderAdminMemberRows() {
         const status = formatAdminMemberStatus(member);
         const seen = member.lastSeenAt ? formatAdminTime(member.lastSeenAt) : '从未记录';
         const boundLabel = isAdminMemberBound(member) ? '已绑定' : '未绑定';
-        const hashArg = jsString(member.codeHash || '');
-        const nameArg = jsString(member.displayName || '');
-        const inspectAction = escapeHtml(`adminInspectMember(${hashArg}, ${nameArg})`);
-        const renameAction = escapeHtml(`adminRenameMember(${hashArg}, ${nameArg})`);
-        const resetAction = escapeHtml(`adminResetMember(${hashArg}, ${nameArg})`);
-        const deleteAction = escapeHtml(`adminDeleteMember(${hashArg}, ${nameArg})`);
+        const memberHash = escapeHtml(member.codeHash || '');
+        const memberName = escapeHtml(member.displayName || '');
         const name = escapeHtml(member.displayName || '未命名');
         const roleLabel = typeof ROLE_LABELS !== 'undefined' ? (ROLE_LABELS[member.role] || member.role || '未知身份') : (member.role || '未知身份');
         return `<article class="profile-list-item">
@@ -151,10 +147,10 @@ function renderAdminMemberRows() {
             <div class="profile-list-meta">${escapeHtml(roleLabel)} · ${escapeHtml(member.faithGod || '未定信仰')} · ${escapeHtml(member.profession || '未定职业')}</div>
             <div class="profile-list-meta">登神 ${Number(member.ascensionScore || 0)} / 觐见 ${Number(member.audienceScore || 0)} · 最后登录网站：${escapeHtml(seen)} · ${escapeHtml(member.lastSeenAction || '无动作')}</div>
             <div class="profile-tools">
-                <button class="btn btn-outline btn-sm" onclick="${inspectAction}">查看档案</button>
-                <button class="btn btn-outline btn-sm" onclick="${renameAction}">改名</button>
-                <button class="btn btn-outline btn-sm" onclick="${resetAction}">重置</button>
-                <button class="btn btn-outline btn-sm" onclick="${deleteAction}">删除</button>
+                <button class="btn btn-outline btn-sm" data-admin-member-action="inspect" data-target-hash="${memberHash}" data-display-name="${memberName}">查看档案</button>
+                <button class="btn btn-outline btn-sm" data-admin-member-action="rename" data-target-hash="${memberHash}" data-display-name="${memberName}">改名</button>
+                <button class="btn btn-outline btn-sm" data-admin-member-action="reset" data-target-hash="${memberHash}" data-display-name="${memberName}">重置</button>
+                <button class="btn btn-outline btn-sm" data-admin-member-action="delete" data-target-hash="${memberHash}" data-display-name="${memberName}">删除</button>
             </div>
         </article>`;
     }).join('');
@@ -420,17 +416,16 @@ function renderAdminManagementPanels() {
 function renderAdminRenameMemberPanel() {
     const target = adminMembers.find(member => String(member.codeHash || '') === String(adminRenamingMemberHash || '')) || null;
     if (!target) return '';
-    const codeHashArg = jsString(target.codeHash || '');
-    const renameSubmitAction = escapeHtml(`adminSubmitRenameMember(${codeHashArg})`);
+    const codeHash = escapeHtml(target.codeHash || '');
     return `<div class="profile-form-grid" style="margin-bottom:12px;">
         <div class="form-group full">
             <label>改名目标</label>
-            <input id="adminRenameInput" maxlength="40" value="${escapeHtml(target.displayName || '')}" placeholder="输入新昵称" onkeydown="if(event.key==='Enter') ${renameSubmitAction}">
+            <input id="adminRenameInput" maxlength="40" value="${escapeHtml(target.displayName || '')}" placeholder="输入新昵称" data-admin-rename-input data-target-hash="${codeHash}">
             <div class="identity-help">当前账号：${escapeHtml(target.displayName || '未命名')} · 保存后会同步档案、称号和诅咒记录。</div>
         </div>
         <div class="profile-tools">
-            <button class="btn btn-primary btn-sm" onclick="${renameSubmitAction}">保存改名</button>
-            <button class="btn btn-outline btn-sm" onclick="adminCancelRenameMember()">取消</button>
+            <button class="btn btn-primary btn-sm" data-admin-member-action="submit-rename" data-target-hash="${codeHash}">保存改名</button>
+            <button class="btn btn-outline btn-sm" data-admin-member-action="cancel-rename">取消</button>
         </div>
     </div>`;
 }
@@ -688,8 +683,10 @@ function adminSelectTalentPool(poolKey) {
     adminUpdateTalentDeleteSummary();
 }
 
-function adminInspectMember(_targetHash, displayName) {
-    adminLookupPlayer(displayName || '');
+async function adminInspectMember(_targetHash, displayName) {
+    await adminLookupPlayer(displayName || '');
+    const snapshot = document.querySelector('#adminContent .admin-snapshot');
+    snapshot?.scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
 
 function findAdminTalentPoolItem(poolKey, talentId) {
@@ -772,7 +769,11 @@ async function adminRenameMember(targetHash, currentName) {
     adminMemberPage = Math.max(1, adminMemberPage);
     setAdminManagementStatus(`准备给 ${currentName || '该玩家'} 改名`, 'success');
     await renderAdminPage();
-    window.setTimeout(() => document.getElementById('adminRenameInput')?.focus(), 50);
+    window.setTimeout(() => {
+        const input = document.getElementById('adminRenameInput');
+        input?.focus();
+        input?.select?.();
+    }, 50);
 }
 
 async function adminCancelRenameMember() {
@@ -812,6 +813,7 @@ async function adminSubmitRenameMember(targetHash) {
 
 async function adminResetMember(targetHash, displayName) {
     if (!window.confirm(`确认重置 ${displayName || '该玩家'} 的个人状态？这会清空档案、分数、天赋、称号诅咒等个人数据，但保留账号。`)) return;
+    if (!window.confirm(`再确认一次：真的要重置 ${displayName || '该玩家'} 吗？`)) return;
     setAdminManagementStatus('账号重置处理中...', 'pending');
     try {
         const { error } = await invokeDungeonAction('adminResetAccount', { targetHash });
@@ -835,6 +837,7 @@ async function adminResetMember(targetHash, displayName) {
 async function adminDeleteMember(targetHash, displayName) {
     const typed = window.prompt(`删除会禁用 ${displayName || '该账号'} 并清空个人状态。请输入玩家昵称确认。`);
     if (typed !== displayName) { showToast('昵称不一致，已取消删除'); return; }
+    if (!window.confirm(`最后确认：删除 ${displayName || '该账号'} 并禁用账号？`)) return;
     setAdminManagementStatus('账号删除处理中...', 'pending');
     try {
         const { error } = await invokeDungeonAction('adminDeleteAccount', { targetHash });
@@ -1220,12 +1223,48 @@ function bindAdminButtonFeedback() {
     container.addEventListener('click', (event) => {
         const button = event.target.closest('button');
         if (!button || !container.contains(button)) return;
+        const action = String(button.dataset.adminMemberAction || '').trim();
+        const hash = String(button.dataset.targetHash || '').trim();
+        const displayName = String(button.dataset.displayName || '').trim();
         const label = button.dataset.feedback || button.textContent || button.getAttribute('aria-label') || button.id || '';
+        if (!action) {
+            button.classList.remove('is-action-ack');
+            void button.offsetWidth;
+            button.classList.add('is-action-ack');
+            window.setTimeout(() => button.classList.remove('is-action-ack'), 650);
+            flashAdminClickFeedback(label);
+            return;
+        }
+        event.preventDefault();
+        event.stopPropagation();
         button.classList.remove('is-action-ack');
         void button.offsetWidth;
         button.classList.add('is-action-ack');
         window.setTimeout(() => button.classList.remove('is-action-ack'), 650);
         flashAdminClickFeedback(label);
+        if (action === 'inspect') {
+            void adminInspectMember(hash, displayName);
+            return;
+        }
+        if (action === 'rename') {
+            void adminRenameMember(hash, displayName);
+            return;
+        }
+        if (action === 'submit-rename') {
+            void adminSubmitRenameMember(hash);
+            return;
+        }
+        if (action === 'cancel-rename') {
+            void adminCancelRenameMember();
+            return;
+        }
+        if (action === 'reset') {
+            void adminResetMember(hash, displayName);
+            return;
+        }
+        if (action === 'delete') {
+            void adminDeleteMember(hash, displayName);
+        }
     }, true);
 }
 if (typeof renderAdminPage === 'function') {
