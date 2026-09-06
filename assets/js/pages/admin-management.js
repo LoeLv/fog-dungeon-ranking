@@ -138,7 +138,12 @@ function renderAdminMemberRows() {
         const status = formatAdminMemberStatus(member);
         const seen = member.lastSeenAt ? formatAdminTime(member.lastSeenAt) : '从未记录';
         const boundLabel = isAdminMemberBound(member) ? '已绑定' : '未绑定';
-        const hash = escapeHtml(jsString(member.codeHash || ''));
+        const hashArg = jsString(member.codeHash || '');
+        const nameArg = jsString(member.displayName || '');
+        const inspectAction = escapeHtml(`adminInspectMember(${hashArg}, ${nameArg})`);
+        const renameAction = escapeHtml(`adminRenameMember(${hashArg}, ${nameArg})`);
+        const resetAction = escapeHtml(`adminResetMember(${hashArg}, ${nameArg})`);
+        const deleteAction = escapeHtml(`adminDeleteMember(${hashArg}, ${nameArg})`);
         const name = escapeHtml(member.displayName || '未命名');
         const roleLabel = typeof ROLE_LABELS !== 'undefined' ? (ROLE_LABELS[member.role] || member.role || '未知身份') : (member.role || '未知身份');
         return `<article class="profile-list-item">
@@ -146,10 +151,10 @@ function renderAdminMemberRows() {
             <div class="profile-list-meta">${escapeHtml(roleLabel)} · ${escapeHtml(member.faithGod || '未定信仰')} · ${escapeHtml(member.profession || '未定职业')}</div>
             <div class="profile-list-meta">登神 ${Number(member.ascensionScore || 0)} / 觐见 ${Number(member.audienceScore || 0)} · 最后登录网站：${escapeHtml(seen)} · ${escapeHtml(member.lastSeenAction || '无动作')}</div>
             <div class="profile-tools">
-                <button class="btn btn-outline btn-sm" onclick="adminInspectMember(${hash}, ${escapeHtml(jsString(member.displayName || ''))})">查看档案</button>
-                <button class="btn btn-outline btn-sm" onclick="adminRenameMember(${hash}, ${escapeHtml(jsString(member.displayName || ''))})">改名</button>
-                <button class="btn btn-outline btn-sm" onclick="adminResetMember(${hash}, ${escapeHtml(jsString(member.displayName || ''))})">重置</button>
-                <button class="btn btn-outline btn-sm" onclick="adminDeleteMember(${hash}, ${escapeHtml(jsString(member.displayName || ''))})">删除</button>
+                <button class="btn btn-outline btn-sm" onclick="${inspectAction}">查看档案</button>
+                <button class="btn btn-outline btn-sm" onclick="${renameAction}">改名</button>
+                <button class="btn btn-outline btn-sm" onclick="${resetAction}">重置</button>
+                <button class="btn btn-outline btn-sm" onclick="${deleteAction}">删除</button>
             </div>
         </article>`;
     }).join('');
@@ -415,15 +420,16 @@ function renderAdminManagementPanels() {
 function renderAdminRenameMemberPanel() {
     const target = adminMembers.find(member => String(member.codeHash || '') === String(adminRenamingMemberHash || '')) || null;
     if (!target) return '';
-    const codeHash = escapeHtml(jsString(target.codeHash || ''));
+    const codeHashArg = jsString(target.codeHash || '');
+    const renameSubmitAction = escapeHtml(`adminSubmitRenameMember(${codeHashArg})`);
     return `<div class="profile-form-grid" style="margin-bottom:12px;">
         <div class="form-group full">
             <label>改名目标</label>
-            <input id="adminRenameInput" maxlength="40" value="${escapeHtml(target.displayName || '')}" placeholder="输入新昵称" onkeydown="if(event.key==='Enter') adminSubmitRenameMember(${codeHash})">
+            <input id="adminRenameInput" maxlength="40" value="${escapeHtml(target.displayName || '')}" placeholder="输入新昵称" onkeydown="if(event.key==='Enter') ${renameSubmitAction}">
             <div class="identity-help">当前账号：${escapeHtml(target.displayName || '未命名')} · 保存后会同步档案、称号和诅咒记录。</div>
         </div>
         <div class="profile-tools">
-            <button class="btn btn-primary btn-sm" onclick="adminSubmitRenameMember(${codeHash})">保存改名</button>
+            <button class="btn btn-primary btn-sm" onclick="${renameSubmitAction}">保存改名</button>
             <button class="btn btn-outline btn-sm" onclick="adminCancelRenameMember()">取消</button>
         </div>
     </div>`;
