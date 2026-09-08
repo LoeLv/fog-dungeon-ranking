@@ -22,6 +22,13 @@ const ETERNAL_STELE_RECORDS = [
         summary: '\u9f99\u9f99\u662f\u4e16\u4e0a\u6700\u5f3a\u5927\u7684\u6c61\u5815\u9f99\u79cd\uff0c\u7942\u82f1\u52c7\uff0c\u667a\u6167\uff0c\u4e50\u5584\u597d\u65bd\u3002\u4e24\u4ee3\u53f2\u8bd7\u90fd\u66fe\u7559\u4e0b\u7942\u7684\u4f20\u5947\u3002\u7942\u5386\u7ecf\u4e86\u4e24\u4e2a\u65f6\u4ee3\u7684\u8bde\u751f\u4e0e\u8fdb\u7a0b\uff0c\u4e5f\u662f\u5e74\u5c81\u6700\u957f\u7684\u795e\u8bdd\u4e4b\u9f99\u3002\u4f5c\u4e3a\u6c61\u5815\u4e4b\u795e\uff0c\u7942\u7ed9\u4eba\u4eec\u7684\u5f62\u8c61\u603b\u662f\u4ece\u4e0d\u62d2\u7edd\uff0c\u4ece\u5e0c\u671b\u4e4b\u5dde\u5230\u4fe1\u4ef0\u4e4b\u5730\uff0c\u6240\u6709\u4fe1\u5f92\u90fd\u559c\u6b22\u8fd9\u6761\u4f1f\u5927\u4e4b\u9f99\uff0c\u7942\u603b\u662f\u80fd\u5e26\u7ed9\u6240\u6709\u4eba\u6b22\u4e50\u3002',
         motto: '\u62e5\u62b1\u81ea\u6211\uff0c\u8ffd\u5df1\u6c42\u65b0--\u6c38\u5ff5\u52ff\u5fd8\u3002',
         note: '\u6b22\u610f\u4e0d\u62d2',
+    },
+    {
+        motif: 'coffin',
+        title: '\u62a4\u77ed\u4e4b\u795e--\u68af\u68cd',
+        subtitle: '\u524d\u8eab \u00b7 \u8150\u673d\u4e4b\u795e',
+        summary: '\u4f5c\u4e3a\u6b7b\u4ea1\u5bb6\u65cf\u4e2d\u6700\u611f\u6027\u7684\u5b58\u5728\uff0c\u9aa8\u5934\u5ea7\u4e0b\u7b2c\u4e00\u4eba\uff0c\u68af\u68cd\u7684\u4e3a\u4eba\u88ab\u4f17\u4eba\u6240\u77e5\uff0c\u8131\u79bb\u5e0c\u671b\u4e4b\u5dde\u540e\u6765\u5230\u4fe1\u4ef0\u4e4b\u5730\uff0c\u5e76\u4e14\u5c06\u5b97\u95e8\u6269\u5927\u81f3\u6570\u4eba\u3002\u671f\u95f4\u5c3d\u804c\u5c3d\u8d23\uff0c\u62c5\u4efb\u8fc7\u591a\u9879\u804c\u8d23\u662f\u6211\u4eec\u5fc5\u4e0d\u53ef\u7f3a\u7684\u4f19\u4f34\u3002\u4f46\u662f\u7531\u4e8e\u5b97\u95e8\u88f8\u5e26\u5173\u7cfb\uff0c\u68af\u68cd\u9648\u843d\u81f3\u9ed1\u98ce\u5c9a\u8c37\uff08\u4fe1\u4ef0\u6740\uff09\u4e4b\u4e2d\u3002\u81f3\u4eca\uff0c\u4ed6\u7684\u4e8b\u8ff9\u4ecd\u7136\u5728\u88ab\u6b4c\u8bbc\uff0c\u6c38\u6052\u4f20\u5531\uff01',
+        note: '\u6c38\u6052\u4f20\u5531',
     }
 ];
 
@@ -53,6 +60,22 @@ function renderEternalSteleMotif(record) {
             <span class="stele-luck-gold-trail"></span>
         `;
     }
+    if (record.motif === 'coffin') {
+        return `
+            <span class="stele-coffin-shield"></span>
+            <span class="stele-coffin-board"></span>
+            <span class="stele-coffin-guard guard-left"></span>
+            <span class="stele-coffin-guard guard-right"></span>
+            <span class="stele-coffin-ward ward-left"></span>
+            <span class="stele-coffin-ward ward-right"></span>
+            <span class="stele-coffin-bolt bolt-top"></span>
+            <span class="stele-coffin-bolt bolt-left"></span>
+            <span class="stele-coffin-bolt bolt-right"></span>
+            <span class="stele-coffin-root root-left"></span>
+            <span class="stele-coffin-root root-right"></span>
+            <span class="stele-coffin-haze"></span>
+        `;
+    }
     return `
         <span class="stele-motif-stone"></span>
         <span class="stele-motif-crack"></span>
@@ -65,6 +88,7 @@ function renderEternalSteleRecord(record) {
     const motifClass =
         record.motif === 'pages' ? 'stele-monolith-pages' :
         record.motif === 'luck' ? 'stele-monolith-luck' :
+        record.motif === 'coffin' ? 'stele-monolith-coffin' :
         'stele-monolith-tomb';
     return `
         <section class="stele-sanctum stele-sanctum-${escapeHtml(record.motif)}" aria-label="${escapeHtml(record.title)}">
@@ -95,6 +119,15 @@ function renderEternalSteleRecord(record) {
                         <span class="stele-luck-crown-bead bead-left"></span>
                         <span class="stele-luck-crown-bead bead-right"></span>
                         <span class="stele-luck-crown-bead bead-center"></span>
+                    ` : record.motif === 'coffin' ? `
+                        <span class="stele-coffin-crown-lid"></span>
+                        <span class="stele-coffin-crown-lid-shadow"></span>
+                        <span class="stele-coffin-crown-spine"></span>
+                        <span class="stele-coffin-crown-brace coffin-brace-left"></span>
+                        <span class="stele-coffin-crown-brace coffin-brace-right"></span>
+                        <span class="stele-coffin-crown-bolt coffin-bolt-left"></span>
+                        <span class="stele-coffin-crown-bolt coffin-bolt-center"></span>
+                        <span class="stele-coffin-crown-bolt coffin-bolt-right"></span>
                     ` : `
                         <span class="stele-crown-halo"></span>
                         <span class="stele-crown-arc"></span>
