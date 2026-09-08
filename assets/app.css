@@ -4416,6 +4416,12 @@ button.is-action-ack {
         linear-gradient(72deg, transparent 0 50%, rgba(221,232,255,0.22) 50% 53%, transparent 53% 100%),
         linear-gradient(115deg, transparent 0 42%, rgba(12,14,20,0.72) 42% 47%, transparent 47% 100%);
 }
+.stele-monolith-pages .stele-monolith-body p {
+    width: min(38ch, 88%);
+    max-width: 38ch;
+    margin: 0 auto;
+    text-align: center;
+}
 .stele-motif-pages {
     top: 56px;
     width: 318px;
@@ -5308,6 +5314,10 @@ body.eternal-stele-view-open .profile-toolbar {
         height: 92px;
         bottom: -48px;
         border-radius: 10px 34px 18px 34px;
+    }
+    .stele-monolith-pages .stele-monolith-body p {
+        width: min(40ch, 92%);
+        max-width: 40ch;
     }
     .stele-monolith-luck {
         width: min(100%, 94vw);
