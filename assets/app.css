@@ -4909,18 +4909,18 @@ button.is-action-ack {
     transform: translateX(-50%);
 }
 .stele-coffin-shield {
-    top: 2px;
-    width: 258px;
-    height: 210px;
-    border-radius: 34px 34px 20px 20px;
-    border: 1px solid rgba(216,187,147,0.28);
+    top: -8px;
+    width: 292px;
+    height: 238px;
+    border-radius: 38px 38px 22px 22px;
+    border: 1px solid rgba(216,187,147,0.34);
     background:
-        radial-gradient(circle at 50% 14%, rgba(255,236,198,0.16), transparent 18%),
-        linear-gradient(180deg, rgba(44,39,34,0.96), rgba(19,16,14,0.98));
+        radial-gradient(circle at 50% 10%, rgba(255,236,198,0.22), transparent 14%),
+        linear-gradient(180deg, rgba(47,41,36,0.99), rgba(18,15,14,1));
     box-shadow:
-        0 0 34px rgba(0,0,0,0.38),
-        inset 0 0 28px rgba(255,231,195,0.05);
-    clip-path: polygon(14% 0, 86% 0, 100% 18%, 92% 100%, 8% 100%, 0 18%);
+        0 0 34px rgba(0,0,0,0.44),
+        inset 0 0 28px rgba(255,231,195,0.06);
+    clip-path: polygon(10% 0, 90% 0, 100% 16%, 94% 100%, 6% 100%, 0 16%);
 }
 .stele-coffin-shield::before,
 .stele-coffin-shield::after {
@@ -4931,33 +4931,33 @@ button.is-action-ack {
 }
 .stele-coffin-shield::before {
     background:
-        linear-gradient(180deg, rgba(255,242,218,0.08), transparent 26%),
-        linear-gradient(90deg, rgba(255,238,203,0.04) 0 13%, transparent 13% 87%, rgba(255,238,203,0.04) 87% 100%);
+        linear-gradient(180deg, rgba(255,242,218,0.1), transparent 22%),
+        linear-gradient(90deg, rgba(255,238,203,0.05) 0 10%, transparent 10% 90%, rgba(255,238,203,0.05) 90% 100%);
     opacity: 0.88;
 }
 .stele-coffin-shield::after {
-    inset: 12px 18px 18px;
-    border: 1px solid rgba(255,231,193,0.08);
+    inset: 14px 18px 18px;
+    border: 1px solid rgba(255,231,193,0.1);
     border-bottom-width: 0;
-    border-radius: 22px 22px 14px 14px;
+    border-radius: 24px 24px 12px 12px;
     background:
-        radial-gradient(ellipse at 50% 10%, rgba(255,242,211,0.08), transparent 32%),
-        linear-gradient(180deg, rgba(0,0,0,0.1), transparent 56%, rgba(0,0,0,0.28));
-    box-shadow: inset 0 18px 28px rgba(0,0,0,0.26);
+        radial-gradient(ellipse at 50% 8%, rgba(255,242,211,0.1), transparent 28%),
+        linear-gradient(180deg, rgba(0,0,0,0.16), transparent 52%, rgba(0,0,0,0.34));
+    box-shadow: inset 0 22px 34px rgba(0,0,0,0.32);
 }
 .stele-coffin-board {
     top: 20px;
-    width: 182px;
-    height: 170px;
-    border-radius: 20px 20px 10px 10px;
-    border: 1px solid rgba(238,212,173,0.2);
+    width: 214px;
+    height: 198px;
+    border-radius: 22px 22px 14px 14px;
+    border: 1px solid rgba(238,212,173,0.28);
     background:
-        linear-gradient(180deg, rgba(233,209,170,0.12), rgba(82,56,35,0.72) 52%, rgba(20,17,15,0.94)),
-        repeating-linear-gradient(90deg, rgba(255,242,222,0.08) 0 12px, transparent 12px 24px);
+        linear-gradient(180deg, rgba(233,209,170,0.18), rgba(82,56,35,0.88) 48%, rgba(18,15,14,1)),
+        repeating-linear-gradient(90deg, rgba(255,242,222,0.12) 0 12px, transparent 12px 22px);
     box-shadow:
-        inset 0 0 30px rgba(255,230,189,0.06),
-        0 0 26px rgba(83,69,47,0.28);
-    clip-path: polygon(16% 0, 84% 0, 100% 16%, 95% 100%, 5% 100%, 0 16%);
+        inset 0 0 34px rgba(255,230,189,0.1),
+        0 0 32px rgba(83,69,47,0.36);
+    clip-path: polygon(14% 0, 86% 0, 100% 14%, 96% 100%, 4% 100%, 0 14%);
 }
 .stele-coffin-board::before,
 .stele-coffin-board::after {
@@ -4967,16 +4967,16 @@ button.is-action-ack {
     transform: translateX(-50%);
 }
 .stele-coffin-board::before {
-    inset: 16px 24px;
-    border-left: 1px solid rgba(255,244,224,0.18);
-    border-right: 1px solid rgba(255,244,224,0.18);
-    opacity: 0.82;
+    inset: 18px 20px;
+    border-left: 1px solid rgba(255,244,224,0.22);
+    border-right: 1px solid rgba(255,244,224,0.22);
+    opacity: 0.86;
 }
 .stele-coffin-board::after {
-    top: 16px;
-    bottom: 16px;
+    top: 10px;
+    bottom: 12px;
     width: 1px;
-    background: linear-gradient(180deg, transparent, rgba(255,242,217,0.5) 24%, rgba(255,242,217,0.16) 78%, transparent);
+    background: linear-gradient(180deg, transparent, rgba(255,242,217,0.56) 24%, rgba(255,242,217,0.18) 78%, transparent);
 }
 .stele-coffin-guard,
 .stele-coffin-ward,
@@ -4987,27 +4987,29 @@ button.is-action-ack {
     transform: translateX(-50%);
 }
 .stele-coffin-guard {
-    top: 20px;
-    width: 94px;
-    height: 138px;
-    border: 1px solid rgba(246,222,181,0.3);
+    top: 26px;
+    width: 108px;
+    height: 150px;
+    border: 1px solid rgba(246,222,181,0.34);
     border-top: 0;
     border-radius: 0 0 20px 20px;
     background:
-        linear-gradient(180deg, rgba(255,243,220,0.08), rgba(116,79,51,0.1)),
-        linear-gradient(90deg, rgba(255,238,196,0.06), transparent 30%, rgba(0,0,0,0.18) 70%, rgba(255,238,196,0.05));
-    box-shadow: inset 0 0 18px rgba(0,0,0,0.2);
+        linear-gradient(180deg, rgba(255,243,220,0.1), rgba(116,79,51,0.14)),
+        linear-gradient(90deg, rgba(255,238,196,0.08), transparent 28%, rgba(0,0,0,0.24) 72%, rgba(255,238,196,0.06));
+    box-shadow:
+        inset 0 0 18px rgba(0,0,0,0.24),
+        0 0 18px rgba(0,0,0,0.2);
 }
 .guard-left { left: 30%; transform: rotate(-7deg); }
 .guard-right { left: 70%; transform: scaleX(-1) rotate(-7deg); }
 .stele-coffin-ward {
-    top: 64px;
-    width: 24px;
-    height: 82px;
+    top: 70px;
+    width: 28px;
+    height: 90px;
     border-radius: 999px;
     border: 1px solid rgba(231,208,167,0.28);
-    background: linear-gradient(180deg, rgba(255,237,201,0.22), rgba(77,55,36,0.88));
-    box-shadow: 0 0 16px rgba(255,226,181,0.1);
+    background: linear-gradient(180deg, rgba(255,237,201,0.26), rgba(77,55,36,0.92));
+    box-shadow: 0 0 18px rgba(255,226,181,0.12);
 }
 .ward-left { left: 28%; transform: rotate(-22deg); }
 .ward-right { left: 72%; transform: rotate(22deg); }
@@ -5033,24 +5035,25 @@ button.is-action-ack {
 .root-left { left: 30%; transform: rotate(8deg); }
 .root-right { left: 70%; transform: scaleX(-1) rotate(8deg); }
 .stele-coffin-haze {
-    bottom: 14px;
-    width: 320px;
-    height: 176px;
+    bottom: 8px;
+    width: 354px;
+    height: 194px;
     background:
-        radial-gradient(circle at 50% 42%, rgba(225,191,150,0.16), transparent 24%),
+        radial-gradient(circle at 50% 42%, rgba(225,191,150,0.22), transparent 20%),
         radial-gradient(circle at 50% 76%, rgba(84,124,101,0.1), transparent 24%),
-        linear-gradient(180deg, transparent, rgba(12,13,17,0.68));
-    filter: blur(0.35px);
-    opacity: 0.9;
+        linear-gradient(180deg, transparent, rgba(12,13,17,0.76));
+    filter: blur(0.25px);
+    opacity: 0.96;
 }
 .stele-monolith-coffin .stele-monolith-base {
-    width: 124%;
-    height: 118px;
-    bottom: -68px;
-    border-radius: 26px 26px 32px 32px;
+    width: 128%;
+    height: 126px;
+    bottom: -76px;
+    border-radius: 30px 30px 34px 34px;
     background:
-        linear-gradient(180deg, rgba(103,78,57,0.92), rgba(28,21,18,0.98)),
-        radial-gradient(circle at 50% 0, rgba(255,230,188,0.18), transparent 58%);
+        linear-gradient(180deg, rgba(103,78,57,0.98), rgba(28,21,18,1)),
+        radial-gradient(circle at 50% 0, rgba(255,230,188,0.22), transparent 58%);
+    clip-path: polygon(8% 0, 92% 0, 100% 44%, 90% 100%, 10% 100%, 0 44%);
 }
 @keyframes luckWheelTurn {
     to { transform: translateX(-50%) rotate(360deg); }
