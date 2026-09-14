@@ -15,7 +15,7 @@ select
   p.invite_code_hash,
   true,
   '提前预开专属天赋槽，待达到 2500 分后测试',
-  coalesce(enabled_at, now()),
+  now(),
   now()
 from public.player_profiles p
 where p.display_name = '情忆浮生'
