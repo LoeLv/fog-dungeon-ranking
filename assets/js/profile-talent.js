@@ -365,6 +365,19 @@ function renderEquippedTalentSlots(state, god = getProfileFaithGod(getCurrentPro
                 ${locked ? renderMiniRitualEmpty('分数达到对应门槛后开启此携带槽。', god, '携带环封锁') : (talent ? `<div class="talent-slot-meta">${escapeHtml(renderTalentOptionLabel(talent))}</div>` : renderMiniRitualEmpty(getGodEmptyText(god, 'equipped'), god, '携带环空置'))}
             </div>`;
     }).join('')}</div>`;
+    const exclusive = state.exclusiveTalentSlot || {};
+    if (!exclusive.enabled) return regularSlots;
+    const exclusiveTalent = exclusive.talent;
+    const exclusiveBody = exclusiveTalent
+        ? `<div class="talent-slot-name">${escapeHtml(exclusiveTalent.talentName || '未命名专属天赋')}（${escapeHtml(exclusiveTalent.rank || 'S')}）</div>
+           <div class="talent-slot-meta">专属天赋 · 行动点 ${Number(exclusiveTalent.actionCost || 0)} · 冷却 ${escapeHtml(exclusiveTalent.cooldown || '无')}</div>
+           ${exclusiveTalent.effect ? `<div class="talent-effect-text">${escapeHtml(exclusiveTalent.effect)}</div>` : ''}`
+        : renderMiniRitualEmpty('等待羔羊编辑并授予专属天赋。', god, '专属槽空置');
+    const exclusiveCard = `<div class="talent-slot-card ${exclusiveTalent ? '' : 'empty'}">
+        <div class="talent-slot-head"><span>专属槽</span><span>已开启</span></div>
+        ${exclusiveBody}
+    </div>`;
+    return `${regularSlots}<div class="talent-equipped-grid">${exclusiveCard}</div>`;
 }
 
 function renderTalentWarehouse(state, god = getProfileFaithGod(getCurrentProfile()) || '命运') {
@@ -409,19 +422,6 @@ function renderTalentWarehouse(state, god = getProfileFaithGod(getCurrentProfile
                 </div>
             </div>`;
     }).join('')}</div>`;
-    const exclusive = state.exclusiveTalentSlot || {};
-    const exclusiveTalent = exclusive.talent;
-    const exclusiveStatus = exclusive.enabled ? '已开启' : '2500分开启';
-    const exclusiveBody = exclusiveTalent
-        ? `<div class="talent-slot-name">${escapeHtml(exclusiveTalent.talentName || '未命名专属天赋')}（${escapeHtml(exclusiveTalent.rank || 'S')}）</div>
-           <div class="talent-slot-meta">专属天赋 · 行动点 ${Number(exclusiveTalent.actionCost || 0)} · 冷却 ${escapeHtml(exclusiveTalent.cooldown || '无')}</div>
-           ${exclusiveTalent.effect ? `<div class="talent-effect-text">${escapeHtml(exclusiveTalent.effect)}</div>` : ''}`
-        : renderMiniRitualEmpty(exclusive.enabled ? '等待羔羊编辑并授予专属天赋。' : '登神之路达到 2500 分后开启。', god, '专属槽空置');
-    const exclusiveCard = `<div class="talent-slot-card ${exclusiveTalent ? '' : 'empty'} ${exclusive.enabled ? '' : 'pending'}">
-        <div class="talent-slot-head"><span>专属槽</span><span>${exclusiveStatus}</span></div>
-        ${exclusiveBody}
-    </div>`;
-    return `${regularSlots}<div class="talent-equipped-grid">${exclusiveCard}</div>`;
 }
 
 function renderSTalentWarehouse(state, god = getProfileFaithGod(getCurrentProfile()) || '命运') {
