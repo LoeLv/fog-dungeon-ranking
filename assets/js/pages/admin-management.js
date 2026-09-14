@@ -10,6 +10,8 @@ let adminFaithTraitsLoading = false;
 let adminFaithTraitEditingItem = null;
 let adminManagementLoading = false;
 let adminTalentWarehouseLoading = false;
+let adminExclusiveWorkbench = { candidates: [], templates: [] };
+let adminExclusiveWorkbenchLoading = false;
 let adminManagementView = 'overview';
 let adminMemberSearchQuery = '';
 let adminIdentityTargetQuery = '';
@@ -200,7 +202,7 @@ function adminSetMemberPage(page) {
 async function adminSetManagementView(view) {
     const allowedViews = ['overview'];
     if (isAdmin()) allowedViews.push('members');
-    if (canManageTalentPoolUI()) allowedViews.push('talents');
+    if (canManageTalentPoolUI()) allowedViews.push('talents', 'exclusive');
     adminManagementView = allowedViews.includes(view) ? view : 'overview';
     if (adminManagementView !== 'members') adminMemberPage = 1;
     await renderAdminPage();
@@ -211,7 +213,10 @@ function renderAdminManagementNav() {
         ['overview', '权限工作台']
     ];
     if (isAdmin()) items.push(['members', '成员管理']);
-    if (canManageTalentPoolUI()) items.push(['talents', '天赋池维护']);
+    if (canManageTalentPoolUI()) {
+        items.push(['talents', '天赋池维护']);
+        items.push(['exclusive', '专属天赋']);
+    }
     return `<section class="profile-panel" data-god="真理" style="${getGodSkinStyle('真理')}">
         <div class="profile-panel-title"><span>馆主后台</span></div>
         <div id="adminManagementStatus" class="profile-action-status ${adminManagementStatus?.type === 'error' ? 'error' : (adminManagementStatus?.type === 'pending' ? 'pending' : 'success')}" ${adminManagementStatus ? '' : 'hidden'}>${escapeHtml(adminManagementStatus?.message || '')}</div>
@@ -570,6 +575,63 @@ function renderAdminTalentPoolPage() {
     return `${renderAdminTalentWarehousePanel()}${renderAdminFaithTraitPanel()}`;
 }
 
+function renderAdminExclusiveWorkbench() {
+    const candidates = adminExclusiveWorkbench.candidates || [];
+    const templates = adminExclusiveWorkbench.templates || [];
+    const candidateOptions = candidates.map(candidate =>
+        `<option value="${escapeHtml(candidate.codeHash)}">${escapeHtml(candidate.displayName || '未命名')} · 登神 ${Number(candidate.ascensionScore || 0)}</option>`
+    ).join('');
+    const templateOptions = templates.map(template =>
+        `<option value="${Number(template.id || 0)}">${escapeHtml(template.templateName || template.talentName || '未命名模板')}</option>`
+    ).join('');
+    return `<section class="profile-panel" data-god="真理" style="${getGodSkinStyle('真理')}">
+        <div class="profile-panel-title"><span>专属天赋工作台</span><small>2500分自动开放，可提前为指定玩家预开</small></div>
+        <div class="profile-form-grid">
+            <div class="form-group full">
+                <label>待处理玩家</label>
+                <select id="adminExclusiveTargetHash">${candidateOptions || '<option value="">暂无待处理玩家</option>'}</select>
+            </div>
+            <div class="form-group full">
+                <label>套用模板</label>
+                <select id="adminExclusiveTemplateId" onchange="adminApplyExclusiveTemplate(this.value)"><option value="">不套用模板</option>${templateOptions}</select>
+            </div>
+            <div class="form-group full">
+                <label>专属天赋名</label>
+                <input id="adminExclusiveTalentName" maxlength="80" placeholder="填写专属天赋名称">
+            </div>
+            <div class="form-group">
+                <label>等级</label>
+                <select id="adminExclusiveRank"><option selected>S</option><option>A</option><option>B</option><option>C</option></select>
+            </div>
+            <div class="form-group">
+                <label>行动点</label>
+                <input id="adminExclusiveActionCost" type="number" min="0" max="99" value="0">
+            </div>
+            <div class="form-group">
+                <label>冷却</label>
+                <input id="adminExclusiveCooldown" maxlength="80" placeholder="例如 一局一次 / 无">
+            </div>
+            <div class="form-group full">
+                <label>效果</label>
+                <textarea id="adminExclusiveEffect" maxlength="1000" rows="4" placeholder="填写专属天赋效果"></textarea>
+            </div>
+            <div class="form-group full">
+                <label>馆主备注</label>
+                <input id="adminExclusiveNote" maxlength="300" placeholder="可选">
+            </div>
+            <div class="form-group full">
+                <label>模板名称</label>
+                <input id="adminExclusiveTemplateName" maxlength="80" placeholder="填写后保存为可复用模板">
+            </div>
+        </div>
+        <div class="profile-tools">
+            <button class="btn btn-primary btn-sm" data-admin-exclusive-save onclick="adminSaveExclusiveTalent()">开启并保存</button>
+            <button class="btn btn-outline btn-sm" data-admin-exclusive-refresh onclick="adminLoadExclusiveWorkbench(true)">刷新候选</button>
+        </div>
+        <div class="identity-help">${adminExclusiveWorkbenchLoading ? '正在读取 2500 分以上且专属槽空置的玩家...' : `当前待处理 ${candidates.length} 人，模板 ${templates.length} 个。`}</div>
+    </section>`;
+}
+
 function renderAdminRolePanel() {
     const options = adminMembers
         .filter(member => member.isActive && member.role !== 'god')
@@ -654,6 +716,78 @@ async function adminLoadTalentWarehouse(showResult = false) {
         const target = document.getElementById('adminTalentPoolRows');
         if (target) target.innerHTML = renderAdminTalentRows();
         adminUpdateTalentDeleteSummary();
+    }
+}
+
+async function adminLoadExclusiveWorkbench(showResult = false) {
+    if (!canManageTalentPoolUI()) return;
+    adminExclusiveWorkbenchLoading = true;
+    const panel = document.getElementById('adminExclusiveWorkbenchPanel');
+    if (panel) panel.innerHTML = renderAdminExclusiveWorkbench();
+    try {
+        const { data, error } = await invokeDungeonAction('adminListExclusiveTalentWorkbench', {});
+        if (error) { showToast(`失败：${error.message || '专属天赋工作台读取失败'}`); return; }
+        adminExclusiveWorkbench = {
+            candidates: Array.isArray(data?.candidates) ? data.candidates : [],
+            templates: Array.isArray(data?.templates) ? data.templates : [],
+        };
+        if (showResult) showToast(`已读取 ${adminExclusiveWorkbench.candidates.length} 位专属天赋候选`);
+    } finally {
+        adminExclusiveWorkbenchLoading = false;
+        const target = document.getElementById('adminExclusiveWorkbenchPanel');
+        if (target) target.innerHTML = renderAdminExclusiveWorkbench();
+    }
+}
+
+function adminApplyExclusiveTemplate(templateId) {
+    const template = (adminExclusiveWorkbench.templates || []).find(item => Number(item.id) === Number(templateId));
+    if (!template) return;
+    const values = {
+        adminExclusiveTalentName: template.talentName,
+        adminExclusiveRank: template.rank || 'S',
+        adminExclusiveActionCost: template.actionCost || 0,
+        adminExclusiveCooldown: template.cooldown || '',
+        adminExclusiveEffect: template.effect || '',
+        adminExclusiveNote: template.adminNote || '',
+    };
+    Object.entries(values).forEach(([id, value]) => {
+        const element = document.getElementById(id);
+        if (element) element.value = value;
+    });
+}
+
+async function adminSaveExclusiveTalent() {
+    const targetHash = document.getElementById('adminExclusiveTargetHash')?.value || '';
+    const talentName = document.getElementById('adminExclusiveTalentName')?.value || '';
+    if (!targetHash) { showToast('请选择待处理玩家'); return; }
+    if (!talentName.trim()) { showToast('请填写专属天赋名称'); return; }
+    const templateName = document.getElementById('adminExclusiveTemplateName')?.value || '';
+    setAdminManagementStatus('专属天赋保存处理中...', 'pending');
+    const payload = {
+        targetHash,
+        talentName,
+        rank: document.getElementById('adminExclusiveRank')?.value || 'S',
+        effect: document.getElementById('adminExclusiveEffect')?.value || '',
+        cooldown: document.getElementById('adminExclusiveCooldown')?.value || '',
+        actionCost: Number(document.getElementById('adminExclusiveActionCost')?.value || 0),
+        adminNote: document.getElementById('adminExclusiveNote')?.value || '',
+        templateName,
+        saveTemplate: !!templateName.trim(),
+        isEnabled: true,
+    };
+    try {
+        const { data, error } = await invokeDungeonAction('adminUpsertExclusiveTalent', payload);
+        if (error) {
+            setAdminManagementStatus(`保存失败：${error.message || '后端未返回原因'}`, 'error');
+            showToast(`失败：${error.message || '专属天赋保存失败'}`);
+            return;
+        }
+        setAdminManagementStatus(`${data?.targetName || '玩家'} 的专属天赋已保存`, 'success');
+        showToast('专属天赋已保存');
+        await adminLoadExclusiveWorkbench(false);
+    } catch (error) {
+        setAdminManagementStatus(`保存失败：${error?.message || error || '未知错误'}`, 'error');
+        showToast(`失败：${error?.message || '专属天赋保存失败'}`);
     }
 }
 
@@ -1277,6 +1411,7 @@ if (typeof renderAdminPage === 'function') {
         }
         if (!isAdmin() && adminManagementView === 'members') adminManagementView = 'overview';
         if (!canManageTalentPoolUI() && adminManagementView === 'talents') adminManagementView = 'overview';
+        if (!canManageTalentPoolUI() && adminManagementView === 'exclusive') adminManagementView = 'overview';
         if (adminManagementView === 'members') {
             container.innerHTML = `${renderAdminManagementNav()}${renderAdminMembersPage()}`;
             bindAdminButtonFeedback();
@@ -1290,6 +1425,12 @@ if (typeof renderAdminPage === 'function') {
             if (!adminTalentPools.length && !adminTalentWarehouseLoading) loads.push(adminLoadTalentWarehouse(false));
             if (!adminFaithTraits.length && !adminFaithTraitsLoading) loads.push(adminLoadFaithTraits(false));
             if (loads.length) await Promise.all(loads);
+            return;
+        }
+        if (adminManagementView === 'exclusive') {
+            container.innerHTML = `${renderAdminManagementNav()}<div id="adminExclusiveWorkbenchPanel">${renderAdminExclusiveWorkbench()}</div>`;
+            bindAdminButtonFeedback();
+            if (!adminExclusiveWorkbench.candidates.length && !adminExclusiveWorkbenchLoading) await adminLoadExclusiveWorkbench(false);
             return;
         }
         await renderAdminPageBase();
@@ -1314,6 +1455,9 @@ Object.assign(window, {
     adminResetMember,
     adminDeleteMember,
     adminLoadTalentWarehouse,
+    adminLoadExclusiveWorkbench,
+    adminSaveExclusiveTalent,
+    adminApplyExclusiveTemplate,
     adminLoadFaithTraits,
     adminSaveTalentPoolItem,
     adminSaveTalentPoolItemFromModal,

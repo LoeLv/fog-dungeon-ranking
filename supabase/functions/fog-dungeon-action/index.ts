@@ -1216,6 +1216,46 @@ function canEquipTalentPool(poolKey: unknown, requirement: { kind: string; poolK
   return !!requirement.poolKey && String(poolKey || "") === requirement.poolKey;
 }
 
+async function getExclusiveTalentState(
+  supabase: SupabaseClientAny,
+  profile: Record<string, unknown>,
+  codeHash: string,
+) {
+  const [slotResult, talentResult] = await Promise.all([
+    supabase.from("exclusive_talent_slots").select("manual_enabled, enabled_note, enabled_at").eq("invite_code_hash", codeHash).maybeSingle(),
+    supabase.from("exclusive_talents").select("talent_name, rank, effect, cooldown, action_cost, admin_note, is_enabled, updated_at").eq("invite_code_hash", codeHash).maybeSingle(),
+  ]);
+  const missingError = [slotResult.error, talentResult.error].find((error) => error?.code === "42P01");
+  if (missingError) return { error: { message: "请先运行 exclusive_talent_slot_migration_20260914.sql" } };
+  if (slotResult.error) return { error: slotResult.error };
+  if (talentResult.error) return { error: talentResult.error };
+  const scoreUnlocked = cleanScore(profile.ascension_score) >= 2500;
+  const manualEnabled = slotResult.data?.manual_enabled === true;
+  const slotEnabled = scoreUnlocked || manualEnabled;
+  const talent = talentResult.data && cleanText(talentResult.data.talent_name, 80)
+    ? {
+      talentName: cleanText(talentResult.data.talent_name, 80),
+      rank: cleanText(talentResult.data.rank, 2) || "S",
+      effect: cleanText(talentResult.data.effect, 1000),
+      cooldown: cleanText(talentResult.data.cooldown, 80),
+      actionCost: Math.max(0, Math.min(99, Number(talentResult.data.action_cost || 0))),
+      adminNote: cleanText(talentResult.data.admin_note, 300),
+      isEnabled: talentResult.data.is_enabled !== false,
+      updatedAt: cleanText(talentResult.data.updated_at, 80),
+    }
+    : null;
+  return {
+    data: {
+      enabled: slotEnabled,
+      scoreUnlocked,
+      manualEnabled,
+      enabledNote: cleanText(slotResult.data?.enabled_note, 300),
+      enabledAt: cleanText(slotResult.data?.enabled_at, 80),
+      talent,
+    },
+  };
+}
+
 function getAllowedTalentPools(profile: Record<string, unknown>) {
   const poolSet = new Set<string>();
   const faithPoolKey = getFaithTalentPoolKey(profile);
@@ -2227,6 +2267,8 @@ async function buildTalentState(
   const allowedPoolKeys = getAllowedTalentPools(profile);
   const talentSlotRule = getTalentSlotRule(profile.ascension_score);
   const activeEquippedSlotLimit = getTalentSlotLimit(profile.ascension_score);
+  const exclusiveResult = await getExclusiveTalentState(supabase, profile, identity.codeHash);
+  if (exclusiveResult.error) return { error: exclusiveResult.error };
 
   let poolItems: TalentPoolItem[] = [];
   if (allowedPoolKeys.length > 0) {
@@ -2419,6 +2461,7 @@ async function buildTalentState(
       talentSlotRule,
       talentSlotScoreRules,
       talentSlotKinds: getTalentSlotKinds(profile.ascension_score),
+      exclusiveTalentSlot: exclusiveResult.data,
       faithTalentPoolKey: getFaithTalentPoolKey(profile),
       professionTalentPoolKey: getProfessionTalentPoolKey(profile),
       starterTalentDrawGrant,
@@ -4362,6 +4405,86 @@ async function listAdminTalentPoolItems(supabase: SupabaseClientAny) {
   return { data: { pools: [...pools.entries()].map(([poolKey, items]) => ({ poolKey, items })) } };
 }
 
+async function listAdminExclusiveTalentWorkbench(supabase: SupabaseClientAny) {
+  const [profilesResult, slotsResult, talentsResult, templatesResult] = await Promise.all([
+    supabase.from("player_profiles").select("invite_code_hash, display_name, ascension_score, faith_god, profession").order("ascension_score", { ascending: false }).limit(500),
+    supabase.from("exclusive_talent_slots").select("invite_code_hash, manual_enabled, enabled_note, enabled_at"),
+    supabase.from("exclusive_talents").select("invite_code_hash, talent_name, rank, effect, cooldown, action_cost, admin_note, is_enabled, updated_at"),
+    supabase.from("exclusive_talent_templates").select("id, template_name, talent_name, rank, effect, cooldown, action_cost, admin_note, is_enabled, updated_at").order("updated_at", { ascending: false }).limit(200),
+  ]);
+  const missingError = [profilesResult.error, slotsResult.error, talentsResult.error, templatesResult.error].find((error) => error?.code === "42P01");
+  if (missingError) return { error: { message: "请先运行 exclusive_talent_slot_migration_20260914.sql" } };
+  const firstError = [profilesResult.error, slotsResult.error, talentsResult.error, templatesResult.error].find(Boolean);
+  if (firstError) return { error: firstError };
+  const slots = new Map((slotsResult.data || []).map((row: Record<string, unknown>) => [cleanText(row.invite_code_hash, 64), row]));
+  const talents = new Map((talentsResult.data || []).map((row: Record<string, unknown>) => [cleanText(row.invite_code_hash, 64), row]));
+  const candidates = (profilesResult.data || [])
+    .map((profile: Record<string, unknown>) => {
+      const codeHash = cleanText(profile.invite_code_hash, 64);
+      const slot = slots.get(codeHash) || {};
+      const talent = talents.get(codeHash) || {};
+      const enabled = cleanScore(profile.ascension_score) >= 2500 || slot.manual_enabled === true;
+      return {
+        codeHash,
+        displayName: cleanText(profile.display_name, 40),
+        ascensionScore: cleanScore(profile.ascension_score),
+        faithGod: cleanText(profile.faith_god, 20),
+        profession: cleanText(profile.profession, 40),
+        manualEnabled: slot.manual_enabled === true,
+        enabled,
+        hasTalent: !!cleanText(talent.talent_name, 80),
+        talent: cleanText(talent.talent_name, 80) ? {
+          talentName: cleanText(talent.talent_name, 80),
+          rank: cleanText(talent.rank, 2),
+          effect: cleanText(talent.effect, 1000),
+          cooldown: cleanText(talent.cooldown, 80),
+          actionCost: Math.max(0, Math.min(99, Number(talent.action_cost || 0))),
+          adminNote: cleanText(talent.admin_note, 300),
+          isEnabled: talent.is_enabled !== false,
+          updatedAt: cleanText(talent.updated_at, 80),
+        } : null,
+      };
+    })
+    .filter((candidate) => candidate.enabled && !candidate.hasTalent);
+  return {
+    data: {
+      candidates,
+      templates: (templatesResult.data || []).map((row: Record<string, unknown>) => ({
+        id: Number(row.id || 0),
+        templateName: cleanText(row.template_name, 80),
+        talentName: cleanText(row.talent_name, 80),
+        rank: cleanText(row.rank, 2) || "S",
+        effect: cleanText(row.effect, 1000),
+        cooldown: cleanText(row.cooldown, 80),
+        actionCost: Math.max(0, Math.min(99, Number(row.action_cost || 0))),
+        adminNote: cleanText(row.admin_note, 300),
+        isEnabled: row.is_enabled !== false,
+        updatedAt: cleanText(row.updated_at, 80),
+      })),
+    },
+  };
+}
+
+function cleanExclusiveTalentPayload(payload: Record<string, unknown>) {
+  const talentName = cleanText(payload.talentName, 80);
+  const rank = cleanText(payload.rank, 2).toUpperCase();
+  if (!talentName) return { error: { message: "请填写专属天赋名称" } };
+  if (!["S", "A", "B", "C"].includes(rank)) return { error: { message: "专属天赋等级只能是 S/A/B/C" } };
+  return {
+    data: {
+      talentName,
+      rank,
+      effect: cleanText(payload.effect, 1000),
+      cooldown: cleanText(payload.cooldown, 80),
+      actionCost: Math.max(0, Math.min(99, Number(payload.actionCost || 0))),
+      adminNote: cleanText(payload.adminNote, 300),
+      isEnabled: payload.isEnabled !== false,
+      templateName: cleanText(payload.templateName, 80),
+      saveTemplate: payload.saveTemplate === true,
+    },
+  };
+}
+
 async function listFaithTraits(supabase: SupabaseClientAny) {
   const { data, error } = await supabase
     .from("faith_traits")
@@ -4847,6 +4970,81 @@ Deno.serve(async (req) => {
       const result = await listAdminTalentPoolItems(supabase);
       if (result.error) return json({ error: result.error.message || "天赋仓库读取失败" }, 400);
       return json({ role, name: identity.displayName, data: result.data });
+    }
+
+    if (action === "adminListExclusiveTalentWorkbench") {
+      if (!hasPermission(identity, "talent_pool_manage")) return json({ error: "没有天赋池管理权限" }, 403);
+      const result = await listAdminExclusiveTalentWorkbench(supabase);
+      if (result.error) return json({ error: result.error.message || "专属天赋工作台读取失败" }, 400);
+      return json({ role, name: identity.displayName, data: result.data });
+    }
+
+    if (action === "adminUpsertExclusiveTalent") {
+      if (!hasPermission(identity, "talent_pool_manage")) return json({ error: "没有天赋池管理权限" }, 403);
+      const cleanResult = cleanExclusiveTalentPayload(payload);
+      if (cleanResult.error) return json({ error: cleanResult.error.message }, 400);
+      const targetName = cleanText(payload.targetName, 40);
+      const targetHash = cleanText(payload.targetHash, 64);
+      let profileResult = targetHash
+        ? await supabase.from("player_profiles").select("invite_code_hash, display_name, ascension_score").eq("invite_code_hash", targetHash).maybeSingle()
+        : await supabase.from("player_profiles").select("invite_code_hash, display_name, ascension_score").eq("display_name", targetName).maybeSingle();
+      if (profileResult.error) return json({ error: profileResult.error.message }, 400);
+      if (!profileResult.data) return json({ error: "没有找到目标玩家档案" }, 404);
+      const target = profileResult.data as Record<string, unknown>;
+      const codeHash = cleanText(target.invite_code_hash, 64);
+      const item = cleanResult.data;
+      const now = new Date().toISOString();
+      const { error: slotError } = await supabase.from("exclusive_talent_slots").upsert({
+        invite_code_hash: codeHash,
+        manual_enabled: true,
+        enabled_note: "馆主已开启专属天赋槽",
+        enabled_by_hash: identity.codeHash,
+        enabled_by_name: identity.displayName,
+        enabled_at: now,
+        updated_at: now,
+      }, { onConflict: "invite_code_hash" });
+      if (slotError) return json({ error: slotError.message }, 400);
+      const { error: talentError } = await supabase.from("exclusive_talents").upsert({
+        invite_code_hash: codeHash,
+        talent_name: item.talentName,
+        rank: item.rank,
+        effect: item.effect,
+        cooldown: item.cooldown,
+        action_cost: item.actionCost,
+        admin_note: item.adminNote,
+        is_enabled: item.isEnabled,
+        updated_by_hash: identity.codeHash,
+        updated_by_name: identity.displayName,
+        updated_at: now,
+      }, { onConflict: "invite_code_hash" });
+      if (talentError) return json({ error: talentError.message }, 400);
+      if (item.saveTemplate && item.templateName) {
+        const { error: templateError } = await supabase.from("exclusive_talent_templates").insert({
+          template_name: item.templateName,
+          talent_name: item.talentName,
+          rank: item.rank,
+          effect: item.effect,
+          cooldown: item.cooldown,
+          action_cost: item.actionCost,
+          admin_note: item.adminNote,
+          is_enabled: true,
+          created_by_hash: identity.codeHash,
+          created_by_name: identity.displayName,
+          updated_by_hash: identity.codeHash,
+          updated_by_name: identity.displayName,
+          updated_at: now,
+        });
+        if (templateError) return json({ error: templateError.message }, 400);
+      }
+      await writeAdminOperationLog(supabase, identity, {
+        action: "exclusive_talent.upsert",
+        targetCodeHash: codeHash,
+        targetName: cleanText(target.display_name, 40),
+        objectType: "exclusive_talent",
+        summary: `为 ${cleanText(target.display_name, 40)} 开启并保存专属天赋`,
+        afterState: { ...item, targetName: cleanText(target.display_name, 40), ascensionScore: cleanScore(target.ascension_score) },
+      });
+      return json({ role, name: identity.displayName, data: { targetName: cleanText(target.display_name, 40), savedTemplate: item.saveTemplate && !!item.templateName } });
     }
 
     if (action === "adminUpsertTalentPoolItem") {
@@ -6789,6 +6987,19 @@ Deno.serve(async (req) => {
           previousStorageSlot = slotResult.slot;
         }
         if (!sourceStorageSlot && !isSpecialSOwned) return json({ error: "仓库位状态异常，请刷新后重试" }, 400);
+
+        // When switching from one equipped S talent to another S talent,
+        // release the incoming talent's S-warehouse slot first. Otherwise
+        // storing the outgoing talent in that same slot hits the unique
+        // (invite_code_hash, s_slot) index before the incoming row is updated.
+        if (currentSlotTalent && currentSlotIsS && isSpecialSOwned) {
+          const { error: releaseIncomingSStorageError } = await supabase
+            .from("owned_talents")
+            .update({ s_slot: null, equipped_slot: null })
+            .eq("id", ownedTalentId)
+            .eq("invite_code_hash", identity.codeHash);
+          if (releaseIncomingSStorageError) return json({ error: releaseIncomingSStorageError.message }, 400);
+        }
 
         if (currentSlotTalent) {
           const clearCurrentSlotUpdate: Record<string, unknown> = { equipped_slot: null };

@@ -48,6 +48,7 @@ function normalizeTalentState(rawState) {
         ownedTalents: Array.isArray(state.ownedTalents) ? state.ownedTalents : [],
         overflowChoices: Array.isArray(state.overflowChoices) ? state.overflowChoices : [],
         settledOverflowChoices: Array.isArray(state.settledOverflowChoices) ? state.settledOverflowChoices : [],
+        exclusiveTalentSlot: state.exclusiveTalentSlot || { enabled: false, scoreUnlocked: false, manualEnabled: false, talent: null },
         drawLogs: Array.isArray(state.drawLogs) ? state.drawLogs : [],
         exchangeLogs: Array.isArray(state.exchangeLogs) ? state.exchangeLogs : []
     };
@@ -337,7 +338,7 @@ function renderEquippedTalentSlots(state, god = getProfileFaithGod(getCurrentPro
     const byEquippedSlot = new Map(talents.filter(t => t.equipped_slot).map(t => [Number(t.equipped_slot), t]));
     const activeLimit = Number(state.equippedSlotLimit || 3);
     const limit = Number(state.maxEquippedSlotLimit || activeLimit || 3);
-    return `<div class="talent-equipped-grid">${Array.from({ length: limit }, (_, index) => {
+    const regularSlots = `<div class="talent-equipped-grid">${Array.from({ length: limit }, (_, index) => {
         const slot = index + 1;
         const talent = byEquippedSlot.get(slot);
         const locked = slot > activeLimit;
@@ -408,6 +409,19 @@ function renderTalentWarehouse(state, god = getProfileFaithGod(getCurrentProfile
                 </div>
             </div>`;
     }).join('')}</div>`;
+    const exclusive = state.exclusiveTalentSlot || {};
+    const exclusiveTalent = exclusive.talent;
+    const exclusiveStatus = exclusive.enabled ? '已开启' : '2500分开启';
+    const exclusiveBody = exclusiveTalent
+        ? `<div class="talent-slot-name">${escapeHtml(exclusiveTalent.talentName || '未命名专属天赋')}（${escapeHtml(exclusiveTalent.rank || 'S')}）</div>
+           <div class="talent-slot-meta">专属天赋 · 行动点 ${Number(exclusiveTalent.actionCost || 0)} · 冷却 ${escapeHtml(exclusiveTalent.cooldown || '无')}</div>
+           ${exclusiveTalent.effect ? `<div class="talent-effect-text">${escapeHtml(exclusiveTalent.effect)}</div>` : ''}`
+        : renderMiniRitualEmpty(exclusive.enabled ? '等待羔羊编辑并授予专属天赋。' : '登神之路达到 2500 分后开启。', god, '专属槽空置');
+    const exclusiveCard = `<div class="talent-slot-card ${exclusiveTalent ? '' : 'empty'} ${exclusive.enabled ? '' : 'pending'}">
+        <div class="talent-slot-head"><span>专属槽</span><span>${exclusiveStatus}</span></div>
+        ${exclusiveBody}
+    </div>`;
+    return `${regularSlots}<div class="talent-equipped-grid">${exclusiveCard}</div>`;
 }
 
 function renderSTalentWarehouse(state, god = getProfileFaithGod(getCurrentProfile()) || '命运') {
@@ -623,6 +637,20 @@ function getProfileExportPayload() {
                 effect: getTalentEffectText(state, canonical),
             };
         });
+    const exclusiveTalent = state.exclusiveTalentSlot?.enabled && state.exclusiveTalentSlot?.talent
+        ? state.exclusiveTalentSlot.talent
+        : null;
+    if (exclusiveTalent) {
+        equippedTalents.push({
+            slot: '专属',
+            name: String(exclusiveTalent.talentName || ''),
+            rank: String(exclusiveTalent.rank || ''),
+            pool: '专属',
+            actionCost: Number(exclusiveTalent.actionCost || 0),
+            cooldown: String(exclusiveTalent.cooldown || '无'),
+            effect: String(exclusiveTalent.effect || ''),
+        });
+    }
     return {
         displayName,
         faithGod,
