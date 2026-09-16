@@ -369,7 +369,7 @@ function renderEquippedTalentSlots(state, god = getProfileFaithGod(getCurrentPro
     if (!exclusive.enabled) return regularSlots;
     const exclusiveTalent = exclusive.talent;
     const exclusiveBody = exclusiveTalent
-        ? `<div class="talent-slot-name">${escapeHtml(exclusiveTalent.talentName || '未命名专属天赋')}（${escapeHtml(exclusiveTalent.rank || 'S')}）</div>
+        ? `<div class="talent-slot-name">${escapeHtml(exclusiveTalent.talentName || '未命名专属天赋')}（${escapeHtml(exclusiveTalent.rank || 'EX')}）</div>
            <div class="talent-slot-meta">专属天赋 · 行动点 ${Number(exclusiveTalent.actionCost || 0)} · 冷却 ${escapeHtml(exclusiveTalent.cooldown || '无')}</div>
            ${exclusiveTalent.effect ? `<div class="talent-effect-text">${escapeHtml(exclusiveTalent.effect)}</div>` : ''}`
         : renderMiniRitualEmpty('等待羔羊编辑并授予专属天赋。', god, '专属槽空置');

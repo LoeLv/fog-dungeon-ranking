@@ -577,8 +577,10 @@ function renderAdminTalentPoolPage() {
 
 function renderAdminExclusiveWorkbench() {
     const candidates = adminExclusiveWorkbench.candidates || [];
+    const assigned = adminExclusiveWorkbench.assigned || [];
     const templates = adminExclusiveWorkbench.templates || [];
-    const candidateOptions = candidates.map(candidate =>
+    const targetMembers = [...candidates, ...assigned.filter(item => !candidates.some(candidate => candidate.codeHash === item.codeHash))];
+    const candidateOptions = targetMembers.map(candidate =>
         `<option value="${escapeHtml(candidate.codeHash)}">${escapeHtml(candidate.displayName || '未命名')} · 登神 ${Number(candidate.ascensionScore || 0)}</option>`
     ).join('');
     const templateOptions = templates.map(template =>
@@ -601,7 +603,7 @@ function renderAdminExclusiveWorkbench() {
             </div>
             <div class="form-group">
                 <label>等级</label>
-                <select id="adminExclusiveRank"><option selected>S</option><option>A</option><option>B</option><option>C</option></select>
+                <select id="adminExclusiveRank"><option selected>EX</option></select>
             </div>
             <div class="form-group">
                 <label>行动点</label>
@@ -629,6 +631,16 @@ function renderAdminExclusiveWorkbench() {
             <button class="btn btn-outline btn-sm" data-admin-exclusive-refresh onclick="adminLoadExclusiveWorkbench(true)">刷新候选</button>
         </div>
         <div class="identity-help">${adminExclusiveWorkbenchLoading ? '正在读取 2500 分以上且专属槽空置的玩家...' : `当前待处理 ${candidates.length} 人，模板 ${templates.length} 个。`}</div>
+        <div class="profile-panel-title" style="margin-top:16px;"><span>已授予 EX 专属天赋</span><small>${assigned.length} 人</small></div>
+        ${assigned.length ? assigned.map(item => `
+            <div class="profile-title-status">
+                <div class="profile-title-status-head"><strong>${escapeHtml(item.displayName || '未命名')} · ${escapeHtml(item.talent?.talentName || '未命名')}</strong><small>EX · 登神 ${Number(item.ascensionScore || 0)}</small></div>
+                <div class="profile-title-status-note">${escapeHtml(item.talent?.effect || '未填写效果')} · 更新于 ${escapeHtml(formatAdminTime(item.talent?.updatedAt))}</div>
+                <div class="profile-tools">
+                    <button class="btn btn-outline btn-sm" onclick='adminEditAssignedExclusiveTalent(${jsString(item.codeHash)})'>编辑</button>
+                    <button class="btn btn-outline btn-sm" onclick='adminDeleteAssignedExclusiveTalent(${jsString(item.codeHash)}, ${jsString(item.displayName)})'>删除天赋</button>
+                </div>
+            </div>`).join('') : renderRitualEmpty('暂无已授予的 EX 专属天赋。', '真理', '等待授予')}
     </section>`;
 }
 
@@ -729,6 +741,7 @@ async function adminLoadExclusiveWorkbench(showResult = false) {
         if (error) { showToast(`失败：${error.message || '专属天赋工作台读取失败'}`); return; }
         adminExclusiveWorkbench = {
             candidates: Array.isArray(data?.candidates) ? data.candidates : [],
+            assigned: Array.isArray(data?.assigned) ? data.assigned : [],
             templates: Array.isArray(data?.templates) ? data.templates : [],
         };
         if (showResult) showToast(`已读取 ${adminExclusiveWorkbench.candidates.length} 位专属天赋候选`);
@@ -744,7 +757,7 @@ function adminApplyExclusiveTemplate(templateId) {
     if (!template) return;
     const values = {
         adminExclusiveTalentName: template.talentName,
-        adminExclusiveRank: template.rank || 'S',
+        adminExclusiveRank: 'EX',
         adminExclusiveActionCost: template.actionCost || 0,
         adminExclusiveCooldown: template.cooldown || '',
         adminExclusiveEffect: template.effect || '',
@@ -754,6 +767,45 @@ function adminApplyExclusiveTemplate(templateId) {
         const element = document.getElementById(id);
         if (element) element.value = value;
     });
+}
+
+function adminEditAssignedExclusiveTalent(targetHash) {
+    const item = (adminExclusiveWorkbench.assigned || []).find(candidate => candidate.codeHash === String(targetHash || ''));
+    if (!item) return;
+    const target = document.getElementById('adminExclusiveTargetHash');
+    if (target) target.value = item.codeHash;
+    const values = {
+        adminExclusiveTalentName: item.talent?.talentName || '',
+        adminExclusiveRank: 'EX',
+        adminExclusiveActionCost: item.talent?.actionCost || 0,
+        adminExclusiveCooldown: item.talent?.cooldown || '',
+        adminExclusiveEffect: item.talent?.effect || '',
+        adminExclusiveNote: item.talent?.adminNote || '',
+    };
+    Object.entries(values).forEach(([id, value]) => {
+        const element = document.getElementById(id);
+        if (element) element.value = value;
+    });
+    document.getElementById('adminExclusiveTalentName')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+}
+
+async function adminDeleteAssignedExclusiveTalent(targetHash, displayName) {
+    if (!window.confirm(`确认删除 ${displayName || '该玩家'} 的 EX 专属天赋吗？专属槽会保留。`)) return;
+    setAdminManagementStatus('EX 专属天赋删除处理中...', 'pending');
+    try {
+        const { error } = await invokeDungeonAction('adminDeleteExclusiveTalent', { targetHash });
+        if (error) {
+            setAdminManagementStatus(`删除失败：${error.message || '后端未返回原因'}`, 'error');
+            showToast(`失败：${error.message || '专属天赋删除失败'}`);
+            return;
+        }
+        setAdminManagementStatus('EX 专属天赋已删除，专属槽仍保留', 'success');
+        showToast('EX 专属天赋已删除');
+        await adminLoadExclusiveWorkbench(false);
+    } catch (error) {
+        setAdminManagementStatus(`删除失败：${error?.message || error || '未知错误'}`, 'error');
+        showToast(`失败：${error?.message || '专属天赋删除失败'}`);
+    }
 }
 
 async function adminSaveExclusiveTalent() {
@@ -766,7 +818,7 @@ async function adminSaveExclusiveTalent() {
     const payload = {
         targetHash,
         talentName,
-        rank: document.getElementById('adminExclusiveRank')?.value || 'S',
+        rank: 'EX',
         effect: document.getElementById('adminExclusiveEffect')?.value || '',
         cooldown: document.getElementById('adminExclusiveCooldown')?.value || '',
         actionCost: Number(document.getElementById('adminExclusiveActionCost')?.value || 0),
@@ -1458,6 +1510,8 @@ Object.assign(window, {
     adminLoadExclusiveWorkbench,
     adminSaveExclusiveTalent,
     adminApplyExclusiveTemplate,
+    adminEditAssignedExclusiveTalent,
+    adminDeleteAssignedExclusiveTalent,
     adminLoadFaithTraits,
     adminSaveTalentPoolItem,
     adminSaveTalentPoolItemFromModal,

@@ -18,6 +18,8 @@
 - `migrations/faith_traits_management_20260812.sql`：信仰特性维护表和默认 16 神种子。
 - `migrations/promo_code_redemption_20260811.sql`：兑换码功能表。
 - `migrations/battle_room_system_20260810.sql`：战斗房间功能表。
+- `migrations/exclusive_talent_slot_migration_20260914.sql`：专属天赋槽、专属天赋和可复用模板表。
+- `current/enable_exclusive_talent_qingyifusheng_20260914.sql`：提前为情忆浮生开启专属天赋槽。
 
 ## 安全习惯
 

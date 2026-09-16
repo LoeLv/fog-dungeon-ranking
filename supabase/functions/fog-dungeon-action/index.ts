@@ -180,8 +180,8 @@ const talentSlot5ScoreRules = [
   { minScore: 2200, ranks: ["S", "A", "A", "A", "C"], summary: "SAAAC", kind: "profession" },
   { minScore: 2300, ranks: ["S", "A", "A", "A", "B"], summary: "SAAAB", kind: "profession" },
   { minScore: 2400, ranks: ["S", "A", "A", "A", "A"], summary: "SAAAA", kind: "profession" },
-  { minScore: 2500, ranks: ["S", "A", "A", "A", "A"], summary: "SAAAA", kind: "any" },
-  { minScore: 2600, ranks: ["S", "A", "A", "A", "A"], summary: "SAAAA", kind: "fusion" },
+  { minScore: 2500, ranks: ["S", "A", "A", "A", "A"], summary: "SAAAA", kind: "profession" },
+  { minScore: 2600, ranks: ["S", "A", "A", "A", "A"], summary: "SAAAA", kind: "profession" },
 ] as const;
 const talentRankOrder: Record<string, number> = { C: 1, B: 2, A: 3, S: 4 };
 const scoreDengMin = -30;
@@ -1235,7 +1235,7 @@ async function getExclusiveTalentState(
   const talent = talentResult.data && cleanText(talentResult.data.talent_name, 80)
     ? {
       talentName: cleanText(talentResult.data.talent_name, 80),
-      rank: cleanText(talentResult.data.rank, 2) || "S",
+      rank: cleanText(talentResult.data.rank, 2) || "EX",
       effect: cleanText(talentResult.data.effect, 1000),
       cooldown: cleanText(talentResult.data.cooldown, 80),
       actionCost: Math.max(0, Math.min(99, Number(talentResult.data.action_cost || 0))),
@@ -4446,14 +4446,38 @@ async function listAdminExclusiveTalentWorkbench(supabase: SupabaseClientAny) {
       };
     })
     .filter((candidate) => candidate.enabled && !candidate.hasTalent);
+  const assigned = (profilesResult.data || [])
+    .map((profile: Record<string, unknown>) => {
+      const codeHash = cleanText(profile.invite_code_hash, 64);
+      const slot = slots.get(codeHash) || {};
+      const talent = talents.get(codeHash) || {};
+      if (slot.manual_enabled !== true || !cleanText(talent.talent_name, 80)) return null;
+      return {
+        codeHash,
+        displayName: cleanText(profile.display_name, 40),
+        ascensionScore: cleanScore(profile.ascension_score),
+        talent: {
+          talentName: cleanText(talent.talent_name, 80),
+          rank: cleanText(talent.rank, 2) || "EX",
+          effect: cleanText(talent.effect, 1000),
+          cooldown: cleanText(talent.cooldown, 80),
+          actionCost: Math.max(0, Math.min(99, Number(talent.action_cost || 0))),
+          adminNote: cleanText(talent.admin_note, 300),
+          isEnabled: talent.is_enabled !== false,
+          updatedAt: cleanText(talent.updated_at, 80),
+        },
+      };
+    })
+    .filter(Boolean);
   return {
     data: {
       candidates,
+      assigned,
       templates: (templatesResult.data || []).map((row: Record<string, unknown>) => ({
         id: Number(row.id || 0),
         templateName: cleanText(row.template_name, 80),
         talentName: cleanText(row.talent_name, 80),
-        rank: cleanText(row.rank, 2) || "S",
+        rank: cleanText(row.rank, 2) || "EX",
         effect: cleanText(row.effect, 1000),
         cooldown: cleanText(row.cooldown, 80),
         actionCost: Math.max(0, Math.min(99, Number(row.action_cost || 0))),
@@ -4469,7 +4493,7 @@ function cleanExclusiveTalentPayload(payload: Record<string, unknown>) {
   const talentName = cleanText(payload.talentName, 80);
   const rank = cleanText(payload.rank, 2).toUpperCase();
   if (!talentName) return { error: { message: "请填写专属天赋名称" } };
-  if (!["S", "A", "B", "C"].includes(rank)) return { error: { message: "专属天赋等级只能是 S/A/B/C" } };
+  if (rank !== "EX") return { error: { message: "专属天赋等级固定为 EX" } };
   return {
     data: {
       talentName,
@@ -5045,6 +5069,28 @@ Deno.serve(async (req) => {
         afterState: { ...item, targetName: cleanText(target.display_name, 40), ascensionScore: cleanScore(target.ascension_score) },
       });
       return json({ role, name: identity.displayName, data: { targetName: cleanText(target.display_name, 40), savedTemplate: item.saveTemplate && !!item.templateName } });
+    }
+
+    if (action === "adminDeleteExclusiveTalent") {
+      if (!hasPermission(identity, "talent_pool_manage")) return json({ error: "没有天赋池管理权限" }, 403);
+      const targetHash = cleanText(payload.targetHash, 64);
+      if (!targetHash) return json({ error: "目标玩家不正确" }, 400);
+      const { data: target, error: targetError } = await supabase.from("player_profiles")
+        .select("invite_code_hash, display_name")
+        .eq("invite_code_hash", targetHash)
+        .maybeSingle();
+      if (targetError) return json({ error: targetError.message }, 400);
+      if (!target) return json({ error: "没有找到目标玩家档案" }, 404);
+      const { error } = await supabase.from("exclusive_talents").delete().eq("invite_code_hash", targetHash);
+      if (error) return json({ error: error.message }, 400);
+      await writeAdminOperationLog(supabase, identity, {
+        action: "exclusive_talent.delete",
+        targetCodeHash: targetHash,
+        targetName: cleanText(target.display_name, 40),
+        objectType: "exclusive_talent",
+        summary: `删除 ${cleanText(target.display_name, 40)} 的 EX 专属天赋，保留专属槽`,
+      });
+      return json({ role, name: identity.displayName, data: { targetName: cleanText(target.display_name, 40), deleted: true } });
     }
 
     if (action === "adminUpsertTalentPoolItem") {
