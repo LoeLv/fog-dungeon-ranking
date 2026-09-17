@@ -63,6 +63,44 @@
         }
     }
 
+    /* 抽取瞬间：结果容器短暂挂 .gt-draw-burst 触发神谕光爆 */
+    var burstObserver = null;
+    var burstTimers = new WeakMap();
+
+    function triggerBurst(el) {
+        if (!el || el.nodeType !== 1) return;
+        // 只对"结果"网格触发，避免仓库/已携带列表误触发
+        if (!el.classList || !el.classList.contains('talent-result-grid')) return;
+        if (el.querySelectorAll(':scope > .talent-card').length === 0) return;
+        el.classList.remove('gt-draw-burst');
+        // 强制重排以重启动画
+        void el.offsetWidth;
+        el.classList.add('gt-draw-burst');
+        var prev = burstTimers.get(el);
+        if (prev) window.clearTimeout(prev);
+        burstTimers.set(el, window.setTimeout(function () {
+            el.classList.remove('gt-draw-burst');
+        }, 950));
+    }
+
+    function startBurstObserver() {
+        if (reduceMotion || !window.MutationObserver || burstObserver) return;
+        try {
+            burstObserver = new MutationObserver(function (mutations) {
+                for (var i = 0; i < mutations.length; i++) {
+                    var m = mutations[i];
+                    if (m.type === 'childList' && m.target && m.target.classList &&
+                        m.target.classList.contains('talent-result-grid')) {
+                        triggerBurst(m.target);
+                    }
+                }
+            });
+            burstObserver.observe(document.body, { childList: true, subtree: true });
+        } catch (err) {
+            burstObserver = null;
+        }
+    }
+
     function scheduleDecorate() {
         if (pending) return;
         pending = window.setTimeout(function () {
@@ -86,6 +124,7 @@
         injectAtmosphere();
         decorate(document);
         startObserver();
+        startBurstObserver();
     }
 
     window.__godsTheme = {
@@ -93,6 +132,7 @@
         refresh: function () { decorate(document); },
         destroy: function () {
             if (observer) { observer.disconnect(); observer = null; }
+            if (burstObserver) { burstObserver.disconnect(); burstObserver = null; }
             var atmosphere = document.querySelector('.gods-atmosphere');
             if (atmosphere && atmosphere.parentNode) atmosphere.parentNode.removeChild(atmosphere);
             var corners = document.querySelectorAll('.gods-corner');
