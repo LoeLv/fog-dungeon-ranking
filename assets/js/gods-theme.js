@@ -1,10 +1,13 @@
 /* ==========================================================================
-   诸神愚戏 · 神性主题增强脚本  (gods-theme.js)
+   诸神愚戏 · 星辉圣所  (gods-theme.js  v3 "Celestial Sanctum")
    --------------------------------------------------------------------------
-   仅做装饰性 DOM 注入，不改变任何业务逻辑：
-     1. 注入全站金砂星尘氛围层 .gods-atmosphere
-     2. 为主要卡片/面板注入四角纹饰 .gods-corner
-   全部为 pointer-events:none / aria-hidden，安全无副作用。
+   纯装饰性 DOM 注入，绝不触碰任何业务逻辑：
+     1. 注入星辉氛围层     .gods-atmosphere
+     2. 注入指针聚光层     .gt-spotlight（跟随鼠标，screen 混合）
+     3. 为卡片/面板注入金饰画框 .gods-cornered > .gods-corner ×4
+     4. 为天赋卡识别品阶并挂 gt-rank-* 与品阶徽章 .gt-rank-badge
+     5. 抽卡结果网格分级光爆 .gt-draw-burst / .gt-burst-*
+   安全：全部 pointer-events:none / aria-hidden，无副作用。
    卸载：window.__godsTheme.destroy()
    ========================================================================== */
 (function () {
@@ -20,16 +23,25 @@
         '.profile-panel',
         '.admin-panel',
         '.authored-card',
-        '.leaderboard-panel'
+        '.leaderboard-panel',
+        '.forum-feed',
+        '.controls'
     ].join(',');
     var CORNER_POSITIONS = ['tl', 'tr', 'bl', 'br'];
+    var RANK_ORDER = { C: 0, B: 1, A: 2, S: 3, EX: 4 };
+    var BURST_CLASSES = ['gt-burst-C', 'gt-burst-B', 'gt-burst-A', 'gt-burst-S', 'gt-burst-EX'];
+
     var reduceMotion = window.matchMedia
         ? window.matchMedia('(prefers-reduced-motion: reduce)').matches
         : false;
 
     var observer = null;
+    var burstObserver = null;
+    var burstTimers = new WeakMap();
     var pending = null;
+    var pointerBound = false;
 
+    /* ---------- 1. 氛围层 ---------- */
     function injectAtmosphere() {
         if (document.querySelector('.gods-atmosphere')) return;
         var layer = document.createElement('div');
@@ -38,6 +50,33 @@
         document.body.appendChild(layer);
     }
 
+    /* ---------- 2. 指针聚光 ---------- */
+    function injectSpotlight() {
+        if (reduceMotion) return;
+        if (document.querySelector('.gt-spotlight')) return;
+        var s = document.createElement('div');
+        s.className = 'gt-spotlight';
+        s.setAttribute('aria-hidden', 'true');
+        document.body.appendChild(s);
+    }
+
+    function bindPointer() {
+        if (reduceMotion || pointerBound) return;
+        pointerBound = true;
+        var root = document.documentElement;
+        var raf = 0, mx = 0, my = 0;
+        function apply() {
+            raf = 0;
+            root.style.setProperty('--gt-mx', mx + 'px');
+            root.style.setProperty('--gt-my', my + 'px');
+        }
+        window.addEventListener('pointermove', function (e) {
+            mx = e.clientX; my = e.clientY;
+            if (!raf) raf = window.requestAnimationFrame(apply);
+        }, { passive: true });
+    }
+
+    /* ---------- 3. 金饰画框 ---------- */
     function makeCorner(position) {
         var span = document.createElement('span');
         span.className = 'gods-corner ' + position;
@@ -45,9 +84,7 @@
         return span;
     }
 
-    /* 抽卡品阶：从 rank-* 类提取 S/A/B/C/EX，挂 gt-rank-* 并注入徽章 */
-    var RANK_ORDER = { C: 0, B: 1, A: 2, S: 3, EX: 4 };
-
+    /* ---------- 4. 品阶识别 ---------- */
     function detectRank(el) {
         var cls = el.classList;
         for (var r in RANK_ORDER) {
@@ -61,9 +98,7 @@
         var cards;
         try {
             cards = (root || document).querySelectorAll('.talent-card');
-        } catch (err) {
-            return;
-        }
+        } catch (err) { return; }
         for (var i = 0; i < cards.length; i++) {
             var card = cards[i];
             var rank = detectRank(card);
@@ -87,9 +122,7 @@
         var nodes;
         try {
             nodes = (root || document).querySelectorAll(CARD_SELECTOR);
-        } catch (err) {
-            nodes = [];
-        }
+        } catch (err) { nodes = []; }
         decorateTalentCards(root);
         for (var i = 0; i < nodes.length; i++) {
             var el = nodes[i];
@@ -102,12 +135,7 @@
         }
     }
 
-    /* 抽取瞬间：结果容器短暂挂 .gt-draw-burst 触发神谕光爆 */
-    var burstObserver = null;
-    var burstTimers = new WeakMap();
-
-    var BURST_CLASSES = ['gt-burst-C', 'gt-burst-B', 'gt-burst-A', 'gt-burst-S', 'gt-burst-EX'];
-
+    /* ---------- 5. 抽卡分级光爆 ---------- */
     function clearBurst(el) {
         if (!el || !el.classList) return;
         el.classList.remove('gt-draw-burst');
@@ -116,11 +144,9 @@
 
     function triggerBurst(el) {
         if (!el || el.nodeType !== 1) return;
-        // 只对"结果"网格触发，避免仓库/已携带列表误触发
         if (!el.classList || !el.classList.contains('talent-result-grid')) return;
         var cards = el.querySelectorAll(':scope > .talent-card');
         if (cards.length === 0) return;
-        // 找出本批最高品阶
         var maxRank = 0, maxName = 'C';
         for (var i = 0; i < cards.length; i++) {
             var r = detectRank(cards[i]);
@@ -128,15 +154,29 @@
             if (v > maxRank) { maxRank = v; maxName = r; }
         }
         clearBurst(el);
-        // 强制重排以重启动画
-        void el.offsetWidth;
+        void el.offsetWidth; /* 重排以重启动画 */
         el.classList.add('gt-draw-burst');
         el.classList.add('gt-burst-' + maxName);
         var prev = burstTimers.get(el);
         if (prev) window.clearTimeout(prev);
-        burstTimers.set(el, window.setTimeout(function () {
-            clearBurst(el);
-        }, 1000));
+        burstTimers.set(el, window.setTimeout(function () { clearBurst(el); }, 1100));
+    }
+
+    /* ---------- 观察器 ---------- */
+    function scheduleDecorate() {
+        if (pending) return;
+        pending = window.setTimeout(function () {
+            pending = null;
+            decorate(document);
+        }, 320);
+    }
+
+    function startObserver() {
+        if (reduceMotion || !window.MutationObserver || observer) return;
+        try {
+            observer = new MutationObserver(scheduleDecorate);
+            observer.observe(document.body, { childList: true, subtree: true });
+        } catch (err) { observer = null; }
     }
 
     function startBurstObserver() {
@@ -152,32 +192,14 @@
                 }
             });
             burstObserver.observe(document.body, { childList: true, subtree: true });
-        } catch (err) {
-            burstObserver = null;
-        }
-    }
-
-    function scheduleDecorate() {
-        if (pending) return;
-        pending = window.setTimeout(function () {
-            pending = null;
-            decorate(document);
-        }, 320);
-    }
-
-    function startObserver() {
-        if (reduceMotion || !window.MutationObserver || observer) return;
-        try {
-            observer = new MutationObserver(scheduleDecorate);
-            observer.observe(document.body, { childList: true, subtree: true });
-        } catch (err) {
-            observer = null;
-        }
+        } catch (err) { burstObserver = null; }
     }
 
     function init() {
         if (!document.body) return;
         injectAtmosphere();
+        injectSpotlight();
+        bindPointer();
         decorate(document);
         startObserver();
         startBurstObserver();
@@ -191,17 +213,20 @@
             if (burstObserver) { burstObserver.disconnect(); burstObserver = null; }
             var atmosphere = document.querySelector('.gods-atmosphere');
             if (atmosphere && atmosphere.parentNode) atmosphere.parentNode.removeChild(atmosphere);
+            var spot = document.querySelector('.gt-spotlight');
+            if (spot && spot.parentNode) spot.parentNode.removeChild(spot);
             var corners = document.querySelectorAll('.gods-corner');
             for (var i = 0; i < corners.length; i++) {
                 if (corners[i].parentNode) corners[i].parentNode.removeChild(corners[i]);
             }
             var marked = document.querySelectorAll('.gods-cornered');
             for (var k = 0; k < marked.length; k++) marked[k].classList.remove('gods-cornered');
+            pointerBound = false;
         }
     };
 
     if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', init, { once: true });
+        document.addEventListener('DOMContentLoaded', init);
     } else {
         init();
     }
