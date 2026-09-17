@@ -45,13 +45,52 @@
         return span;
     }
 
+    /* 抽卡品阶：从 rank-* 类提取 S/A/B/C/EX，挂 gt-rank-* 并注入徽章 */
+    var RANK_ORDER = { C: 0, B: 1, A: 2, S: 3, EX: 4 };
+
+    function detectRank(el) {
+        var cls = el.classList;
+        for (var r in RANK_ORDER) {
+            if (cls.contains('rank-' + r)) return r;
+        }
+        if (cls.contains('is-exclusive') || cls.contains('exclusive')) return 'EX';
+        return null;
+    }
+
+    function decorateTalentCards(root) {
+        var cards;
+        try {
+            cards = (root || document).querySelectorAll('.talent-card');
+        } catch (err) {
+            return;
+        }
+        for (var i = 0; i < cards.length; i++) {
+            var card = cards[i];
+            var rank = detectRank(card);
+            if (!rank) continue;
+            var cls = 'gt-rank-' + rank;
+            if (!card.classList.contains(cls)) {
+                card.classList.remove('gt-rank-C', 'gt-rank-B', 'gt-rank-A', 'gt-rank-S', 'gt-rank-EX');
+                card.classList.add(cls);
+            }
+            if (!card.querySelector(':scope > .gt-rank-badge')) {
+                var badge = document.createElement('span');
+                badge.className = 'gt-rank-badge';
+                badge.textContent = rank;
+                badge.setAttribute('aria-hidden', 'true');
+                card.appendChild(badge);
+            }
+        }
+    }
+
     function decorate(root) {
         var nodes;
         try {
             nodes = (root || document).querySelectorAll(CARD_SELECTOR);
         } catch (err) {
-            return;
+            nodes = [];
         }
+        decorateTalentCards(root);
         for (var i = 0; i < nodes.length; i++) {
             var el = nodes[i];
             if (el.classList.contains('gods-cornered')) continue;
@@ -67,20 +106,37 @@
     var burstObserver = null;
     var burstTimers = new WeakMap();
 
+    var BURST_CLASSES = ['gt-burst-C', 'gt-burst-B', 'gt-burst-A', 'gt-burst-S', 'gt-burst-EX'];
+
+    function clearBurst(el) {
+        if (!el || !el.classList) return;
+        el.classList.remove('gt-draw-burst');
+        for (var i = 0; i < BURST_CLASSES.length; i++) el.classList.remove(BURST_CLASSES[i]);
+    }
+
     function triggerBurst(el) {
         if (!el || el.nodeType !== 1) return;
         // 只对"结果"网格触发，避免仓库/已携带列表误触发
         if (!el.classList || !el.classList.contains('talent-result-grid')) return;
-        if (el.querySelectorAll(':scope > .talent-card').length === 0) return;
-        el.classList.remove('gt-draw-burst');
+        var cards = el.querySelectorAll(':scope > .talent-card');
+        if (cards.length === 0) return;
+        // 找出本批最高品阶
+        var maxRank = 0, maxName = 'C';
+        for (var i = 0; i < cards.length; i++) {
+            var r = detectRank(cards[i]);
+            var v = (r && RANK_ORDER[r] != null) ? RANK_ORDER[r] : 0;
+            if (v > maxRank) { maxRank = v; maxName = r; }
+        }
+        clearBurst(el);
         // 强制重排以重启动画
         void el.offsetWidth;
         el.classList.add('gt-draw-burst');
+        el.classList.add('gt-burst-' + maxName);
         var prev = burstTimers.get(el);
         if (prev) window.clearTimeout(prev);
         burstTimers.set(el, window.setTimeout(function () {
-            el.classList.remove('gt-draw-burst');
-        }, 950));
+            clearBurst(el);
+        }, 1000));
     }
 
     function startBurstObserver() {

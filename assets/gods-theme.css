@@ -562,6 +562,217 @@ table tbody tr:hover td {
     .page-enter, .view-enter { animation: none !important; }
 }
 
+/* ==========================================================================
+   P5 · 抽卡分级特效：S / A / B / C 品阶差异
+   —— 每张结果卡按品阶获得专属光晕、徽章与揭晓动画；
+      结果网格按"本批最高品阶"触发不同强度的神谕光爆。
+   ========================================================================== */
+
+/* 品阶主题色变量（默认 C） */
+.talent-card.gt-rank-C { --gt-grade: 122, 174, 194; --gt-grade-strong: 168, 214, 232; }
+.talent-card.gt-rank-B { --gt-grade: 231, 207, 138; --gt-grade-strong: 247, 227, 158; }
+.talent-card.gt-rank-A { --gt-grade: 176, 132, 214; --gt-grade-strong: 208, 172, 236; }
+.talent-card.gt-rank-S { --gt-grade: 231, 122, 74;  --gt-grade-strong: 255, 190, 120; }
+.talent-card.gt-rank-EX { --gt-grade: 231, 100, 90; --gt-grade-strong: 255, 210, 130; }
+
+/* 品阶光晕与内辉光 */
+.talent-card.gt-rank-C {
+    border-color: rgba(var(--gt-grade), 0.4);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05), 0 0 10px rgba(var(--gt-grade), 0.16);
+}
+.talent-card.gt-rank-B {
+    border-color: rgba(var(--gt-grade), 0.46);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06), 0 0 14px rgba(var(--gt-grade), 0.24);
+}
+.talent-card.gt-rank-A {
+    border-color: rgba(var(--gt-grade), 0.52);
+    box-shadow: inset 0 0 10px rgba(var(--gt-grade), 0.12), 0 0 18px rgba(var(--gt-grade), 0.3);
+}
+.talent-card.gt-rank-S {
+    border-color: rgba(var(--gt-grade), 0.6);
+    box-shadow: inset 0 0 12px rgba(var(--gt-grade-strong), 0.16), 0 0 26px rgba(var(--gt-grade), 0.42);
+}
+.talent-card.gt-rank-EX {
+    border-color: rgba(var(--gt-grade), 0.66);
+    box-shadow: inset 0 0 14px rgba(var(--gt-grade-strong), 0.2), 0 0 30px rgba(var(--gt-grade), 0.48);
+}
+
+/* B 及以上：缓慢流动的品阶光泽（扫光） */
+.talent-card.gt-rank-B,
+.talent-card.gt-rank-A,
+.talent-card.gt-rank-S,
+.talent-card.gt-rank-EX {
+    background-image: linear-gradient(115deg,
+        transparent 30%,
+        rgba(var(--gt-grade-strong), 0.16) 50%,
+        transparent 70%);
+    background-size: 260% 100%;
+    background-repeat: no-repeat;
+    animation: gtGradeSheen 3.4s ease-in-out infinite;
+}
+@keyframes gtGradeSheen {
+    0%   { background-position: 130% 0; }
+    60%  { background-position: -130% 0; }
+    100% { background-position: -130% 0; }
+}
+
+/* A 及以上：边框脉冲呼吸 */
+.talent-card.gt-rank-A { animation: gtGradeSheen 3.4s ease-in-out infinite, gtGradePulse 2.6s ease-in-out infinite; }
+.talent-card.gt-rank-S { animation: gtGradeSheen 2.8s ease-in-out infinite, gtGradePulse 1.9s ease-in-out infinite; }
+.talent-card.gt-rank-EX { animation: gtGradeSheen 2.6s ease-in-out infinite, gtGradePulse 1.7s ease-in-out infinite; }
+@keyframes gtGradePulse {
+    0%, 100% { box-shadow: inset 0 0 10px rgba(var(--gt-grade), 0.1), 0 0 14px rgba(var(--gt-grade), 0.24); }
+    50%      { box-shadow: inset 0 0 14px rgba(var(--gt-grade-strong), 0.2), 0 0 26px rgba(var(--gt-grade), 0.44); }
+}
+
+/* 品阶徽章：右上角字母印记 */
+.talent-card { position: relative; }
+.gt-rank-badge {
+    position: absolute;
+    top: 7px;
+    right: 8px;
+    min-width: 20px;
+    height: 20px;
+    padding: 0 5px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.66rem;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    line-height: 1;
+    border-radius: 6px;
+    color: rgb(var(--gt-grade-strong));
+    background: rgba(0, 0, 0, 0.42);
+    border: 1px solid rgba(var(--gt-grade), 0.55);
+    box-shadow: 0 0 10px rgba(var(--gt-grade), 0.34), inset 0 0 6px rgba(var(--gt-grade), 0.16);
+    text-shadow: 0 0 8px rgba(var(--gt-grade), 0.6);
+    pointer-events: none;
+    z-index: 4;
+}
+.talent-card.gt-rank-S .gt-rank-badge,
+.talent-card.gt-rank-EX .gt-rank-badge {
+    animation: gtBadgeGlow 1.8s ease-in-out infinite;
+}
+@keyframes gtBadgeGlow {
+    0%, 100% { box-shadow: 0 0 10px rgba(var(--gt-grade), 0.34), inset 0 0 6px rgba(var(--gt-grade), 0.16); }
+    50%      { box-shadow: 0 0 18px rgba(var(--gt-grade), 0.66), inset 0 0 10px rgba(var(--gt-grade-strong), 0.28); }
+}
+
+/* 分级揭晓：品阶越高，入场越"重" */
+.talent-result-grid > .talent-card.gt-rank-C { animation: gtRevealC 0.42s cubic-bezier(0.22, 0.61, 0.36, 1) both; }
+.talent-result-grid > .talent-card.gt-rank-B { animation: gtRevealB 0.5s cubic-bezier(0.22, 0.61, 0.36, 1) both; }
+.talent-result-grid > .talent-card.gt-rank-A { animation: gtRevealA 0.58s cubic-bezier(0.22, 0.61, 0.36, 1) both; }
+.talent-result-grid > .talent-card.gt-rank-S { animation: gtRevealS 0.72s cubic-bezier(0.22, 0.61, 0.36, 1) both; }
+.talent-result-grid > .talent-card.gt-rank-EX { animation: gtRevealS 0.78s cubic-bezier(0.22, 0.61, 0.36, 1) both; }
+
+@keyframes gtRevealC {
+    from { opacity: 0; transform: translateY(8px) scale(0.98); filter: brightness(0.75); }
+    to   { opacity: 1; transform: translateY(0) scale(1); filter: brightness(1); }
+}
+@keyframes gtRevealB {
+    0%   { opacity: 0; transform: translateY(12px) scale(0.95); filter: brightness(0.5) saturate(0.6); }
+    60%  { opacity: 1; transform: translateY(-2px) scale(1.02); filter: brightness(1.15); }
+    100% { opacity: 1; transform: translateY(0) scale(1); filter: brightness(1); }
+}
+@keyframes gtRevealA {
+    0%   { opacity: 0; transform: translateY(14px) scale(0.92) rotate(-1deg); filter: brightness(0.45) saturate(0.5); }
+    55%  { opacity: 1; transform: translateY(-3px) scale(1.04) rotate(0.4deg); filter: brightness(1.3); }
+    100% { opacity: 1; transform: translateY(0) scale(1) rotate(0); filter: brightness(1); }
+}
+@keyframes gtRevealS {
+    0%   { opacity: 0; transform: translateY(18px) scale(0.88) rotate(-2deg); filter: brightness(0.3) saturate(0.4) blur(1px); }
+    45%  { opacity: 1; transform: translateY(-4px) scale(1.07) rotate(1deg); filter: brightness(1.55) saturate(1.25); }
+    70%  { transform: translateY(1px) scale(0.99) rotate(-0.3deg); }
+    100% { opacity: 1; transform: translateY(0) scale(1) rotate(0); filter: brightness(1); }
+}
+
+/* 结果网格分级光爆（由脚本按最高品阶挂类） */
+.talent-result-grid.gt-burst-C::after,
+.talent-result-grid.gt-burst-B::after,
+.talent-result-grid.gt-burst-A::after,
+.talent-result-grid.gt-burst-S::after {
+    content: "";
+    position: absolute;
+    inset: -12%;
+    border-radius: 20px;
+    pointer-events: none;
+    z-index: 5;
+    animation: gtBurstFade 0.9s ease-out both;
+}
+.talent-result-grid.gt-burst-C::after { background: radial-gradient(circle at 50% 40%, rgba(122,174,194,0.22), transparent 60%); }
+.talent-result-grid.gt-burst-B::after { background: radial-gradient(circle at 50% 40%, rgba(231,207,138,0.30), transparent 62%); }
+.talent-result-grid.gt-burst-A::after { background: radial-gradient(circle at 50% 40%, rgba(176,132,214,0.34), transparent 64%); }
+.talent-result-grid.gt-burst-S::after { background: radial-gradient(circle at 50% 40%, rgba(231,122,74,0.42), transparent 66%), radial-gradient(circle at 50% 40%, rgba(255,210,130,0.28), transparent 45%); }
+@keyframes gtBurstFade {
+    0%   { opacity: 0; transform: scale(0.72); }
+    35%  { opacity: 1; transform: scale(1.02); }
+    100% { opacity: 0; transform: scale(1.14); }
+}
+/* 让网格成为光爆定位参照 */
+.talent-result-grid { position: relative; }
+
+/* S/EX：整屏金红一闪（极短，克制） */
+.talent-result-grid.gt-burst-S::before,
+.talent-result-grid.gt-burst-EX::before {
+    content: "";
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    z-index: 40;
+    background: radial-gradient(circle at 50% 45%, rgba(255, 214, 150, 0.16), transparent 60%);
+    animation: gtScreenFlash 0.55s ease-out both;
+}
+@keyframes gtScreenFlash {
+    0%   { opacity: 0; }
+    25%  { opacity: 1; }
+    100% { opacity: 0; }
+}
+
+/* ==========================================================================
+   P5 · 天赋区布局修饰（更舒展、对齐更齐整）
+   ========================================================================== */
+.talent-result-grid {
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 12px;
+}
+.talent-card {
+    padding: 12px 13px;
+    border-radius: 13px;
+    min-height: 82px;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-start;
+}
+.talent-card strong {
+    padding-right: 26px; /* 给品阶徽章让位 */
+    line-height: 1.32;
+}
+.talent-inventory-grid {
+    grid-template-columns: repeat(auto-fit, minmax(165px, 1fr));
+    gap: 12px;
+}
+.talent-equipped-grid {
+    grid-template-columns: repeat(auto-fit, minmax(195px, 1fr));
+    gap: 12px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .talent-card.gt-rank-B,
+    .talent-card.gt-rank-A,
+    .talent-card.gt-rank-S,
+    .talent-card.gt-rank-EX,
+    .gt-rank-badge,
+    .talent-result-grid.gt-burst-C::after,
+    .talent-result-grid.gt-burst-B::after,
+    .talent-result-grid.gt-burst-A::after,
+    .talent-result-grid.gt-burst-S::after,
+    .talent-result-grid.gt-burst-S::before,
+    .talent-result-grid.gt-burst-EX::before {
+        animation: none !important;
+    }
+}
+
 /* ---- 一键关闭 -------------------------------------------------------- */
 html[data-gods-theme="off"] .gods-atmosphere,
 html[data-gods-theme="off"] .gods-cornered > .gods-corner {
