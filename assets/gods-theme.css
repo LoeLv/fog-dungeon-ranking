@@ -1,0 +1,304 @@
+/* ==========================================================================
+   诸神愚戏 · 神性主题增强层  (gods-theme.css)
+   --------------------------------------------------------------------------
+   纯叠加层：只增加装饰、光效、纹样，不改变现有布局与结构。
+   依赖 app.css 中已有的设计变量（--gold / --path-* / --font-display 等）。
+   可通过给 <html> 加 data-gods-theme="off" 整体关闭。
+   ========================================================================== */
+
+:root {
+    --gt-gold: var(--gold-light, #e7cf8a);
+    --gt-rune: rgba(231, 207, 138, 0.55);
+    --gt-rune-soft: rgba(231, 207, 138, 0.16);
+    --gt-ink: rgba(10, 12, 18, 0.72);
+}
+
+/* ---- 全局：选区 / 滚动条 / 焦点环 -------------------------------------- */
+::selection {
+    background: rgba(231, 207, 138, 0.26);
+    color: #fffaf0;
+    text-shadow: 0 0 12px rgba(231, 207, 138, 0.5);
+}
+
+* {
+    scrollbar-width: thin;
+    scrollbar-color: rgba(197, 166, 104, 0.55) rgba(0, 0, 0, 0.25);
+}
+::-webkit-scrollbar {
+    width: 11px;
+    height: 11px;
+}
+::-webkit-scrollbar-track {
+    background: linear-gradient(180deg, rgba(10, 12, 18, 0.9), rgba(10, 12, 18, 0.6));
+}
+::-webkit-scrollbar-thumb {
+    border-radius: 999px;
+    border: 2px solid transparent;
+    background-clip: content-box;
+    background-image: linear-gradient(180deg, rgba(231, 207, 138, 0.75), rgba(122, 93, 46, 0.75));
+    box-shadow: inset 0 0 6px rgba(0, 0, 0, 0.6);
+}
+::-webkit-scrollbar-thumb:hover {
+    background-image: linear-gradient(180deg, rgba(247, 227, 158, 0.95), rgba(150, 116, 60, 0.9));
+}
+
+:focus-visible {
+    outline: 2px solid rgba(231, 207, 138, 0.75);
+    outline-offset: 2px;
+    border-radius: 4px;
+}
+
+/* ---- 神性氛围层：金砂星尘 --------------------------------------------- */
+.gods-atmosphere {
+    position: fixed;
+    inset: 0;
+    z-index: 2;
+    pointer-events: none;
+    overflow: hidden;
+    mix-blend-mode: screen;
+    opacity: 0.85;
+}
+.gods-atmosphere::before,
+.gods-atmosphere::after {
+    content: "";
+    position: absolute;
+    inset: -20% -10%;
+    background-repeat: repeat;
+    will-change: transform;
+}
+/* 细密金砂 */
+.gods-atmosphere::before {
+    background-image:
+        radial-gradient(circle, rgba(231, 207, 138, 0.55) 0 1px, transparent 1.6px),
+        radial-gradient(circle, rgba(199, 168, 110, 0.34) 0 1px, transparent 1.4px);
+    background-size: 190px 190px, 260px 260px;
+    background-position: 0 0, 90px 130px;
+    animation: gtDriftA 90s linear infinite;
+}
+/* 较大光尘 */
+.gods-atmosphere::after {
+    background-image:
+        radial-gradient(circle, rgba(255, 240, 200, 0.5) 0 1.6px, transparent 2.6px),
+        radial-gradient(circle, rgba(211, 175, 97, 0.42) 0 1.4px, transparent 2.4px);
+    background-size: 420px 420px, 560px 560px;
+    background-position: 0 0, 200px 260px;
+    animation: gtDriftB 140s linear infinite;
+    opacity: 0.7;
+}
+@keyframes gtDriftA {
+    0%   { transform: translate3d(0, 0, 0); }
+    100% { transform: translate3d(-190px, -190px, 0); }
+}
+@keyframes gtDriftB {
+    0%   { transform: translate3d(0, 0, 0); }
+    100% { transform: translate3d(140px, -210px, 0); }
+}
+
+/* ---- 分节标题：金色渐变 + 符文下划线 + 神谕扫光 ----------------------- */
+.section-title {
+    position: relative;
+}
+.section-title::after {
+    content: "";
+    position: absolute;
+    left: 0;
+    bottom: -7px;
+    height: 1px;
+    width: 100%;
+    background:
+        linear-gradient(90deg,
+            rgba(231, 207, 138, 0.85) 0%,
+            rgba(231, 207, 138, 0.25) 22%,
+            rgba(231, 207, 138, 0.06) 60%,
+            transparent 100%);
+    box-shadow: 0 0 10px rgba(231, 207, 138, 0.28);
+}
+.section-title::before {
+    content: "◈";
+    position: absolute;
+    right: 0;
+    bottom: -12px;
+    font-size: 0.7rem;
+    color: var(--gt-rune);
+    opacity: 0.65;
+    text-shadow: 0 0 10px rgba(231, 207, 138, 0.45);
+    animation: gtRunePulse 4.5s ease-in-out infinite;
+}
+@keyframes gtRunePulse {
+    0%, 100% { opacity: 0.35; transform: scale(0.94) rotate(0deg); }
+    50%      { opacity: 0.9;  transform: scale(1.06) rotate(45deg); }
+}
+
+/* ---- 卡片四角纹饰（神话画框感） --------------------------------------- */
+.gods-cornered {
+    position: relative;
+}
+.gods-cornered > .gods-corner {
+    position: absolute;
+    width: 15px;
+    height: 15px;
+    pointer-events: none;
+    opacity: 0;
+    z-index: 3;
+    transition: opacity 0.4s ease, transform 0.4s ease, border-color 0.4s ease;
+    border-color: var(--gt-rune);
+    filter: drop-shadow(0 0 4px rgba(231, 207, 138, 0.35));
+}
+.gods-cornered > .gods-corner.tl { top: 6px; left: 6px; border-top: 1px solid; border-left: 1px solid; }
+.gods-cornered > .gods-corner.tr { top: 6px; right: 6px; border-top: 1px solid; border-right: 1px solid; }
+.gods-cornered > .gods-corner.bl { bottom: 6px; left: 6px; border-bottom: 1px solid; border-left: 1px solid; }
+.gods-cornered > .gods-corner.br { bottom: 6px; right: 6px; border-bottom: 1px solid; border-right: 1px solid; }
+
+.gods-cornered:hover > .gods-corner { opacity: 0.9; }
+.gods-cornered:hover > .gods-corner.tl { transform: translate(-3px, -3px); }
+.gods-cornered:hover > .gods-corner.tr { transform: translate(3px, -3px); }
+.gods-cornered:hover > .gods-corner.bl { transform: translate(-3px, 3px); }
+.gods-cornered:hover > .gods-corner.br { transform: translate(3px, 3px); }
+
+/* 卡片悬停：命途色晕光 + 轻微浮起 */
+.gods-cornered {
+    transition: box-shadow 0.35s ease, transform 0.35s ease, border-color 0.35s ease;
+}
+
+/* ---- 按钮：神谕流光 + 抬升 ------------------------------------------- */
+.btn {
+    position: relative;
+    transition: transform 0.22s ease, box-shadow 0.22s ease, border-color 0.22s ease, color 0.22s ease, background-color 0.22s ease;
+}
+.btn:hover {
+    transform: translateY(-1px);
+}
+.btn-primary {
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.42), 0 0 0 rgba(231, 207, 138, 0);
+}
+.btn-primary:hover {
+    box-shadow: 0 10px 28px rgba(0, 0, 0, 0.5), 0 0 22px rgba(231, 207, 138, 0.32);
+}
+.btn-outline {
+    background-image: linear-gradient(115deg,
+        transparent 32%,
+        rgba(231, 207, 138, 0.2) 50%,
+        transparent 68%);
+    background-size: 240% 100%;
+    background-position: 120% 0;
+    background-repeat: no-repeat;
+    transition: background-position 0.7s ease, transform 0.22s ease, box-shadow 0.22s ease, border-color 0.22s ease;
+}
+.btn-outline:hover {
+    background-position: -120% 0;
+    border-color: rgba(231, 207, 138, 0.6);
+    box-shadow: 0 0 18px rgba(231, 207, 138, 0.18);
+}
+
+/* ---- 命途导航按钮：点亮强化 ------------------------------------------ */
+.path-nav-btn {
+    transition: transform 0.25s ease, border-color 0.25s ease, box-shadow 0.25s ease, background-color 0.25s ease;
+}
+.path-nav-btn:hover,
+.path-nav-btn.active {
+    transform: translateY(-1px);
+}
+.path-nav-btn.active {
+    background-image: linear-gradient(180deg, rgba(231, 207, 138, 0.08), transparent);
+}
+
+/* ---- 头部徽记：呼吸神光 ---------------------------------------------- */
+.brand-emblem {
+    position: relative;
+}
+.brand-emblem::after {
+    content: "";
+    position: absolute;
+    inset: -6px;
+    border-radius: 14px;
+    background: radial-gradient(circle at 50% 45%, rgba(231, 207, 138, 0.28), transparent 68%);
+    opacity: 0.5;
+    pointer-events: none;
+    animation: gtEmblemBreath 6s ease-in-out infinite;
+    z-index: -1;
+}
+@keyframes gtEmblemBreath {
+    0%, 100% { opacity: 0.28; transform: scale(0.96); }
+    50%      { opacity: 0.7;  transform: scale(1.04); }
+}
+
+/* ---- 侧栏神谕条目：悬停微光 ------------------------------------------ */
+.oracle-item {
+    transition: transform 0.25s ease, box-shadow 0.25s ease, border-color 0.25s ease, background-color 0.25s ease;
+}
+.oracle-item:hover {
+    transform: translateX(3px);
+    box-shadow: -3px 0 0 rgba(231, 207, 138, 0.5), 0 6px 18px rgba(0, 0, 0, 0.4);
+}
+
+/* ---- 顶部氛围光带：缓慢游移 ------------------------------------------ */
+.header::before {
+    content: "";
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 0;
+    height: 1px;
+    background: linear-gradient(90deg,
+        transparent 0%,
+        rgba(231, 207, 138, 0.0) 15%,
+        rgba(231, 207, 138, 0.7) 50%,
+        rgba(231, 207, 138, 0.0) 85%,
+        transparent 100%);
+    background-size: 60% 100%;
+    background-repeat: no-repeat;
+    background-position: -60% 0;
+    animation: gtHeaderSweep 9s ease-in-out infinite;
+    opacity: 0.8;
+    pointer-events: none;
+}
+@keyframes gtHeaderSweep {
+    0%   { background-position: -60% 0; }
+    55%  { background-position: 120% 0; }
+    100% { background-position: 120% 0; }
+}
+
+/* ---- 详情/面板：入场淡升 --------------------------------------------- */
+.detail-panel,
+.leaderboard-panel,
+.stele-panel {
+    animation: gtRiseIn 0.5s cubic-bezier(0.22, 0.61, 0.36, 1) both;
+}
+@keyframes gtRiseIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to   { opacity: 1; transform: translateY(0); }
+}
+
+/* ---- 表格/数据行：悬停高亮 ------------------------------------------ */
+tbody tr:hover td {
+    background-color: rgba(231, 207, 138, 0.045);
+}
+
+/* ---- 链接：神性下划线 ------------------------------------------------ */
+a {
+    transition: color 0.2s ease, text-shadow 0.2s ease;
+}
+a:hover {
+    text-shadow: 0 0 10px rgba(231, 207, 138, 0.35);
+}
+
+/* ---- 无障碍 / 省电模式：关闭动画 ------------------------------------ */
+@media (prefers-reduced-motion: reduce) {
+    .gods-atmosphere::before,
+    .gods-atmosphere::after,
+    .section-title::before,
+    .brand-emblem::after,
+    .header::before,
+    .detail-panel,
+    .leaderboard-panel,
+    .stele-panel {
+        animation: none !important;
+    }
+    .gods-atmosphere { opacity: 0.4; }
+}
+
+/* ---- 一键关闭 -------------------------------------------------------- */
+html[data-gods-theme="off"] .gods-atmosphere,
+html[data-gods-theme="off"] .gods-cornered > .gods-corner {
+    display: none !important;
+}
