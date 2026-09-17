@@ -467,6 +467,101 @@ html[data-gods-theme="off"] .talent-slot-card {
     box-shadow: none !important;
 }
 
+/* ==========================================================================
+   P3 · 个人面板整体美化（档案 / 天赋 / 消息）
+   ========================================================================== */
+.profile-panel {
+    position: relative;
+    transition: box-shadow 0.3s ease, border-color 0.3s ease;
+}
+.profile-panel:hover {
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.42), 0 0 18px rgba(231, 207, 138, 0.12);
+}
+/* 面板标题：金色渐变 + 左侧刻度线 */
+.profile-panel-title {
+    position: relative;
+    padding-left: 12px;
+}
+.profile-panel-title::before {
+    content: "";
+    position: absolute;
+    left: 0;
+    top: 12%;
+    bottom: 12%;
+    width: 3px;
+    border-radius: 2px;
+    background: linear-gradient(180deg, rgba(231, 207, 138, 0.9), rgba(150, 116, 60, 0.35));
+    box-shadow: 0 0 10px rgba(231, 207, 138, 0.4);
+}
+/* 指标胶囊/条：数值脉冲 + 微光 */
+.metric-pill,
+.metric-strip {
+    transition: box-shadow 0.3s ease, transform 0.3s ease, border-color 0.3s ease;
+}
+.metric-pill:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 0 14px rgba(231, 207, 138, 0.2);
+}
+/* 天赋池卡：命途色描边 + 悬停浮起 */
+.talent-pool-card {
+    position: relative;
+    transition: box-shadow 0.3s ease, transform 0.3s ease, border-color 0.3s ease;
+}
+.talent-pool-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 10px 24px rgba(0, 0, 0, 0.4), 0 0 16px rgba(231, 207, 138, 0.16);
+}
+/* 属性/背包网格里的条目统一入场 */
+.talent-overflow-card {
+    transition: transform 0.25s ease, box-shadow 0.25s ease, border-color 0.25s ease;
+}
+.talent-overflow-card:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 0 14px rgba(231, 207, 138, 0.16);
+}
+
+/* ==========================================================================
+   P4 · 馆主后台 + 全站收尾
+   ========================================================================== */
+.admin-panel {
+    position: relative;
+    transition: box-shadow 0.3s ease, border-color 0.3s ease;
+}
+.admin-panel:hover {
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.45), 0 0 16px rgba(231, 207, 138, 0.1);
+}
+/* 后台表格：斑马纹 + 行悬停 */
+table tbody tr:nth-child(even) td {
+    background-color: rgba(255, 255, 255, 0.018);
+}
+table tbody tr {
+    transition: background-color 0.18s ease;
+}
+table tbody tr:hover td {
+    background-color: rgba(231, 207, 138, 0.07);
+}
+/* 全局：滚动进入内容轻微淡升（交由现有动画类，不强制） */
+.page-enter,
+.view-enter {
+    animation: gtRiseIn 0.45s cubic-bezier(0.22, 0.61, 0.36, 1) both;
+}
+/* 空状态/加载：神谕符印 */
+.gt-spinner {
+    display: inline-block;
+    width: 20px;
+    height: 20px;
+    border: 2px solid rgba(231, 207, 138, 0.25);
+    border-top-color: rgba(231, 207, 138, 0.9);
+    border-radius: 50%;
+    animation: gtSpin 0.9s linear infinite;
+}
+@keyframes gtSpin { to { transform: rotate(360deg); } }
+
+@media (prefers-reduced-motion: reduce) {
+    .gt-spinner { animation: none; }
+    .page-enter, .view-enter { animation: none !important; }
+}
+
 /* ---- 一键关闭 -------------------------------------------------------- */
 html[data-gods-theme="off"] .gods-atmosphere,
 html[data-gods-theme="off"] .gods-cornered > .gods-corner {
