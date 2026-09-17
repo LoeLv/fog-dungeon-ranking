@@ -231,3 +231,72 @@
         init();
     }
 })();
+
+
+/* ==========================================================================
+   v3.1 追加：为携带槽 / 仓库位注入品阶标记（gt-slot-X + 角标）
+   独立于主脚本，自建观察器，随列表重渲染自动补挂。
+   ========================================================================== */
+(function () {
+    if (window.__godsSlotDecor) return;
+    window.__godsSlotDecor = true;
+
+    var RANK_CLASSES = ['gt-slot-C', 'gt-slot-B', 'gt-slot-A', 'gt-slot-S', 'gt-slot-EX'];
+    var pending = null;
+    var reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+    function slotRank(text) {
+        var m = text.match(/[（(]\s*(EX|S|A|B|C)\s*[·•]/) || text.match(/\b(EX|S|A|B|C)\s*级/);
+        return m ? m[1] : null;
+    }
+
+    function decorateSlots(root) {
+        var cards;
+        try { cards = (root || document).querySelectorAll('.talent-slot-card'); }
+        catch (e) { return; }
+        for (var i = 0; i < cards.length; i++) {
+            var card = cards[i];
+            var empty = card.classList.contains('empty') || card.classList.contains('pending');
+            var rank = empty ? null : slotRank(card.textContent || '');
+            var tag = card.querySelector(':scope > .gt-slot-tag');
+            if (!rank) {
+                for (var r = 0; r < RANK_CLASSES.length; r++) card.classList.remove(RANK_CLASSES[r]);
+                if (tag) tag.parentNode.removeChild(tag);
+                continue;
+            }
+            var cls = 'gt-slot-' + rank;
+            if (!card.classList.contains(cls)) {
+                for (var k = 0; k < RANK_CLASSES.length; k++) card.classList.remove(RANK_CLASSES[k]);
+                card.classList.add(cls);
+            }
+            if (!tag) {
+                tag = document.createElement('span');
+                tag.className = 'gt-slot-tag';
+                tag.setAttribute('aria-hidden', 'true');
+                tag.textContent = rank;
+                card.appendChild(tag);
+            } else if (tag.textContent !== rank) {
+                tag.textContent = rank;
+            }
+        }
+    }
+
+    function schedule() {
+        if (pending) return;
+        pending = window.setTimeout(function () { pending = null; decorateSlots(document); }, 320);
+    }
+
+    function init() {
+        if (!document.body) return;
+        decorateSlots(document);
+        if (!reduce && window.MutationObserver) {
+            try { new MutationObserver(schedule).observe(document.body, { childList: true, subtree: true }); }
+            catch (e) {}
+        }
+    }
+
+    if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init);
+    else init();
+
+    window.__godsSlotDecor = { refresh: function () { decorateSlots(document); } };
+})();

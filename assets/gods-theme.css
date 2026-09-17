@@ -730,3 +730,164 @@ html[data-gods-theme="off"] .talent-slot-card.empty { animation: none !important
     .gt-spotlight { display: none; }
     body::after { opacity: 0.85; }
 }
+
+
+/* ==========================================================================
+   v3.1 追加：携带槽 / 天赋仓库位 精饰增强
+   （针对 .talent-equipped-grid / .talent-inventory-grid 内的 .talent-slot-card）
+   ========================================================================== */
+
+/* 网格更透气 */
+.talent-equipped-grid,
+.talent-inventory-grid {
+    gap: 14px !important;
+}
+
+/* 共享基底：玻璃鎏金 + 内高光 + 顶部扫光 */
+.talent-equipped-grid .talent-slot-card,
+.talent-inventory-grid .talent-slot-card {
+    position: relative;
+    overflow: hidden;
+    isolation: isolate;
+    border-radius: 15px !important;
+    border: 1px solid rgba(231, 207, 138, 0.16) !important;
+    background:
+        radial-gradient(130% 90% at 50% -12%, rgba(231, 207, 138, 0.08), transparent 62%),
+        linear-gradient(160deg, rgba(29, 33, 49, 0.92) 0%, rgba(12, 15, 24, 0.86) 100%) !important;
+    box-shadow: 0 14px 34px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.05) !important;
+    transition: transform .32s cubic-bezier(.2,.7,.3,1), box-shadow .32s ease, border-color .32s ease;
+}
+.talent-equipped-grid .talent-slot-card::before,
+.talent-inventory-grid .talent-slot-card::before {
+    content: "";
+    position: absolute; left: 0; right: 0; top: 0; height: 2px;
+    background: linear-gradient(90deg, transparent, rgba(231, 207, 138, 0.8), transparent);
+    transform: translateX(-100%);
+    transition: transform .6s ease;
+    pointer-events: none; z-index: 3;
+}
+.talent-equipped-grid .talent-slot-card:hover::before,
+.talent-inventory-grid .talent-slot-card:hover::before { transform: translateX(0); }
+
+/* 悬停浮起（非空卡） */
+.talent-equipped-grid .talent-slot-card:hover:not(.empty):not(.pending),
+.talent-inventory-grid .talent-slot-card:hover:not(.empty):not(.pending) {
+    transform: translateY(-4px);
+    border-color: rgba(231, 207, 138, 0.5) !important;
+    box-shadow: 0 22px 48px rgba(0, 0, 0, 0.6), 0 0 30px rgba(231, 207, 138, 0.22),
+                inset 0 1px 0 rgba(255, 255, 255, 0.08) !important;
+}
+
+/* ===== 品阶着色（JS 注入 gt-slot-X） ===== */
+.talent-slot-card.gt-slot-C  { --gt-rk: 150, 168, 188; }
+.talent-slot-card.gt-slot-B  { --gt-rk: 200, 150, 88; }
+.talent-slot-card.gt-slot-A  { --gt-rk: 145, 128, 222; }
+.talent-slot-card.gt-slot-S  { --gt-rk: 240, 178, 92; }
+.talent-slot-card.gt-slot-EX { --gt-rk: 245, 227, 168; }
+
+.talent-slot-card[class*="gt-slot-"] {
+    border-color: rgba(var(--gt-rk), 0.5) !important;
+    box-shadow: 0 14px 34px rgba(0, 0, 0, 0.5), 0 0 24px rgba(var(--gt-rk), 0.24),
+                inset 0 1px 0 rgba(255, 255, 255, 0.06) !important;
+}
+/* 左侧品阶光条 */
+.talent-slot-card[class*="gt-slot-"]::after {
+    content: "";
+    position: absolute; left: 0; top: 0; bottom: 0; width: 3px;
+    background: linear-gradient(180deg, rgba(var(--gt-rk), 0.98), rgba(var(--gt-rk), 0.18));
+    box-shadow: 0 0 14px rgba(var(--gt-rk), 0.7);
+    pointer-events: none;
+}
+/* 右上角品阶铭牌 */
+.talent-slot-card[class*="gt-slot-"] > .gt-slot-tag {
+    position: absolute; bottom: 0; right: 0; z-index: 4;
+    font-family: var(--font-display); font-size: 0.62rem; font-weight: 700;
+    letter-spacing: 0.08em; line-height: 1;
+    padding: 4px 7px 5px; border-top-left-radius: 10px;
+    color: #14100a;
+    background: linear-gradient(160deg, rgba(var(--gt-rk), 1), rgba(var(--gt-rk), 0.65));
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.5), 0 0 14px rgba(var(--gt-rk), 0.55);
+    pointer-events: none;
+}
+/* S / EX 卡：呼吸辉光 */
+.talent-slot-card.gt-slot-S,
+.talent-slot-card.gt-slot-EX { animation: gtSlotRankGlow 3.4s ease-in-out infinite; }
+@keyframes gtSlotRankGlow {
+    0%, 100% { box-shadow: 0 14px 34px rgba(0,0,0,0.5), 0 0 20px rgba(var(--gt-rk), 0.2), inset 0 1px 0 rgba(255,255,255,0.06); }
+    50%      { box-shadow: 0 14px 34px rgba(0,0,0,0.5), 0 0 34px rgba(var(--gt-rk), 0.5), inset 0 1px 0 rgba(255,255,255,0.08); }
+}
+
+/* ===== 抬头行：铭牌化 ===== */
+.talent-slot-head { align-items: center; }
+.talent-slot-head span:first-child {
+    display: inline-flex; align-items: center; gap: 5px;
+    color: var(--gt-gold-2) !important;
+    font-weight: 600; letter-spacing: 0.03em;
+}
+.talent-slot-head span:first-child::before {
+    content: "◈"; font-size: 0.72em; color: rgba(231, 207, 138, 0.75);
+    text-shadow: 0 0 8px rgba(231, 207, 138, 0.6);
+}
+.talent-slot-head span:last-child {
+    padding: 1px 7px; border-radius: 999px;
+    border: 1px solid rgba(231, 207, 138, 0.22);
+    background: rgba(231, 207, 138, 0.06);
+    color: rgba(214, 220, 240, 0.72) !important;
+    font-size: 0.66rem; letter-spacing: 0.04em;
+}
+.talent-slot-card.pending .talent-slot-head span:last-child {
+    border-color: rgba(214, 220, 240, 0.28);
+    background: rgba(214, 220, 240, 0.06);
+}
+
+/* ===== 名称：描金渐变（满卡） ===== */
+.talent-slot-card:not(.empty):not(.pending) .talent-slot-name {
+    background: linear-gradient(180deg, #fff6dc 0%, #efd692 55%, #c39a45 100%);
+    -webkit-background-clip: text; background-clip: text;
+    color: transparent; -webkit-text-fill-color: transparent;
+    filter: drop-shadow(0 1px 6px rgba(231, 207, 138, 0.28));
+    letter-spacing: 0.01em;
+}
+
+/* ===== 元信息：碎片化小胶囊 ===== */
+.talent-slot-meta {
+    color: rgba(198, 208, 226, 0.78) !important;
+    letter-spacing: 0.02em;
+}
+
+/* ===== 空 / 锁定态：符印呼吸 + 旋转环 ===== */
+.talent-equipped-grid .talent-slot-card.empty,
+.talent-inventory-grid .talent-slot-card.empty {
+    border-style: dashed !important;
+    border-color: rgba(231, 207, 138, 0.22) !important;
+    background:
+        radial-gradient(120% 90% at 50% -10%, rgba(231, 207, 138, 0.05), transparent 60%),
+        linear-gradient(160deg, rgba(18, 21, 33, 0.72) 0%, rgba(10, 12, 20, 0.7) 100%) !important;
+    animation: gtSlotBreathe 4.6s ease-in-out infinite;
+}
+.talent-mini-empty { position: relative; }
+.talent-mini-empty > span { position: relative; display: inline-flex; }
+.talent-mini-empty > span::after {
+    content: "";
+    position: absolute; inset: -8px; border-radius: 50%;
+    border: 1px dashed rgba(231, 207, 138, 0.38);
+    border-top-color: rgba(143, 216, 207, 0.6);
+    animation: gtEmblemSpin 11s linear infinite;
+    pointer-events: none;
+}
+.talent-mini-empty strong {
+    color: rgba(231, 207, 138, 0.85) !important;
+    letter-spacing: 0.04em;
+}
+.talent-mini-empty small { color: rgba(180, 190, 210, 0.6) !important; }
+
+/* ===== 末尾：微弱内角饰（仅满卡） ===== */
+.talent-slot-card:not(.empty):not(.pending)::marker { content: none; }
+
+@media (prefers-reduced-motion: reduce) {
+    .talent-slot-card.gt-slot-S,
+    .talent-slot-card.gt-slot-EX,
+    .talent-equipped-grid .talent-slot-card.empty,
+    .talent-inventory-grid .talent-slot-card.empty,
+    .talent-mini-empty > span::after { animation: none !important; }
+}
