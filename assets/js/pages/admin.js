@@ -11,8 +11,8 @@ function renderAdminHonorRows(items, type, targetName) {
         const source = type === 'title' ? item.title_god : item.curse_god;
         const typeLabel = type === 'curse' ? ` · ${getProfileCurseTypeLabel(item.curse_type || item.curseType)}` : '';
         const action = active
-            ? `<button class="btn btn-outline btn-sm" onclick="adminRevokeHonor('${type}', ${Number(item.id)}, ${escapeHtml(jsString(targetName))}, ${escapeHtml(jsString(label))})">回收</button>`
-            : `<button class="btn btn-primary btn-sm" onclick="adminRestoreHonor('${type}', ${Number(item.id)}, ${escapeHtml(jsString(targetName))}, ${escapeHtml(jsString(label))})">恢复</button>`;
+            ? `<button class="btn btn-outline btn-sm" onclick="adminRevokeHonor('${type}', ${Number(item.id)}, ${escapeAttrString(targetName)}, ${escapeAttrString(label)})">回收</button>`
+            : `<button class="btn btn-primary btn-sm" onclick="adminRestoreHonor('${type}', ${Number(item.id)}, ${escapeAttrString(targetName)}, ${escapeAttrString(label)})">恢复</button>`;
         return `<div class="profile-title-status ${type === 'curse' ? 'profile-curse-status' : ''}">
             <div class="profile-title-status-head"><strong>${escapeHtml(label || '未命名')}</strong><small>${active ? '生效中' : '已回收'}</small></div>
             <div class="profile-title-status-note">${escapeHtml(source || '馆主亲授')}${escapeHtml(typeLabel)} · ${escapeHtml(item.granted_by_name || '未记录')} · ${escapeHtml(formatAdminTime(item.granted_at))}</div>

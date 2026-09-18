@@ -278,6 +278,10 @@ function escapeHtml(s) { const d=document.createElement('div'); d.textContent=s|
 
 function jsString(value) { return JSON.stringify(String(value ?? '')); }
 
+// 用于内联 onclick="...（双引号属性）" 场景：先转义 & < >，再把双引号转成 &quot;，
+// 避免 JSON 字符串自带的双引号提前截断 HTML 属性，导致内联处理器语法错误而“按钮失效”。
+function escapeAttrString(value) { return escapeHtml(jsString(value)).replace(/"/g, '&quot;'); }
+
 // 站内确认框：替代 window.confirm，避免在部分环境中原生对话框被自动取消而导致操作流程提前中断。
 function gtEnsureConfirmStyles() {
     if (document.getElementById('gtConfirmStyles')) return;
