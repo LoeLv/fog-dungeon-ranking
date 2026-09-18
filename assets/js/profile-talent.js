@@ -680,6 +680,152 @@ function getProfileExportPayload() {
     };
 }
 
+/* ===== 导出档案图 v4「圣所档案」· 辅助绘制函数 ===== */
+function gtSeededRandom(seed) {
+    let s = seed >>> 0;
+    return function () { s = (s * 1664525 + 1013904223) >>> 0; return s / 4294967296; };
+}
+
+function gtHexA(color, a) {
+    if (typeof color !== 'string') return color;
+    const m = color.match(/^#([0-9a-fA-F]{6})$/);
+    if (!m) return color;
+    const n = parseInt(m[1], 16);
+    return `rgba(${(n >> 16) & 255},${(n >> 8) & 255},${n & 255},${a})`;
+}
+
+function gtRankColor(rank) {
+    const r = String(rank || '').toUpperCase();
+    if (!r) return null;
+    if (r.includes('EX') || r.includes('专')) return '#f5e3a8';
+    if (r.includes('S')) return '#f0b25c';
+    if (r.includes('A')) return '#8b7bd8';
+    if (r.includes('B')) return '#c49254';
+    if (r.includes('C')) return '#96a8bc';
+    return null;
+}
+
+function gtHairline(ctx, x1, y, x2, color, alpha = 0.5, lineWidth = 2) {
+    const g = ctx.createLinearGradient(x1, 0, x2, 0);
+    g.addColorStop(0, gtHexA(color, 0));
+    g.addColorStop(0.5, gtHexA(color, alpha));
+    g.addColorStop(1, gtHexA(color, 0));
+    ctx.save();
+    ctx.strokeStyle = g;
+    ctx.lineWidth = lineWidth;
+    ctx.beginPath();
+    ctx.moveTo(x1, y);
+    ctx.lineTo(x2, y);
+    ctx.stroke();
+    ctx.restore();
+}
+
+function gtDiamond(ctx, cx, cy, size, color, alpha = 1) {
+    ctx.save();
+    ctx.globalAlpha = alpha;
+    ctx.fillStyle = color;
+    ctx.translate(cx, cy);
+    ctx.rotate(Math.PI / 4);
+    ctx.fillRect(-size / 2, -size / 2, size, size);
+    ctx.restore();
+}
+
+function gtStarfield(ctx, w, h, main, accent, seed) {
+    const rnd = gtSeededRandom(seed);
+    for (let i = 0; i < 180; i++) {
+        const x = rnd() * w;
+        const y = rnd() * h;
+        const r = rnd() * 1.5 + 0.3;
+        ctx.save();
+        ctx.globalAlpha = 0.10 + rnd() * 0.45;
+        ctx.fillStyle = rnd() < 0.16 ? '#ffffff' : (rnd() < 0.5 ? main : accent);
+        ctx.beginPath();
+        ctx.arc(x, y, r, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+    }
+    for (let i = 0; i < 16; i++) {
+        const x = rnd() * w;
+        const y = rnd() * h;
+        const r = 1.4 + rnd() * 1.8;
+        const g = ctx.createRadialGradient(x, y, 0, x, y, r * 7);
+        g.addColorStop(0, 'rgba(255,255,255,0.42)');
+        g.addColorStop(1, 'rgba(255,255,255,0)');
+        ctx.fillStyle = g;
+        ctx.beginPath();
+        ctx.arc(x, y, r * 7, 0, Math.PI * 2);
+        ctx.fill();
+    }
+}
+
+function gtCornerOrnaments(ctx, x, y, w, h, size, color) {
+    const corners = [[x, y, 1, 1], [x + w, y, -1, 1], [x, y + h, 1, -1], [x + w, y + h, -1, -1]];
+    ctx.save();
+    ctx.strokeStyle = color;
+    ctx.lineWidth = 3;
+    ctx.lineCap = 'round';
+    ctx.globalAlpha = 0.85;
+    for (const [cx, cy, sx, sy] of corners) {
+        ctx.beginPath();
+        ctx.moveTo(cx + sx * size, cy);
+        ctx.lineTo(cx + sx * 16, cy);
+        ctx.quadraticCurveTo(cx, cy, cx, cy + sy * 16);
+        ctx.lineTo(cx, cy + sy * size);
+        ctx.stroke();
+    }
+    ctx.restore();
+}
+
+function gtSectionHeading(ctx, text, x, y, color, ruleEnd) {
+    gtDiamond(ctx, x + 9, y - 10, 13, color, 0.95);
+    ctx.save();
+    ctx.fillStyle = color;
+    ctx.font = '900 30px "Microsoft YaHei", sans-serif';
+    ctx.textAlign = 'left';
+    ctx.fillText(text, x + 30, y);
+    const tw = ctx.measureText(text).width;
+    ctx.restore();
+    const startX = x + 30 + tw + 22;
+    if (startX < ruleEnd) gtHairline(ctx, startX, y - 10, ruleEnd, color, 0.42, 2);
+}
+
+function gtCardShell(ctx, x, y, w, h, r, borderColor, fillA, fillB, leftColor) {
+    drawRoundRect(ctx, x, y, w, h, r);
+    const g = ctx.createLinearGradient(x, y, x, y + h);
+    g.addColorStop(0, fillA);
+    g.addColorStop(1, fillB);
+    ctx.fillStyle = g;
+    ctx.fill();
+    if (leftColor) {
+        ctx.save();
+        drawRoundRect(ctx, x, y, w, h, r);
+        ctx.clip();
+        const lg = ctx.createLinearGradient(x, y, x + 40, y);
+        lg.addColorStop(0, gtHexA(leftColor, 0.9));
+        lg.addColorStop(1, gtHexA(leftColor, 0));
+        ctx.fillStyle = lg;
+        ctx.fillRect(x, y, 40, h);
+        ctx.restore();
+    }
+    ctx.save();
+    drawRoundRect(ctx, x, y, w, h, r);
+    ctx.clip();
+    const hg = ctx.createLinearGradient(x, 0, x + w, 0);
+    hg.addColorStop(0, 'rgba(255,255,255,0)');
+    hg.addColorStop(0.5, 'rgba(255,255,255,0.12)');
+    hg.addColorStop(1, 'rgba(255,255,255,0)');
+    ctx.fillStyle = hg;
+    ctx.fillRect(x, y, w, 2);
+    ctx.restore();
+    ctx.save();
+    ctx.strokeStyle = borderColor;
+    ctx.globalAlpha = 0.5;
+    ctx.lineWidth = 1.5;
+    drawRoundRect(ctx, x, y, w, h, r);
+    ctx.stroke();
+    ctx.restore();
+}
+
 function drawProfileCardImage(payload) {
     const width = 1200;
     const scale = Math.max(1, Math.floor(window.devicePixelRatio || 1));
@@ -697,9 +843,7 @@ function drawProfileCardImage(payload) {
         }).filter(Boolean).join(' / ')
         : '暂无已佩戴称号';
     const titleLines = wrapCanvasText(measureCtx, titleText, 960, Infinity);
-    const itemEntries = Array.isArray(payload.items) && payload.items.length
-        ? payload.items
-        : ['无'];
+    const itemEntries = Array.isArray(payload.items) && payload.items.length ? payload.items : ['无'];
     const itemLayouts = itemEntries.map(item => {
         measureCtx.font = '700 28px "Microsoft YaHei", sans-serif';
         const lines = wrapCanvasText(measureCtx, String(item || '无'), 880, Infinity);
@@ -757,18 +901,36 @@ function drawProfileCardImage(payload) {
     const skin = getGodSkin(payload.faithGod);
     const main = skin.primary || '#d5a742';
     const accent = skin.secondary || '#7f8cff';
-    const bg = ctx.createLinearGradient(0, 0, width, height);
-    bg.addColorStop(0, '#080a10');
-    bg.addColorStop(0.48, '#111521');
-    bg.addColorStop(1, '#07070b');
+
+    /* --- 底色：深邃星域渐变 --- */
+    const bg = ctx.createLinearGradient(0, 0, width * 0.4, height);
+    bg.addColorStop(0, '#070810');
+    bg.addColorStop(0.46, '#10131f');
+    bg.addColorStop(1, '#06060a');
     ctx.fillStyle = bg;
     ctx.fillRect(0, 0, width, height);
 
+    /* --- 神性辉光：左上主色 + 右下副色 --- */
+    const glowTL = ctx.createRadialGradient(200, 150, 0, 200, 150, 980);
+    glowTL.addColorStop(0, gtHexA(main, 0.20));
+    glowTL.addColorStop(0.5, gtHexA(main, 0.05));
+    glowTL.addColorStop(1, gtHexA(main, 0));
+    ctx.fillStyle = glowTL;
+    ctx.fillRect(0, 0, width, height);
+
+    const glowBR = ctx.createRadialGradient(width - 210, height - 300, 0, width - 210, height - 300, 1100);
+    glowBR.addColorStop(0, gtHexA(accent, 0.16));
+    glowBR.addColorStop(0.55, gtHexA(accent, 0.04));
+    glowBR.addColorStop(1, gtHexA(accent, 0));
+    ctx.fillStyle = glowBR;
+    ctx.fillRect(0, 0, width, height);
+
+    /* --- 斜向细纹 --- */
     ctx.save();
-    ctx.globalAlpha = 0.08;
+    ctx.globalAlpha = 0.05;
     ctx.strokeStyle = main;
     ctx.lineWidth = 2;
-    for (let x = -height; x < width; x += 72) {
+    for (let x = -height; x < width; x += 76) {
         ctx.beginPath();
         ctx.moveTo(x, height);
         ctx.lineTo(x + height, 0);
@@ -776,11 +938,15 @@ function drawProfileCardImage(payload) {
     }
     ctx.restore();
 
+    /* --- 星尘粒子 --- */
+    gtStarfield(ctx, width, height, main, accent, 20260918);
+
+    /* --- 背景水印 --- */
     ctx.save();
     ctx.translate(width / 2, height / 2);
     ctx.rotate(-Math.PI / 7);
     ctx.font = '900 118px "Microsoft YaHei", sans-serif';
-    ctx.fillStyle = 'rgba(231,207,138,0.055)';
+    ctx.fillStyle = 'rgba(231,207,138,0.04)';
     ctx.textAlign = 'center';
     for (let y = -760; y <= 760; y += 260) {
         for (let x = -760; x <= 760; x += 680) {
@@ -789,138 +955,267 @@ function drawProfileCardImage(payload) {
     }
     ctx.restore();
 
+    /* --- 主框体：暗底 + 常显金框 + 内边框 + 四角纹饰 --- */
     drawRoundRect(ctx, 62, 62, width - 124, height - 124, 28);
-    ctx.fillStyle = 'rgba(12,14,22,0.82)';
+    const frameFill = ctx.createLinearGradient(0, 62, 0, height - 62);
+    frameFill.addColorStop(0, 'rgba(14,16,25,0.86)');
+    frameFill.addColorStop(1, 'rgba(10,11,18,0.90)');
+    ctx.fillStyle = frameFill;
     ctx.fill();
+    ctx.save();
     ctx.strokeStyle = main;
-    ctx.globalAlpha = 0.55;
-    ctx.lineWidth = 2;
+    ctx.globalAlpha = 0.6;
+    ctx.lineWidth = 2.5;
     ctx.stroke();
-    ctx.globalAlpha = 1;
+    ctx.restore();
+    const inset = 20;
+    ctx.save();
+    ctx.strokeStyle = gtHexA(main, 0.30);
+    ctx.lineWidth = 1;
+    drawRoundRect(ctx, 62 + inset, 62 + inset, width - 124 - inset * 2, height - 124 - inset * 2, 20);
+    ctx.stroke();
+    ctx.restore();
+    gtCornerOrnaments(ctx, 62 + inset, 62 + inset, width - 124 - inset * 2, height - 124 - inset * 2, 46, gtHexA(main, 0.9));
 
+    /* --- 顶部标题 + 圣辉分隔线 --- */
+    gtDiamond(ctx, 112, 128, 15, main, 0.95);
     ctx.fillStyle = main;
     ctx.font = '900 34px "Microsoft YaHei", sans-serif';
-    ctx.fillText('诸神愚戏 · 信徒档案', 108, 138);
+    ctx.textAlign = 'left';
+    ctx.fillText('诸神愚戏 · 信徒档案', 132, 138);
     ctx.fillStyle = 'rgba(234,234,242,0.58)';
     ctx.font = '600 22px "Microsoft YaHei", sans-serif';
-    ctx.fillText(`导出时间 ${formatDate(payload.exportedAt.toISOString())}`, 108, 178);
+    ctx.fillText(`导出时间 ${formatDate(payload.exportedAt.toISOString())}`, 132, 178);
 
-    ctx.textAlign = 'right';
-    ctx.fillStyle = 'rgba(231,207,138,0.9)';
-    ctx.font = '900 92px "Microsoft YaHei", sans-serif';
-    ctx.fillText(getGodIcon(payload.faithGod) || '✦', width - 110, 150);
-    ctx.font = '700 24px "Microsoft YaHei", sans-serif';
-    ctx.fillText(`${payload.faithGod} · ${skin.motif || '命途'}`, width - 110, 188);
+    /* --- 信仰之神徽记章 --- */
+    const mx = width - 176;
+    const my = 152;
+    const mr = 58;
+    const mg = ctx.createRadialGradient(mx, my, mr * 0.3, mx, my, mr * 1.8);
+    mg.addColorStop(0, gtHexA(main, 0.5));
+    mg.addColorStop(1, gtHexA(main, 0));
+    ctx.fillStyle = mg;
+    ctx.beginPath();
+    ctx.arc(mx, my, mr * 1.8, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.beginPath();
+    ctx.arc(mx, my, mr, 0, Math.PI * 2);
+    const dg = ctx.createLinearGradient(mx - mr, my - mr, mx + mr, my + mr);
+    dg.addColorStop(0, 'rgba(22,24,36,0.96)');
+    dg.addColorStop(1, 'rgba(11,12,20,0.96)');
+    ctx.fillStyle = dg;
+    ctx.fill();
+    ctx.save();
+    ctx.strokeStyle = gtHexA(main, 0.85);
+    ctx.lineWidth = 2.5;
+    ctx.stroke();
+    ctx.restore();
+    ctx.save();
+    ctx.strokeStyle = gtHexA(main, 0.32);
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.arc(mx, my, mr - 8, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.restore();
+    ctx.save();
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.shadowColor = gtHexA(main, 0.75);
+    ctx.shadowBlur = 16;
+    ctx.fillStyle = gtHexA(main, 0.97);
+    ctx.font = '900 58px "Microsoft YaHei", sans-serif';
+    ctx.fillText(getGodIcon(payload.faithGod) || '✦', mx, my + 2);
+    ctx.restore();
+    ctx.save();
+    ctx.textAlign = 'center';
+    ctx.fillStyle = 'rgba(234,234,242,0.74)';
+    ctx.font = '700 22px "Microsoft YaHei", sans-serif';
+    ctx.fillText(`${payload.faithGod} · ${skin.motif || '命途'}`, mx, my + mr + 32);
+    ctx.restore();
     ctx.textAlign = 'left';
+    ctx.textBaseline = 'alphabetic';
 
-    ctx.fillStyle = '#f4f0df';
+    /* --- 圣辉分隔线 --- */
+    gtHairline(ctx, 96, 214, width - 96, main, 0.55, 2);
+
+    /* --- 名讳 --- */
+    ctx.save();
+    ctx.shadowColor = gtHexA(main, 0.35);
+    ctx.shadowBlur = 12;
+    ctx.fillStyle = '#f6f2e2';
     ctx.font = '900 72px "Microsoft YaHei", sans-serif';
-    ctx.fillText(payload.displayName, 108, 292);
+    ctx.fillText(payload.displayName, 108, 300);
+    ctx.restore();
+    const nameWidth = ctx.measureText(payload.displayName).width;
+    ctx.save();
+    const ng = ctx.createLinearGradient(108, 0, 108 + Math.max(nameWidth, 240), 0);
+    ng.addColorStop(0, gtHexA(main, 0.9));
+    ng.addColorStop(1, gtHexA(main, 0));
+    ctx.strokeStyle = ng;
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.moveTo(108, 318);
+    ctx.lineTo(108 + Math.max(nameWidth, 240), 318);
+    ctx.stroke();
+    ctx.restore();
     ctx.fillStyle = 'rgba(234,234,242,0.78)';
     ctx.font = '700 30px "Microsoft YaHei", sans-serif';
     const professionLine = payload.professionClass
         ? `职业：${payload.professionClass} · ${payload.profession}`
         : `职业：${payload.profession}`;
-    ctx.fillText(professionLine, 112, 342);
+    ctx.fillText(professionLine, 112, 356);
 
+    /* --- 双榜评分卡 --- */
     const scoreCards = [
         ['登神之路', String(payload.ascensionScore)],
         ['觐见之梯', String(payload.audienceScore)],
     ];
     scoreCards.forEach(([label, value], index) => {
         const x = 108 + index * 500;
+        const cc = index ? accent : main;
         drawRoundRect(ctx, x, 396, 440, 130, 18);
-        ctx.fillStyle = index ? 'rgba(127,140,255,0.12)' : 'rgba(213,167,66,0.13)';
+        const sg = ctx.createLinearGradient(x, 396, x, 526);
+        sg.addColorStop(0, index ? 'rgba(127,140,255,0.16)' : 'rgba(213,167,66,0.17)');
+        sg.addColorStop(1, 'rgba(255,255,255,0.02)');
+        ctx.fillStyle = sg;
         ctx.fill();
-        ctx.strokeStyle = index ? accent : main;
-        ctx.globalAlpha = 0.45;
+        ctx.save();
+        drawRoundRect(ctx, x, 396, 440, 130, 18);
+        ctx.clip();
+        const bar = ctx.createLinearGradient(x, 0, x + 40, 0);
+        bar.addColorStop(0, gtHexA(cc, 0.85));
+        bar.addColorStop(1, gtHexA(cc, 0));
+        ctx.fillStyle = bar;
+        ctx.fillRect(x, 396, 40, 130);
+        const hg = ctx.createLinearGradient(x, 0, x + 440, 0);
+        hg.addColorStop(0, 'rgba(255,255,255,0)');
+        hg.addColorStop(0.5, 'rgba(255,255,255,0.14)');
+        hg.addColorStop(1, 'rgba(255,255,255,0)');
+        ctx.fillStyle = hg;
+        ctx.fillRect(x, 396, 440, 2);
+        ctx.restore();
+        ctx.save();
+        ctx.strokeStyle = cc;
+        ctx.globalAlpha = 0.5;
+        ctx.lineWidth = 1.5;
+        drawRoundRect(ctx, x, 396, 440, 130, 18);
         ctx.stroke();
-        ctx.globalAlpha = 1;
-        ctx.fillStyle = 'rgba(234,234,242,0.62)';
+        ctx.restore();
+        ctx.fillStyle = 'rgba(234,234,242,0.66)';
         ctx.font = '700 24px "Microsoft YaHei", sans-serif';
-        ctx.fillText(label, x + 28, 438);
-        ctx.fillStyle = '#f4f0df';
+        ctx.fillText(label, x + 30, 440);
+        ctx.save();
+        ctx.shadowColor = gtHexA(cc, 0.6);
+        ctx.shadowBlur = 16;
+        ctx.fillStyle = '#f6f2e2';
         ctx.font = '900 48px "Microsoft YaHei", sans-serif';
-        ctx.fillText(value, x + 28, 494);
+        ctx.fillText(value, x + 30, 496);
+        ctx.restore();
     });
 
-    ctx.fillStyle = main;
-    ctx.font = '900 30px "Microsoft YaHei", sans-serif';
-    ctx.fillText('战斗面板', 108, 596);
+    /* --- 战斗面板 --- */
+    gtSectionHeading(ctx, '战斗面板', 108, 596, main, width - 108);
     drawRoundRect(ctx, 108, battleTop, 310, battleHeight, 20);
-    ctx.fillStyle = 'rgba(213,167,66,0.12)';
+    const hpFill = ctx.createLinearGradient(108, battleTop, 108, battleTop + battleHeight);
+    hpFill.addColorStop(0, 'rgba(213,167,66,0.16)');
+    hpFill.addColorStop(1, 'rgba(213,167,66,0.03)');
+    ctx.fillStyle = hpFill;
     ctx.fill();
+    ctx.save();
     ctx.strokeStyle = main;
-    ctx.globalAlpha = 0.42;
+    ctx.globalAlpha = 0.45;
+    ctx.lineWidth = 1.5;
     ctx.stroke();
-    ctx.globalAlpha = 1;
+    ctx.restore();
+    ctx.save();
+    drawRoundRect(ctx, 108, battleTop, 310, battleHeight, 20);
+    ctx.clip();
+    const hpBar = ctx.createLinearGradient(108, 0, 148, 0);
+    hpBar.addColorStop(0, gtHexA(main, 0.85));
+    hpBar.addColorStop(1, gtHexA(main, 0));
+    ctx.fillStyle = hpBar;
+    ctx.fillRect(108, battleTop, 40, battleHeight);
+    ctx.restore();
     ctx.fillStyle = 'rgba(234,234,242,0.62)';
     ctx.font = '800 24px "Microsoft YaHei", sans-serif';
     ctx.fillText('当前血量', 136, battleTop + 44);
-    ctx.fillStyle = '#f4f0df';
+    ctx.save();
+    ctx.shadowColor = gtHexA(main, 0.6);
+    ctx.shadowBlur = 18;
+    ctx.fillStyle = '#f6f2e2';
     ctx.font = '900 70px "Microsoft YaHei", sans-serif';
     const currentHpText = Number.isFinite(Number(payload.health.currentHp)) ? String(Number(payload.health.currentHp)) : '未定';
-    ctx.fillText(currentHpText, 136, battleTop + 118);
+    ctx.fillText(currentHpText, 136, battleTop + 122);
+    ctx.restore();
 
     drawRoundRect(ctx, 444, battleTop, 648, battleHeight, 20);
-    ctx.fillStyle = 'rgba(255,255,255,0.045)';
+    const tpFill = ctx.createLinearGradient(444, battleTop, 444, battleTop + battleHeight);
+    tpFill.addColorStop(0, 'rgba(255,255,255,0.06)');
+    tpFill.addColorStop(1, 'rgba(255,255,255,0.015)');
+    ctx.fillStyle = tpFill;
     ctx.fill();
+    ctx.save();
     ctx.strokeStyle = accent;
-    ctx.globalAlpha = 0.36;
+    ctx.globalAlpha = 0.4;
+    ctx.lineWidth = 1.5;
     ctx.stroke();
-    ctx.globalAlpha = 1;
-    ctx.fillStyle = 'rgba(231,207,138,0.86)';
+    ctx.restore();
+    ctx.save();
+    drawRoundRect(ctx, 444, battleTop, 648, battleHeight, 20);
+    ctx.clip();
+    const tBar = ctx.createLinearGradient(444, 0, 484, 0);
+    tBar.addColorStop(0, gtHexA(accent, 0.7));
+    tBar.addColorStop(1, gtHexA(accent, 0));
+    ctx.fillStyle = tBar;
+    ctx.fillRect(444, battleTop, 40, battleHeight);
+    ctx.restore();
+    gtDiamond(ctx, 490, battleTop + 36, 11, accent, 0.9);
+    ctx.fillStyle = gtHexA(main, 0.9);
     ctx.font = '800 24px "Microsoft YaHei", sans-serif';
-    ctx.fillText(`${payload.faithGod}之神 · 信仰特性`, 474, battleTop + 44);
+    ctx.fillText(`${payload.faithGod}之神 · 信仰特性`, 504, battleTop + 44);
     ctx.fillStyle = 'rgba(244,240,223,0.84)';
     ctx.font = '600 23px "Microsoft YaHei", sans-serif';
     faithTraitLines.forEach((line, index) => {
-        ctx.fillText(line, 474, battleTop + 88 + index * 31);
+        ctx.fillText(line, 504, battleTop + 88 + index * 31);
     });
     const professionTraitTitleY = battleTop + 104 + faithTraitLines.length * 31;
-    ctx.fillStyle = 'rgba(231,207,138,0.86)';
+    gtDiamond(ctx, 490, professionTraitTitleY - 8, 11, main, 0.9);
+    ctx.fillStyle = gtHexA(main, 0.9);
     ctx.font = '800 24px "Microsoft YaHei", sans-serif';
     const classLabel = payload.professionClass || '职业';
-    ctx.fillText(`${classLabel} · 职业特性`, 474, professionTraitTitleY);
+    ctx.fillText(`${classLabel} · 职业特性`, 504, professionTraitTitleY);
     ctx.fillStyle = 'rgba(244,240,223,0.84)';
     ctx.font = '600 23px "Microsoft YaHei", sans-serif';
     professionTraitLines.forEach((line, index) => {
-        ctx.fillText(line, 474, professionTraitTitleY + 44 + index * 31);
+        ctx.fillText(line, 504, professionTraitTitleY + 44 + index * 31);
     });
 
-    ctx.fillStyle = main;
-    ctx.font = '900 30px "Microsoft YaHei", sans-serif';
-    ctx.fillText('已佩戴称号', 108, titlesHeadingY);
+    /* --- 已佩戴称号 --- */
+    gtSectionHeading(ctx, '已佩戴称号', 108, titlesHeadingY, main, width - 108);
     titleLines.forEach((line, index) => {
-        ctx.fillStyle = index ? 'rgba(244,240,223,0.72)' : '#f4f0df';
+        ctx.fillStyle = index ? 'rgba(244,240,223,0.72)' : '#f6f2e2';
         ctx.font = '800 34px "Microsoft YaHei", sans-serif';
         ctx.fillText(line, 108, titleStartY + index * 44);
     });
 
-    ctx.fillStyle = main;
-    ctx.font = '900 30px "Microsoft YaHei", sans-serif';
-    ctx.fillText('个人道具', 108, itemsHeadingY);
+    /* --- 个人道具 --- */
+    gtSectionHeading(ctx, '个人道具', 108, itemsHeadingY, main, width - 108);
     let itemY = firstItemY;
     itemLayouts.forEach((layout, index) => {
         const y = itemY;
-        drawRoundRect(ctx, 108, y, 984, layout.cardHeight, 16);
-        ctx.fillStyle = 'rgba(255,255,255,0.035)';
-        ctx.fill();
-        ctx.strokeStyle = index % 2 ? accent : main;
-        ctx.globalAlpha = 0.28;
-        ctx.stroke();
-        ctx.globalAlpha = 1;
-        ctx.fillStyle = '#f4f0df';
+        const cc = index % 2 ? accent : main;
+        gtCardShell(ctx, 108, y, 984, layout.cardHeight, 16, gtHexA(cc, 0.4), 'rgba(255,255,255,0.05)', 'rgba(255,255,255,0.015)', cc);
+        gtDiamond(ctx, 142, y + 40, 11, gtHexA(cc, 0.95), 1);
+        ctx.fillStyle = '#f6f2e2';
         ctx.font = '700 28px "Microsoft YaHei", sans-serif';
         layout.lines.forEach((line, lineIndex) => {
-            ctx.fillText(line, 136, y + 48 + lineIndex * 34);
+            ctx.fillText(line, 166, y + 48 + lineIndex * 34);
         });
         itemY += layout.cardHeight + 14;
     });
 
-    ctx.fillStyle = '#d98d8d';
-    ctx.font = '900 30px "Microsoft YaHei", sans-serif';
-    ctx.fillText('现存诅咒', 108, curseHeadingY);
+    /* --- 现存诅咒 --- */
+    gtSectionHeading(ctx, '现存诅咒', 108, curseHeadingY, '#d98d8d', width - 108);
     let curseY = curseStartY;
     curseLayouts.forEach((layout, index) => {
         const { curse, nameLines, effectLines, cardHeight } = layout;
@@ -928,73 +1223,100 @@ function drawProfileCardImage(payload) {
         const curseGod = curse.god || payload.faithGod || '命运';
         const curseSkin = getGodSkin(curseGod);
         const curseAccent = curse.empty ? main : (curseSkin.primary || '#b84545');
-        drawRoundRect(ctx, 108, y, 984, cardHeight, 18);
-        ctx.fillStyle = curse.empty ? 'rgba(255,255,255,0.035)' : 'rgba(80,15,22,0.18)';
-        ctx.fill();
-        ctx.strokeStyle = curseAccent;
-        ctx.globalAlpha = curse.empty ? 0.24 : 0.42;
-        ctx.stroke();
-        ctx.globalAlpha = 1;
+        gtCardShell(ctx, 108, y, 984, cardHeight, 18, gtHexA(curseAccent, curse.empty ? 0.28 : 0.5),
+            curse.empty ? 'rgba(255,255,255,0.04)' : 'rgba(80,15,22,0.22)',
+            curse.empty ? 'rgba(255,255,255,0.012)' : 'rgba(80,15,22,0.06)', curseAccent);
         ctx.fillStyle = curse.empty ? 'rgba(231,207,138,0.76)' : 'rgba(217,141,141,0.92)';
         ctx.font = '800 24px "Microsoft YaHei", sans-serif';
         const curseTypeLabel = getProfileCurseTypeLabel(curse.type || curse.curseType);
-        ctx.fillText(curse.empty ? '诅咒状态' : `${curseGod} · ${curseTypeLabel}`, 136, y + 38);
-        ctx.fillStyle = '#f4f0df';
+        ctx.fillText(curse.empty ? '诅咒状态' : `${curseGod} · ${curseTypeLabel}`, 166, y + 38);
+        ctx.fillStyle = '#f6f2e2';
         ctx.font = '900 32px "Microsoft YaHei", sans-serif';
         nameLines.forEach((line, lineIndex) => {
-            ctx.fillText(line, 136, y + 76 + lineIndex * 36);
+            ctx.fillText(line, 166, y + 76 + lineIndex * 36);
         });
         ctx.fillStyle = 'rgba(234,234,242,0.68)';
         ctx.font = '600 22px "Microsoft YaHei", sans-serif';
         const effectStartY = y + 100 + nameLines.length * 36;
         effectLines.forEach((line, lineIndex) => {
-            ctx.fillText(line, 136, effectStartY + lineIndex * 29);
+            ctx.fillText(line, 166, effectStartY + lineIndex * 29);
         });
         curseY += cardHeight + 18;
     });
 
-    ctx.fillStyle = main;
-    ctx.font = '900 30px "Microsoft YaHei", sans-serif';
-    ctx.fillText('携带天赋', 108, talentsHeadingY);
+    /* --- 携带天赋 --- */
+    gtSectionHeading(ctx, '携带天赋', 108, talentsHeadingY, main, width - 108);
     let talentY = firstTalentY;
     talentLayouts.forEach((layout, index) => {
         const { talent, nameLines, metaLines, cardHeight } = layout;
         const y = talentY;
-        drawRoundRect(ctx, 108, y, 984, cardHeight, 18);
-        ctx.fillStyle = 'rgba(255,255,255,0.045)';
-        ctx.fill();
-        ctx.strokeStyle = index % 2 ? accent : main;
-        ctx.globalAlpha = 0.36;
-        ctx.stroke();
-        ctx.globalAlpha = 1;
+        const rankColor = gtRankColor(talent.rank);
+        const cc = rankColor || (index % 2 ? accent : main);
+        gtCardShell(ctx, 108, y, 984, cardHeight, 18, gtHexA(cc, rankColor ? 0.72 : 0.4),
+            'rgba(255,255,255,0.06)', 'rgba(255,255,255,0.015)', cc);
+        if (rankColor) {
+            ctx.save();
+            const badgeGrad = ctx.createLinearGradient(108, y, 108, y + cardHeight);
+            badgeGrad.addColorStop(0, gtHexA(rankColor, 0.95));
+            badgeGrad.addColorStop(1, gtHexA(rankColor, 0.5));
+            ctx.fillStyle = badgeGrad;
+            ctx.fillRect(108, y, 6, cardHeight);
+            ctx.restore();
+        }
         ctx.fillStyle = 'rgba(231,207,138,0.86)';
         ctx.font = '800 24px "Microsoft YaHei", sans-serif';
-        ctx.fillText(talent.slot ? `携带槽 ${talent.slot}` : '携带槽', 136, y + 38);
-        ctx.fillStyle = '#f4f0df';
+        ctx.fillText(talent.slot ? `携带槽 ${talent.slot}` : '携带槽', 166, y + 38);
+        ctx.fillStyle = '#f6f2e2';
         ctx.font = '900 34px "Microsoft YaHei", sans-serif';
         nameLines.forEach((line, lineIndex) => {
-            ctx.fillText(line, 136, y + 78 + lineIndex * 38);
+            ctx.fillText(line, 166, y + 78 + lineIndex * 38);
         });
         ctx.fillStyle = 'rgba(234,234,242,0.64)';
         ctx.font = '600 22px "Microsoft YaHei", sans-serif';
         const metaStartY = y + 104 + nameLines.length * 38;
         metaLines.forEach((line, lineIndex) => {
-            ctx.fillText(line, 136, metaStartY + lineIndex * 29);
+            ctx.fillText(line, 166, metaStartY + lineIndex * 29);
         });
+        if (talent.rank) {
+            ctx.font = '900 24px "Microsoft YaHei", sans-serif';
+            const label = String(talent.rank);
+            const cw = ctx.measureText(label).width + 36;
+            const cx = 108 + 984 - 26 - cw;
+            const cy = y + 18;
+            drawRoundRect(ctx, cx, cy, cw, 38, 19);
+            const chipGrad = ctx.createLinearGradient(cx, cy, cx, cy + 38);
+            chipGrad.addColorStop(0, gtHexA(cc, 0.98));
+            chipGrad.addColorStop(1, gtHexA(cc, 0.7));
+            ctx.fillStyle = chipGrad;
+            ctx.fill();
+            ctx.save();
+            ctx.strokeStyle = gtHexA('#ffffff', 0.5);
+            ctx.lineWidth = 1;
+            ctx.stroke();
+            ctx.restore();
+            ctx.fillStyle = '#101018';
+            ctx.textAlign = 'center';
+            ctx.fillText(label, cx + cw / 2, cy + 27);
+            ctx.textAlign = 'left';
+        }
         talentY += cardHeight + 22;
     });
 
+    /* --- 页脚 --- */
+    gtHairline(ctx, 96, height - 176, width - 96, main, 0.4, 2);
+    gtDiamond(ctx, width / 2, height - 176, 12, main, 0.9);
     ctx.fillStyle = 'rgba(234,234,242,0.48)';
     ctx.font = '600 22px "Microsoft YaHei", sans-serif';
-    ctx.fillText('由诸神愚戏副本论坛生成 · 仅作玩家档案展示', 108, height - 130);
+    ctx.fillText('由诸神愚戏副本论坛生成 · 仅作玩家档案展示', 108, height - 128);
     ctx.textAlign = 'right';
     ctx.fillStyle = 'rgba(231,207,138,0.72)';
     ctx.font = '900 28px "Microsoft YaHei", sans-serif';
-    ctx.fillText('诸神愚戏', width - 108, height - 130);
+    ctx.fillText('诸神愚戏', width - 108, height - 128);
     ctx.textAlign = 'left';
 
     return canvas;
 }
+
 
 function exportProfileCardImage() {
     if (!inviteSession) { openInviteModal('先验入局谕令后可导出个人档案图。'); return; }
