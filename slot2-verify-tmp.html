@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="zh-CN"><head><meta charset="utf-8"><title>槽位角标核验2</title>
+<link rel="stylesheet" href="/fog-dungeon-ranking/assets/gods-theme.css?t=slotrank3">
+</head><body style="background:#080a12;margin:0">
+<div style="max-width:840px;margin:20px auto;padding:18px;">
+  <h3 style="color:#e7cf8a;font-family:sans-serif;margin:0 0 14px">携带槽角标核验（引用线上已部署 js/css）</h3>
+  <div class="talent-equipped-grid" style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
+    <div class="talent-slot-card">
+      <div class="talent-slot-head"><span>信仰槽 </span><span>已开启</span></div>
+      <select>
+        <option value="1">灼魂之火（A·腐朽池）</option>
+        <option value="2">无尽凋零（S·腐朽池）</option>
+      </select>
+      <div class="talent-slot-meta">灼魂之火（A·腐朽池）</div>
+    </div>
+    <div class="talent-slot-card">
+      <div class="talent-slot-head"><span>职业槽（必带）</span><span>已开启</span></div>
+      <select>
+        <option value="a">别A天赋（A·牧师池）</option>
+        <option value="b" selected>真言之盾（B·牧师池）</option>
+        <option value="c">驱散（A·牧师池）</option>
+      </select>
+      <div class="talent-slot-meta">真言之盾（B·牧师池）</div>
+    </div>
+    <div class="talent-slot-card">
+      <div class="talent-slot-head"><span>任意槽</span><span>已开启</span></div>
+      <select>
+        <option value="a">别A天赋（A·腐朽池）</option>
+        <option value="b" selected>无尽凋零（S·腐朽池）</option>
+      </select>
+      <div class="talent-slot-meta">无尽凋零（S·腐朽池）</div>
+    </div>
+    <div class="talent-slot-card">
+      <div class="talent-slot-head"><span>任意槽</span><span>已开启</span></div>
+      <select>
+        <option value="a">别A天赋（A·牧师池）</option>
+        <option value="b" selected>驱散（A·牧师池）</option>
+      </select>
+      <div class="talent-slot-meta">驱散（A·牧师池）</div>
+    </div>
+  </div>
+  <h3 style="color:#e7cf8a;font-family:sans-serif;margin:20px 0 14px">专属槽 / 仓库位</h3>
+  <div class="talent-equipped-grid" style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
+    <div class="talent-slot-card">
+      <div class="talent-slot-head"><span>专属槽</span><span>已开启</span></div>
+      <div class="talent-slot-name">命运主宰（EX）</div>
+      <div class="talent-slot-meta">专属天赋 · 行动点 0 · 冷却 无</div>
+    </div>
+    <div class="talent-slot-card">
+      <div class="talent-slot-head"><span>仓库位 1</span><span>未佩戴</span></div>
+      <div class="talent-slot-name">沉眠之刃</div>
+      <div class="talent-slot-meta">S级 · 腐朽池 · 行动点 1</div>
+    </div>
+    <div class="talent-slot-card empty">
+      <div class="talent-slot-head"><span>仓库位 2</span><span>空</span></div>
+    </div>
+  </div>
+  <div style="font-family:sans-serif;color:#9fb;font-size:13px;margin-top:16px">
+    期望：信仰槽=A · 职业槽=B · 任意槽=S · 任意槽=A · 专属槽=EX · 仓库位1=S · 仓库位2=无
+  </div>
+</div>
+<script src="/fog-dungeon-ranking/assets/js/gods-theme.js?t=slotrank3"></script>
+<script>
+setTimeout(function(){
+  var want=['A','B','S','A','EX','S','(none)'];
+  var out=[];var i=0;
+  document.querySelectorAll('.talent-slot-card').forEach(function(c){
+    var t=c.querySelector(':scope > .gt-slot-tag');
+    var h=c.querySelector('.talent-slot-head span');
+    var got=t?t.textContent:'(none)';
+    out.push((h?h.textContent.trim():'?')+' => badge='+got+' expect='+want[i]+' '+(got===want[i]?'PASS':'FAIL'));
+    i++;
+  });
+  var pre=document.createElement('pre');
+  pre.style.cssText='color:#cfe;font:14px monospace;padding:12px;white-space:pre-wrap;background:#000;margin:0';
+  pre.textContent='RESULT_BEGIN\n'+out.join('\n')+'\nRESULT_END';
+  document.body.insertBefore(pre, document.body.firstChild);
+},1000);
+</script>
+</body></html>
