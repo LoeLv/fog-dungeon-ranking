@@ -233,6 +233,8 @@ function updateInviteUI() {
     const mobileAuthorPanelButton = document.getElementById('mobileAuthorPanelButton');
     const achievementButton = document.getElementById('achievementButton');
     const mobileAchievementButton = document.getElementById('mobileAchievementButton');
+    const faithLevelButton = document.getElementById('faithLevelButton');
+    const mobileFaithLevelButton = document.getElementById('mobileFaithLevelButton');
     const mobileActionStrip = document.getElementById('mobileActionStrip');
     const identityCard = document.getElementById('identityCard');
     const identityRoleText = document.getElementById('identityRoleText');
@@ -296,6 +298,14 @@ function updateInviteUI() {
     if (mobileAchievementButton) {
         mobileAchievementButton.hidden = !inviteSession;
         mobileAchievementButton.title = '查看已解锁成就与进度';
+    }
+    if (faithLevelButton) {
+        faithLevelButton.style.display = inviteSession ? '' : 'none';
+        faithLevelButton.title = '查看各神明信仰阶位与进度';
+    }
+    if (mobileFaithLevelButton) {
+        mobileFaithLevelButton.hidden = !inviteSession;
+        mobileFaithLevelButton.title = '查看各神明信仰阶位与进度';
     }
     if (mobileActionStrip) {
         const actionCount = [...mobileActionStrip.querySelectorAll('button:not([hidden])')].length;

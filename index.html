@@ -66,6 +66,7 @@
             <button class="btn btn-outline header-action" id="adminDeskButton" onclick="openAdminPage()" style="display:none;">▣ 馆主后台</button>
             <button class="btn btn-outline header-action" id="authorPanelButton" onclick="openAuthorPanel()" style="display:none;">📊 作者数据</button>
             <button class="btn btn-outline header-action" id="achievementButton" onclick="openAchievements()" style="display:none;">🏆 成就殿堂</button>
+            <button class="btn btn-outline header-action" id="faithLevelButton" onclick="openFaithLevels()" style="display:none;">🕊️ 信仰阶位</button>
             <button class="btn btn-outline header-action header-action-invite" id="inviteButton" onclick="openInviteModal()">◇ 同契召引</button>
             <button class="btn btn-primary btn-folly header-action header-action-build" id="submitEntryButton" onclick="openSubmitModal()">🎭 构筑愚戏</button>
         </div>
@@ -102,6 +103,7 @@
             <button type="button" class="btn btn-outline btn-sm" id="mobileAdminButton" onclick="openAdminPage()" hidden>馆主后台</button>
             <button type="button" class="btn btn-outline btn-sm" id="mobileAuthorPanelButton" onclick="openAuthorPanel()" hidden>作者数据</button>
             <button type="button" class="btn btn-outline btn-sm" id="mobileAchievementButton" onclick="openAchievements()" hidden>成就殿堂</button>
+            <button type="button" class="btn btn-outline btn-sm" id="mobileFaithLevelButton" onclick="openFaithLevels()" hidden>信仰阶位</button>
         </div>
 
         <div class="controls">
@@ -315,6 +317,18 @@
             <div id="adminContent" class="profile-content">
                 <div class="loading"><div class="spinner"></div><br>正在校验馆主权限...</div>
             </div>
+        </div>
+    </main>
+
+    <!-- 信仰阶位独立页 -->
+    <main class="profile-page" id="faithLevelPage" style="display:none;">
+        <div class="profile-shell">
+            <div class="profile-toolbar">
+                <button class="detail-back" onclick="closeFaithLevels()">← 返回试炼列表</button>
+                <div class="detail-window-title">FAITH ASCENSION · 信仰阶位</div>
+                <button class="detail-close-icon" onclick="closeFaithLevels()" title="返回试炼列表" aria-label="返回试炼列表">✕</button>
+            </div>
+            <div id="faithLevelContent" class="profile-content"></div>
         </div>
     </main>
 
@@ -561,7 +575,7 @@
     <script src="assets/js/api.js?v=20260830-recovery1"></script>
 <script src="assets/js/profile-core.js?v=20260814-uiclean3"></script>
     <script src="assets/js/profile-talent.js?v=20260918-gtconfirm1"></script>
-    <script src="assets/js/runtime.js?v=20260918-panels1"></script>
+    <script src="assets/js/runtime.js?v=20260918-panels2"></script>
 <script src="assets/js/data-access.js?v=20260830-recovery1"></script>
 <script src="assets/js/detail.js?v=20260814-uiclean3"></script>
 <script src="assets/js/discovery.js?v=20260814-uiclean3"></script>
@@ -576,6 +590,7 @@
     <script src="assets/js/pages/admin.js?v=20260918-gtconfirm2"></script>
     <script src="assets/js/pages/author-panel.js?v=20260918-authorpanel1"></script>
     <script src="assets/js/pages/achievements.js?v=20260918-achievements1"></script>
+    <script src="assets/js/pages/faith-levels.js?v=20260918-faithlevels1"></script>
     <script src="assets/js/pages/admin-panel.js?v=20260918-gtconfirm1"></script>
     <script src="assets/js/pages/admin-management.js?v=20260918-gtconfirm1"></script>
     <script src="assets/js/pages/permission-desk.js?v=20260918-gtconfirm1"></script>
