@@ -1383,7 +1383,7 @@ async function exchangeTalentUI() {
     const confirmText = optionCost > 0
         ? `确定消耗 ${optionCost} 碎片兑换 ${optionRank}级天赋「${optionName}」吗？${optionEffect ? `\n效果：${optionEffect}` : ''}`
         : `确定兑换天赋「${optionName}」吗？`;
-    if (!window.confirm(confirmText)) return;
+    if (!await gtConfirm(confirmText)) return;
     if (!acquireUiActionLock('exchangeTalent', '天赋兑换正在处理中，请勿重复点击')) return;
     const inviteSnapshot = getInviteSnapshot();
     try {
@@ -1452,7 +1452,7 @@ async function resolveTalentOverflowUI(choiceId, decision) {
 async function discardOwnedTalentUI(ownedTalentId) {
     if (!inviteSession?.code) { openInviteModal('先验入局谕令后可整理仓库。'); return; }
     if (talentManageInFlight) { showToast('天赋正在处理中，请勿重复点击'); return; }
-    if (!window.confirm('确定分解这个仓库天赋并获得碎片吗？')) return;
+    if (!await gtConfirm('确定分解这个仓库天赋并获得碎片吗？')) return;
     talentManageInFlight = true;
     const inviteSnapshot = getInviteSnapshot();
     replaceTalentPoolPanel();
@@ -1482,7 +1482,7 @@ async function discardWarehouseTalentsUI() {
     const previewGain = (currentTalentState.ownedTalents || [])
         .filter(talent => selectedIds.includes(Number(talent.id)))
         .reduce((sum, talent) => sum + getTalentDismantleGain(currentTalentState, talent.rank), 0);
-    if (!window.confirm(`确定批量分解这 ${previewCount} 个仓库天赋吗？预计获得 ${previewGain} 碎片。`)) return;
+    if (!await gtConfirm(`确定批量分解这 ${previewCount} 个仓库天赋吗？预计获得 ${previewGain} 碎片。`)) return;
 
     talentWarehouseBatchInFlight = true;
     talentManageInFlight = true;

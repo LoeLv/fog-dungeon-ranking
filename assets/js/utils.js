@@ -277,3 +277,92 @@ function formatDate(iso) { if(!iso)return'未知'; const d=new Date(iso),n=new D
 function escapeHtml(s) { const d=document.createElement('div'); d.textContent=s||''; return d.innerHTML; }
 
 function jsString(value) { return JSON.stringify(String(value ?? '')); }
+
+// 站内确认框：替代 window.confirm，避免在部分环境中原生对话框被自动取消而导致操作流程提前中断。
+function gtEnsureConfirmStyles() {
+    if (document.getElementById('gtConfirmStyles')) return;
+    const style = document.createElement('style');
+    style.id = 'gtConfirmStyles';
+    style.textContent = `
+.gt-confirm-overlay{position:fixed;inset:0;z-index:99999;display:flex;align-items:center;justify-content:center;padding:24px;background:rgba(6,7,16,.72);-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px);opacity:0;transition:opacity .18s ease}
+.gt-confirm-overlay.is-open{opacity:1}
+.gt-confirm-box{width:min(440px,92vw);border-radius:16px;padding:22px 22px 18px;background:linear-gradient(160deg,rgba(26,24,42,.98),rgba(14,13,26,.98));border:1px solid rgba(214,178,96,.45);box-shadow:0 24px 60px rgba(0,0,0,.55),inset 0 0 0 1px rgba(214,178,96,.12);color:#f3ecd9;transform:translateY(10px) scale(.98);transition:transform .18s ease}
+.gt-confirm-overlay.is-open .gt-confirm-box{transform:translateY(0) scale(1)}
+.gt-confirm-title{font-size:15px;letter-spacing:.08em;color:#e8c877;margin-bottom:10px;font-weight:600}
+.gt-confirm-message{font-size:14px;line-height:1.7;color:#ded7c6;white-space:pre-wrap;word-break:break-word}
+.gt-confirm-actions{display:flex;justify-content:flex-end;gap:10px;margin-top:20px}
+.gt-confirm-btn{cursor:pointer;border-radius:10px;padding:9px 18px;font-size:14px;border:1px solid transparent;transition:filter .15s ease,background .15s ease}
+.gt-confirm-cancel{background:rgba(255,255,255,.06);border-color:rgba(255,255,255,.16);color:#cfc8ba}
+.gt-confirm-cancel:hover{background:rgba(255,255,255,.12)}
+.gt-confirm-ok{background:linear-gradient(135deg,#d8b56a,#b98f3d);color:#1a1508;font-weight:600}
+.gt-confirm-ok:hover{filter:brightness(1.08)}
+.gt-confirm-ok.is-danger{background:linear-gradient(135deg,#e07070,#b23b3b);color:#fff}
+`;
+    document.head.appendChild(style);
+}
+
+function gtConfirm(message, options = {}) {
+    gtEnsureConfirmStyles();
+    return new Promise(resolve => {
+        const title = options.title || '请确认';
+        const confirmText = options.confirmText || '确认';
+        const cancelText = options.cancelText || '取消';
+        const dangerous = options.dangerous === true;
+
+        const overlay = document.createElement('div');
+        overlay.className = 'gt-confirm-overlay';
+
+        const box = document.createElement('div');
+        box.className = 'gt-confirm-box';
+        box.setAttribute('role', 'dialog');
+        box.setAttribute('aria-modal', 'true');
+
+        const titleEl = document.createElement('div');
+        titleEl.className = 'gt-confirm-title';
+        titleEl.textContent = title;
+
+        const msgEl = document.createElement('div');
+        msgEl.className = 'gt-confirm-message';
+        msgEl.textContent = String(message ?? '');
+
+        const actions = document.createElement('div');
+        actions.className = 'gt-confirm-actions';
+
+        const cancelBtn = document.createElement('button');
+        cancelBtn.type = 'button';
+        cancelBtn.className = 'gt-confirm-btn gt-confirm-cancel';
+        cancelBtn.textContent = cancelText;
+
+        const okBtn = document.createElement('button');
+        okBtn.type = 'button';
+        okBtn.className = 'gt-confirm-btn gt-confirm-ok' + (dangerous ? ' is-danger' : '');
+        okBtn.textContent = confirmText;
+
+        actions.appendChild(cancelBtn);
+        actions.appendChild(okBtn);
+        box.appendChild(titleEl);
+        box.appendChild(msgEl);
+        box.appendChild(actions);
+        overlay.appendChild(box);
+        document.body.appendChild(overlay);
+
+        let settled = false;
+        const cleanup = result => {
+            if (settled) return;
+            settled = true;
+            document.removeEventListener('keydown', onKey, true);
+            overlay.remove();
+            resolve(result);
+        };
+        const onKey = event => {
+            if (event.key === 'Escape') { event.preventDefault(); event.stopPropagation(); cleanup(false); }
+            else if (event.key === 'Enter') { event.preventDefault(); event.stopPropagation(); cleanup(true); }
+        };
+        cancelBtn.addEventListener('click', () => cleanup(false));
+        okBtn.addEventListener('click', () => cleanup(true));
+        overlay.addEventListener('click', event => { if (event.target === overlay) cleanup(false); });
+        document.addEventListener('keydown', onKey, true);
+
+        requestAnimationFrame(() => { overlay.classList.add('is-open'); okBtn.focus(); });
+    });
+}

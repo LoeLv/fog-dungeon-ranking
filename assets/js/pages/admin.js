@@ -125,7 +125,7 @@ async function adminScanTalentState() {
 async function adminRepairTalentState() {
     const name = adminLookupState.targetName;
     if (!name) { showToast('请先查询玩家档案'); return; }
-    if (!window.confirm(`确认修复 ${name} 的可自动处理天赋状态？不会删除已拥有天赋。`)) return;
+    if (!await gtConfirm(`确认修复 ${name} 的可自动处理天赋状态？不会删除已拥有天赋。`)) return;
     if (!acquireUiActionLock(`adminRepair:${name}`, '天赋状态正在修复，请勿重复点击')) return;
     const restore = setActionButtonsBusy('[data-admin-repair]', '修复中...');
     try {
@@ -142,7 +142,7 @@ async function adminRepairTalentState() {
 async function adminRevokeHonor(type, id, targetName, label) {
     const action = type === 'title' ? 'revokeProfileTitle' : 'revokeProfileCurse';
     const key = `adminRevoke:${type}:${id}`;
-    if (!window.confirm(`确认回收 ${targetName} 的${type === 'title' ? '称号' : '诅咒'}「${label}」？`)) return;
+    if (!await gtConfirm(`确认回收 ${targetName} 的${type === 'title' ? '称号' : '诅咒'}「${label}」？`)) return;
     if (!acquireUiActionLock(key, '回收正在处理，请勿重复点击')) return;
     try {
         const payload = type === 'title' ? { targetName, titleId: id } : { targetName, curseId: id };
@@ -156,7 +156,7 @@ async function adminRevokeHonor(type, id, targetName, label) {
 async function adminRestoreHonor(type, id, targetName, label) {
     const action = type === 'title' ? 'restoreProfileTitle' : 'restoreProfileCurse';
     const key = `adminRestore:${type}:${id}`;
-    if (!window.confirm(`确认恢复 ${targetName} 的${type === 'title' ? '称号' : '诅咒'}「${label}」？`)) return;
+    if (!await gtConfirm(`确认恢复 ${targetName} 的${type === 'title' ? '称号' : '诅咒'}「${label}」？`)) return;
     if (!acquireUiActionLock(key, '恢复正在处理，请勿重复点击')) return;
     try {
         const payload = type === 'title' ? { targetName, titleId: id } : { targetName, curseId: id };

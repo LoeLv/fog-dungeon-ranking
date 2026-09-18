@@ -410,7 +410,7 @@ async function revokeScoreSettlementUI(settlementId) {
     if (scoreActionLocks.has(lockKey)) { showToast('撤销正在处理中，请等待结果'); return; }
     const revokeRemark = window.prompt('请输入撤销备注');
     if (!revokeRemark) return;
-    if (!window.confirm('确认撤销这场结算并回滚对应分数？')) return;
+    if (!await gtConfirm('确认撤销这场结算并回滚对应分数？')) return;
     scoreActionLocks.add(lockKey);
     setScoreActionBusy(lockKey, true, '撤销中...');
     showToast('撤销处理中，请勿重复点击');

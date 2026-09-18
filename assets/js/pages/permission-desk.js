@@ -133,7 +133,7 @@ async function permissionUpgradePlayerToAuthor() {
         showToast('请输入玩家昵称');
         return;
     }
-    if (!window.confirm(`确认将 ${targetName} 从玩家升级为作者？`)) return;
+    if (!await gtConfirm(`确认将 ${targetName} 从玩家升级为作者？`)) return;
     setPermissionDeskStatus('正在升级为作者...', 'pending');
     const { error } = await invokeDungeonAction('adminSetAccountRole', { targetName, role: 'author' });
     if (error) {

@@ -194,7 +194,7 @@ async function godChangeBelieverProfessionUI() {
     const profession = String(window.prompt(`请输入新职业（可选：${careers.join('、')}），当前：${target.profession || '未设置'}`, careers[0] || '') || '').trim();
     if (!profession) return;
     if (!careers.includes(profession)) { showToast('职业不属于该信仰，请从提示列表中选择'); return; }
-    if (!window.confirm(`确认将 ${target.display_name} 的职业改为 ${profession}？这会清空天赋和碎片，并返还已用抽数。`)) return;
+    if (!await gtConfirm(`确认将 ${target.display_name} 的职业改为 ${profession}？这会清空天赋和碎片，并返还已用抽数。`)) return;
     const lockKey = `godProfession:${targetHash}:${profession}`;
     if (!acquireUiActionLock(lockKey, '职业调整正在处理，请勿重复点击')) return;
     setGodBelieverStatus(`正在调整职业：${target.display_name} -> ${profession}...`, 'pending');
@@ -295,7 +295,7 @@ async function godConvertBelieverUI() {
         showToast(message);
         return;
     }
-    if (!window.confirm(`确认将 ${target.display_name} 从 ${target.faith_god} 改到 ${faithGod}，并同步改成 ${profession} 吗？`)) return;
+    if (!await gtConfirm(`确认将 ${target.display_name} 从 ${target.faith_god} 改到 ${faithGod}，并同步改成 ${profession} 吗？`)) return;
     const lockKey = `godConvert:${targetHash}:${faithGod}:${profession}`;
     if (!acquireUiActionLock(lockKey, '神明改信正在处理中，请勿重复点击')) return;
     setGodBelieverStatus(`正在改信：${target.display_name} -> ${faithGod}/${profession}...`, 'pending');
@@ -477,7 +477,7 @@ async function grantBetrayalCurseUI() {
     }
     const curseName = curseText || '背弃诅咒';
     const titleHint = curseType === 'betrayal' ? '，并自动赋予「背弃者」称号' : '，不自动赋予称号';
-    if (!window.confirm(`对 ${targetName} 下放${getProfileCurseTypeLabel(curseType)}「${curseName}」${titleHint}？`)) return;
+    if (!await gtConfirm(`对 ${targetName} 下放${getProfileCurseTypeLabel(curseType)}「${curseName}」${titleHint}？`)) return;
     const lockKey = `grantCurse:${targetName}:${curseType}:${curseName}`;
     if (!acquireUiActionLock(lockKey, '诅咒正在下放，请勿重复点击')) return;
     setHonorActionStatus(`诅咒下放中：正在为 ${targetName} 写入「${curseName}」...`, 'pending');
@@ -515,7 +515,7 @@ async function revokeProfileTitleUI() {
         showToast(message);
         return;
     }
-    if (!window.confirm(titleText ? `回收 ${targetName} 的称号「${titleText}」？` : `回收 ${targetName} 最新生效称号？`)) return;
+    if (!await gtConfirm(titleText ? `回收 ${targetName} 的称号「${titleText}」？` : `回收 ${targetName} 最新生效称号？`)) return;
     const lockKey = `revokeTitle:${targetName}:${titleText || 'latest'}`;
     if (!acquireUiActionLock(lockKey, '称号正在回收，请勿重复点击')) return;
     setHonorActionStatus(`称号回收中：正在处理 ${targetName} 的${titleText ? `「${titleText}」` : '最新生效称号'}...`, 'pending');
@@ -550,7 +550,7 @@ async function revokeProfileCurseUI() {
         showToast(message);
         return;
     }
-    if (!window.confirm(curseText ? `回收 ${targetName} 的诅咒「${curseText}」？` : `回收 ${targetName} 最新生效诅咒？`)) return;
+    if (!await gtConfirm(curseText ? `回收 ${targetName} 的诅咒「${curseText}」？` : `回收 ${targetName} 最新生效诅咒？`)) return;
     const lockKey = `revokeCurse:${targetName}:${curseText || 'latest'}`;
     if (!acquireUiActionLock(lockKey, '诅咒正在回收，请勿重复点击')) return;
     setHonorActionStatus(`诅咒回收中：正在处理 ${targetName} 的${curseText ? `「${curseText}」` : '最新生效诅咒'}...`, 'pending');

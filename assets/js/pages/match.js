@@ -347,7 +347,7 @@ async function applyBattlePlayerActionUI(battleRoomId, playerId, actionType) {
 async function finishBattleRoomUI(battleRoomId, status = 'finished') {
     if (!battleRoomId) return;
     if (status === 'cancelled') {
-        const confirmed = window.confirm('关闭房间会结束本场战斗，并在战斗日志中提示 DM/主持人房间已关闭。确定关闭吗？');
+        const confirmed = await gtConfirm('关闭房间会结束本场战斗，并在战斗日志中提示 DM/主持人房间已关闭。确定关闭吗？');
         if (!confirmed) return;
     }
     const note = document.getElementById('battleFinishNote')?.value || '';

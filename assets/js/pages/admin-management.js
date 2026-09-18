@@ -542,7 +542,7 @@ async function adminChangeMemberIdentityUI() {
         return;
     }
     const summary = changeMode === 'profession' ? `${target.displayName}：职业改为 ${profession}` : `${target.displayName}：改为 ${faithGod}/${profession}`;
-    if (!window.confirm(`确认${summary}？这会清空天赋和碎片，并返还已用抽数。`)) return;
+    if (!await gtConfirm(`确认${summary}？这会清空天赋和碎片，并返还已用抽数。`)) return;
     const lockKey = `adminIdentity:${targetHash}:${changeMode}:${faithGod}:${profession}`;
     if (!acquireUiActionLock(lockKey, '身份调整正在处理，请勿重复点击')) return;
     setAdminManagementStatus('身份调整处理中...', 'pending');
@@ -790,7 +790,7 @@ function adminEditAssignedExclusiveTalent(targetHash) {
 }
 
 async function adminDeleteAssignedExclusiveTalent(targetHash, displayName) {
-    if (!window.confirm(`确认删除 ${displayName || '该玩家'} 的 EX 专属天赋吗？专属槽会保留。`)) return;
+    if (!await gtConfirm(`确认删除 ${displayName || '该玩家'} 的 EX 专属天赋吗？专属槽会保留。`)) return;
     setAdminManagementStatus('EX 专属天赋删除处理中...', 'pending');
     try {
         const { error } = await invokeDungeonAction('adminDeleteExclusiveTalent', { targetHash });
@@ -928,7 +928,7 @@ async function adminSetMemberRole() {
         showToast('没有找到目标成员');
         return;
     }
-    if (!window.confirm(`确认将 ${target.displayName || '该成员'} 的权限调整为 ${nextRole}？`)) return;
+    if (!await gtConfirm(`确认将 ${target.displayName || '该成员'} 的权限调整为 ${nextRole}？`)) return;
     setAdminManagementStatus('权限调整处理中...', 'pending');
     try {
         const { error } = await invokeDungeonAction('adminSetAccountRole', { targetHash, role: nextRole });
@@ -998,8 +998,8 @@ async function adminSubmitRenameMember(targetHash) {
 }
 
 async function adminResetMember(targetHash, displayName) {
-    if (!window.confirm(`确认重置 ${displayName || '该玩家'} 的个人状态？这会清空档案、分数、天赋、称号诅咒等个人数据，但保留账号。`)) return;
-    if (!window.confirm(`再确认一次：真的要重置 ${displayName || '该玩家'} 吗？`)) return;
+    if (!await gtConfirm(`确认重置 ${displayName || '该玩家'} 的个人状态？这会清空档案、分数、天赋、称号诅咒等个人数据，但保留账号。`)) return;
+    if (!await gtConfirm(`再确认一次：真的要重置 ${displayName || '该玩家'} 吗？`)) return;
     setAdminManagementStatus('账号重置处理中...', 'pending');
     try {
         const { error } = await invokeDungeonAction('adminResetAccount', { targetHash });
@@ -1023,7 +1023,7 @@ async function adminResetMember(targetHash, displayName) {
 async function adminDeleteMember(targetHash, displayName) {
     const typed = window.prompt(`删除会禁用 ${displayName || '该账号'} 并清空个人状态。请输入玩家昵称确认。`);
     if (typed !== displayName) { showToast('昵称不一致，已取消删除'); return; }
-    if (!window.confirm(`最后确认：删除 ${displayName || '该账号'} 并禁用账号？`)) return;
+    if (!await gtConfirm(`最后确认：删除 ${displayName || '该账号'} 并禁用账号？`)) return;
     setAdminManagementStatus('账号删除处理中...', 'pending');
     try {
         const { error } = await invokeDungeonAction('adminDeleteAccount', { targetHash });
@@ -1318,7 +1318,7 @@ async function adminBatchSaveTalentPoolItems() {
         return;
     }
     if (!items.length) { showToast('请粘贴至少一行天赋'); return; }
-    if (!window.confirm(`确认批量保存 ${items.length} 个天赋到 ${poolKey}？同编号会覆盖。`)) return;
+    if (!await gtConfirm(`确认批量保存 ${items.length} 个天赋到 ${poolKey}？同编号会覆盖。`)) return;
     setAdminManagementStatus(`正在批量保存 ${items.length} 个天赋...`, 'pending');
     try {
         const { data, error } = await invokeDungeonAction('adminBatchUpsertTalentPoolItems', { poolKey, items });
@@ -1354,7 +1354,7 @@ async function adminBatchDeleteTalentPoolItems() {
         .map(item => `#${Number(item.talentId || 0)} ${item.talentName || '未命名'}`)
         .join('\n');
     const more = selectedItems.length > 8 ? `\n...以及 ${selectedItems.length - 8} 个` : '';
-    if (!window.confirm(`确认从 ${poolKey} 删除 ${talentIds.length} 个天赋池条目？\n\n${preview}${more}\n\n只删除池子定义，不会删除玩家已拥有天赋。`)) return;
+    if (!await gtConfirm(`确认从 ${poolKey} 删除 ${talentIds.length} 个天赋池条目？\n\n${preview}${more}\n\n只删除池子定义，不会删除玩家已拥有天赋。`)) return;
     setAdminManagementStatus(`正在删除 ${talentIds.length} 个天赋池条目...`, 'pending');
     try {
         const { data, error } = await invokeDungeonAction('adminBatchDeleteTalentPoolItems', { poolKey, talentIds });
