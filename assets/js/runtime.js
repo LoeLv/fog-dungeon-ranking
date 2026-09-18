@@ -231,6 +231,8 @@ function updateInviteUI() {
     const mobileAdminButton = document.getElementById('mobileAdminButton');
     const authorPanelButton = document.getElementById('authorPanelButton');
     const mobileAuthorPanelButton = document.getElementById('mobileAuthorPanelButton');
+    const achievementButton = document.getElementById('achievementButton');
+    const mobileAchievementButton = document.getElementById('mobileAchievementButton');
     const mobileActionStrip = document.getElementById('mobileActionStrip');
     const identityCard = document.getElementById('identityCard');
     const identityRoleText = document.getElementById('identityRoleText');
@@ -286,6 +288,14 @@ function updateInviteUI() {
     if (mobileAuthorPanelButton) {
         mobileAuthorPanelButton.hidden = !canSubmit();
         mobileAuthorPanelButton.title = '查看作品数据、评分趋势与读者反馈';
+    }
+    if (achievementButton) {
+        achievementButton.style.display = inviteSession ? '' : 'none';
+        achievementButton.title = '查看已解锁成就与进度';
+    }
+    if (mobileAchievementButton) {
+        mobileAchievementButton.hidden = !inviteSession;
+        mobileAchievementButton.title = '查看已解锁成就与进度';
     }
     if (mobileActionStrip) {
         const actionCount = [...mobileActionStrip.querySelectorAll('button:not([hidden])')].length;
