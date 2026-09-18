@@ -120,7 +120,9 @@ const ACHIEVEMENT_TIER_TARGETS = {
 
 function getAchievementTarget(def) {
     const explicit = { clear_5: 5, clear_20: 20, explore_5: 5, ascension_100: 100, audience_50: 50,
-        talent_10: 10, fragment_200: 200, forge_5: 5, beloved_10: 10, faction_all: 6, faction_dedicated: 8 };
+        talent_10: 10, fragment_200: 200, forge_5: 5, beloved_10: 10, faction_all: 6, faction_dedicated: 8,
+        first_clear: 1, first_b_talent: 1, first_a_talent: 1, first_s_talent: 1,
+        first_forge: 1, high_rating: 1, faction_life: 1, faction_void: 1 };
     if (explicit[def.id] !== undefined) return explicit[def.id];
     return ACHIEVEMENT_TIER_TARGETS[def.tier]?.default || 1;
 }
