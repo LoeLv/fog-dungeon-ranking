@@ -246,8 +246,31 @@
     var reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
     function slotRank(text) {
-        var m = text.match(/[（(]\s*(EX|S|A|B|C)\s*[·•]/) || text.match(/\b(EX|S|A|B|C)\s*级/);
+        var m = text.match(/[（(]\s*(EX|S|A|B|C)\s*[·•）)]/) || text.match(/\b(EX|S|A|B|C)\s*级/);
         return m ? m[1] : null;
+    }
+
+    /* 只从「当前选中项 / 说明文字 / 天赋名」取品阶，
+       避免把 <select> 里全部 <option> 文本都算进来导致误判。 */
+    function slotRankSource(card) {
+        var parts = [];
+        var sel = card.querySelector('select');
+        if (sel) {
+            var op = sel.options && sel.selectedIndex > -1 ? sel.options[sel.selectedIndex] : null;
+            if (op) parts.push(op.textContent || op.value || '');
+            else if (sel.value) parts.push(sel.value);
+        }
+        var meta = card.querySelector('.talent-slot-meta');
+        if (meta) parts.push(meta.textContent || '');
+        var name = card.querySelector('.talent-slot-name');
+        if (name) parts.push(name.textContent || '');
+        if (!parts.length) {
+            var clone = card.cloneNode(true);
+            var cs = clone.querySelector('select');
+            if (cs && cs.parentNode) cs.parentNode.removeChild(cs);
+            parts.push(clone.textContent || '');
+        }
+        return parts.join(' ');
     }
 
     function decorateSlots(root) {
@@ -257,7 +280,7 @@
         for (var i = 0; i < cards.length; i++) {
             var card = cards[i];
             var empty = card.classList.contains('empty') || card.classList.contains('pending');
-            var rank = empty ? null : slotRank(card.textContent || '');
+            var rank = empty ? null : slotRank(slotRankSource(card));
             var tag = card.querySelector(':scope > .gt-slot-tag');
             if (!rank) {
                 for (var r = 0; r < RANK_CLASSES.length; r++) card.classList.remove(RANK_CLASSES[r]);
