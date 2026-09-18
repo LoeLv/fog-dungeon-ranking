@@ -254,16 +254,16 @@
        避免把 <select> 里全部 <option> 文本都算进来导致误判。 */
     function slotRankSource(card) {
         var parts = [];
+        var meta = card.querySelector('.talent-slot-meta');
+        if (meta) parts.push(meta.textContent || '');
+        var name = card.querySelector('.talent-slot-name');
+        if (name) parts.push(name.textContent || '');
         var sel = card.querySelector('select');
         if (sel) {
             var op = sel.options && sel.selectedIndex > -1 ? sel.options[sel.selectedIndex] : null;
             if (op) parts.push(op.textContent || op.value || '');
             else if (sel.value) parts.push(sel.value);
         }
-        var meta = card.querySelector('.talent-slot-meta');
-        if (meta) parts.push(meta.textContent || '');
-        var name = card.querySelector('.talent-slot-name');
-        if (name) parts.push(name.textContent || '');
         if (!parts.length) {
             var clone = card.cloneNode(true);
             var cs = clone.querySelector('select');
