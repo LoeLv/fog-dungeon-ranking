@@ -64,6 +64,7 @@
             <button class="btn btn-outline header-action header-action-score" id="scoreDeskButton" onclick="openScorePage()" style="display:none;">⚖ 分数结算</button>
             <button class="btn btn-outline header-action" id="permissionDeskButton" onclick="openPermissionDesk()" style="display:none;">权限工作台</button>
             <button class="btn btn-outline header-action" id="adminDeskButton" onclick="openAdminPage()" style="display:none;">▣ 馆主后台</button>
+            <button class="btn btn-outline header-action" id="authorPanelButton" onclick="openAuthorPanel()" style="display:none;">📊 作者数据</button>
             <button class="btn btn-outline header-action header-action-invite" id="inviteButton" onclick="openInviteModal()">◇ 同契召引</button>
             <button class="btn btn-primary btn-folly header-action header-action-build" id="submitEntryButton" onclick="openSubmitModal()">🎭 构筑愚戏</button>
         </div>
@@ -98,6 +99,7 @@
             <button type="button" class="btn btn-outline btn-sm" id="mobileScoreButton" onclick="openScorePage()" hidden>分数结算</button>
             <button type="button" class="btn btn-outline btn-sm" id="mobilePermissionButton" onclick="openPermissionDesk()" hidden>权限工作台</button>
             <button type="button" class="btn btn-outline btn-sm" id="mobileAdminButton" onclick="openAdminPage()" hidden>馆主后台</button>
+            <button type="button" class="btn btn-outline btn-sm" id="mobileAuthorPanelButton" onclick="openAuthorPanel()" hidden>作者数据</button>
         </div>
 
         <div class="controls">
@@ -311,6 +313,18 @@
             <div id="adminContent" class="profile-content">
                 <div class="loading"><div class="spinner"></div><br>正在校验馆主权限...</div>
             </div>
+        </div>
+    </main>
+
+    <!-- 作者数据面板独立页 -->
+    <main class="profile-page" id="authorPanelPage" style="display:none;">
+        <div class="profile-shell">
+            <div class="profile-toolbar">
+                <button class="detail-back" onclick="closeAuthorPanel()">← 返回试炼列表</button>
+                <div class="detail-window-title">AUTHOR ANALYTICS · 作者数据面板</div>
+                <button class="detail-close-icon" onclick="closeAuthorPanel()" title="返回试炼列表" aria-label="返回试炼列表">✕</button>
+            </div>
+            <div id="authorPanelContent" class="profile-content"></div>
         </div>
     </main>
 
@@ -546,6 +560,7 @@
     <script src="assets/js/pages/score-tools.js?v=20260918-gtconfirm1"></script>
     <script src="assets/js/pages/score.js?v=20260822-faithscore1"></script>
     <script src="assets/js/pages/admin.js?v=20260918-gtconfirm2"></script>
+    <script src="assets/js/pages/author-panel.js?v=20260918-authorpanel1"></script>
     <script src="assets/js/pages/admin-panel.js?v=20260918-gtconfirm1"></script>
     <script src="assets/js/pages/admin-management.js?v=20260918-gtconfirm1"></script>
     <script src="assets/js/pages/permission-desk.js?v=20260918-gtconfirm1"></script>

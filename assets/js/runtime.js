@@ -229,6 +229,8 @@ function updateInviteUI() {
     const mobilePermissionFabButton = document.getElementById('mobilePermissionFabButton');
     const adminButton = document.getElementById('adminDeskButton');
     const mobileAdminButton = document.getElementById('mobileAdminButton');
+    const authorPanelButton = document.getElementById('authorPanelButton');
+    const mobileAuthorPanelButton = document.getElementById('mobileAuthorPanelButton');
     const mobileActionStrip = document.getElementById('mobileActionStrip');
     const identityCard = document.getElementById('identityCard');
     const identityRoleText = document.getElementById('identityRoleText');
@@ -276,6 +278,14 @@ function updateInviteUI() {
     if (mobileAdminButton) {
         mobileAdminButton.hidden = !canUseAdminConsole();
         mobileAdminButton.title = '馆主后台与权限工作台';
+    }
+    if (authorPanelButton) {
+        authorPanelButton.style.display = canSubmit() ? '' : 'none';
+        authorPanelButton.title = '查看作品数据、评分趋势与读者反馈';
+    }
+    if (mobileAuthorPanelButton) {
+        mobileAuthorPanelButton.hidden = !canSubmit();
+        mobileAuthorPanelButton.title = '查看作品数据、评分趋势与读者反馈';
     }
     if (mobileActionStrip) {
         const actionCount = [...mobileActionStrip.querySelectorAll('button:not([hidden])')].length;
