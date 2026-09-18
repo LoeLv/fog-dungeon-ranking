@@ -891,3 +891,74 @@ html[data-gods-theme="off"] .talent-slot-card.empty { animation: none !important
     .talent-inventory-grid .talent-slot-card.empty,
     .talent-mini-empty > span::after { animation: none !important; }
 }
+
+/* ==========================================================================
+   布局精修层  (gods-theme.css  v3.2  "Layout Refinement")
+   --------------------------------------------------------------------------
+   纯叠加层：只调整版面节奏与栅格，不改配色/组件语义。
+   目标：① 大屏减少两侧留白 ② 主视觉收敛 ③ 主/侧栏配比更均衡
+        ④ 卡片密度提升 ⑤ 侧栏压缩 ⑥ 顶栏防换行 ⑦ 统一垂直节奏
+   全部规则置于文件末尾，按需覆盖 app.css，不影响断点既有行为。
+   ========================================================================== */
+
+/* ===== 1. 顶栏：收紧动作区，防止按钮换行到第二行 ====================== */
+@media (min-width: 1101px) {
+    .header { padding: 12px 28px 14px; gap: 16px; }
+    .header-actions { flex-wrap: nowrap; gap: 8px; }
+    .header-action { padding: 0 12px; }
+}
+@media (min-width: 1101px) and (max-width: 1380px) {
+    .header { grid-template-columns: minmax(216px, 0.82fr) minmax(200px, 1fr) auto; gap: 12px; }
+    .header-actions { gap: 6px; }
+    .header-action { font-size: 0.68rem; padding: 0 9px; }
+    .header-action-build { min-width: 116px; }
+}
+
+/* ===== 2. 主视觉祭坛：收敛高度与留白，提升首屏信息密度 ================= */
+@media (min-width: 721px) {
+    .world-altar {
+        min-height: 236px;
+        margin-bottom: 18px;
+        padding: clamp(20px, 3vw, 30px) clamp(22px, 3.4vw, 40px);
+    }
+    .world-kicker { margin-bottom: 6px; }
+    .world-title { font-size: clamp(2rem, 4.2vw, 3.4rem); }
+    .void-constellation { width: min(238px, 44vw); }
+}
+@media (min-width: 1440px) {
+    .world-altar {
+        grid-template-columns: minmax(0, 1fr) minmax(300px, 0.5fr);
+        min-height: 264px;
+    }
+}
+
+/* ===== 3. 控制条 & 证言殿：统一垂直节奏 ================================ */
+.controls { margin-bottom: 20px; padding: 12px 14px 13px; gap: 10px; }
+.forum-feed { margin: 0 0 20px; }
+.forum-feed.is-collapsed { margin-bottom: 18px; }
+
+/* ===== 4. 主区栅格：侧栏略加宽 + 间距拉开（信息密度高，缓解失衡）======= */
+@media (min-width: 1101px) {
+    .archive-layout { grid-template-columns: minmax(0, 1fr) 320px; gap: 22px; }
+    .archive-layout::before { left: calc(100% - 342px); }
+    .archive-layout::after { left: calc(100% - 350px); }
+}
+@media (min-width: 1600px) {
+    .archive-layout { grid-template-columns: minmax(0, 1fr) 340px; gap: 26px; }
+    .archive-layout::before { left: calc(100% - 366px); }
+    .archive-layout::after { left: calc(100% - 374px); }
+}
+
+/* ===== 5. 试炼卡：提升密度，缩短主列总高 ============================== */
+.dungeon-list { gap: 14px; }
+.dungeon-card { padding: 18px 22px; }
+
+/* ===== 6. 神谕侧栏：压缩面板纵向占用，缩小左右高度差 ================== */
+.oracle-sidebar { gap: 12px; top: 96px; }
+.oracle-panel { padding: 12px 13px; }
+.oracle-panel-title { margin-bottom: 8px; }
+.oracle-list { gap: 8px; }
+
+/* ===== 7. 大屏内容宽度：让 1120 容器在宽屏舒展，减少两侧空白 ========== */
+@media (min-width: 1440px) { .container { max-width: 1280px; } }
+@media (min-width: 1760px) { .container { max-width: 1400px; } }
