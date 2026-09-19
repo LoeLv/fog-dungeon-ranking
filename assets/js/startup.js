@@ -8,9 +8,11 @@
     renderGodFilters();
     renderDifficultyFilters();
     updateInviteUI();
-    await loadFaithTraits();
-    await renderDungeonList();
-    await renderLatestComments();
+    await Promise.all([
+        loadFaithTraits(),
+        renderDungeonList(),
+        renderLatestComments()
+    ]);
     if (USE_LOCAL_FALLBACK && getLocalData('dungeons', []).length === 0) {
         const samples = [
             { id:'s1', name:'深渊回廊', creator:'灰袍记事者', difficulty:'中', type:'记忆', description:'无尽深渊边缘的一座古老回廊，保存着坠落神迹的记忆碎片。', pinned_note:'建议 6 人进入，第二幕需要有人记录线索。', participant_count:6, run_count:2, clear_count:6, clear_rate:50, avg_rating:4.7, rating_count:23, comment_count:8, created_at:new Date(Date.now()-7*86400000).toISOString() },
