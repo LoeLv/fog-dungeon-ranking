@@ -8,6 +8,8 @@
     renderGodFilters();
     renderDifficultyFilters();
     updateInviteUI();
+    // 方案B：先用 1 次调用预热「信仰特性 + 首屏副本列表」，再并行渲染。
+    await primeOpenBootstrap();
     await Promise.all([
         loadFaithTraits(),
         renderDungeonList(),
