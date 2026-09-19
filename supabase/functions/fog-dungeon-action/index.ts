@@ -1194,7 +1194,7 @@ function hasTrickeryFaithPrivilege(profile: Record<string, unknown> | null | und
 
 function getTalentSlotKinds(ascensionScore: unknown) {
   const score = cleanScore(ascensionScore);
-  if (score >= 2600) return ["faith", "profession", "any", "any", "fusion"];
+  if (score >= 2600) return ["faith", "profession", "any", "any", "profession"];
   if (score >= 2500) return ["faith", "profession", "any", "any", "any"];
   if (score >= 2200) return ["faith", "profession", "any", "any", "profession"];
   return ["faith", "profession", "any", "any"];
