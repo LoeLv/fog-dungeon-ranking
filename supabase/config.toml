@@ -1,0 +1,9 @@
+# Supabase 项目配置（Supabase CLI 使用）
+# 生成：后端模块化重构（路径 A）
+# 用法：在本机 supabase 命令行执行 `supabase functions deploy fog-dungeon-action`
+project_id = "fog-dungeon-ranking"
+
+[functions.fog-dungeon-action]
+# 前端以 `apikey` + `Authorization: Bearer <ANON_KEY>` 调用；
+# ANON_KEY 是合法 JWT，因此网关 JWT 校验保持开启（与原 Dashboard 行为一致）。
+verify_jwt = true

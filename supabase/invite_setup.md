@@ -52,15 +52,34 @@ supabase/battle_room_system_20260810.sql
 
 不要在正式数据上执行 `second_beta_reset.sql`，除非你明确要重置第二轮测试数据。
 
-## 2. 创建 Edge Function
+## 2. 部署 Edge Function（模块化 · CLI 方式）
 
-在 Supabase 后台打开 `Edge Functions`，新建函数：
+函数已从「单个 8304 行 index.ts」重构为多文件模块化结构：
 
 ```text
-fog-dungeon-action
+supabase/functions/fog-dungeon-action/
+├── index.ts              # 薄路由（CORS → 校验 → 分发 → 兜底）
+├── _shared/core.ts       # 共享类型/常量/工具/DB/身份/权限
+└── handlers/             # 按业务域拆分的处理器
+    ├── open.ts  content.ts  profile.ts  god.ts
+    ├── talent.ts  score.ts  battle.ts  admin.ts
 ```
 
-把 `supabase/functions/fog-dungeon-action/index.ts` 的内容部署到这个函数。
+多文件结构**必须使用 Supabase CLI 部署**（后台网页编辑器只支持单文件）。
+
+### 一次性准备
+
+```text
+npm install -g supabase        # 安装 CLI（已装可跳过）
+supabase login                 # 交互式登录
+supabase link --project-ref trosjcbvfhnfkelflijc
+```
+
+### 每次发布
+
+```text
+supabase functions deploy fog-dungeon-action
+```
 
 确认函数 Secrets 中有：
 
@@ -68,6 +87,8 @@ fog-dungeon-action
 SUPABASE_URL
 SUPABASE_SERVICE_ROLE_KEY
 ```
+
+`supabase/config.toml` 内已配置 `[functions.fog-dungeon-action] verify_jwt = true`，与前端 `apikey + Bearer ANON_KEY` 的调用方式一致。
 
 函数会用 service role 访问 `invite_codes`、副本表、档案表、结算表和天赋表。
 
