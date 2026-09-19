@@ -51,7 +51,8 @@ with roster(display_name, permissions) as (
     ('情忆浮生', array['settle_scores', 'account_role_manage', 'review_dungeons']::text[]),
     ('知更', array['settle_scores', 'account_role_manage', 'review_dungeons']::text[]),
     ('变态', array['account_role_manage', 'review_dungeons']::text[]),
-    ('墨染流年', array['account_role_manage', 'review_dungeons']::text[])
+    ('墨染流年', array['account_role_manage', 'review_dungeons']::text[]),
+    ('六伞', array['settle_scores']::text[])
 ),
 matched as (
   select distinct target.code_hash, r.display_name, r.permissions
@@ -85,7 +86,8 @@ where display_name in (
   '情忆浮生',
   '知更',
   '变态',
-  '墨染流年'
+  '墨染流年',
+  '六伞'
 )
 order by display_name;
 
@@ -100,7 +102,8 @@ with roster(display_name) as (
     ('情忆浮生'),
     ('知更'),
     ('变态'),
-    ('墨染流年')
+    ('墨染流年'),
+    ('六伞')
 ),
 matched as (
   select distinct target.display_name
