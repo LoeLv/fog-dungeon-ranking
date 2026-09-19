@@ -37,51 +37,85 @@ let eternalSteleScrollY = 0;
 function renderEternalSteleMotif(record) {
     if (record.motif === 'pages') {
         return `
-            <span class="stele-page-sheet page-left"></span>
-            <span class="stele-page-sheet page-center"></span>
-            <span class="stele-page-sheet page-right"></span>
-            <span class="stele-page-thread"></span>
-            <span class="stele-page-glow"></span>
-        `;
+            <span class="stele-art stele-art-pages">
+                <span class="art-pages-board"></span>
+                <span class="art-pages-leaf art-leaf-left"></span>
+                <span class="art-pages-leaf art-leaf-right"></span>
+                <span class="art-pages-spine"></span>
+                <span class="art-pages-line art-line-1"></span>
+                <span class="art-pages-line art-line-2"></span>
+                <span class="art-pages-line art-line-3"></span>
+                <span class="art-pages-sheet art-sheet-1"></span>
+                <span class="art-pages-sheet art-sheet-2"></span>
+                <span class="art-pages-sheet art-sheet-3"></span>
+                <span class="art-pages-glyph art-glyph-1"></span>
+                <span class="art-pages-glyph art-glyph-2"></span>
+                <span class="art-pages-glyph art-glyph-3"></span>
+                <span class="art-pages-inkflow"></span>
+            </span>`;
     }
     if (record.motif === 'luck') {
         return `
-            <span class="stele-luck-wheel"></span>
-            <span class="stele-luck-wheel-track"></span>
-            <span class="stele-luck-wheel-rune rune-top"></span>
-            <span class="stele-luck-wheel-rune rune-right"></span>
-            <span class="stele-luck-wheel-rune rune-bottom"></span>
-            <span class="stele-luck-wheel-rune rune-left"></span>
-            <span class="stele-luck-dragon-arc arc-left"></span>
-            <span class="stele-luck-dragon-arc arc-right"></span>
-            <span class="stele-luck-scale scale-1"></span>
-            <span class="stele-luck-scale scale-2"></span>
-            <span class="stele-luck-scale scale-3"></span>
-            <span class="stele-luck-gold-trail"></span>
-        `;
+            <span class="stele-art stele-art-luck">
+                <span class="art-luck-ring"></span>
+                <span class="art-luck-scale art-scale-1"></span>
+                <span class="art-luck-scale art-scale-2"></span>
+                <span class="art-luck-scale art-scale-3"></span>
+                <span class="art-luck-scale art-scale-4"></span>
+                <span class="art-luck-scale art-scale-5"></span>
+                <span class="art-luck-scale art-scale-6"></span>
+                <span class="art-luck-wheel"></span>
+                <span class="art-luck-spoke art-spoke-1"></span>
+                <span class="art-luck-spoke art-spoke-2"></span>
+                <span class="art-luck-spoke art-spoke-3"></span>
+                <span class="art-luck-spoke art-spoke-4"></span>
+                <span class="art-luck-hub"></span>
+                <span class="art-luck-eye"></span>
+                <span class="art-luck-dragon art-dragon-left"></span>
+                <span class="art-luck-dragon art-dragon-right"></span>
+                <span class="art-luck-sweep"></span>
+            </span>`;
     }
     if (record.motif === 'coffin') {
         return `
-            <span class="stele-coffin-shield"></span>
-            <span class="stele-coffin-board"></span>
-            <span class="stele-coffin-guard guard-left"></span>
-            <span class="stele-coffin-guard guard-right"></span>
-            <span class="stele-coffin-ward ward-left"></span>
-            <span class="stele-coffin-ward ward-right"></span>
-            <span class="stele-coffin-bolt bolt-top"></span>
-            <span class="stele-coffin-bolt bolt-left"></span>
-            <span class="stele-coffin-bolt bolt-right"></span>
-            <span class="stele-coffin-root root-left"></span>
-            <span class="stele-coffin-root root-right"></span>
-            <span class="stele-coffin-haze"></span>
-        `;
+            <span class="stele-art stele-art-coffin">
+                <span class="art-coffin-board"></span>
+                <span class="art-coffin-shield"></span>
+                <span class="art-coffin-cross-v"></span>
+                <span class="art-coffin-cross-h"></span>
+                <span class="art-coffin-band art-band-top"></span>
+                <span class="art-coffin-band art-band-bottom"></span>
+                <span class="art-coffin-bolt art-bolt-lt"></span>
+                <span class="art-coffin-bolt art-bolt-rt"></span>
+                <span class="art-coffin-bolt art-bolt-lb"></span>
+                <span class="art-coffin-bolt art-bolt-rb"></span>
+                <span class="art-coffin-rune art-rune-1"></span>
+                <span class="art-coffin-rune art-rune-2"></span>
+                <span class="art-coffin-rune art-rune-3"></span>
+                <span class="art-coffin-miasma"></span>
+                <span class="art-coffin-ember art-ember-1"></span>
+                <span class="art-coffin-ember art-ember-2"></span>
+                <span class="art-coffin-ember art-ember-3"></span>
+            </span>`;
     }
     return `
-        <span class="stele-motif-stone"></span>
-        <span class="stele-motif-crack"></span>
-        <span class="stele-motif-light"></span>
-        <span class="stele-motif-base"></span>
-    `;
+        <span class="stele-art stele-art-tomb">
+            <span class="art-tomb-obelisk"></span>
+            <span class="art-tomb-cap"></span>
+            <span class="art-tomb-star"></span>
+            <span class="art-tomb-star-core"></span>
+            <span class="art-tomb-rune art-tomb-rune-1"></span>
+            <span class="art-tomb-rune art-tomb-rune-2"></span>
+            <span class="art-tomb-rune art-tomb-rune-3"></span>
+            <span class="art-tomb-crack"></span>
+            <span class="art-tomb-moonlight"></span>
+            <span class="art-tomb-orbit"></span>
+            <span class="art-tomb-dust art-dust-1"></span>
+            <span class="art-tomb-dust art-dust-2"></span>
+            <span class="art-tomb-dust art-dust-3"></span>
+            <span class="art-tomb-dust art-dust-4"></span>
+            <span class="art-tomb-dust art-dust-5"></span>
+        </span>`;
 }
 
 function renderEternalSteleRecord(record) {
