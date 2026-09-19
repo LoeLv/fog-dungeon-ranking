@@ -92,12 +92,31 @@ function renderEternalSteleRecord(record) {
         'stele-monolith-tomb';
     return `
         <section class="stele-sanctum stele-sanctum-${escapeHtml(record.motif)}" aria-label="${escapeHtml(record.title)}">
+            <div class="stele-atmos" aria-hidden="true">
+                <span class="stele-atmos-aura"></span>
+                <span class="stele-atmos-ray r1"></span>
+                <span class="stele-atmos-ray r2"></span>
+                <span class="stele-atmos-ray r3"></span>
+                <span class="stele-atmos-mote m1"></span>
+                <span class="stele-atmos-mote m2"></span>
+                <span class="stele-atmos-mote m3"></span>
+                <span class="stele-atmos-mote m4"></span>
+                <span class="stele-atmos-mote m5"></span>
+                <span class="stele-atmos-mote m6"></span>
+                <span class="stele-atmos-cast"></span>
+                <span class="stele-atmos-floor"></span>
+                <span class="stele-atmos-ripple"></span>
+            </div>
             <div class="stele-sanctum-pillars" aria-hidden="true">
                 <span class="stele-pillar stele-pillar-left"></span>
                 <span class="stele-pillar stele-pillar-right"></span>
                 <span class="stele-sanctum-arch"></span>
             </div>
             <div class="stele-monolith ${motifClass}">
+                <span class="stele-sheen" aria-hidden="true"></span>
+                <span class="stele-rim stele-rim-left" aria-hidden="true"></span>
+                <span class="stele-rim stele-rim-right" aria-hidden="true"></span>
+                <span class="stele-grain" aria-hidden="true"></span>
                 <div class="stele-monolith-crown stele-crown-${escapeHtml(record.motif)}" aria-hidden="true">
                     ${record.motif === 'pages' ? `
                         <span class="stele-crown-halo"></span>
@@ -159,6 +178,7 @@ function renderEternalSteleRecord(record) {
                 </div>
                 <div class="stele-monolith-base" aria-hidden="true"></div>
             </div>
+            <div class="stele-veil" aria-hidden="true"></div>
         </section>
     `;
 }

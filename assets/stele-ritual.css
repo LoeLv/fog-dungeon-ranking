@@ -1,0 +1,238 @@
+/* ============================================================
+   永恒神碑 · 仪式感增强层 (Eternal Stele Ritual Layer)
+   目标：庄严 · 真实 · 压迫感
+   纯叠加式增强，不修改既有布局骨架。
+   ============================================================ */
+
+/* ---------- 神龛氛围层（碑后神光 / 尘埃 / 地雾 / 光环） ---------- */
+.stele-sanctum .stele-atmos {
+    position: absolute;
+    inset: 0;
+    overflow: hidden;
+    pointer-events: none;
+    z-index: 0;
+    border-radius: inherit;
+}
+
+/* 碑周暗气：令碑体被一层沉沉暗雾包裹，制造压迫 */
+.stele-atmos-aura {
+    position: absolute;
+    left: 50%;
+    top: 48%;
+    width: min(130%, 980px);
+    height: min(160%, 1280px);
+    transform: translate(-50%, -50%);
+    background: radial-gradient(ellipse at 50% 42%,
+        rgba(6, 8, 14, 0.58),
+        rgba(6, 8, 14, 0.3) 44%,
+        transparent 72%);
+    filter: blur(12px);
+    animation: steleRitualAura 7.5s ease-in-out infinite;
+}
+
+/* 自上而下的神光光柱 */
+.stele-atmos-ray {
+    position: absolute;
+    top: -8%;
+    left: 50%;
+    height: 126%;
+    transform-origin: top center;
+    background: linear-gradient(180deg,
+        rgba(255, 240, 196, 0.18),
+        rgba(255, 240, 196, 0.06) 40%,
+        transparent 76%);
+    filter: blur(7px);
+    mix-blend-mode: screen;
+    opacity: 0.4;
+    animation: steleRitualRay 11s ease-in-out infinite;
+}
+.stele-atmos-ray.r1 { width: clamp(130px, 22vw, 320px); transform: translateX(-50%) rotate(9deg); }
+.stele-atmos-ray.r2 { width: clamp(90px, 16vw, 220px); transform: translateX(-50%) rotate(-12deg); opacity: 0.3; animation-duration: 14s; animation-delay: 1.1s; }
+.stele-atmos-ray.r3 { width: clamp(150px, 27vw, 380px); transform: translateX(-50%) rotate(2deg); opacity: 0.24; animation-duration: 17s; animation-delay: 2s; }
+
+/* 缓缓上浮的尘埃 / 灰烬 */
+.stele-atmos-mote {
+    position: absolute;
+    bottom: 8%;
+    width: 4px;
+    height: 4px;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(255, 242, 206, 0.95), rgba(255, 242, 206, 0) 70%);
+    opacity: 0;
+    filter: blur(0.3px);
+    animation: steleRitualMote 12s linear infinite;
+}
+.stele-atmos-mote.m1 { left: 20%; animation-duration: 12s; animation-delay: 0s; }
+.stele-atmos-mote.m2 { left: 34%; width: 3px; height: 3px; animation-duration: 15s; animation-delay: 2.4s; }
+.stele-atmos-mote.m3 { left: 48%; animation-duration: 10s; animation-delay: 4.1s; }
+.stele-atmos-mote.m4 { left: 62%; width: 5px; height: 5px; animation-duration: 17s; animation-delay: 1.2s; }
+.stele-atmos-mote.m5 { left: 74%; width: 3px; height: 3px; animation-duration: 13s; animation-delay: 5.6s; }
+.stele-atmos-mote.m6 { left: 86%; animation-duration: 16s; animation-delay: 3.3s; }
+
+/* 碑座落影：把碑体压在大地上，增强真实与重量感 */
+.stele-atmos-cast {
+    position: absolute;
+    left: 50%;
+    bottom: 5%;
+    width: min(62%, 460px);
+    height: 74px;
+    transform: translateX(-50%);
+    border-radius: 50%;
+    background: radial-gradient(ellipse at center, rgba(0, 0, 0, 0.66), transparent 70%);
+    filter: blur(7px);
+    animation: steleRitualCast 6.5s ease-in-out infinite;
+}
+
+/* 地面暗雾 */
+.stele-atmos-floor {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    height: 34%;
+    background: linear-gradient(0deg, rgba(0, 0, 0, 0.52), transparent);
+}
+
+/* 足下沉沉扩散的光环涟漪 */
+.stele-atmos-ripple {
+    position: absolute;
+    left: 50%;
+    bottom: 10%;
+    width: min(70%, 580px);
+    height: 120px;
+    transform: translateX(-50%) scale(0.7);
+    border-radius: 50%;
+    border: 1px solid rgba(243, 222, 160, 0.2);
+    box-shadow: 0 0 26px rgba(243, 222, 160, 0.14);
+    opacity: 0;
+    animation: steleRitualRipple 5s ease-out infinite;
+}
+
+/* ---------- 碑体真实感：流光 / 边光 / 石质颗粒 ---------- */
+.stele-sanctum .stele-monolith { z-index: 2; }
+
+/* 斜掠而过的冷光，令碑面石材有体积反光 */
+.stele-monolith .stele-sheen {
+    position: absolute;
+    inset: 2px;
+    z-index: -1;
+    display: block;
+    border-radius: inherit;
+    overflow: hidden;
+    pointer-events: none;
+    background: linear-gradient(115deg,
+        transparent 34%,
+        rgba(255, 250, 232, 0.13) 46%,
+        rgba(255, 250, 232, 0) 58%);
+    background-size: 280% 280%;
+    background-position: 120% 0;
+    animation: steleRitualSheen 9s ease-in-out infinite;
+}
+
+/* 左右边缘轮廓光，勾出碑体厚度 */
+.stele-monolith .stele-rim {
+    position: absolute;
+    top: 8%;
+    bottom: 12%;
+    width: 2px;
+    z-index: -1;
+    display: block;
+    pointer-events: none;
+    background: linear-gradient(180deg, transparent, rgba(255, 244, 212, 0.5), transparent);
+    filter: blur(0.4px);
+    opacity: 0.7;
+}
+.stele-monolith .stele-rim-left { left: 6px; }
+.stele-monolith .stele-rim-right { right: 6px; }
+
+/* 石质颗粒噪点：低透明度叠加，去除塑料感 */
+.stele-monolith .stele-grain {
+    position: absolute;
+    inset: 1px;
+    z-index: -1;
+    display: block;
+    border-radius: inherit;
+    pointer-events: none;
+    opacity: 0.07;
+    mix-blend-mode: overlay;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+    background-size: 180px 180px;
+}
+
+/* ---------- 全局压暗帷幔（压迫感核心） ---------- */
+.stele-sanctum .stele-veil {
+    position: absolute;
+    inset: 0;
+    z-index: 6;
+    pointer-events: none;
+    border-radius: inherit;
+    background: radial-gradient(ellipse at 50% 46%,
+        transparent 40%,
+        rgba(0, 0, 0, 0.36) 76%,
+        rgba(0, 0, 0, 0.62) 100%);
+    mix-blend-mode: multiply;
+    animation: steleRitualVeil 8.5s ease-in-out infinite;
+}
+
+/* ---------- 标题庄严化 ---------- */
+.stele-hero .stele-title {
+    text-shadow:
+        0 0 28px rgba(243, 222, 160, 0.36),
+        0 0 60px rgba(243, 222, 160, 0.18),
+        0 2px 2px rgba(0, 0, 0, 0.65);
+    letter-spacing: 0.06em;
+}
+
+/* ---------- 关键帧 ---------- */
+@keyframes steleRitualAura {
+    0%, 100% { opacity: 0.7; }
+    50% { opacity: 0.96; }
+}
+@keyframes steleRitualRay {
+    0%, 100% { opacity: 0.22; filter: blur(8px) brightness(1); }
+    50% { opacity: 0.58; filter: blur(5px) brightness(1.16); }
+}
+@keyframes steleRitualMote {
+    0% { transform: translateY(0) translateX(0); opacity: 0; }
+    14% { opacity: 0.72; }
+    78% { opacity: 0.45; }
+    100% { transform: translateY(-46vh) translateX(14px); opacity: 0; }
+}
+@keyframes steleRitualCast {
+    0%, 100% { opacity: 0.72; }
+    50% { opacity: 0.96; }
+}
+@keyframes steleRitualRipple {
+    0% { transform: translateX(-50%) scale(0.7); opacity: 0; }
+    28% { opacity: 0.5; }
+    100% { transform: translateX(-50%) scale(1.18); opacity: 0; }
+}
+@keyframes steleRitualSheen {
+    0%, 68% { background-position: 120% 0; }
+    86% { background-position: -45% 0; }
+    100% { background-position: -45% 0; }
+}
+@keyframes steleRitualVeil {
+    0%, 100% { opacity: 0.84; }
+    50% { opacity: 1; }
+}
+
+/* ---------- 移动端与可访问性 ---------- */
+@media (max-width: 640px) {
+    .stele-atmos-ray.r3 { display: none; }
+    .stele-atmos-cast { height: 54px; }
+    .stele-sanctum .stele-veil { background: radial-gradient(ellipse at 50% 46%, transparent 44%, rgba(0, 0, 0, 0.34) 80%, rgba(0, 0, 0, 0.58) 100%); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .stele-atmos-aura,
+    .stele-atmos-ray,
+    .stele-atmos-mote,
+    .stele-atmos-cast,
+    .stele-atmos-ripple,
+    .stele-monolith .stele-sheen,
+    .stele-sanctum .stele-veil {
+        animation: none !important;
+    }
+    .stele-atmos-mote { opacity: 0.35; }
+}
