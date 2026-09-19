@@ -948,3 +948,174 @@
     .stele-art-sun .art-sun-corona { width: 170px; height: 170px; }
     .stele-art-sun .art-sun-ray { height: 160px; }
 }
+
+/* ============================================================
+   G. 皮卡丘之神 · 守护 —— 秩序律法（金律天秤）× 守护（盾印封印）× 皮卡丘（黄电光）
+   ============================================================ */
+
+/* —— 碑体：暗蓝黑底，镀皮卡丘暖黄光与秩序白金边 —— */
+.stele-sanctum-guard .stele-monolith {
+    width: min(80%, 384px);
+    background:
+        linear-gradient(180deg, #2a2410 0%, #1c2233 46%, #12141f 100%);
+    border-color: rgba(247, 208, 60, 0.5);
+    box-shadow:
+        inset 0 0 52px rgba(247, 208, 60, 0.16),
+        inset 0 0 96px rgba(60, 92, 170, 0.22),
+        0 20px 56px rgba(0, 0, 0, 0.66),
+        0 0 44px rgba(247, 200, 60, 0.16);
+}
+/* 秩序律法格栅：覆于碑面的规则网格 */
+.stele-motif-guard::after {
+    content: '';
+    position: absolute;
+    inset: 6% 8%;
+    pointer-events: none;
+    opacity: 0.26;
+    mix-blend-mode: screen;
+    background-image:
+        linear-gradient(rgba(247, 222, 120, 0.5) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(247, 222, 120, 0.5) 1px, transparent 1px);
+    background-size: 34px 34px;
+    -webkit-mask: radial-gradient(circle at 50% 42%, #000 28%, transparent 76%);
+            mask: radial-gradient(circle at 50% 42%, #000 28%, transparent 76%);
+    animation: artGuardGrid 7s ease-in-out infinite;
+}
+
+/* —— 造型：守护盾印 · 律法天秤 · 秩序立柱 · 皮卡丘之耳/电光 —— */
+.stele-art-guard { position: absolute; inset: 0; display: block; }
+.stele-art-guard .art-guard-lattice {
+    position: absolute; left: 50%; top: 40%;
+    width: 260px; height: 260px;
+    transform: translate(-50%, -50%);
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(247, 220, 120, 0.22), rgba(90, 130, 210, 0.1) 48%, transparent 70%);
+    animation: artGuardPulse 6s ease-in-out infinite;
+}
+.stele-art-guard .art-guard-column {
+    position: absolute; top: 26%; width: 10px; height: 56%;
+    border-radius: 5px;
+    background: linear-gradient(180deg, rgba(247, 222, 120, 0.72), rgba(247, 222, 120, 0.08));
+    box-shadow: 0 0 14px rgba(247, 210, 90, 0.5);
+}
+.stele-art-guard .art-col-left { left: 14%; }
+.stele-art-guard .art-col-right { right: 14%; }
+.stele-art-guard .art-guard-scale {
+    position: absolute; left: 50%; top: 53%;
+    width: 74%; height: 2px;
+    transform: translate(-50%, -50%);
+    background: linear-gradient(90deg, transparent, rgba(247, 222, 120, 0.85) 20%, rgba(247, 222, 120, 0.85) 80%, transparent);
+    box-shadow: 0 0 12px rgba(247, 210, 90, 0.6);
+}
+.stele-art-guard .art-guard-scale::before,
+.stele-art-guard .art-guard-scale::after {
+    content: '';
+    position: absolute; top: 3px;
+    width: 22px; height: 22px;
+    border: 2px solid rgba(247, 222, 120, 0.72);
+    border-top: none;
+    border-radius: 0 0 11px 11px;
+}
+.stele-art-guard .art-guard-scale::before { left: 10%; }
+.stele-art-guard .art-guard-scale::after { right: 10%; }
+.stele-art-guard .art-guard-shield {
+    position: absolute; left: 50%; top: 40%;
+    width: 148px; height: 178px;
+    transform: translate(-50%, -50%);
+    clip-path: polygon(50% 0, 100% 18%, 100% 62%, 50% 100%, 0 62%, 0 18%);
+    background: linear-gradient(180deg, rgba(247, 208, 60, 0.32), rgba(150, 110, 40, 0.14));
+    filter: drop-shadow(0 0 18px rgba(247, 200, 60, 0.5));
+}
+.stele-art-guard .art-guard-shield-core {
+    position: absolute; left: 50%; top: 40%;
+    width: 72px; height: 86px;
+    transform: translate(-50%, -50%);
+    clip-path: polygon(50% 0, 100% 20%, 100% 60%, 50% 100%, 0 60%, 0 20%);
+    background: radial-gradient(circle at 50% 40%, #fff6cf, #f7d02c 55%, #b8891f 100%);
+    animation: artGuardShieldGlow 5s ease-in-out infinite;
+}
+.stele-art-guard .art-guard-bolt {
+    position: absolute; width: 26px; height: 48px;
+    background: linear-gradient(180deg, #fff6c0, #f7d02c 60%, #e0a010);
+    clip-path: polygon(55% 0, 20% 52%, 48% 52%, 32% 100%, 82% 40%, 52% 40%);
+    filter: drop-shadow(0 0 10px rgba(247, 220, 90, 0.9));
+    animation: artGuardBolt 3.2s ease-in-out infinite;
+}
+.stele-art-guard .art-bolt-1 { left: 21%; top: 19%; transform: scale(0.8) rotate(-12deg); animation-delay: 0s; }
+.stele-art-guard .art-bolt-2 { right: 19%; top: 23%; transform: scale(0.7) rotate(14deg); animation-delay: 1s; }
+.stele-art-guard .art-bolt-3 { left: 46%; top: 11%; transform: scale(0.6); animation-delay: 2s; }
+.stele-art-guard .art-guard-ear {
+    position: absolute; top: 6%; width: 20px; height: 82px;
+    border-radius: 10px / 22px;
+    background: linear-gradient(180deg, #2b2b2b 0%, #2b2b2b 22%, #f7d02c 26%, #f0c020 100%);
+    box-shadow: 0 0 14px rgba(247, 210, 90, 0.55);
+    animation: artGuardEarGlow 4.5s ease-in-out infinite;
+}
+.stele-art-guard .art-ear-left { left: 24%; transform: rotate(-16deg); }
+.stele-art-guard .art-ear-right { right: 24%; transform: rotate(16deg); animation-delay: 0.8s; }
+.stele-art-guard .art-guard-cheek {
+    position: absolute; top: 52%; width: 22px; height: 22px;
+    border-radius: 50%;
+    background: radial-gradient(circle, #ff6b6b, #d63b3b 70%, transparent);
+    box-shadow: 0 0 16px rgba(255, 90, 90, 0.7);
+    animation: artGuardCheek 5s ease-in-out infinite;
+}
+.stele-art-guard .art-cheek-left { left: 28%; }
+.stele-art-guard .art-cheek-right { right: 28%; }
+.stele-art-guard .art-guard-seal {
+    position: absolute; left: 50%; top: 74%;
+    width: 62px; height: 62px;
+    transform: translate(-50%, -50%);
+    border: 2px solid rgba(247, 222, 120, 0.55);
+    border-radius: 8px;
+    background: conic-gradient(from 0deg, rgba(247, 222, 120, 0.2), transparent, rgba(120, 92, 200, 0.2), transparent, rgba(247, 222, 120, 0.2));
+    box-shadow: inset 0 0 20px rgba(247, 210, 90, 0.4), 0 0 18px rgba(247, 210, 90, 0.35);
+    animation: artGuardSealSpin 24s linear infinite;
+}
+.stele-art-guard .art-guard-spark {
+    position: absolute; width: 6px; height: 6px; border-radius: 50%;
+    background: radial-gradient(circle, #fffce0, rgba(247, 208, 60, 0));
+    filter: blur(0.3px);
+    animation: artGuardSpark 4s ease-in-out infinite;
+}
+.art-spark-1 { left: 30%; bottom: 26%; animation-delay: 0s; }
+.art-spark-2 { left: 52%; bottom: 20%; animation-delay: 1s; }
+.art-spark-3 { left: 70%; bottom: 28%; animation-delay: 2s; }
+.art-spark-4 { left: 42%; bottom: 34%; animation-delay: 3s; }
+
+/* —— 碑冠：秩序光环 + 皮卡丘电光核心 —— */
+.stele-crown-guard::before {
+    content: '';
+    position: absolute; left: 50%; top: 50%;
+    width: 150px; height: 150px;
+    transform: translate(-50%, -54%);
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(255, 240, 180, 0.42), rgba(247, 208, 60, 0.2) 52%, transparent 72%);
+    animation: artGuardPulse 5.6s ease-in-out infinite;
+}
+.stele-crown-guard::after {
+    content: '';
+    position: absolute; left: 50%; top: 50%;
+    width: 40px; height: 40px;
+    transform: translate(-50%, -72%);
+    background: linear-gradient(180deg, #fff6c0, #f7d02c 60%, #e0a010);
+    clip-path: polygon(55% 0, 20% 52%, 48% 52%, 32% 100%, 82% 40%, 52% 40%);
+    filter: drop-shadow(0 0 14px rgba(247, 220, 90, 0.9));
+    animation: artGuardBolt 3s ease-in-out infinite;
+}
+
+/* —— 守护专属动效 —— */
+@keyframes artGuardPulse { 0%, 100% { opacity: 0.72; } 50% { opacity: 1; } }
+@keyframes artGuardGrid { 0%, 100% { opacity: 0.2; } 50% { opacity: 0.36; } }
+@keyframes artGuardBolt { 0%, 100% { opacity: 0.6; filter: brightness(1) drop-shadow(0 0 8px rgba(247, 220, 90, 0.7)); } 50% { opacity: 1; filter: brightness(1.35) drop-shadow(0 0 14px rgba(247, 220, 90, 1)); } }
+@keyframes artGuardShieldGlow { 0%, 100% { filter: brightness(0.95); } 50% { filter: brightness(1.28); } }
+@keyframes artGuardEarGlow { 0%, 100% { filter: brightness(1); } 50% { filter: brightness(1.32); } }
+@keyframes artGuardCheek { 0%, 100% { opacity: 0.7; } 50% { opacity: 1; } }
+@keyframes artGuardSealSpin { from { transform: translate(-50%, -50%) rotate(0deg); } to { transform: translate(-50%, -50%) rotate(360deg); } }
+@keyframes artGuardSpark { 0% { transform: translateY(0) scale(0.7); opacity: 0; } 25% { opacity: 0.9; } 75% { opacity: 0.5; } 100% { transform: translateY(-90px) translateX(10px) scale(1.1); opacity: 0; } }
+
+@media (max-width: 640px) {
+    .stele-sanctum-guard .stele-monolith { width: 88%; }
+    .stele-art-guard .art-guard-lattice { width: 220px; height: 220px; }
+    .stele-art-guard .art-guard-shield { width: 120px; height: 148px; }
+}

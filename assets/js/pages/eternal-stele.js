@@ -36,6 +36,13 @@ const ETERNAL_STELE_RECORDS = [
         subtitle: '前身 · 湮灭之神',
         summary: '槐柏是世界上最温情的存在，虽身负湮灭破坏之力，却从未做出伤害。祂是一代神女，而后成为湮灭，祂的柔情与温暖照拂世间。执世界之崩坏，护苍生，保天下。历经黑暗时代后，集结数人开辟新的信仰大陆，保全己身，护人周全，天穹早就吹响湮灭的和风，祂的柔情和光照耀，无不咏叹。',
         note: '暖阳长照',
+    },
+    {
+        motif: 'guard',
+        title: '皮卡丘之神--守护',
+        subtitle: '前身 · 秩序之神',
+        summary: '世界的终结者--皮卡丘，这是一种邪恶的黄色生物。处在希望之州的预言家神棍有一天意外碰到这种生物，历经大战之后，最终成功收容，但是外表被皮卡丘腐蚀，最终沦为黄色的猫，改名守护。祂用自己的身体，使用秩序的权柄将这个生物封锁在自己身体中，来到信仰之地，被赋予秩序之力。祂即是律法的化身，虽然自己的身体已经如此，但祂仍然被群众们所信仰，爱戴，拥护，而祂也因此热爱着这个接受祂的地方，勤奋且不知疲倦地守护这里，不忘初心，刻心执守。',
+        note: '刻心执守',
     }
 ];
 
@@ -126,6 +133,29 @@ function renderEternalSteleMotif(record) {
                 <span class="art-sun-mote art-mote-4"></span>
             </span>`;
     }
+    if (record.motif === 'guard') {
+        return `
+            <span class="stele-art stele-art-guard">
+                <span class="art-guard-lattice"></span>
+                <span class="art-guard-column art-col-left"></span>
+                <span class="art-guard-column art-col-right"></span>
+                <span class="art-guard-scale"></span>
+                <span class="art-guard-shield"></span>
+                <span class="art-guard-shield-core"></span>
+                <span class="art-guard-bolt art-bolt-1"></span>
+                <span class="art-guard-bolt art-bolt-2"></span>
+                <span class="art-guard-bolt art-bolt-3"></span>
+                <span class="art-guard-ear art-ear-left"></span>
+                <span class="art-guard-ear art-ear-right"></span>
+                <span class="art-guard-cheek art-cheek-left"></span>
+                <span class="art-guard-cheek art-cheek-right"></span>
+                <span class="art-guard-seal"></span>
+                <span class="art-guard-spark art-spark-1"></span>
+                <span class="art-guard-spark art-spark-2"></span>
+                <span class="art-guard-spark art-spark-3"></span>
+                <span class="art-guard-spark art-spark-4"></span>
+            </span>`;
+    }
     return `
         <span class="stele-art stele-art-tomb">
             <span class="art-tomb-obelisk"></span>
@@ -152,6 +182,7 @@ function renderEternalSteleRecord(record) {
         record.motif === 'luck' ? 'stele-monolith-luck' :
         record.motif === 'coffin' ? 'stele-monolith-coffin' :
         record.motif === 'sun' ? 'stele-monolith-sun' :
+        record.motif === 'guard' ? 'stele-monolith-guard' :
         'stele-monolith-tomb';
     return `
         <section class="stele-sanctum stele-sanctum-${escapeHtml(record.motif)}" aria-label="${escapeHtml(record.title)}">
@@ -216,6 +247,12 @@ function renderEternalSteleRecord(record) {
                         <span class="stele-crown-sun-ray sun-crown-ray-right"></span>
                         <span class="stele-crown-sun-gem"></span>
                         <span class="stele-crown-sun-flare"></span>
+                    ` : record.motif === 'guard' ? `
+                        <span class="stele-crown-guard-bolt"></span>
+                        <span class="stele-crown-guard-ear ear-left"></span>
+                        <span class="stele-crown-guard-ear ear-right"></span>
+                        <span class="stele-crown-guard-core"></span>
+                        <span class="stele-crown-guard-ring"></span>
                     ` : `
                         <span class="stele-crown-halo"></span>
                         <span class="stele-crown-arc"></span>
