@@ -29,6 +29,13 @@ const ETERNAL_STELE_RECORDS = [
         subtitle: '\u524d\u8eab \u00b7 \u8150\u673d\u4e4b\u795e',
         summary: '作为死亡家族中最感性的存在，骨头座下第一人，棺材板的为人被众人所知，脱离希望之州后来到信仰之地，并且将宗门扩大至数人。期间尽职尽责，担任过多项职责，是我们必不可缺的伙伴。但是由于宗门裙带关系，棺材板陨落至黑风峡谷（信仰杀）之中。至今，棺材板的事迹仍然在被歌颂，永恒传唱！',
         note: '\u6c38\u6052\u4f20\u5531',
+    },
+    {
+        motif: 'sun',
+        title: '暖阳女神--槐柏',
+        subtitle: '前身 · 湮灭之神',
+        summary: '槐柏是世界上最温情的存在，虽身负湮灭破坏之力，却从未做出伤害。祂是一代神女，而后成为湮灭，祂的柔情与温暖照拂世间。执世界之崩坏，护苍生，保天下。历经黑暗时代后，集结数人开辟新的信仰大陆，保全己身，护人周全，天穹早就吹响湮灭的和风，祂的柔情和光照耀，无不咏叹。',
+        note: '暖阳长照',
     }
 ];
 
@@ -98,6 +105,27 @@ function renderEternalSteleMotif(record) {
                 <span class="art-coffin-ember art-ember-3"></span>
             </span>`;
     }
+    if (record.motif === 'sun') {
+        return `
+            <span class="stele-art stele-art-sun">
+                <span class="art-sun-halo"></span>
+                <span class="art-sun-corona"></span>
+                <span class="art-sun-ray art-sun-ray-1"></span>
+                <span class="art-sun-ray art-sun-ray-2"></span>
+                <span class="art-sun-ray art-sun-ray-3"></span>
+                <span class="art-sun-ray art-sun-ray-4"></span>
+                <span class="art-sun-disc"></span>
+                <span class="art-sun-core"></span>
+                <span class="art-sun-horizon"></span>
+                <span class="art-sun-petal art-petal-1"></span>
+                <span class="art-sun-petal art-petal-2"></span>
+                <span class="art-sun-petal art-petal-3"></span>
+                <span class="art-sun-mote art-mote-1"></span>
+                <span class="art-sun-mote art-mote-2"></span>
+                <span class="art-sun-mote art-mote-3"></span>
+                <span class="art-sun-mote art-mote-4"></span>
+            </span>`;
+    }
     return `
         <span class="stele-art stele-art-tomb">
             <span class="art-tomb-obelisk"></span>
@@ -123,6 +151,7 @@ function renderEternalSteleRecord(record) {
         record.motif === 'pages' ? 'stele-monolith-pages' :
         record.motif === 'luck' ? 'stele-monolith-luck' :
         record.motif === 'coffin' ? 'stele-monolith-coffin' :
+        record.motif === 'sun' ? 'stele-monolith-sun' :
         'stele-monolith-tomb';
     return `
         <section class="stele-sanctum stele-sanctum-${escapeHtml(record.motif)}" aria-label="${escapeHtml(record.title)}">
@@ -181,6 +210,12 @@ function renderEternalSteleRecord(record) {
                         <span class="stele-coffin-crown-bolt coffin-bolt-left"></span>
                         <span class="stele-coffin-crown-bolt coffin-bolt-center"></span>
                         <span class="stele-coffin-crown-bolt coffin-bolt-right"></span>
+                    ` : record.motif === 'sun' ? `
+                        <span class="stele-crown-sun-ring"></span>
+                        <span class="stele-crown-sun-ray sun-crown-ray-left"></span>
+                        <span class="stele-crown-sun-ray sun-crown-ray-right"></span>
+                        <span class="stele-crown-sun-gem"></span>
+                        <span class="stele-crown-sun-flare"></span>
                     ` : `
                         <span class="stele-crown-halo"></span>
                         <span class="stele-crown-arc"></span>

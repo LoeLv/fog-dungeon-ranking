@@ -789,3 +789,162 @@
     }
     .stele-atmos-mote { opacity: 0.35; }
 }
+
+/* ============================================================
+   F. 暖阳女神 · 槐柏 —— 暖阳（温情光辉）× 湮灭（崩坏破坏）
+   ============================================================ */
+
+/* —— 碑体：暖金基调，暗紫湮灭底色 —— */
+.stele-sanctum-sun .stele-monolith {
+    width: min(80%, 384px);
+    background:
+        linear-gradient(180deg, #3b2c22 0%, #2b202c 46%, #1b1324 100%);
+    border-color: rgba(255, 205, 130, 0.42);
+    box-shadow:
+        inset 0 0 52px rgba(255, 190, 110, 0.16),
+        inset 0 0 96px rgba(96, 48, 128, 0.24),
+        0 20px 56px rgba(0, 0, 0, 0.66),
+        0 0 44px rgba(255, 170, 90, 0.14);
+}
+/* 湮灭裂纹：暗紫脉络覆于碑面 */
+.stele-motif-sun::after {
+    content: '';
+    position: absolute;
+    inset: 8% 10%;
+    pointer-events: none;
+    opacity: 0.4;
+    mix-blend-mode: screen;
+    background:
+        linear-gradient(72deg, transparent 47%, rgba(180, 120, 255, 0.6) 48%, transparent 49.3%),
+        linear-gradient(-58deg, transparent 62%, rgba(140, 90, 210, 0.5) 63%, transparent 64.4%),
+        linear-gradient(118deg, transparent 34%, rgba(90, 50, 140, 0.6) 35%, transparent 36.5%),
+        linear-gradient(24deg, transparent 70%, rgba(160, 100, 230, 0.45) 71%, transparent 72.4%);
+    animation: artVoidCrack 8s ease-in-out infinite;
+}
+
+/* —— 造型：柔光日轮 · 崩坏日冕 · 暖光花瓣 · 湮灭光尘 —— */
+.stele-art-sun { position: absolute; inset: 0; display: block; }
+.stele-art-sun .art-sun-halo {
+    position: absolute; left: 50%; top: 38%;
+    width: 360px; height: 360px;
+    transform: translate(-50%, -50%);
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(255, 206, 140, 0.34), rgba(255, 180, 110, 0.12) 42%, transparent 66%);
+    animation: artSunBreath 6.5s ease-in-out infinite;
+}
+.stele-art-sun .art-sun-corona {
+    position: absolute; left: 50%; top: 38%;
+    width: 210px; height: 210px;
+    transform: translate(-50%, -50%);
+    border-radius: 50%;
+    background: conic-gradient(from 0deg,
+        rgba(255, 200, 120, 0.30) 0deg, rgba(90, 48, 140, 0.34) 30deg,
+        rgba(255, 210, 140, 0.26) 60deg, rgba(64, 30, 96, 0.38) 90deg,
+        rgba(255, 205, 130, 0.28) 120deg, rgba(104, 58, 160, 0.32) 150deg,
+        rgba(255, 215, 150, 0.26) 180deg, rgba(74, 36, 110, 0.36) 210deg,
+        rgba(255, 200, 120, 0.30) 240deg, rgba(92, 50, 146, 0.32) 270deg,
+        rgba(255, 210, 140, 0.26) 300deg, rgba(60, 28, 92, 0.36) 330deg,
+        rgba(255, 200, 120, 0.30) 360deg);
+    -webkit-mask: radial-gradient(circle, transparent 46%, #000 52%, #000 88%, transparent 100%);
+            mask: radial-gradient(circle, transparent 46%, #000 52%, #000 88%, transparent 100%);
+    filter: blur(1.4px);
+    opacity: 0.92;
+    animation: artSunCorona 26s linear infinite;
+}
+.stele-art-sun .art-sun-ray {
+    position: absolute; left: 50%; top: 38%;
+    width: 3px; height: 200px;
+    transform-origin: 50% 50%;
+    background: linear-gradient(180deg, transparent, rgba(255, 214, 150, 0.55) 30%, rgba(255, 236, 200, 0.9) 50%, rgba(255, 214, 150, 0.55) 70%, transparent);
+    filter: blur(0.6px);
+    animation: artSunRay 6s ease-in-out infinite;
+}
+.stele-art-sun .art-sun-ray-1 { transform: translate(-50%, -50%) rotate(0deg); animation-delay: 0s; }
+.stele-art-sun .art-sun-ray-2 { transform: translate(-50%, -50%) rotate(45deg); animation-delay: 0.5s; }
+.stele-art-sun .art-sun-ray-3 { transform: translate(-50%, -50%) rotate(90deg); animation-delay: 1s; }
+.stele-art-sun .art-sun-ray-4 { transform: translate(-50%, -50%) rotate(135deg); animation-delay: 1.5s; }
+.stele-art-sun .art-sun-disc {
+    position: absolute; left: 50%; top: 38%;
+    width: 132px; height: 132px;
+    transform: translate(-50%, -50%);
+    border-radius: 50%;
+    background: radial-gradient(circle at 50% 40%, #fff8e6 0%, #ffd98f 38%, #f4a63f 66%, #c06a2c 88%, #7a3f5c 100%);
+    box-shadow:
+        0 0 34px rgba(255, 190, 110, 0.7),
+        inset 0 0 20px rgba(120, 60, 140, 0.55),
+        inset 0 -8px 20px rgba(60, 26, 80, 0.7);
+    animation: artSunBreath 6.5s ease-in-out infinite;
+}
+.stele-art-sun .art-sun-core {
+    position: absolute; left: 50%; top: 38%;
+    width: 44px; height: 44px;
+    transform: translate(-50%, -50%);
+    border-radius: 50%;
+    background: radial-gradient(circle, #ffffff, #ffe6ad 55%, rgba(255, 200, 120, 0));
+    box-shadow: 0 0 26px rgba(255, 236, 190, 0.95);
+    animation: artSunCorePulse 4.5s ease-in-out infinite;
+}
+.stele-art-sun .art-sun-horizon {
+    position: absolute; left: 50%; top: 58%;
+    width: 74%; height: 2px;
+    transform: translate(-50%, -50%);
+    background: linear-gradient(90deg, transparent, rgba(255, 214, 150, 0.75) 30%, rgba(214, 150, 255, 0.5) 70%, transparent);
+    filter: blur(1px);
+    box-shadow: 0 0 18px rgba(255, 200, 130, 0.5);
+}
+.stele-art-sun .art-sun-petal {
+    position: absolute; width: 10px; height: 10px;
+    border-radius: 50% 0 50% 50%;
+    background: linear-gradient(135deg, rgba(255, 224, 170, 0.95), rgba(255, 170, 90, 0.5));
+    filter: blur(0.4px);
+    animation: artSunPetal 9s ease-in-out infinite;
+}
+.art-sun-petal.art-petal-1 { left: 30%; top: 34%; animation-delay: 0s; }
+.art-sun-petal.art-petal-2 { left: 62%; top: 30%; animation-delay: 2.6s; }
+.art-sun-petal.art-petal-3 { left: 46%; top: 52%; animation-delay: 5.2s; }
+.stele-art-sun .art-sun-mote {
+    position: absolute; width: 5px; height: 5px; border-radius: 50%;
+    background: radial-gradient(circle, rgba(196, 150, 255, 0.95), rgba(110, 58, 170, 0));
+    filter: blur(0.3px);
+    animation: artSunMoteRise 8s ease-in-out infinite;
+}
+.art-sun-mote.art-mote-1 { left: 24%; bottom: 26%; animation-delay: 0s; }
+.art-sun-mote.art-mote-2 { left: 50%; bottom: 20%; animation-delay: 2s; }
+.art-sun-mote.art-mote-3 { left: 70%; bottom: 28%; animation-delay: 4s; }
+.art-sun-mote.art-mote-4 { left: 40%; bottom: 32%; animation-delay: 6s; }
+
+/* —— 碑冠：日轮光环 + 核心宝珠（带湮灭暗环） —— */
+.stele-crown-sun::before {
+    content: '';
+    position: absolute; left: 50%; top: 50%;
+    width: 150px; height: 150px;
+    transform: translate(-50%, -54%);
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(255, 232, 180, 0.42), rgba(120, 70, 180, 0.22) 52%, transparent 72%);
+    animation: artSunBreath 6s ease-in-out infinite;
+}
+.stele-crown-sun::after {
+    content: '';
+    position: absolute; left: 50%; top: 50%;
+    width: 34px; height: 34px;
+    transform: translate(-50%, -70%) rotate(45deg);
+    background: radial-gradient(circle, #fff6df, #ffcf82 60%, #b15a3a);
+    box-shadow: 0 0 20px rgba(255, 220, 150, 0.85), 0 0 40px rgba(150, 80, 200, 0.45);
+    animation: artSunCorePulse 4s ease-in-out infinite;
+}
+
+/* —— 暖阳专属动效 —— */
+@keyframes artSunBreath { 0%, 100% { opacity: 0.75; } 50% { opacity: 1; } }
+@keyframes artSunCorePulse { 0%, 100% { opacity: 0.78; filter: brightness(0.95); } 50% { opacity: 1; filter: brightness(1.28); } }
+@keyframes artSunCorona { from { transform: translate(-50%, -50%) rotate(0deg); } to { transform: translate(-50%, -50%) rotate(360deg); } }
+@keyframes artSunRay { 0%, 100% { opacity: 0.35; } 50% { opacity: 0.8; } }
+@keyframes artSunPetal { 0% { transform: translateY(0) rotate(0deg); opacity: 0; } 20% { opacity: 0.9; } 80% { opacity: 0.5; } 100% { transform: translateY(-90px) translateX(14px) rotate(120deg); opacity: 0; } }
+@keyframes artSunMoteRise { 0% { transform: translateY(0) scale(0.8); opacity: 0; } 25% { opacity: 0.9; } 75% { opacity: 0.5; } 100% { transform: translateY(-96px) translateX(-10px) scale(1.1); opacity: 0; } }
+@keyframes artVoidCrack { 0%, 100% { opacity: 0.3; } 50% { opacity: 0.62; } }
+
+@media (max-width: 640px) {
+    .stele-sanctum-sun .stele-monolith { width: 88%; }
+    .stele-art-sun .art-sun-halo { width: 280px; height: 280px; }
+    .stele-art-sun .art-sun-corona { width: 170px; height: 170px; }
+    .stele-art-sun .art-sun-ray { height: 160px; }
+}
