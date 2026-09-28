@@ -372,15 +372,117 @@ function openInviteModal(message) {
     const hint = document.getElementById('inviteHint');
     if (hint) hint.textContent = message || '输入群内谕令后，才能参与神格判定、试炼证言、构筑愚戏或分数结算。';
     updateInviteUI();
+    // 已有身份默认展示「账号登录」，新用户默认「首次绑定」
+    switchInviteTab(inviteSession?.code ? 'account' : 'bind');
     overlay.style.display='flex';
     document.body.style.overflow='hidden';
-    setTimeout(() => document.getElementById('inviteCodeInput')?.focus(), 50);
 }
 
 function closeInviteModal(e) {
     if(e && e.target!==document.getElementById('inviteModalOverlay')) return;
     document.getElementById('inviteModalOverlay').style.display='none';
     document.body.style.overflow='';
+}
+
+function switchInviteTab(tab) {
+    const isAccount = tab === 'account';
+    const accountBtn = document.getElementById('inviteTabAccount');
+    const bindBtn = document.getElementById('inviteTabBind');
+    const accountPanel = document.getElementById('invitePanelAccount');
+    const bindPanel = document.getElementById('invitePanelBind');
+    if (accountBtn) accountBtn.classList.toggle('invite-tab-active', isAccount);
+    if (bindBtn) bindBtn.classList.toggle('invite-tab-active', !isAccount);
+    if (accountPanel) accountPanel.style.display = isAccount ? '' : 'none';
+    if (bindPanel) bindPanel.style.display = isAccount ? 'none' : '';
+    const focusId = isAccount ? 'accountLoginUsername' : 'inviteCodeInput';
+    setTimeout(() => document.getElementById(focusId)?.focus(), 50);
+}
+
+// 账号登录 / 绑定成功后：把服务端回传的凭据落成既有的邀请码会话（其余逻辑零改动）
+function applyAccountSession(result, fallbackName) {
+    const role = normalizeRole(result?.role) || getInviteRole();
+    const code = result?.code || result?.inviteCode || '';
+    if (!role || !code) return false;
+    saveInviteSession({
+        role,
+        code,
+        name: result?.name || fallbackName || ROLE_LABELS[role],
+        permissions: Array.isArray(result?.permissions) ? result.permissions : (inviteSession?.permissions || []),
+        sessionId: result?.sessionId || '',
+        deviceKind: result?.deviceKind || getClientDeviceKind()
+    });
+    return true;
+}
+
+// 登录/绑定后刷新个人昵称、弹窗关闭与各页面重绘（与 submitInviteCode 收尾保持一致）
+async function finishAccountAuth(result, fallbackName, successVerb) {
+    const profileRefresh = await refreshCurrentProfileFromCloud({ preserveSessionOnInvalid: true });
+    if (profileRefresh.data?.displayName) {
+        saveInviteSession({ ...inviteSession, name: profileRefresh.data.displayName });
+    }
+    closeInviteModal();
+    showToast(`✅ ${(profileRefresh.data?.displayName || result?.name || fallbackName)}${successVerb}`);
+    if (currentDetailId) await openDetail(currentDetailId);
+    if (document.getElementById('profilePage')?.style.display !== 'none') await renderProfilePage();
+    if (document.getElementById('matchPage')?.style.display !== 'none') await renderMatchPage();
+    await updateProfileNoticeBadge();
+}
+
+async function submitAccountLogin() {
+    const usernameInput = document.getElementById('accountLoginUsername');
+    const passwordInput = document.getElementById('accountLoginPassword');
+    const btn = document.getElementById('accountLoginButton');
+    const username = usernameInput?.value.trim() || '';
+    const password = passwordInput?.value || '';
+    if (!username) { showToast('请输入账号名'); return; }
+    if (!password) { showToast('请输入密码'); return; }
+    if (!acquireUiActionLock('submitAccountLogin', '正在登录，请勿重复点击')) return;
+    if (btn) { btn.disabled = true; btn.textContent = '登录中...'; }
+    try {
+        const result = await invokeDungeonAction('loginAccount', { username, password });
+        if (result.error || !result.role) { showToast(`❌ ${getFriendlyActionError(result.error, '账号登录失败')}`); return; }
+        resetTalentViewState();
+        if (!applyAccountSession(result, username)) { showToast('❌ 登录异常：未取回入局凭据'); return; }
+        if (usernameInput) usernameInput.value = '';
+        if (passwordInput) passwordInput.value = '';
+        await finishAccountAuth(result, username, `已登录：${ROLE_LABELS[getInviteRole()] || ''}`);
+    } catch (error) {
+        console.error('账号登录失败', error);
+        showToast(`❌ ${getFriendlyActionError(error, '账号登录失败')}`);
+    } finally {
+        if (btn) { btn.disabled = false; btn.textContent = '账号登录'; }
+        releaseUiActionLock('submitAccountLogin');
+    }
+}
+
+async function submitAccountBind() {
+    const codeInput = document.getElementById('inviteCodeInput');
+    const usernameInput = document.getElementById('accountBindUsername');
+    const passwordInput = document.getElementById('accountBindPassword');
+    const btn = document.getElementById('accountBindButton');
+    const code = codeInput?.value.trim() || '';
+    const username = usernameInput?.value.trim() || '';
+    const password = passwordInput?.value || '';
+    if (!code) { showToast('请输入入局谕令'); return; }
+    if (!username) { showToast('请设置账号名'); return; }
+    if (password.length < 6) { showToast('密码至少 6 位'); return; }
+    if (!acquireUiActionLock('submitAccountBind', '正在绑定，请勿重复点击')) return;
+    if (btn) { btn.disabled = true; btn.textContent = '绑定中...'; }
+    try {
+        const result = await invokeDungeonAction('registerAccount', { username, password }, code);
+        if (result.error || !result.role) { showToast(`❌ ${getFriendlyActionError(result.error, '绑定失败')}`); return; }
+        resetTalentViewState();
+        if (!applyAccountSession(result, username)) { showToast('❌ 绑定异常：未取回入局凭据'); return; }
+        if (codeInput) codeInput.value = '';
+        if (passwordInput) passwordInput.value = '';
+        await finishAccountAuth(result, username, '账号已绑定并进入');
+    } catch (error) {
+        console.error('账号绑定失败', error);
+        showToast(`❌ ${getFriendlyActionError(error, '绑定失败')}`);
+    } finally {
+        if (btn) { btn.disabled = false; btn.textContent = '绑定并进入'; }
+        releaseUiActionLock('submitAccountBind');
+    }
 }
 
 async function submitInviteCode() {

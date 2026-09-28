@@ -367,15 +367,54 @@
         </div>
     </main>
 
+    <style>
+    .invite-tabs{display:flex;gap:8px;margin:4px 0 14px;}
+    .invite-tab{flex:1;padding:9px 10px;border:1px solid rgba(255,255,255,.18);background:transparent;color:inherit;border-radius:8px;cursor:pointer;font-size:14px;line-height:1.2;}
+    .invite-tab-active{background:rgba(212,175,55,.18);border-color:rgba(212,175,55,.6);font-weight:600;}
+    </style>
+
     <!-- 邀请弹窗 -->
     <div class="modal-overlay" id="inviteModalOverlay" style="display:none;" onclick="closeInviteModal(event)">
         <div class="modal" id="inviteModal" onclick="event.stopPropagation()">
             <button class="close-btn" style="position:absolute;top:16px;right:20px;" onclick="closeInviteModal()">✕</button>
             <h2>🎲 入局谕令</h2>
             <p class="modal-note" id="inviteHint"></p>
-            <div class="form-group">
-                <label>入局谕令</label>
-                <input type="password" id="inviteCodeInput" placeholder="输入你的同契谕令" autocomplete="off">
+            <div class="invite-tabs">
+                <button type="button" class="invite-tab" id="inviteTabAccount" onclick="switchInviteTab('account')">账号登录</button>
+                <button type="button" class="invite-tab" id="inviteTabBind" onclick="switchInviteTab('bind')">首次绑定 / 谕令入局</button>
+            </div>
+            <div id="invitePanelAccount">
+                <div class="form-group">
+                    <label>账号名</label>
+                    <input type="text" id="accountLoginUsername" placeholder="你的账号名" autocomplete="username" maxlength="32">
+                </div>
+                <div class="form-group">
+                    <label>密码</label>
+                    <input type="password" id="accountLoginPassword" placeholder="你的密码" autocomplete="current-password" maxlength="72">
+                </div>
+                <div class="form-actions">
+                    <button type="button" class="btn btn-primary" id="accountLoginButton" onclick="submitAccountLogin()">账号登录</button>
+                </div>
+                <div class="identity-help">换设备首次登录也在这里输入账号名与密码即可。</div>
+            </div>
+            <div id="invitePanelBind" style="display:none;">
+                <div class="form-group">
+                    <label>入局谕令</label>
+                    <input type="password" id="inviteCodeInput" placeholder="输入你的同契谕令" autocomplete="off">
+                </div>
+                <div class="form-group">
+                    <label>设置账号名</label>
+                    <input type="text" id="accountBindUsername" placeholder="2-16 位，中文 / 字母 / 数字 / 下划线" autocomplete="username" maxlength="32">
+                </div>
+                <div class="form-group">
+                    <label>设置密码</label>
+                    <input type="password" id="accountBindPassword" placeholder="6-72 位" autocomplete="new-password" maxlength="72">
+                </div>
+                <div class="form-actions">
+                    <button type="button" class="btn btn-outline" id="inviteSubmitButton" onclick="submitInviteCode()">仅用谕令入局</button>
+                    <button type="button" class="btn btn-primary" id="accountBindButton" onclick="submitAccountBind()">绑定并进入</button>
+                </div>
+                <div class="identity-help">首次使用：填入谕令并设置账号名与密码，即可自助创建账号；之后就能用账号名登录。</div>
             </div>
             <div class="role-guide">
                 <div class="role-card" data-role="player" data-mark="信"><strong>入局信徒</strong><span>浏览、判定、证言、评分、登记通关。</span><small>不能构筑 / 不能结算</small></div>
@@ -396,7 +435,6 @@
             </div>
             <div class="form-actions">
                 <button type="button" class="btn btn-outline" onclick="clearInviteSession()">退出身份</button>
-                <button type="button" class="btn btn-primary" id="inviteSubmitButton" onclick="submitInviteCode()">掷骰入局</button>
             </div>
         </div>
     </div>

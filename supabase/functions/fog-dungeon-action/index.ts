@@ -7,6 +7,7 @@ import { handleDiscardOwnedTalent, handleDiscardOwnedTalents, handleDrawTalent, 
 import { handleCheckScorePreview, handleGetScoreSettlementDetail, handleListMyScoreMessages, handleListScoreSettlements, handleMarkScoreMessageRead, handleRevokeScoreSettlement, handleSubmitScoreBatch, handleSubmitScoreSingle } from "./handlers/score.ts";
 import { handleAddBattlePlayerStatus, handleApplyBattlePlayerAction, handleCancelMatchMuster, handleCancelMatchQueue, handleCreateBattleRoom, handleCreateBattleRoomFromMatchRoom, handleDeleteBattlePlayerStatus, handleDrawMatchMuster, handleExtendBattleRoom, handleFinishBattleRoom, handleGetBattleOverview, handleGetBattleRoom, handleGetMatchMuster, handleGetMatchState, handleJoinBattleRoom, handleJoinMatchMuster, handleJoinMatchQueue, handleListMatchDungeons, handleResolveBattleRoomAction, handleSearchMusterPlayers, handleStartMatchMuster, handleSubmitBattleRoomAction, handleUpdateBattleAbilityCooldown, handleUpdateBattlePlayerStatus, handleUpdateBattlePlayerTeam, handleUpdateBattleRoomRound } from "./handlers/battle.ts";
 import { handleAdminBatchDeleteTalentPoolItems, handleAdminBatchUpsertTalentPoolItems, handleAdminChangeMemberIdentity, handleAdminDeleteExclusiveTalent, handleAdminListExclusiveTalentWorkbench, handleAdminListMembers, handleAdminListOperationLogs, handleAdminListTalentPoolItems, handleAdminLookupPlayer, handleAdminRenameAccount, handleAdminRepairTalentState, handleAdminResetAccount, handleAdminScanTalentState, handleAdminSetAccountRole, handleAdminSetTalentPoolItemEnabled, handleAdminUpsertExclusiveTalent, handleAdminUpsertFaithTrait, handleAdminUpsertTalentPoolItem, handleListHonorOperationLogs } from "./handlers/admin.ts";
+import { handleLoginAccount, handleRegisterAccount } from "./handlers/account.ts";
 import {
   allowedBrowserOrigins, corsHeaders, cleanText, json, readRequestBody, isRecord,
   isPublicReadRateLimited, getInviteIdentity, inviteDeviceSessionEnforcement,
@@ -52,6 +53,10 @@ Deno.serve(async (req) => {
   if (action === "getDungeonDetail") return await handleGetDungeonDetail(ctx);
   if (action === "listProfiles") return await handleListProfiles(ctx);
   if (action === "listFaithTraits") return await handleListFaithTraits(ctx);
+
+  // ================= account actions (no identity gateway) =================
+  if (action === "registerAccount") return await handleRegisterAccount(ctx);
+  if (action === "loginAccount") return await handleLoginAccount(ctx);
 
   // ================= identity gateway =================
   const identity = await getInviteIdentity(supabase, body.inviteCode);

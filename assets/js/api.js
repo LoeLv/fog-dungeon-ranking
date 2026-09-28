@@ -222,7 +222,9 @@ async function invokeDungeonAction(action, payload = {}, codeOverride = null, op
     const inviteCode = codeOverride ?? inviteSession?.code;
     const inviteSnapshot = codeOverride ? '' : getInviteSnapshot();
     const publicReadActions = new Set(['listDungeons', 'listDungeonArchivePage', 'getDungeonDetail', 'listProfiles', 'listFaithTraits']);
-    if (!USE_LOCAL_FALLBACK && !inviteCode && !publicReadActions.has(action)) {
+    // 账号体系：注册 / 登录在任何会话状态下都应放行（登录前本地没有 inviteCode）
+    const accountActions = new Set(['registerAccount', 'loginAccount']);
+    if (!USE_LOCAL_FALLBACK && !inviteCode && !publicReadActions.has(action) && !accountActions.has(action)) {
         return { data: null, error: { message: '请先验入局谕令' } };
     }
     // 方案A：公开读优先走 Data API RPC；成功即返回，失败/未部署则继续走 Edge。
@@ -285,7 +287,8 @@ async function invokeDungeonAction(action, payload = {}, codeOverride = null, op
         invalidateShortReadCache('leaderboard');
     }
     if (action === 'adminUpsertFaithTrait') invalidateShortReadCache('faith-traits');
-    return { data: result.data ?? null, error: null, role, name: result.name };
+    // 一并回传账号登录所需的凭据字段（邀请码 / 权限 / 会话），供前端保存会话使用
+    return { data: result.data ?? null, error: null, role, name: result.name, label: result.label, permissions: result.permissions, sessionId: result.sessionId, deviceKind: result.deviceKind, code: result.inviteCode };
 }
 
 async function loadFaithTraits(options = {}) {

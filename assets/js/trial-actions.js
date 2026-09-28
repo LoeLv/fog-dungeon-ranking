@@ -433,4 +433,6 @@ document.addEventListener('keydown', e => {
     }
     if (e.key === 'Enter' && document.activeElement?.id === 'inviteCodeInput') submitInviteCode();
     if (e.key === 'Enter' && document.activeElement?.id === 'displayNameInput') saveDisplayName();
+    if (e.key === 'Enter' && document.activeElement?.id === 'accountLoginPassword') submitAccountLogin();
+    if (e.key === 'Enter' && document.activeElement?.id === 'accountBindPassword') submitAccountBind();
 });
