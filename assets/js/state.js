@@ -3,7 +3,7 @@ if (INVITE_DEVICE_SESSION_ENFORCEMENT && !USE_LOCAL_FALLBACK && inviteSession?.c
     inviteSession = null;
     setLocalData(INVITE_STORAGE_KEY, null);
 }
-let currentSort = 'popular', searchQuery = '', selectedGod = 'all', selectedPath = 'all', selectedDifficulty = 'all', reviewFilter = 'all', searchTimeout = null, currentDetailId = null;
+let currentSort = 'popular', searchQuery = '', selectedGod = 'all', selectedPath = 'all', selectedDifficulty = 'all', searchTimeout = null, currentDetailId = null;
 let archivePage = 1;
 let archiveFilteredDungeons = [];
 let archivePageMeta = null;

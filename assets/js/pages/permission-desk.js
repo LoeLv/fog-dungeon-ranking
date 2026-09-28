@@ -20,16 +20,7 @@ function setPermissionDeskStatus(message, type = 'success') {
 function canUsePermissionDesk() {
     return hasInvitePermission('talent_pool_manage') ||
         hasInvitePermission('account_role_manage') ||
-        hasInvitePermission('review_dungeons') ||
         hasInvitePermission('settle_scores');
-}
-
-function openReviewQueueFromWorkbench() {
-    closePermissionDesk(false);
-    closeAdminPage(false);
-    setSort('newest');
-    if (reviewFilter !== 'pending') toggleReviewFilter();
-    window.scrollTo(0, 0);
 }
 
 async function openTalentManagementFromWorkbench() {
@@ -39,9 +30,6 @@ async function openTalentManagementFromWorkbench() {
 
 function renderPermissionShortcutCards() {
     const cards = [];
-    if (hasInvitePermission('review_dungeons')) {
-        cards.push(['副本审核', 'openReviewQueueFromWorkbench()']);
-    }
     if (hasInvitePermission('account_role_manage')) {
         cards.push(['玩家升作者', "document.getElementById('permissionUpgradeName')?.focus()"]);
     }
@@ -70,12 +58,6 @@ function renderPermissionDeskContent() {
         panels.push(`<section class="profile-panel" data-god="真理" style="${getGodSkinStyle('真理')}">
             <div class="profile-panel-title"><span>分数权限</span></div>
             <div class="profile-tools"><button class="btn btn-primary btn-sm" onclick="openScorePage()">打开分数结算</button></div>
-        </section>`);
-    }
-    if (hasInvitePermission('review_dungeons')) {
-        panels.push(`<section class="profile-panel" data-god="真理" style="${getGodSkinStyle('真理')}">
-            <div class="profile-panel-title"><span>副本审核</span></div>
-            <div class="profile-tools"><button class="btn btn-primary btn-sm" onclick="openReviewQueueFromWorkbench()">查看待审核副本</button></div>
         </section>`);
     }
     if (hasInvitePermission('account_role_manage')) {

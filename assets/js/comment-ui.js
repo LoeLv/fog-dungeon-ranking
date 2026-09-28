@@ -30,18 +30,6 @@ function formatClearSlots(d) {
     const slots = getTotalSlots(d);
     return `${getClearCount(d)} / ${slots || '未定'}`;
 }
-function getDungeonReviewStatus(d) {
-    return String(d?.review_status || 'approved');
-}
-function isDungeonApproved(d) {
-    return getDungeonReviewStatus(d) === 'approved';
-}
-function formatDungeonReviewStatus(d) {
-    const status = getDungeonReviewStatus(d);
-    if (status === 'pending') return '待审核';
-    if (status === 'rejected') return '已退回';
-    return '已发布';
-}
 function truncateText(value, length = 80) {
     const text = String(value || '').replace(/\s+/g, ' ').trim();
     return text.length > length ? `${text.slice(0, length)}…` : text;
@@ -64,10 +52,6 @@ function canEditPinned(d) {
 function canManageDungeon(d) {
     return canEditPinned(d);
 }
-function canReviewDungeon(d) {
-    return canReviewDungeonsUI();
-}
-
 function canDeleteComment(c) {
     return isAdmin() || (!!inviteSession?.name && !!c.invite_name && inviteSession.name === c.invite_name) || (USE_LOCAL_FALLBACK && c.invite_code_hash === inviteSession?.code);
 }

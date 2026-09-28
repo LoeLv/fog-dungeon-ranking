@@ -69,7 +69,6 @@ async function renderDungeonList() {
     if (!usingPagedArchive && selectedPath !== 'all') dungeons = dungeons.filter(d => dungeonHasPath(d.type, selectedPath));
     if (!usingPagedArchive && selectedGod !== 'all') dungeons = dungeons.filter(d => dungeonHasGod(d.type, selectedGod));
     if (!usingPagedArchive && selectedDifficulty !== 'all') dungeons = dungeons.filter(d => normalizeDifficulty(d.difficulty) === selectedDifficulty);
-    if (!usingPagedArchive && reviewFilter === 'pending') dungeons = dungeons.filter(d => getDungeonReviewStatus(d) === 'pending');
     if (!usingPagedArchive && currentSort === 'popular') dungeons.sort((a,b) =>
         (b.rating_count||0) - (a.rating_count||0) ||
         (b.avg_rating||0) - (a.avg_rating||0) ||
@@ -83,7 +82,7 @@ async function renderDungeonList() {
     archiveFilteredDungeons = [...dungeons];
     if (!dungeons.length) {
         archivePage = 1;
-        const filtered = searchQuery || selectedGod !== 'all' || selectedPath !== 'all' || selectedDifficulty !== 'all' || reviewFilter !== 'all';
+        const filtered = searchQuery || selectedGod !== 'all' || selectedPath !== 'all' || selectedDifficulty !== 'all';
         listEl.innerHTML = renderArchiveEmptyState(!!filtered);
         await renderOracleSidebar([], archiveSidebar);
         return;
@@ -133,7 +132,6 @@ async function renderDungeonList() {
                 <span class="tag path-tag lore-tag ${godClass}" data-prayer="${escapeHtml(pathMeta.edict)}">${escapeHtml(godPath)}命途</span>
                 <span class="tag danger-stamp ${getDiffClass(d.difficulty)} ${godClass}-difficulty">${escapeHtml(difficultyLabel)}</span>
                 <span class="tag lore-tag ${isOneShotDungeon(d) ? 'divine-tag' : ''}">${escapeHtml(formatTrialArchive(d))}</span>
-                ${isDungeonApproved(d) ? '' : `<span class="tag divine-tag">${escapeHtml(formatDungeonReviewStatus(d))}</span>`}
                 ${isDivineTrial(d) ? '<span class="tag divine-tag">神级愚戏</span>' : ''}
                 <span class="trial-data-pill">🎲 ${formatDate(d.created_at)}降下</span>
             </div>

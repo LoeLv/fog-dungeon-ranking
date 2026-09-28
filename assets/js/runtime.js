@@ -1,12 +1,3 @@
-function updateReviewFilterButton() {
-    const button = document.getElementById('reviewFilterBtn');
-    if (!button) return;
-    const visible = canReviewDungeonsUI();
-    button.style.display = visible ? '' : 'none';
-    button.classList.toggle('active', reviewFilter === 'pending');
-    button.textContent = reviewFilter === 'pending' ? '待审核中' : '待审核';
-}
-
 function isMobileViewport() {
     return window.matchMedia('(max-width: 720px)').matches;
 }
@@ -341,7 +332,6 @@ function updateInviteUI() {
     }
     updateRoleCards(role);
     updateRoleInsightPanel(role);
-    updateReviewFilterButton();
     updateFilterSummary();
     updateProfileNoticeBadge();
 }

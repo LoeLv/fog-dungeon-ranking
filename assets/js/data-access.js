@@ -36,11 +36,11 @@ async function fetchDungeons(options = {}) {
 }
 
 function hasActiveArchiveFilters() {
-    return !!searchQuery.trim() || selectedGod !== 'all' || selectedPath !== 'all' || selectedDifficulty !== 'all' || reviewFilter !== 'all';
+    return !!searchQuery.trim() || selectedGod !== 'all' || selectedPath !== 'all' || selectedDifficulty !== 'all';
 }
 
 function canUsePagedArchive() {
-    return !USE_LOCAL_FALLBACK && !hasActiveArchiveFilters() && !canReviewDungeonsUI();
+    return !USE_LOCAL_FALLBACK && !hasActiveArchiveFilters();
 }
 
 async function fetchDungeonArchivePage(page = 1) {
@@ -270,21 +270,6 @@ async function savePinnedNote(dungeonId, pinnedNote) {
         return { data: [d], error: null };
     }
     return invokeDungeonAction('updatePinnedNote', { dungeonId, pinnedNote: pinnedNote.trim() });
-}
-
-async function reviewDungeon(dungeonId, decision, reviewNote = '') {
-    if (USE_LOCAL_FALLBACK) {
-        const dungeons = getLocalData('dungeons', []);
-        const d = dungeons.find(item => item.id === dungeonId);
-        if (!d) return { error: { message: '试炼未找到' } };
-        d.review_status = decision === 'approve' ? 'approved' : 'rejected';
-        d.review_note = reviewNote;
-        d.reviewed_by_name = inviteSession?.name || '';
-        d.reviewed_at = new Date().toISOString();
-        setLocalData('dungeons', dungeons);
-        return { data: d, error: null };
-    }
-    return invokeDungeonAction('reviewDungeon', { dungeonId, decision, reviewNote });
 }
 
 async function removeDungeon(dungeonId) {

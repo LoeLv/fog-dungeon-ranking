@@ -43,8 +43,7 @@ function updateFilterSummary() {
     if (!summary) return;
     const godText = selectedGod !== 'all' ? `${selectedGod}之神` : (selectedPath !== 'all' ? `${selectedPath}命途` : '全神廳');
     const difficultyText = selectedDifficulty === 'all' ? '全部难度' : formatDifficulty(selectedDifficulty);
-    const reviewText = reviewFilter === 'pending' ? '待审核' : '全部发布';
-    summary.textContent = canReviewDungeonsUI() ? `${godText} 路 ${difficultyText} 路 ${reviewText}` : `${godText} 路 ${difficultyText}`;
+    summary.textContent = `${godText} 路 ${difficultyText}`;
 }
 
 function toggleAdvancedFilters(force) {
@@ -162,11 +161,9 @@ function resetDiscoveryFiltersToEmpty() {
     selectedGod = 'all';
     selectedPath = 'all';
     selectedDifficulty = 'all';
-    reviewFilter = 'all';
     archivePage = 1;
     const input = document.getElementById('searchInput');
     if (input) input.value = '';
-    updateReviewFilterButton();
 }
 
 function populateGodSelect() {
@@ -263,8 +260,7 @@ function hasActiveDiscoveryFilters() {
     return Boolean(searchQuery.trim()) ||
         selectedGod !== 'all' ||
         selectedPath !== 'all' ||
-        selectedDifficulty !== 'all' ||
-        reviewFilter !== 'all';
+        selectedDifficulty !== 'all';
 }
 
 function updateDiscoveryFilterStatus(totalCount, visibleCount) {
@@ -280,7 +276,6 @@ function updateDiscoveryFilterStatus(totalCount, visibleCount) {
     if (selectedGod !== 'all') parts.push(`${selectedGod}之神`);
     if (selectedPath !== 'all') parts.push(`${selectedPath}命途`);
     if (selectedDifficulty !== 'all') parts.push(`${formatDifficulty(selectedDifficulty)}难度`);
-    if (reviewFilter === 'pending') parts.push('待审核');
     text.innerHTML = `当前只显示<strong>${visibleCount}</strong> / ${totalCount} 个试炼，条件：${escapeHtml(parts.join(' · '))}`;
     box.hidden = false;
 }
@@ -294,13 +289,4 @@ function clearDiscoveryFilters() {
     syncEdgeAtmosphere();
     renderDungeonList();
     showToast('已显示全部试炼');
-}
-
-function toggleReviewFilter() {
-    if (!canReviewDungeonsUI()) return;
-    reviewFilter = reviewFilter === 'pending' ? 'all' : 'pending';
-    archivePage = 1;
-    updateReviewFilterButton();
-    updateFilterSummary();
-    renderDungeonList();
 }

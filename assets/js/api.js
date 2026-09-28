@@ -126,7 +126,7 @@ async function getShortCachedRead(name, loader, ttl = SHORT_READ_CACHE_TTL_MS) {
 
 function isDungeonListMutation(action) {
     return new Set([
-        'submitDungeon', 'updateDungeon', 'deleteDungeon', 'reviewDungeon',
+        'submitDungeon', 'updateDungeon', 'deleteDungeon',
         'advanceRun', 'markCleared', 'submitScoreBatch', 'submitScoreSingle',
         'addComment', 'deleteComment', 'addRating', 'updatePinnedNote'
     ]).has(action);

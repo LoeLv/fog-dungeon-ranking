@@ -27,7 +27,7 @@ function isNamedScoreSettler() { return hasStaffName(SCORE_SETTLER_NAMES); }
 
 function hasInvitePermission(permission) {
     if (getInviteRole() === 'admin') return true;
-    if (permission === 'review_dungeons' || permission === 'account_role_manage') return isNamedStaffAdmin() || getInvitePermissions().includes(permission);
+    if (permission === 'account_role_manage') return isNamedStaffAdmin() || getInvitePermissions().includes(permission);
     if (permission === 'talent_pool_manage') return isNamedTalentManager() || getInvitePermissions().includes(permission);
     if (permission === 'settle_scores') return isNamedScoreSettler() || getInvitePermissions().includes(permission);
     return getInvitePermissions().includes(permission);
@@ -52,10 +52,6 @@ function isGodRole() { return getInviteRole() === 'god' || getInviteRole() === '
 function canGrantTitlesUI() { return canUseRole(['admin', 'god', 'astral']); }
 
 function canSettleScores() { return isAdmin() || hasInvitePermission('settle_scores'); }
-
-function canReviewDungeonsUI() {
-    return isGodRole() || isAdmin() || hasInvitePermission('review_dungeons');
-}
 
 function canManageTalentPoolUI() { return isAdmin() || hasInvitePermission('talent_pool_manage'); }
 

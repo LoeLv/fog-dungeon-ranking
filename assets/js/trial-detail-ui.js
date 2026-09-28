@@ -13,13 +13,12 @@ async function openDetail(id) {
         checkHasRated(id)
     ]);
     const d = detail || summary;
-    const reviewStatus = getDungeonReviewStatus(d);
-    const published = isDungeonApproved(d);
+    const published = true;
     const ratingLocked = !canInteract() || !published;
     const testimonyLocked = !canTestify() || !published;
-    const ratingText = !published ? `此试炼为${formatDungeonReviewStatus(d)}，暂不可判定` : (rated ? '你已经封存过这场神格评议。' : (ratingLocked ? '入局谕令后可对试炼做出判定' : '选择 1-5 级，封存你的神格评议'));
+    const ratingText = (rated ? '你已经封存过这场神格评议。' : (ratingLocked ? '入局谕令后可对试炼做出判定' : '选择 1-5 级，封存你的神格评议'));
     const commentLockedAttrs = testimonyLocked ? 'disabled' : '';
-    const commentPlaceholder = !published ? '通过审核后才可提交证言' : (testimonyLocked ? '入局谕令后可提交证言' : getTestimonyPlaceholder(d.type));
+    const commentPlaceholder = (testimonyLocked ? '入局谕令后可提交证言' : getTestimonyPlaceholder(d.type));
     const runCount = getRunCount(d);
     const clearLocalKey = `${id}:${runCount}:${inviteSession?.code || 'guest'}`;
     const clearDone = !!getLocalData('cleared_supabase', {})[clearLocalKey];
@@ -39,12 +38,7 @@ async function openDetail(id) {
         : `<button class="btn btn-outline btn-sm" onclick="${ratingLocked ? `openInviteModal('入局谕令后可进行判定。')` : `openRatingModal('${escapeHtml(id)}')`}">${ratingLocked ? '入局谕令' : '降下你的判定'}</button>`;
     const pinnedNote = d.pinned_note || '';
     const canEditNote = canEditPinned(d);
-    const reviewActionsHtml = canReviewDungeon(d) && reviewStatus !== 'approved' ? `
-        <div class="profile-tools" style="margin:12px 0;">
-            <button class="btn btn-primary btn-sm" onclick="reviewDungeonUI('${escapeHtml(id)}', 'approve')">审核通过</button>
-            <button class="btn btn-outline btn-sm" onclick="reviewDungeonUI('${escapeHtml(id)}', 'reject')">退回副本</button>
-        </div>` : '';
-    const pinnedNoteHtml = pinnedNote || canEditNote ? `
+        const pinnedNoteHtml = pinnedNote || canEditNote ? `
         <div class="pinned-note">
             <div class="pinned-note-head">
                 <span>置顶神谕</span>
@@ -87,7 +81,6 @@ async function openDetail(id) {
                 <span class="trial-data-pill">归档：${escapeHtml(formatTrialArchive(d))}</span>
                 <span class="trial-data-pill">通关留存率：${formatClearRate(d)}</span>
                 <span class="trial-data-pill">证言数：${activeCommentCount}</span>
-                <span class="trial-data-pill">审核状态：${escapeHtml(formatDungeonReviewStatus(d))}</span>
                 ${canSubmit() ? `<button class="btn btn-outline btn-xs" onclick="advanceRunUI('${escapeHtml(id)}')">重开下一局</button>` : ''}
                 ${canManageDungeon(d) ? `<button class="btn btn-outline btn-xs" onclick="editDungeonUI('${escapeHtml(id)}')">重铸副本</button>` : ''}
                 ${canManageDungeon(d) ? `<button class="btn btn-danger btn-xs" onclick="deleteDungeon('${escapeHtml(id)}')">封存试炼</button>` : ''}
@@ -98,7 +91,6 @@ async function openDetail(id) {
             </div>
         </section>
         ${renderDetailDossier(d, { locked: ratingLocked, rated, clearDone, activeCommentCount })}
-        ${reviewActionsHtml}
         ${pinnedNoteHtml}
         <div class="clear-panel">
             <div class="clear-panel-head">

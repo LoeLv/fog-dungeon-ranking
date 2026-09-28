@@ -1,6 +1,6 @@
 import { createClient } from "jsr:@supabase/supabase-js@2";
 import { handleGetDungeonDetail, handleListDungeonArchivePage, handleListDungeons, handleListFaithTraits, handleListProfiles } from "./handlers/open.ts";
-import { handleAddComment, handleAddRating, handleAdvanceRun, handleDeleteComment, handleDeleteDungeon, handleGetCommentHonors, handleListMyDungeons, handleMarkCleared, handleReviewDungeon, handleSubmitDungeon, handleUpdatePinnedNote } from "./handlers/content.ts";
+import { handleAddComment, handleAddRating, handleAdvanceRun, handleDeleteComment, handleDeleteDungeon, handleGetCommentHonors, handleListMyDungeons, handleMarkCleared, handleSubmitDungeon, handleUpdatePinnedNote } from "./handlers/content.ts";
 import { handleGetMyProfile, handleGetPublicProfile, handleGrantBetrayalCurse, handleGrantProfileTitle, handleRedeemPromoCode, handleRestoreProfileCurse, handleRestoreProfileTitle, handleRevokeProfileCurse, handleRevokeProfileTitle, handleSaveProfile, handleSetProfileTitleVisibility, handleUpdateDisplayName, handleUpdateTrickeryFaith, handleVerifyInvite } from "./handlers/profile.ts";
 import { handleGodChangeBelieverProfession, handleGodConvertBeliever, handleListGodBelievers } from "./handlers/god.ts";
 import { handleDiscardOwnedTalent, handleDiscardOwnedTalents, handleDrawTalent, handleExchangeTalent, handleGetTalentState, handleResolveTalentOverflow, handleSetEquippedTalent } from "./handlers/talent.ts";
@@ -147,7 +147,6 @@ Deno.serve(async (req) => {
     if (action === "drawMatchMuster") return await handleDrawMatchMuster(authCtx);
     if (action === "listMyDungeons") return await handleListMyDungeons(authCtx);
     if (action === "submitDungeon") return await handleSubmitDungeon(authCtx);
-    if (action === "reviewDungeon") return await handleReviewDungeon(authCtx);
     if (action === "markCleared") return await handleMarkCleared(authCtx);
     if (action === "advanceRun") return await handleAdvanceRun(authCtx);
     if (action === "addRating") return await handleAddRating(authCtx);

@@ -63,7 +63,6 @@ export const delegatedPermissionKeys = new Set([
   "talent_pool_manage",
   "settle_scores",
   "account_role_manage",
-  "review_dungeons",
 ]);
 export const inviteDeviceKinds = new Set(["desktop", "mobile"]);
 export const inviteDeviceSessionEnforcement = false;
@@ -724,25 +723,18 @@ export function toPublicDungeonSummary(dungeon: Record<string, unknown> | null |
   };
 }
 
-export const dungeonArchiveSelectFields = "id, name, creator, co_creators, difficulty, type, description, pinned_note, participant_count, run_count, clear_count, clear_rate, invite_code_hash, invite_name, avg_rating, rating_count, comment_count, created_at, is_one_shot, review_status, reviewed_at, reviewed_by_name, review_note";
-export const dungeonArchivePageSelectFields = "id, name, creator, co_creators, difficulty, type, participant_count, run_count, clear_count, clear_rate, avg_rating, rating_count, comment_count, created_at, is_one_shot, review_status";
+export const dungeonArchiveSelectFields = "id, name, creator, co_creators, difficulty, type, description, pinned_note, participant_count, run_count, clear_count, clear_rate, invite_code_hash, invite_name, avg_rating, rating_count, comment_count, created_at, is_one_shot";
+export const dungeonArchivePageSelectFields = "id, name, creator, co_creators, difficulty, type, participant_count, run_count, clear_count, clear_rate, avg_rating, rating_count, comment_count, created_at, is_one_shot";
 export const dungeonArchiveAggregateLimit = 500;
 
 export function toDungeonArchiveCard(dungeon: Record<string, unknown>, identity: InviteIdentity | null = null) {
-  const reviewStatus = getDungeonReviewStatus(dungeon);
   const creatorOwned = !!identity && canManageDungeonRecord(dungeon, identity);
   return {
     ...toPublicDungeonSummary(dungeon),
     // The index only needs enough text to identify a dungeon. Details stay on demand.
     description: cleanText(dungeon.description, 280),
     pinned_note: cleanText(dungeon.pinned_note, 180),
-    review_status: reviewStatus,
-    reviewed_at: cleanText(dungeon.reviewed_at, 80),
-    reviewed_by_name: cleanText(dungeon.reviewed_by_name, 40),
-    review_note: cleanText(dungeon.review_note, 240),
-    can_manage: !!identity && (canReviewDungeons(identity) || creatorOwned),
-    is_pending_review: reviewStatus === "pending",
-    is_rejected: reviewStatus === "rejected",
+    can_manage: !!identity && creatorOwned,
   };
 }
 
@@ -926,7 +918,7 @@ export function hasNamedDuty(identity: InviteIdentity, names: Set<string>) {
 
 export function hasPermission(identity: InviteIdentity, permission: string) {
   if (identity.role === "admin") return true;
-  if ((permission === "review_dungeons" || permission === "account_role_manage") && hasNamedDuty(identity, staffAdminNames)) return true;
+  if (permission === "account_role_manage" && hasNamedDuty(identity, staffAdminNames)) return true;
   if (permission === "talent_pool_manage" && hasNamedDuty(identity, talentManagerNames)) return true;
   if (permission === "settle_scores" && hasNamedDuty(identity, scoreSettlerNames)) return true;
   return identity.permissions.includes(permission);
@@ -934,12 +926,6 @@ export function hasPermission(identity: InviteIdentity, permission: string) {
 
 export function canGrantTitles(identity: InviteIdentity) {
   return hasRole(identity.role, ["admin", "god", "astral"]);
-}
-
-export function canReviewDungeons(identity: InviteIdentity) {
-  if (hasRole(identity.role, ["admin", "god", "astral"])) return true;
-  if (hasPermission(identity, "review_dungeons")) return true;
-  return false;
 }
 
 export function getTitleGrantGod(identity: InviteIdentity, requestedGod: unknown) {
@@ -957,14 +943,8 @@ export function canManageDungeonRecord(dungeon: Record<string, unknown>, identit
   return cleanCoCreators(dungeon.co_creators).some((name) => cleanText(name, 40) === displayName);
 }
 
-export function getDungeonReviewStatus(dungeon: Record<string, unknown>) {
-  return cleanText(dungeon.review_status, 20) || "approved";
-}
-
 export function canViewDungeonRecord(dungeon: Record<string, unknown>, identity: InviteIdentity | null) {
-  if (getDungeonReviewStatus(dungeon) === "approved") return true;
-  if (!identity) return false;
-  return canReviewDungeons(identity) || canManageDungeonRecord(dungeon, identity);
+  return !!identity && canManageDungeonRecord(dungeon, identity);
 }
 
 export function isMissingInviteColumn(error: { code?: string; message?: string } | null) {
@@ -988,16 +968,6 @@ export function isMissingEstimatedDurationColumn(error: LooseError) {
 
 export function isMissingBattleRoomExpiresColumn(error: LooseError) {
   return error?.code === "42703" && !!error.message?.includes("expires_at");
-}
-
-export function isMissingDungeonReviewColumn(error: LooseError) {
-  return error?.code === "42703" && (
-    !!error.message?.includes("review_status") ||
-    !!error.message?.includes("reviewed_by_hash") ||
-    !!error.message?.includes("reviewed_by_name") ||
-    !!error.message?.includes("reviewed_at") ||
-    !!error.message?.includes("review_note")
-  );
 }
 
 export function cleanFeedbackTags(value: unknown) {

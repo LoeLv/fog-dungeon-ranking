@@ -262,10 +262,7 @@ async function submitDungeon(e) {
         if (error) { showToast(`❌ ${error.message || '提交失败'}`); return; }
         const savedDungeon = Array.isArray(data) ? data[0] : data;
         const dungeonId = activeEditingDungeonId || savedDungeon?.id || '';
-        const submittedStatus = savedDungeon?.review_status || (canReviewDungeonsUI() ? 'approved' : 'pending');
-        const successText = submittedStatus === 'approved'
-            ? (isEditing ? '副本已重铸并发布' : '试炼已正式发布')
-            : (isEditing ? '副本已重铸，等待审核' : '试炼已提交，等待审核后发布');
+        const successText = isEditing ? '副本已重铸并发布' : '试炼已正式发布';
         showToast(successText);
         closeSubmitModal();
         if (dungeonId) await openDetail(dungeonId);
@@ -282,23 +279,6 @@ async function submitDungeon(e) {
     }
 }
 
-async function reviewDungeonUI(id, decision) {
-    if (!canReviewDungeonsUI()) { showToast('需要副本审核员权限'); return; }
-    const approve = decision === 'approve';
-    const note = approve ? '' : (prompt('填写退回原因（可选）') || '').trim().slice(0, 800);
-    if (!approve && !confirm('确定退回这个副本吗？作者可重铸后再次提交。')) return;
-    const lockKey = `reviewDungeon:${id}`;
-    if (!acquireUiActionLock(lockKey, '副本正在审核，请勿重复点击')) return;
-    try {
-        const { error } = await reviewDungeon(id, decision, note);
-        if (error) { showToast(`❌ ${error.message || '审核失败'}`); return; }
-        showToast(approve ? '副本已审核通过并发布' : '副本已退回');
-        await renderDungeonList();
-        await openDetail(id);
-    } finally {
-        releaseUiActionLock(lockKey);
-    }
-}
 
 async function deleteDungeon(id) {
     if (!requireInvite(['author', 'reviewer', 'admin', 'god'], '只有构筑者、同契共筑者或馆主可以封存试炼。')) return;
@@ -324,7 +304,6 @@ function setSort(sort, btn) {
     archivePage = 1;
     document.querySelectorAll('.sort-btn[data-sort]').forEach(item => item.classList.remove('active'));
     if (btn) btn.classList.add('active');
-    updateReviewFilterButton();
     renderDungeonList();
 }
 
@@ -349,7 +328,7 @@ function showToast(msg) {
 
 function shouldGuardActionButton(button) {
     const action = `${button.getAttribute('onclick') || ''} ${button.getAttribute('type') || ''}`;
-    return /(save|submit|delete|remove|mark|draw|exchange|equip|resolve|discard|grant|revoke|expand|showMore|loadMore|joinMatchQueue|cancelMatchQueue|advanceRun|reviewDungeon|addComment|rating|clear|保存|提交|删除|撤销|授予|回收|分解|兑换|结算|显示更多|展开)/i.test(action);
+    return /(save|submit|delete|remove|mark|draw|exchange|equip|resolve|discard|grant|revoke|expand|showMore|loadMore|joinMatchQueue|cancelMatchQueue|advanceRun|addComment|rating|clear|保存|提交|删除|撤销|授予|回收|分解|兑换|结算|显示更多|展开)/i.test(action);
 }
 
 document.addEventListener('click', event => {
