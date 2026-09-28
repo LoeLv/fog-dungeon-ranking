@@ -59,6 +59,7 @@ const INVITE_STORAGE_KEY = 'invite_session_v1';
 const PROFILE_STORAGE_KEY = 'personal_profiles_v1';
 const PROFILE_NOTICE_SEEN_KEY = 'profile_notice_seen_v1';
 const MOBILE_ONBOARDING_STORAGE_KEY = 'mobile_onboarding_seen_v1';
+const ACCOUNT_BOUND_STORAGE_KEY = 'account_bound_v1';
 const ROLE_LABELS = { player: '入局信徒', author: '试炼构筑者', reviewer: '结算审核员', admin: '神谕馆主', god: '祈愿神明', astral: '星途' };
 const ROLE_UI_COPY = {
     guest: {

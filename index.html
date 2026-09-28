@@ -371,6 +371,10 @@
     .invite-tabs{display:flex;gap:8px;margin:4px 0 14px;}
     .invite-tab{flex:1;padding:9px 10px;border:1px solid rgba(255,255,255,.18);background:transparent;color:inherit;border-radius:8px;cursor:pointer;font-size:14px;line-height:1.2;}
     .invite-tab-active{background:rgba(212,175,55,.18);border-color:rgba(212,175,55,.6);font-weight:600;}
+    .invite-guide{margin:0 0 14px;padding:10px 12px;border:1px solid rgba(212,175,55,.35);background:rgba(212,175,55,.08);border-radius:8px;font-size:13px;line-height:1.6;}
+    .invite-guide-title{font-weight:600;margin-bottom:4px;}
+    .invite-guide b{color:#f0d98c;}
+    .invite-guide .step{margin-top:3px;}
     </style>
 
     <!-- 邀请弹窗 -->
@@ -379,6 +383,12 @@
             <button class="close-btn" style="position:absolute;top:16px;right:20px;" onclick="closeInviteModal()">✕</button>
             <h2>🎲 入局谕令</h2>
             <p class="modal-note" id="inviteHint"></p>
+            <div class="invite-guide" id="inviteGuide">
+                <div class="invite-guide-title">📖 首次使用指引</div>
+                <div class="step">① <b>第一次使用</b>：切到「首次绑定 / 谕令入局」，填入你的谕令，并设置账号名与密码，点「绑定并进入」。此后就用<b>账号名 + 密码</b>登录。</div>
+                <div class="step">② <b>已有账号 / 换台设备</b>：在「账号登录」输入账号名与密码即可（换设备会校验一次）。</div>
+                <div class="step">③ <b>忘记密码</b>：请联系馆主重置。</div>
+            </div>
             <div class="invite-tabs">
                 <button type="button" class="invite-tab" id="inviteTabAccount" onclick="switchInviteTab('account')">账号登录</button>
                 <button type="button" class="invite-tab" id="inviteTabBind" onclick="switchInviteTab('bind')">首次绑定 / 谕令入局</button>
@@ -395,7 +405,7 @@
                 <div class="form-actions">
                     <button type="button" class="btn btn-primary" id="accountLoginButton" onclick="submitAccountLogin()">账号登录</button>
                 </div>
-                <div class="identity-help">换设备首次登录也在这里输入账号名与密码即可。</div>
+                <div class="identity-help">换设备登录：直接输入账号名与密码。尚未设置过账号？请切到「首次绑定」页签自助创建。</div>
             </div>
             <div id="invitePanelBind" style="display:none;">
                 <div class="form-group">

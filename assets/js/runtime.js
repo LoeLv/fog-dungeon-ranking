@@ -372,8 +372,14 @@ function openInviteModal(message) {
     const hint = document.getElementById('inviteHint');
     if (hint) hint.textContent = message || '输入群内谕令后，才能参与神格判定、试炼证言、构筑愚戏或分数结算。';
     updateInviteUI();
-    // 已有身份默认展示「账号登录」，新用户默认「首次绑定」
-    switchInviteTab(inviteSession?.code ? 'account' : 'bind');
+    // 已绑定过账号 → 默认「账号登录」；从未设置密码的老用户 → 默认落在「首次绑定」引导
+    const bound = hasBoundAccount();
+    switchInviteTab(bound ? 'account' : 'bind');
+    // 已在用谕令入局的用户，进入「首次绑定」时自动带入其谕令，只需再设账号名与密码
+    const bindCodeInput = document.getElementById('inviteCodeInput');
+    if (!bound && bindCodeInput && !bindCodeInput.value && inviteSession?.code) {
+        bindCodeInput.value = inviteSession.code;
+    }
     overlay.style.display='flex';
     document.body.style.overflow='hidden';
 }
@@ -396,6 +402,14 @@ function switchInviteTab(tab) {
     if (bindPanel) bindPanel.style.display = isAccount ? 'none' : '';
     const focusId = isAccount ? 'accountLoginUsername' : 'inviteCodeInput';
     setTimeout(() => document.getElementById(focusId)?.focus(), 50);
+}
+
+// 是否已在当前设备完成「账号名 + 密码」绑定（用于默认页与首次使用引导）
+function hasBoundAccount() {
+    return getLocalData(ACCOUNT_BOUND_STORAGE_KEY, false) === true;
+}
+function markAccountBound() {
+    setLocalData(ACCOUNT_BOUND_STORAGE_KEY, true);
 }
 
 // 账号登录 / 绑定成功后：把服务端回传的凭据落成既有的邀请码会话（其余逻辑零改动）
@@ -443,6 +457,7 @@ async function submitAccountLogin() {
         if (result.error || !result.role) { showToast(`❌ ${getFriendlyActionError(result.error, '账号登录失败')}`); return; }
         resetTalentViewState();
         if (!applyAccountSession(result, username)) { showToast('❌ 登录异常：未取回入局凭据'); return; }
+        markAccountBound();
         if (usernameInput) usernameInput.value = '';
         if (passwordInput) passwordInput.value = '';
         await finishAccountAuth(result, username, `已登录：${ROLE_LABELS[getInviteRole()] || ''}`);
@@ -473,6 +488,7 @@ async function submitAccountBind() {
         if (result.error || !result.role) { showToast(`❌ ${getFriendlyActionError(result.error, '绑定失败')}`); return; }
         resetTalentViewState();
         if (!applyAccountSession(result, username)) { showToast('❌ 绑定异常：未取回入局凭据'); return; }
+        markAccountBound();
         if (codeInput) codeInput.value = '';
         if (passwordInput) passwordInput.value = '';
         await finishAccountAuth(result, username, '账号已绑定并进入');
