@@ -626,7 +626,7 @@
 .chat-tab{position:relative;display:flex;flex-direction:column;align-items:center;gap:4px;padding:12px 6px;border:1px solid transparent;border-radius:12px;background:transparent;color:#b7b0c9;font-size:13px;cursor:pointer;letter-spacing:.06em;transition:all .22s ease}
 .chat-tab:hover{background:rgba(214,178,96,.08);color:#fff}
 .chat-tab.active{background:linear-gradient(180deg,rgba(214,178,96,.2),rgba(214,178,96,.06));border-color:var(--chat-accent,#d6b260);color:#fff;box-shadow:0 0 18px -6px var(--chat-accent,#d6b260)}
-.chat-tab .tab-count{font-size:11px;color:#8b86a0}
+.chat-tab .tab-ico{font-size:16px;line-height:1;color:var(--chat-accent,#d6b260);text-shadow:0 0 8px var(--chat-accent,#d6b260)}.chat-tab .tab-count{font-size:11px;color:#8b86a0}
 .chat-tab.active .tab-count{color:var(--chat-accent,#e9d9a8)}
 .chat-side{flex:0 0 264px;display:flex;flex-direction:column;background:rgba(14,12,22,.92);border-right:1px solid rgba(214,178,96,.16)}
 .chat-side-head{display:flex;align-items:center;justify-content:space-between;padding:16px 18px;border-bottom:1px solid rgba(214,178,96,.14)}
@@ -637,8 +637,8 @@
 .chat-chan{position:relative;display:flex;align-items:center;gap:9px;padding:11px 12px 11px 14px;border-radius:11px;color:#cfc8dd;cursor:pointer;font-size:14px;transition:background .18s ease,transform .18s ease}
 .chat-chan:hover{background:rgba(214,178,96,.08)}
 .chat-chan.active{background:linear-gradient(90deg,rgba(214,178,96,.18),rgba(214,178,96,.04));color:#fff}
-.chat-chan .cn-dot{width:7px;height:7px;border-radius:50%;background:var(--chan-accent,#d6b260);box-shadow:0 0 8px var(--chan-accent,#d6b260);flex:0 0 7px}
-.chat-chan.active .cn-dot{animation:pulse 1.8s ease-in-out infinite}
+.chat-chan .cn-ico{width:22px;height:22px;flex:0 0 22px;display:flex;align-items:center;justify-content:center;border-radius:50%;font-size:12px;line-height:1;color:var(--chan-accent,#d6b260);border:1px solid var(--chan-accent,#d6b260);background:radial-gradient(circle at 50% 35%,rgba(255,255,255,.10),rgba(0,0,0,.28));box-shadow:0 0 10px -3px var(--chan-accent,#d6b260);text-shadow:0 0 6px var(--chan-accent,#d6b260)}
+.chat-chan.active .cn-ico{animation:pulse 1.8s ease-in-out infinite}
 @keyframes pulse{0%,100%{transform:scale(1);opacity:1}50%{transform:scale(1.5);opacity:.6}}
 .chat-chan .cn-name{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .chat-chan .cn-kind{margin-left:auto;font-size:11px;color:#8b86a0;flex:0 0 auto}
@@ -728,7 +728,7 @@ body.chat-locked{overflow:hidden}
 <script defer src="assets/app.js?v=20260808-structure1"></script>
     <script defer src="assets/js/startup.js?v=20260920-perf1"></script>
     <script defer src="assets/js/realtime.js?v=1"></script>
-	    <script defer src="assets/js/pages/chat.js?v=20260929-chat2"></script>
+	    <script defer src="assets/js/pages/chat.js?v=20260929-chat3"></script>
 	    <script defer src="assets/js/gods-theme.js?v=20260918-slotrank3"></script>
 </body>
 </html>
