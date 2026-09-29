@@ -1117,18 +1117,34 @@
     // —— 混沌命途：破碎神殿 + 火山裂谷 + 岩浆河 + 翻涌灰雾 ——
     turbulence: {
       init: function (s) {
-        // 地表裂谷：宽窄不一、边缘崎岖的深渊，谷底暗藏岩浆河
+        // 地表裂谷：宽窄不一、边缘崎岖的深渊，谷底暗藏岩浆河，并分出支裂
         s.cracks = [];
         var nc = 6;
         for (var i = 0; i < nc; i++) {
-          var baseX = (i + 0.5) / nc * fx.w + rr(-fx.w * 0.06, fx.w * 0.06);
-          var spine = [], n = 9, x = baseX, y = fx.h + 26, drift = rr(-0.6, 0.6);
-          for (var k = 0; k <= n; k++) {
-            spine.push({ x: x, y: y, t: k / n, jL: rr(0.6, 1.42), jR: rr(0.6, 1.42) });
-            y -= (fx.h * 0.98) / n * rr(0.7, 1.3);
-            x += drift * 7 + rr(-fx.w * 0.05, fx.w * 0.05);
+          var baseX = (i + 0.5) / nc * fx.w + rr(-fx.w * 0.08, fx.w * 0.08);
+          var nn = 8 + (i % 3);
+          var bw = rr(fx.w * 0.028, fx.w * 0.058);
+          var spine = [], x = baseX, y = fx.h + 26, drift = rr(-0.8, 0.8);
+          for (var k = 0; k <= nn; k++) {
+            spine.push({ x: x, y: y, t: k / nn, jL: rr(0.6, 1.42), jR: rr(0.6, 1.42) });
+            y -= (fx.h * 0.98) / nn * rr(0.7, 1.3);
+            x += drift * 9 + rr(-fx.w * 0.075, fx.w * 0.075);
           }
-          s.cracks.push({ spine: spine, ph: rr(0, 6.283), sp: rr(0.0009, 0.0020), baseW: rr(fx.w * 0.026, fx.w * 0.055), flowSp: rr(0.00032, 0.0006) });
+          var branches = [];
+          var nb = 2 + (i % 3);
+          for (var bb2 = 0; bb2 < nb; bb2++) {
+            var bi = 2 + Math.floor(rr(0, nn - 4));
+            var bp = spine[bi];
+            var dir = Math.random() < 0.5 ? -1 : 1;
+            var bdx = dir * rr(6, 20), bdy = -rr(fx.h * 0.012, fx.h * 0.032);
+            var segs = [], bx = bp.x, by = bp.y;
+            for (var sb = 0; sb < 4; sb++) {
+              segs.push({ x: bx, y: by });
+              bx += bdx + rr(-9, 9); by += bdy + rr(-5, 5);
+            }
+            branches.push({ segs: segs, w: bw * rr(0.28, 0.58), ph: rr(0, 6.283) });
+          }
+          s.cracks.push({ spine: spine, branches: branches, ph: rr(0, 6.283), sp: rr(0.0009, 0.0020), baseW: bw, flowSp: rr(0.00032, 0.0006) });
         }
         // 远处破碎柱体 / 断拱（神话残骸剪影，玄武岩色）
         s.columns = [];
@@ -1200,54 +1216,94 @@
           }
           ctx.restore();
         }
-        ctx.globalCompositeOperation = 'lighter';
-        // —— 地表裂谷：崎岖深渊 + 谷底岩浆河（呼吸明灭）——
+        // —— 地表裂谷：崎岖深渊 + 谷底熔岩（正常模式塑纵深，仅岩浆叠加发光）——
         for (var i = 0; i < s.cracks.length; i++) {
           var ck = s.cracks[i];
           var breath = 0.5 + 0.5 * Math.abs(Math.sin(t * ck.sp + ck.ph));
           var sp = ck.spine, m = sp.length;
-          var Lp = [], Rp = [], wL = [];
+          var Lp = [], Rp = [];
           for (var k = 0; k < m; k++) {
             var p = sp[k];
             var pv = sp[k > 0 ? k - 1 : k], nxt = sp[k < m - 1 ? k + 1 : k];
             var dx = nxt.x - pv.x, dy = nxt.y - pv.y, dl = Math.sqrt(dx * dx + dy * dy) || 1;
             var nX = -dy / dl, nY = dx / dl;
-            var halfW = ck.baseW * (1.18 - 0.72 * p.t) * (1 + 0.12 * Math.sin(t * 0.001 + k * 1.7));
-            wL.push(halfW);
+            var halfW = ck.baseW * (0.5 + 0.95 * Math.sin(Math.PI * p.t)) * (1 + 0.16 * Math.sin(t * 0.0012 + k * 1.9 + ck.ph));
             Lp.push({ x: p.x + nX * halfW * p.jL, y: p.y + nY * halfW * p.jL });
             Rp.push({ x: p.x + nX * halfW * p.jR, y: p.y + nY * halfW * p.jR });
           }
-          // 深渊填充（不规则边缘的暗裂口）
-          ctx.fillStyle = 'rgba(7,5,6,0.95)';
+          // (1) 岩层裂口：暗于背景，围出深渊（正常模式）
+          ctx.globalCompositeOperation = 'source-over';
           ctx.beginPath();
           ctx.moveTo(Lp[0].x, Lp[0].y);
           for (var a = 1; a < m; a++) ctx.lineTo(Lp[a].x, Lp[a].y);
           for (var b = m - 1; b >= 0; b--) ctx.lineTo(Rp[b].x, Rp[b].y);
-          ctx.closePath(); ctx.fill();
-          // 谷底岩浆河（窄亮带贴谷心）
-          ctx.strokeStyle = 'rgba(255,' + Math.floor(120 + 70 * breath) + ',30,' + (0.5 + 0.35 * breath) + ')';
-          ctx.lineWidth = ck.baseW * 0.34;
-          ctx.lineJoin = 'round'; ctx.lineCap = 'round';
-          ctx.shadowColor = 'rgba(255,120,30,' + (0.55 * breath) + ')';
-          ctx.shadowBlur = 12;
-          ctx.beginPath();
-          for (var c2 = 0; c2 < m; c2++) { if (c2 === 0) ctx.moveTo(sp[c2].x, sp[c2].y); else ctx.lineTo(sp[c2].x, sp[c2].y); }
-          ctx.stroke();
-          ctx.shadowBlur = 0;
-          // 流动亮脉
-          var fp = (t * ck.flowSp + i * 0.2) % 1;
-          var fi = Math.min(m - 1, Math.floor(fp * (m - 1)));
-          var fpt = sp[fi];
-          var fg = ctx.createRadialGradient(fpt.x, fpt.y, 0, fpt.x, fpt.y, ck.baseW * 1.2);
-          fg.addColorStop(0, 'rgba(255,' + Math.floor(190 + 50 * breath) + ',110,' + (0.6 * breath) + ')');
-          fg.addColorStop(1, 'rgba(255,120,30,0)');
-          ctx.fillStyle = fg; ctx.beginPath(); ctx.arc(fpt.x, fpt.y, ck.baseW * 1.2, 0, 6.2832); ctx.fill();
-          // 上缘暖光唇线（岩石被照亮的一侧）
-          ctx.strokeStyle = 'rgba(255,150,70,' + (0.20 * breath) + ')';
-          ctx.lineWidth = 1.4;
+          ctx.closePath();
+          var cfg = ctx.createLinearGradient(sp[0].x, sp[0].y, sp[m - 1].x, sp[m - 1].y);
+          cfg.addColorStop(0, 'rgba(3,2,4,0.98)');
+          cfg.addColorStop(1, 'rgba(13,7,8,0.98)');
+          ctx.fillStyle = cfg; ctx.fill();
+          // (2) 裂口内参差岩齿（打破平滑边缘）
+          ctx.save(); ctx.clip();
+          ctx.fillStyle = 'rgba(8,6,9,0.96)';
+          for (var tk = 1; tk < m - 1; tk++) {
+            var tp = sp[tk];
+            var tw = ck.baseW * 0.5 * Math.sin(Math.PI * tp.t);
+            ctx.beginPath();
+            ctx.moveTo(tp.x, tp.y + tw * 1.1);
+            ctx.lineTo(tp.x - tw * 0.8, tp.y - tw * 0.2);
+            ctx.lineTo(tp.x + tw * 0.5, tp.y - tw * 0.6);
+            ctx.closePath(); ctx.fill();
+          }
+          ctx.restore();
+          // (3) 单侧被映亮的岩唇（立体感）
+          ctx.strokeStyle = 'rgba(178,96,52,' + (0.14 + 0.2 * breath) + ')';
+          ctx.lineWidth = 1.6; ctx.lineJoin = 'round'; ctx.lineCap = 'round';
           ctx.beginPath();
           for (var d2 = 0; d2 < m; d2++) { if (d2 === 0) ctx.moveTo(Lp[d2].x, Lp[d2].y); else ctx.lineTo(Lp[d2].x, Lp[d2].y); }
           ctx.stroke();
+          // (4) 谷底熔岩：断面断续、宽窄起伏、色温不均（叠加发光）
+          ctx.globalCompositeOperation = 'lighter';
+          for (var sk = 0; sk < m - 1; sk++) {
+            var s0 = sp[sk], s1 = sp[sk + 1];
+            var seg = 0.5 + 0.5 * Math.sin(t * 0.0025 + sk * 1.6 + ck.ph * 3);
+            var lit = 0.5 + 0.5 * Math.sin(t * ck.flowSp * 55 + sk * 0.85 + i * 1.7);
+            var segA = (0.16 + 0.5 * seg) * (0.3 + 0.8 * lit) * (0.45 + 0.6 * breath);
+            if (segA <= 0.03) continue;
+            var midW = ck.baseW * (0.14 + 0.3 * Math.sin(Math.PI * (sk + 0.5) / m));
+            var temp = Math.min(1, 0.3 + 0.7 * lit * breath);
+            ctx.strokeStyle = 'rgba(255,' + Math.floor(96 + 110 * temp) + ',' + Math.floor(24 + 46 * temp) + ',' + segA + ')';
+            ctx.lineWidth = midW * 2; ctx.lineCap = 'round';
+            ctx.beginPath(); ctx.moveTo(s0.x, s0.y); ctx.lineTo(s1.x, s1.y); ctx.stroke();
+          }
+          // (5) 离散熔核亮点（取代连续光带）
+          for (var hh = 0; hh < 2; hh++) {
+            var hp = ((t * ck.flowSp + hh * 0.5 + i * 0.13) % 1 + 1) % 1;
+            var hi = Math.max(0, Math.min(m - 1, Math.floor(hp * (m - 1))));
+            var hpt = sp[hi];
+            var hr = ck.baseW * (0.45 + 0.3 * Math.abs(Math.sin(t * 0.004 + hh + ck.ph)));
+            var hg = ctx.createRadialGradient(hpt.x, hpt.y, 0, hpt.x, hpt.y, hr);
+            hg.addColorStop(0, 'rgba(255,236,185,' + (0.7 * breath) + ')');
+            hg.addColorStop(0.5, 'rgba(255,150,60,' + (0.34 * breath) + ')');
+            hg.addColorStop(1, 'rgba(255,110,40,0)');
+            ctx.fillStyle = hg; ctx.beginPath(); ctx.arc(hpt.x, hpt.y, hr, 0, 6.2832); ctx.fill();
+          }
+          // (6) 支裂：细碎裂缝（暗缝 + 微光）
+          for (var bc = 0; bc < ck.branches.length; bc++) {
+            var br = ck.branches[bc];
+            ctx.globalCompositeOperation = 'source-over';
+            ctx.strokeStyle = 'rgba(4,3,5,0.9)';
+            ctx.lineWidth = Math.max(1.2, br.w * 2); ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+            ctx.beginPath();
+            for (var bs = 0; bs < br.segs.length; bs++) { if (bs === 0) ctx.moveTo(br.segs[bs].x, br.segs[bs].y); else ctx.lineTo(br.segs[bs].x, br.segs[bs].y); }
+            ctx.stroke();
+            ctx.globalCompositeOperation = 'lighter';
+            var ba = 0.12 + 0.18 * Math.abs(Math.sin(t * 0.0016 + br.ph));
+            ctx.strokeStyle = 'rgba(255,118,48,' + ba + ')';
+            ctx.lineWidth = Math.max(1, br.w * 0.7);
+            ctx.beginPath();
+            for (var bs2 = 0; bs2 < br.segs.length; bs2++) { if (bs2 === 0) ctx.moveTo(br.segs[bs2].x, br.segs[bs2].y); else ctx.lineTo(br.segs[bs2].x, br.segs[bs2].y); }
+            ctx.stroke();
+          }
         }
         ctx.globalCompositeOperation = 'source-over';
         // —— 中层：横向翻卷的火山灰雾（灰 / 暖双色）——
