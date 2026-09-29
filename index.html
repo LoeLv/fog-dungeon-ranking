@@ -671,6 +671,10 @@
 .chat-send{border:1px solid rgba(214,178,96,.5);background:linear-gradient(180deg,#3a2f4e,#241d33);color:#e9d9a8;border-radius:11px;padding:0 20px;font-weight:600;cursor:pointer;transition:all .2s ease}
 .chat-send:hover{color:#fff;border-color:var(--chat-accent,#d6b260);box-shadow:0 0 16px -4px var(--chat-accent,#d6b260)}
 body.chat-locked{overflow:hidden}
+.chat-hide-btn{margin-left:auto;flex:0 0 auto;background:rgba(20,16,30,.7);border:1px solid rgba(214,178,96,.28);color:#cfc6e0;border-radius:10px;padding:8px 13px;font-size:13px;cursor:pointer;transition:all .2s ease;white-space:nowrap}
+.chat-hide-btn:hover{color:#fff;border-color:var(--chat-accent,#d6b260);box-shadow:0 0 14px -4px var(--chat-accent,#d6b260)}
+.chat-page.side-hidden .chat-nav,.chat-page.side-hidden .chat-side{display:none}
+.chat-nav,.chat-side{transition:opacity .2s ease}
 @media (max-width:720px){.chat-shell{flex-direction:column}.chat-nav{flex:0 0 auto;flex-direction:row;border-right:none;border-bottom:1px solid rgba(214,178,96,.16);padding:10px 8px;overflow-x:auto}.chat-tab{flex:0 0 auto;flex-direction:row;gap:6px;padding:9px 14px}.chat-side{flex:0 0 34%;border-right:none;border-bottom:1px solid rgba(214,178,96,.16)}#chatFab{right:16px;bottom:84px;padding:11px 14px}}
 </style>
 <button type="button" id="chatFab" onclick="openChatPage()" title="聚议 · 社群" aria-label="打开社群聊天">聚议</button>
@@ -692,6 +696,7 @@ body.chat-locked{overflow:hidden}
         <div class="chat-cur-name" id="chatCurName">请选择群组</div>
         <div class="chat-cur-desc" id="chatCurDesc"></div>
         </div>
+        <button type="button" class="chat-hide-btn" id="chatSideToggle" onclick="toggleChatSide()" title="隐藏侧栏" aria-label="隐藏侧栏">隐藏侧栏</button>
       </div>
       <div class="chat-messages" id="chatMessages"></div>
       <div class="chat-compose">
@@ -701,6 +706,14 @@ body.chat-locked{overflow:hidden}
     </section>
   </div>
 </section>
+<script>
+function toggleChatSide(){
+  var p=document.getElementById('chatPage'); if(!p) return;
+  var hidden=p.classList.toggle('side-hidden');
+  var b=document.getElementById('chatSideToggle');
+  if(b){ b.textContent = hidden ? '显示侧栏' : '隐藏侧栏'; b.title = hidden ? '显示侧栏' : '隐藏侧栏'; b.setAttribute('aria-label', hidden ? '显示侧栏' : '隐藏侧栏'); }
+}
+</script>
 <script defer src="assets/js/foundation.js?v=20260810-loginrollback1"></script>
     <script defer src="assets/js/world-data.js?v=20260812-faithtraits1"></script>
 <script defer src="assets/js/utils.js?v=20260918-gtconfirm2"></script>
@@ -738,7 +751,7 @@ body.chat-locked{overflow:hidden}
 <script defer src="assets/app.js?v=20260808-structure1"></script>
     <script defer src="assets/js/startup.js?v=20260920-perf1"></script>
     <script defer src="assets/js/realtime.js?v=1"></script>
-	    <script defer src="assets/js/pages/chat.js?v=20260929-chat9"></script>
+	    <script defer src="assets/js/pages/chat.js?v=20260929-chat10"></script>
 	    <script defer src="assets/js/gods-theme.js?v=20260918-slotrank3"></script>
 </body>
 </html>
