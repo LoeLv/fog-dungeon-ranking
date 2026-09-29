@@ -1117,21 +1117,20 @@
     // —— 混沌命途：破碎神殿 + 火山裂谷 + 岩浆河 + 翻涌灰雾 ——
     turbulence: {
       init: function (s) {
-        // 地面裂隙（沿裂缝流淌岩浆）
+        // 地表裂谷：宽窄不一、边缘崎岖的深渊，谷底暗藏岩浆河
         s.cracks = [];
-        var nc = 7;
+        var nc = 6;
         for (var i = 0; i < nc; i++) {
-          var x0 = (i + 0.5) / nc * fx.w + rr(-fx.w * 0.05, fx.w * 0.05);
-          var pts = [], y = fx.h + 12, x = x0, segs = 9;
-          pts.push({ x: x, y: y });
-          for (var k = 0; k < segs; k++) {
-            y -= fx.h / segs * rr(0.7, 1.25);
-            x += rr(-fx.w * 0.06, fx.w * 0.06);
-            pts.push({ x: x, y: y });
+          var baseX = (i + 0.5) / nc * fx.w + rr(-fx.w * 0.06, fx.w * 0.06);
+          var spine = [], n = 9, x = baseX, y = fx.h + 26, drift = rr(-0.6, 0.6);
+          for (var k = 0; k <= n; k++) {
+            spine.push({ x: x, y: y, t: k / n, jL: rr(0.6, 1.42), jR: rr(0.6, 1.42) });
+            y -= (fx.h * 0.98) / n * rr(0.7, 1.3);
+            x += drift * 7 + rr(-fx.w * 0.05, fx.w * 0.05);
           }
-          s.cracks.push({ pts: pts, ph: rr(0, 6.283), sp: rr(0.0012, 0.0026), w: rr(2.6, 6) });
+          s.cracks.push({ spine: spine, ph: rr(0, 6.283), sp: rr(0.0009, 0.0020), baseW: rr(fx.w * 0.026, fx.w * 0.055), flowSp: rr(0.00032, 0.0006) });
         }
-        // 远处破碎柱体 / 断拱（神话残骸剪影）
+        // 远处破碎柱体 / 断拱（神话残骸剪影，玄武岩色）
         s.columns = [];
         for (var c = 0; c < 9; c++) {
           s.columns.push({
@@ -1141,120 +1140,153 @@
             h: rr(fx.h * 0.10, fx.h * 0.30),
             lean: rr(-0.12, 0.12),
             ph: rr(0, 6.283),
+            warm: Math.random() < 0.35,
             arch: Math.random() < 0.35
           });
         }
-        // 悬浮碎石
+        // 悬浮碎石（玄武岩灰，少数带冷却熔痕）
         s.rocks = [];
         for (var r = 0; r < 16; r++) {
-          var rp = [], n = 5 + (r % 3);
-          for (var q = 0; q < n; q++) { var a = q / n * 6.2832; var rad = rr(5, 14); rp.push({ x: Math.cos(a) * rad, y: Math.sin(a) * rad }); }
-          s.rocks.push({ x: Math.random() * fx.w, y: rr(fx.h * 0.12, fx.h * 0.7), pts: rp, rot: rr(0, 6.283), spin: rr(-0.012, 0.012), vx: rr(-0.25, 0.25), vy: rr(-0.16, -0.02), ph: rr(0, 6.283), sz: rr(0.7, 1.5) });
+          var rp = [], n2 = 5 + (r % 3);
+          for (var q = 0; q < n2; q++) { var a = q / n2 * 6.2832; var rad = rr(5, 14); rp.push({ x: Math.cos(a) * rad, y: Math.sin(a) * rad }); }
+          s.rocks.push({ x: Math.random() * fx.w, y: rr(fx.h * 0.12, fx.h * 0.7), pts: rp, rot: rr(0, 6.283), spin: rr(-0.012, 0.012), vx: rr(-0.25, 0.25), vy: rr(-0.16, -0.02), ph: rr(0, 6.283), sz: rr(0.7, 1.5), warm: Math.random() < 0.4, tone: rr(0, 1) });
         }
-        // 翻涌火山灰雾
+        // 翻涌火山灰雾（灰 vs 暖，双色系）
         s.fog = [];
         for (var f = 0; f < 9; f++) {
-          s.fog.push({ x: Math.random() * fx.w, y: rr(fx.h * 0.35, fx.h * 0.9), r: rr(fx.w * 0.24, fx.w * 0.5), vx: rr(0.2, 0.6) * (Math.random() < 0.5 ? 1 : -1), vy: rr(-0.05, 0.05), a: rr(0.05, 0.12) });
+          s.fog.push({ x: Math.random() * fx.w, y: rr(fx.h * 0.35, fx.h * 0.9), r: rr(fx.w * 0.24, fx.w * 0.5), vx: rr(0.2, 0.6) * (Math.random() < 0.5 ? 1 : -1), vy: rr(-0.05, 0.05), a: rr(0.05, 0.13), grey: Math.random() < 0.62 });
         }
-        // 上升余烬
+        // 上升余烬（暖黄 / 橙 / 深红多色）
         s.embers = [];
-        for (var e = 0; e < 110; e++) {
-          s.embers.push({ x: Math.random() * fx.w, y: Math.random() * fx.h, vy: rr(-1.4, -0.3), vx: rr(-0.5, 0.5), r: rr(0.7, 2.3), ph: rr(0, 6.283) });
+        for (var e = 0; e < 100; e++) {
+          s.embers.push({ x: Math.random() * fx.w, y: Math.random() * fx.h, vy: rr(-1.4, -0.3), vx: rr(-0.5, 0.5), r: rr(0.7, 2.3), ph: rr(0, 6.283), col: Math.floor(rr(0, 3)) });
         }
         // 火焰冲击
-        s.burst = { life: 0, max: 0, cx: 0, cy: 0, next: rr(220, 460) };
+        s.burst = { life: 0, max: 0, cx: 0, cy: 0, next: rr(240, 480) };
         s.verses = ['裂碎纲常，乱起洪荒', '熔岩崩宇，雾荡狂澜', '毁弃定则，无有常形'];
       },
       draw: function (ctx, w, h, t, s) {
-        // 暗红色天幕（低频拖尾）
-        ctx.fillStyle = 'rgba(16,7,11,0.22)'; ctx.fillRect(0, 0, w, h);
-        // —— 火山灰天空 / 地平线炽光 ——
+        // 火山灰夜空（低频拖尾）
+        ctx.fillStyle = 'rgba(17,13,15,0.22)'; ctx.fillRect(0, 0, w, h);
+        // —— 天空：暗灰紫 → 地平线暖光（不再是纯红）——
         var sky = ctx.createLinearGradient(0, 0, 0, h);
-        sky.addColorStop(0, 'rgba(40,10,16,0.55)');
-        sky.addColorStop(0.55, 'rgba(60,16,18,0.30)');
-        sky.addColorStop(1, 'rgba(120,40,20,0.28)');
+        sky.addColorStop(0, 'rgba(30,24,30,0.52)');
+        sky.addColorStop(0.5, 'rgba(56,36,36,0.32)');
+        sky.addColorStop(0.8, 'rgba(92,48,34,0.30)');
+        sky.addColorStop(1, 'rgba(128,58,34,0.30)');
         ctx.fillStyle = sky; ctx.fillRect(0, 0, w, h);
-        // —— 远处破碎柱体 / 断裂拱桥 ——
+        // —— 地面暗基底（让裂谷落在“地表”上）——
+        var grd = ctx.createLinearGradient(0, h * 0.5, 0, h);
+        grd.addColorStop(0, 'rgba(10,8,9,0)');
+        grd.addColorStop(1, 'rgba(8,6,7,0.5)');
+        ctx.fillStyle = grd; ctx.fillRect(0, h * 0.5, w, h * 0.5);
+        // —— 远处破碎柱体 / 断裂拱桥（玄武岩剪影）——
         for (var c = 0; c < s.columns.length; c++) {
           var col = s.columns[c];
-          var rim = 0.25 + 0.2 * Math.abs(Math.sin(col.ph + t * 0.0015));
+          var rim = 0.2 + 0.18 * Math.abs(Math.sin(col.ph + t * 0.0015));
           ctx.save(); ctx.translate(col.x, col.y); ctx.rotate(col.lean);
-          ctx.fillStyle = 'rgba(20,9,10,0.92)';
+          ctx.fillStyle = 'rgba(26,23,27,0.94)';
           ctx.fillRect(-col.w / 2, -col.h, col.w, col.h + 6);
           ctx.beginPath(); ctx.moveTo(-col.w / 2, -col.h);
           ctx.lineTo(-col.w * 0.1, -col.h - col.w * 0.9);
           ctx.lineTo(col.w * 0.2, -col.h - col.w * 0.3);
           ctx.lineTo(col.w / 2, -col.h - col.w * 0.7);
           ctx.lineTo(col.w / 2, -col.h); ctx.closePath(); ctx.fill();
-          ctx.strokeStyle = 'rgba(200,70,40,' + rim + ')'; ctx.lineWidth = 1.1;
-          ctx.strokeRect(-col.w / 2, -col.h, col.w, col.h);
+          ctx.strokeStyle = col.warm ? ('rgba(210,90,50,' + rim + ')') : ('rgba(150,148,158,' + (rim * 0.8) + ')');
+          ctx.lineWidth = 1.1; ctx.strokeRect(-col.w / 2, -col.h, col.w, col.h);
           if (col.arch) {
-            ctx.strokeStyle = 'rgba(180,60,40,' + (rim * 0.8) + ')'; ctx.lineWidth = 2;
+            ctx.strokeStyle = 'rgba(140,138,150,' + (rim * 0.7) + ')'; ctx.lineWidth = 2;
             ctx.beginPath(); ctx.arc(-col.w * 1.1, -col.h * 0.55, col.w * 1.1, Math.PI, Math.PI * 1.6); ctx.stroke();
           }
           ctx.restore();
         }
         ctx.globalCompositeOperation = 'lighter';
-        // —— 地面裂隙：呼吸式明灭 + 岩浆河流 ——
+        // —— 地表裂谷：崎岖深渊 + 谷底岩浆河（呼吸明灭）——
         for (var i = 0; i < s.cracks.length; i++) {
           var ck = s.cracks[i];
-          var breath = 0.45 + 0.55 * Math.abs(Math.sin(t * ck.sp + ck.ph));
-          ctx.strokeStyle = 'rgba(10,4,5,0.9)'; ctx.lineWidth = ck.w * 1.7; ctx.lineJoin = 'round';
+          var breath = 0.5 + 0.5 * Math.abs(Math.sin(t * ck.sp + ck.ph));
+          var sp = ck.spine, m = sp.length;
+          var Lp = [], Rp = [], wL = [];
+          for (var k = 0; k < m; k++) {
+            var p = sp[k];
+            var pv = sp[k > 0 ? k - 1 : k], nxt = sp[k < m - 1 ? k + 1 : k];
+            var dx = nxt.x - pv.x, dy = nxt.y - pv.y, dl = Math.sqrt(dx * dx + dy * dy) || 1;
+            var nX = -dy / dl, nY = dx / dl;
+            var halfW = ck.baseW * (1.18 - 0.72 * p.t) * (1 + 0.12 * Math.sin(t * 0.001 + k * 1.7));
+            wL.push(halfW);
+            Lp.push({ x: p.x + nX * halfW * p.jL, y: p.y + nY * halfW * p.jL });
+            Rp.push({ x: p.x + nX * halfW * p.jR, y: p.y + nY * halfW * p.jR });
+          }
+          // 深渊填充（不规则边缘的暗裂口）
+          ctx.fillStyle = 'rgba(7,5,6,0.95)';
           ctx.beginPath();
-          for (var k = 0; k < ck.pts.length; k++) { if (k === 0) ctx.moveTo(ck.pts[k].x, ck.pts[k].y); else ctx.lineTo(ck.pts[k].x, ck.pts[k].y); }
-          ctx.stroke();
-          ctx.strokeStyle = 'rgba(255,' + Math.floor(110 + 90 * breath) + ',40,' + (0.55 + 0.4 * breath) + ')';
-          ctx.lineWidth = ck.w * (0.5 + 0.3 * breath);
-          ctx.shadowColor = 'rgba(255,140,40,' + (0.5 * breath) + ')';
-          ctx.shadowBlur = 14;
+          ctx.moveTo(Lp[0].x, Lp[0].y);
+          for (var a = 1; a < m; a++) ctx.lineTo(Lp[a].x, Lp[a].y);
+          for (var b = m - 1; b >= 0; b--) ctx.lineTo(Rp[b].x, Rp[b].y);
+          ctx.closePath(); ctx.fill();
+          // 谷底岩浆河（窄亮带贴谷心）
+          ctx.strokeStyle = 'rgba(255,' + Math.floor(120 + 70 * breath) + ',30,' + (0.5 + 0.35 * breath) + ')';
+          ctx.lineWidth = ck.baseW * 0.34;
+          ctx.lineJoin = 'round'; ctx.lineCap = 'round';
+          ctx.shadowColor = 'rgba(255,120,30,' + (0.55 * breath) + ')';
+          ctx.shadowBlur = 12;
           ctx.beginPath();
-          for (var k2 = 0; k2 < ck.pts.length; k2++) { if (k2 === 0) ctx.moveTo(ck.pts[k2].x, ck.pts[k2].y); else ctx.lineTo(ck.pts[k2].x, ck.pts[k2].y); }
+          for (var c2 = 0; c2 < m; c2++) { if (c2 === 0) ctx.moveTo(sp[c2].x, sp[c2].y); else ctx.lineTo(sp[c2].x, sp[c2].y); }
           ctx.stroke();
           ctx.shadowBlur = 0;
-          var pulsePos = (t * 0.0006 + i * 0.13) % 1;
-          var pi = Math.min(ck.pts.length - 1, Math.floor(pulsePos * ck.pts.length));
-          var pp = ck.pts[pi];
-          var pg = ctx.createRadialGradient(pp.x, pp.y, 0, pp.x, pp.y, 26);
-          pg.addColorStop(0, 'rgba(255,' + Math.floor(180 + 60 * breath) + ',90,' + (0.7 * breath) + ')');
-          pg.addColorStop(1, 'rgba(255,140,40,0)');
-          ctx.fillStyle = pg; ctx.beginPath(); ctx.arc(pp.x, pp.y, 26, 0, 6.2832); ctx.fill();
+          // 流动亮脉
+          var fp = (t * ck.flowSp + i * 0.2) % 1;
+          var fi = Math.min(m - 1, Math.floor(fp * (m - 1)));
+          var fpt = sp[fi];
+          var fg = ctx.createRadialGradient(fpt.x, fpt.y, 0, fpt.x, fpt.y, ck.baseW * 1.2);
+          fg.addColorStop(0, 'rgba(255,' + Math.floor(190 + 50 * breath) + ',110,' + (0.6 * breath) + ')');
+          fg.addColorStop(1, 'rgba(255,120,30,0)');
+          ctx.fillStyle = fg; ctx.beginPath(); ctx.arc(fpt.x, fpt.y, ck.baseW * 1.2, 0, 6.2832); ctx.fill();
+          // 上缘暖光唇线（岩石被照亮的一侧）
+          ctx.strokeStyle = 'rgba(255,150,70,' + (0.20 * breath) + ')';
+          ctx.lineWidth = 1.4;
+          ctx.beginPath();
+          for (var d2 = 0; d2 < m; d2++) { if (d2 === 0) ctx.moveTo(Lp[d2].x, Lp[d2].y); else ctx.lineTo(Lp[d2].x, Lp[d2].y); }
+          ctx.stroke();
         }
         ctx.globalCompositeOperation = 'source-over';
-        // —— 中层：横向翻卷的火山灰雾 ——
+        // —— 中层：横向翻卷的火山灰雾（灰 / 暖双色）——
         for (var f2 = 0; f2 < s.fog.length; f2++) {
           var fg2 = s.fog[f2]; fg2.x += fg2.vx; fg2.y += fg2.vy;
           if (fg2.x < -fg2.r) fg2.x = w + fg2.r; if (fg2.x > w + fg2.r) fg2.x = -fg2.r;
           if (fg2.y < -fg2.r) fg2.y = h + fg2.r; if (fg2.y > h + fg2.r) fg2.y = -fg2.r;
           var flick = 0.75 + 0.25 * Math.sin(t * 0.0016 + f2 * 1.3);
           var g2 = ctx.createRadialGradient(fg2.x, fg2.y, 0, fg2.x, fg2.y, fg2.r);
-          g2.addColorStop(0, 'rgba(78,30,26,' + (fg2.a * flick) + ')');
-          g2.addColorStop(1, 'rgba(40,16,16,0)');
+          if (fg2.grey) { g2.addColorStop(0, 'rgba(86,80,84,' + (fg2.a * flick) + ')'); g2.addColorStop(1, 'rgba(50,46,52,0)'); }
+          else { g2.addColorStop(0, 'rgba(96,52,38,' + (fg2.a * flick * 0.9) + ')'); g2.addColorStop(1, 'rgba(46,24,22,0)'); }
           ctx.fillStyle = g2; ctx.beginPath(); ctx.arc(fg2.x, fg2.y, fg2.r, 0, 6.2832); ctx.fill();
         }
         ctx.globalCompositeOperation = 'lighter';
-        // —— 上层：悬浮碎石缓慢翻转 + 炽热边缘 ——
+        // —— 上层：悬浮碎石缓慢翻转（玄武岩，少数冷却熔痕）——
         for (var r2 = 0; r2 < s.rocks.length; r2++) {
           var rk = s.rocks[r2]; rk.x += rk.vx; rk.y += rk.vy; rk.rot += rk.spin;
           if (rk.y < -40) { rk.y = h + 30; rk.x = Math.random() * w; }
           if (rk.x < -40) rk.x = w + 40; if (rk.x > w + 40) rk.x = -40;
           var glow = 0.5 + 0.5 * Math.sin(t * 0.004 + rk.ph);
           ctx.save(); ctx.translate(rk.x, rk.y); ctx.rotate(rk.rot); ctx.scale(rk.sz, rk.sz);
-          ctx.fillStyle = 'rgba(26,10,9,0.92)';
+          ctx.fillStyle = 'rgba(34,31,36,0.94)';
           ctx.beginPath();
           for (var k3 = 0; k3 < rk.pts.length; k3++) { if (k3 === 0) ctx.moveTo(rk.pts[k3].x, rk.pts[k3].y); else ctx.lineTo(rk.pts[k3].x, rk.pts[k3].y); }
           ctx.closePath(); ctx.fill();
-          ctx.strokeStyle = 'rgba(255,' + Math.floor(90 + glow * 90) + ',45,' + (0.7 * glow) + ')';
+          if (rk.warm) { ctx.strokeStyle = 'rgba(255,' + Math.floor(90 + glow * 90) + ',45,' + (0.6 * glow) + ')'; }
+          else { ctx.strokeStyle = 'rgba(150,148,160,' + (0.35 * glow) + ')'; }
           ctx.lineWidth = 1.4; ctx.stroke();
           ctx.restore();
         }
-        // —— 上升余烬 ——
+        // —— 上升余烬（多色）——
         for (var e2 = 0; e2 < s.embers.length; e2++) {
           var em = s.embers[e2]; em.x += em.vx + Math.sin(t * 0.003 + em.ph) * 0.3; em.y += em.vy;
           if (em.y < -10) { em.y = h + 10; em.x = Math.random() * w; }
           var a2 = 0.4 + 0.6 * Math.abs(Math.sin(t * 0.005 + em.ph));
+          var cr = em.col === 0 ? '255,205,110' : (em.col === 1 ? '255,140,60' : '226,74,40');
           var eg = ctx.createRadialGradient(em.x, em.y, 0, em.x, em.y, em.r * 4);
-          eg.addColorStop(0, 'rgba(255,' + Math.floor(140 + 80 * a2) + ',60,' + a2 + ')');
-          eg.addColorStop(1, 'rgba(255,140,60,0)');
+          eg.addColorStop(0, 'rgba(' + cr + ',' + a2 + ')');
+          eg.addColorStop(1, 'rgba(' + cr + ',0)');
           ctx.fillStyle = eg; ctx.beginPath(); ctx.arc(em.x, em.y, em.r * 4, 0, 6.2832); ctx.fill();
         }
         // —— 火焰冲击：偶发爆发，照亮整个背景 ——
@@ -1264,7 +1296,7 @@
           bu.life = bu.max = 60;
           bu.cx = rr(w * 0.2, w * 0.8);
           bu.cy = rr(h * 0.45, h * 0.8);
-          bu.next = rr(260, 520);
+          bu.next = rr(280, 540);
         }
         if (bu.life > 0) {
           bu.life -= 1;
@@ -1272,7 +1304,7 @@
           var radius = (1 - bp) * Math.max(w, h) * 0.7 + 40;
           var bg = ctx.createRadialGradient(bu.cx, bu.cy, 0, bu.cx, bu.cy, radius);
           bg.addColorStop(0, 'rgba(255,' + Math.floor(220 * bp + 90) + ',120,' + (0.5 * bp) + ')');
-          bg.addColorStop(0.4, 'rgba(255,120,40,' + (0.28 * bp) + ')');
+          bg.addColorStop(0.4, 'rgba(255,120,40,' + (0.26 * bp) + ')');
           bg.addColorStop(1, 'rgba(255,80,20,0)');
           ctx.fillStyle = bg; ctx.beginPath(); ctx.arc(bu.cx, bu.cy, radius, 0, 6.2832); ctx.fill();
         }
@@ -1282,7 +1314,7 @@
           var verses = s.verses || ['裂碎纲常，乱起洪荒', '熔岩崩宇，雾荡狂澜', '毁弃定则，无有常形'];
           var DUR = 5200, total = verses.length;
           var cp = (t % (DUR * total)) / DUR;
-          var fi = Math.floor(cp) % total;
+          var fi2 = Math.floor(cp) % total;
           var lt = cp - Math.floor(cp);
           var a;
           if (lt < 0.16) a = lt / 0.16;
@@ -1290,10 +1322,10 @@
           else a = 1;
           a = a < 0 ? 0 : (a > 1 ? 1 : a);
           if (a > 0.01) {
-            var txt = verses[fi];
+            var txt = verses[fi2];
             var fs = Math.max(22, Math.min(w * 0.06, h * 0.075, 50));
             var tx = w / 2, ty = h * 0.80;
-            var breathe = 0.5 + 0.5 * Math.sin(t * 0.0016 + fi);
+            var breathe = 0.5 + 0.5 * Math.sin(t * 0.0016 + fi2);
             var rise = (1 - a) * 12;
             ctx.save();
             ctx.globalCompositeOperation = 'source-over';
