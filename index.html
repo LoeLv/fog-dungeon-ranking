@@ -637,14 +637,21 @@
 .chat-chan{position:relative;display:flex;align-items:center;gap:9px;padding:11px 12px 11px 14px;border-radius:11px;color:#cfc8dd;cursor:pointer;font-size:14px;transition:background .18s ease,transform .18s ease}
 .chat-chan:hover{background:rgba(214,178,96,.08)}
 .chat-chan.active{background:linear-gradient(90deg,rgba(214,178,96,.18),rgba(214,178,96,.04));color:#fff}
-.chat-chan .cn-ico{width:22px;height:22px;flex:0 0 22px;display:flex;align-items:center;justify-content:center;border-radius:50%;font-size:12px;line-height:1;color:var(--chan-accent,#d6b260);border:1px solid var(--chan-accent,#d6b260);background:radial-gradient(circle at 50% 35%,rgba(255,255,255,.10),rgba(0,0,0,.28));box-shadow:0 0 10px -3px var(--chan-accent,#d6b260);text-shadow:0 0 6px var(--chan-accent,#d6b260)}
-.chat-chan.active .cn-ico{animation:pulse 1.8s ease-in-out infinite}
+.chat-chan .cn-emblem{position:relative;width:34px;height:34px;flex:0 0 34px;border-radius:50%;display:flex;align-items:center;justify-content:center;color:var(--chan-accent,#d6b260);background:radial-gradient(circle at 50% 36%,rgba(255,255,255,.12),rgba(0,0,0,.46) 74%);border:1px solid var(--chan-accent,#d6b260);box-shadow:0 0 14px -3px var(--chan-accent,#d6b260),inset 0 0 9px -3px var(--chan-accent,#d6b260)}
+.chat-chan .cn-emblem::before{content:'';position:absolute;inset:-3px;border-radius:50%;border:1px dashed var(--chan-accent,#d6b260);opacity:.45}
+.chat-chan .cn-emblem svg{width:21px;height:21px;display:block}
+.chat-chan .cn-emblem .emb-glyph{font-size:15px;line-height:1;text-shadow:0 0 8px var(--chan-accent,#d6b260)}
+.chat-chan.active .cn-emblem{animation:pulse 1.8s ease-in-out infinite}
 @keyframes pulse{0%,100%{transform:scale(1);opacity:1}50%{transform:scale(1.5);opacity:.6}}
 .chat-chan .cn-name{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .chat-chan .cn-kind{margin-left:auto;font-size:11px;color:#8b86a0;flex:0 0 auto}
 .chat-badge{min-width:18px;height:18px;padding:0 5px;border-radius:9px;background:#c8434f;color:#fff;font-size:11px;display:flex;align-items:center;justify-content:center;flex:0 0 auto}
 .chat-main{flex:1;display:flex;flex-direction:column;min-width:0}
-.chat-main-head{padding:16px 22px;border-bottom:1px solid rgba(214,178,96,.14)}
+.chat-main-head{padding:14px 22px;border-bottom:1px solid rgba(214,178,96,.14);display:flex;align-items:center;gap:13px}
+.chat-main-headtext{min-width:0}
+.chat-cur-emblem{width:46px;height:46px;flex:0 0 46px;border-radius:50%;display:flex;align-items:center;justify-content:center;color:var(--chat-accent,#d6b260);background:radial-gradient(circle at 50% 36%,rgba(255,255,255,.12),rgba(0,0,0,.46) 74%);border:1px solid var(--chat-accent,#d6b260);box-shadow:0 0 18px -4px var(--chat-accent,#d6b260),inset 0 0 10px -4px var(--chat-accent,#d6b260)}
+.chat-cur-emblem:empty{display:none}
+.chat-cur-emblem svg{width:28px;height:28px;display:block}
 .chat-cur-name{color:#e9d9a8;font-weight:700;font-size:16px;letter-spacing:.04em}
 .chat-cur-name.swap{animation:swapIn .45s ease}
 @keyframes swapIn{0%{opacity:0;transform:translateY(-6px);letter-spacing:.3em;filter:blur(4px)}100%{opacity:1;transform:none;letter-spacing:.04em;filter:none}}
@@ -680,8 +687,11 @@ body.chat-locked{overflow:hidden}
     </aside>
     <section class="chat-main">
       <div class="chat-main-head">
+        <span class="chat-cur-emblem" id="chatCurEmblem"></span>
+        <div class="chat-main-headtext">
         <div class="chat-cur-name" id="chatCurName">请选择群组</div>
         <div class="chat-cur-desc" id="chatCurDesc"></div>
+        </div>
       </div>
       <div class="chat-messages" id="chatMessages"></div>
       <div class="chat-compose">
@@ -728,7 +738,7 @@ body.chat-locked{overflow:hidden}
 <script defer src="assets/app.js?v=20260808-structure1"></script>
     <script defer src="assets/js/startup.js?v=20260920-perf1"></script>
     <script defer src="assets/js/realtime.js?v=1"></script>
-	    <script defer src="assets/js/pages/chat.js?v=20260929-chat3"></script>
+	    <script defer src="assets/js/pages/chat.js?v=20260929-chat4"></script>
 	    <script defer src="assets/js/gods-theme.js?v=20260918-slotrank3"></script>
 </body>
 </html>
