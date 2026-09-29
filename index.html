@@ -615,7 +615,64 @@
             </div>
         </div>
     </div>
-    <script defer src="assets/js/foundation.js?v=20260810-loginrollback1"></script>
+    <style id="chatStyles">
+#chatFab{position:fixed;right:22px;bottom:96px;z-index:1200;border:1px solid rgba(214,178,96,.55);background:linear-gradient(180deg,#2a2233,#1a1522);color:#e9d9a8;font:600 14px/1 inherit;padding:12px 16px;border-radius:999px;box-shadow:0 8px 24px rgba(0,0,0,.45);cursor:pointer;letter-spacing:.08em}
+#chatFab:hover{color:#fff;border-color:rgba(214,178,96,.9)}
+.chat-page{position:fixed;inset:0;z-index:1300;background:rgba(8,7,12,.86);backdrop-filter:blur(6px);display:none;align-items:center;justify-content:center;padding:24px}
+.chat-shell{width:min(960px,96vw);height:min(640px,88vh);display:flex;background:#14111c;border:1px solid rgba(214,178,96,.28);border-radius:18px;overflow:hidden;box-shadow:0 24px 60px rgba(0,0,0,.55)}
+.chat-side{width:236px;flex:0 0 236px;border-right:1px solid rgba(214,178,96,.16);display:flex;flex-direction:column;background:#100e17}
+.chat-side-head{display:flex;align-items:center;justify-content:space-between;padding:14px 16px;border-bottom:1px solid rgba(214,178,96,.14)}
+.chat-title{font-weight:700;letter-spacing:.16em;color:#e9d9a8}
+.chat-close{background:none;border:none;color:#8b86a0;font-size:22px;line-height:1;cursor:pointer}
+.chat-close:hover{color:#fff}
+.chat-channels{flex:1;overflow-y:auto;padding:8px}
+.chat-chan{display:flex;align-items:center;gap:8px;padding:10px 12px;border-radius:10px;color:#cfc8dd;cursor:pointer;font-size:14px}
+.chat-chan:hover{background:rgba(214,178,96,.08)}
+.chat-chan.active{background:rgba(214,178,96,.16);color:#fff}
+.chat-chan .cn-kind{margin-left:auto;font-size:11px;color:#8b86a0}
+.chat-badge{min-width:18px;height:18px;padding:0 5px;border-radius:9px;background:#c8434f;color:#fff;font-size:11px;display:flex;align-items:center;justify-content:center}
+.chat-main{flex:1;display:flex;flex-direction:column;min-width:0}
+.chat-main-head{padding:14px 18px;border-bottom:1px solid rgba(214,178,96,.14)}
+.chat-cur-name{color:#e9d9a8;font-weight:700}
+.chat-cur-desc{color:#8b86a0;font-size:12px;margin-top:3px}
+.chat-messages{flex:1;overflow-y:auto;padding:16px 18px;display:flex;flex-direction:column;gap:12px}
+.chat-msg{display:flex;flex-direction:column;gap:3px;max-width:78%}
+.chat-msg.me{align-self:flex-end;align-items:flex-end}
+.chat-msg .who{font-size:12px;color:#9a93b0}
+.chat-msg .bubble{padding:9px 13px;border-radius:12px;background:#1d1929;color:#e8e4f0;word-break:break-word;white-space:pre-wrap;line-height:1.5}
+.chat-msg.me .bubble{background:linear-gradient(180deg,#3b3050,#2a2338);color:#fff}
+.chat-empty{color:#6f6a84;text-align:center;margin:auto;font-size:13px}
+.chat-compose{display:flex;gap:10px;padding:12px 16px;border-top:1px solid rgba(214,178,96,.14)}
+.chat-input{flex:1;background:#0d0b13;border:1px solid rgba(214,178,96,.22);border-radius:10px;color:#eee;padding:11px 13px;font-size:14px;outline:none}
+.chat-input:focus{border-color:rgba(214,178,96,.6)}
+.chat-send{border:1px solid rgba(214,178,96,.5);background:linear-gradient(180deg,#3a2f4e,#241d33);color:#e9d9a8;border-radius:10px;padding:0 18px;font-weight:600;cursor:pointer}
+.chat-send:hover{color:#fff}
+@media (max-width:640px){.chat-shell{flex-direction:column;height:92vh}.chat-side{width:100%;flex:0 0 44%;border-right:none;border-bottom:1px solid rgba(214,178,96,.16)}#chatFab{right:16px;bottom:84px;padding:11px 14px}}
+</style>
+<button type="button" id="chatFab" onclick="openChatPage()" title="聚议 · 社群" aria-label="打开社群聊天">聚议</button>
+<section id="chatPage" class="chat-page" role="dialog" aria-modal="true" aria-label="社群聊天">
+  <div class="chat-shell">
+    <aside class="chat-side">
+      <div class="chat-side-head">
+        <span class="chat-title">聚议</span>
+        <button type="button" class="chat-close" onclick="closeChatPage()" aria-label="关闭">×</button>
+      </div>
+      <div class="chat-channels" id="chatChannels"></div>
+    </aside>
+    <section class="chat-main">
+      <div class="chat-main-head">
+        <div class="chat-cur-name" id="chatCurName">请选择群组</div>
+        <div class="chat-cur-desc" id="chatCurDesc"></div>
+      </div>
+      <div class="chat-messages" id="chatMessages"></div>
+      <div class="chat-compose">
+        <input type="text" id="chatInput" class="chat-input" placeholder="说点什么…" maxlength="2000" onkeydown="chatOnInputKey(event)" />
+        <button type="button" class="chat-send" onclick="chatSend()">发送</button>
+      </div>
+    </section>
+  </div>
+</section>
+<script defer src="assets/js/foundation.js?v=20260810-loginrollback1"></script>
     <script defer src="assets/js/world-data.js?v=20260812-faithtraits1"></script>
 <script defer src="assets/js/utils.js?v=20260918-gtconfirm2"></script>
     <script defer src="assets/js/session.js?v=20260826-adminworkspace1"></script>
@@ -652,6 +709,7 @@
 <script defer src="assets/app.js?v=20260808-structure1"></script>
     <script defer src="assets/js/startup.js?v=20260920-perf1"></script>
     <script defer src="assets/js/realtime.js?v=1"></script>
+	    <script defer src="assets/js/pages/chat.js?v=20260929-chat1"></script>
 	    <script defer src="assets/js/gods-theme.js?v=20260918-slotrank3"></script>
 </body>
 </html>
