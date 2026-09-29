@@ -914,6 +914,7 @@
         for (var k = 0; k < 8; k++) s.nebula.push({ x: Math.random() * fx.w, y: Math.random() * fx.h, r: rr(fx.w * 0.2, fx.w * 0.52), vx: rr(-0.15, 0.15), vy: rr(-0.09, 0.09), hue: Math.random() < 0.5 });
         // 虚空裂隙
         s.rift = null; s.riftTimer = Math.floor(rr(150, 280));
+        s.verses = ['吞尽万象，归寂空冥', '黑涡吞星，万籁归无', '消弭一切，本自空无'];
         // 边缘折射微光
         s.lens = [];
         for (var m = 0; m < 84; m++) s.lens.push({ a: Math.random() * 6.2832, sz: rr(0.5, 1.6), ph: rr(0, 6.283) });
@@ -1062,6 +1063,53 @@
             ctx.stroke(); ctx.restore();
           }
         }
+        // 虚无箴言：循环艺术字（三组诗句轮播）
+        (function () {
+          var verses = s.verses || ['吞尽万象，归寂空冥', '黑涡吞星，万籁归无', '消弭一切，本自空无'];
+          var DUR = 5200, total = verses.length;
+          var cp = (t % (DUR * total)) / DUR;
+          var fi = Math.floor(cp) % total;
+          var lt = cp - Math.floor(cp);
+          var a;
+          if (lt < 0.16) a = lt / 0.16;
+          else if (lt > 0.84) a = (1 - lt) / 0.16;
+          else a = 1;
+          a = a < 0 ? 0 : (a > 1 ? 1 : a);
+          if (a > 0.01) {
+            var txt = verses[fi];
+            var fs = Math.max(22, Math.min(w * 0.06, h * 0.075, 50));
+            var tx = cx, ty = h * 0.80;
+            var breathe = 0.5 + 0.5 * Math.sin(t * 0.0016 + fi);
+            var rise = (1 - a) * 12;
+            ctx.save();
+            ctx.globalCompositeOperation = 'source-over';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            try { ctx.letterSpacing = (fs * 0.30) + 'px'; } catch (e) {}
+            ctx.font = '600 ' + fs + 'px "STKaiti","KaiTi","Kaiti SC","Songti SC","Noto Serif SC","SimSun",Georgia,serif';
+            ctx.globalAlpha = 0.15 * a;
+            ctx.save(); ctx.scale(1, -1);
+            var rg = ctx.createLinearGradient(tx - fs * 5, 0, tx + fs * 5, 0);
+            rg.addColorStop(0, 'rgba(146,124,236,0.4)');
+            rg.addColorStop(0.5, 'rgba(230,224,255,0.9)');
+            rg.addColorStop(1, 'rgba(146,124,236,0.4)');
+            ctx.fillStyle = rg;
+            ctx.fillText(txt, tx, -(ty + rise) - fs * 1.35);
+            ctx.restore();
+            ctx.globalAlpha = 1;
+            ctx.shadowColor = 'rgba(176,146,255,' + (0.85 * a) + ')';
+            ctx.shadowBlur = 16 + 12 * breathe;
+            var tg = ctx.createLinearGradient(tx - fs * 5, ty, tx + fs * 5, ty);
+            tg.addColorStop(0, 'rgba(150,126,240,' + (0.34 * a) + ')');
+            tg.addColorStop(0.5, 'rgba(246,242,255,' + (0.99 * a) + ')');
+            tg.addColorStop(1, 'rgba(150,126,240,' + (0.34 * a) + ')');
+            ctx.fillStyle = tg;
+            ctx.fillText(txt, tx, ty + rise);
+            ctx.shadowBlur = 0;
+            try { ctx.letterSpacing = '0px'; } catch (e) {}
+            ctx.restore();
+          }
+        })();
         ctx.globalCompositeOperation = 'source-over';
       }
     },
