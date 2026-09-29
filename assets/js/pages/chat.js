@@ -81,6 +81,35 @@
     }
     return '•';
   }
+  function godSigilMap() {
+    try { if (typeof GOD_SIGILS !== 'undefined' && GOD_SIGILS) return GOD_SIGILS; } catch (e) {}
+    try { if (window.GOD_SIGILS) return window.GOD_SIGILS; } catch (e) {}
+    return null;
+  }
+  function sigilFor(ch) {
+    try {
+      var map = godSigilMap();
+      if (ch && ch.kind === 'god' && map) {
+        var gk = ch.godKey || ch.god_key;
+        if (gk && map[gk] && map[gk].svg) return map[gk].svg;
+        var nm = String(ch.name || '').replace(/\u4e4b\u795e.*$/, '').trim();
+        if (nm && map[nm] && map[nm].svg) return map[nm].svg;
+      }
+    } catch (e) {}
+    return '';
+  }
+  function emblemFor(ch) {
+    var svg = sigilFor(ch);
+    var inner = svg ? svg : '<span class="emb-glyph">' + esc(iconFor(ch)) + '</span>';
+    return '<span class="cn-emblem">' + inner + '</span>';
+  }
+  function modeForChannel(ch) {
+    if (!ch) return 'flow';
+    if (ch.kind === 'god') return 'pulse';
+    if (ch.kind === 'path') return 'wave';
+    if (ch.kind === 'profession') return 'spark';
+    return 'flow';
+  }
   async function loadChannels() {
     state.needLogin = false;
     var res = await invokeDungeonAction('listChatChannels', {});
@@ -154,7 +183,7 @@
       var badge = n > 0 ? '<span class="chat-badge">' + (n > 99 ? '99+' : n) + '</span>' : '';
       var col = colorFor(ch);
       return '<div class="chat-chan' + (state.active === ch.id ? ' active' : '') + '" data-cid="' + esc(ch.id) + '" style="--chan-accent:' + col + '" onclick="openChatChannel(\'' + esc(ch.id) + '\')">' +
-        '<span class="cn-ico">' + esc(iconFor(ch)) + '</span>' +
+        emblemFor(ch) +
         '<span class="cn-name">' + esc(ch.name || ch.slug) + '</span>' + badge +
         '<span class="cn-kind">' + esc(KIND_LABEL[ch.kind] || ch.kind || '') + '</span></div>';
     }).join('');
@@ -163,14 +192,18 @@
   function renderHead(animate) {
     var nameEl = document.getElementById('chatCurName');
     var descEl = document.getElementById('chatCurDesc');
+    var embEl = document.getElementById('chatCurEmblem');
     var page = document.getElementById('chatPage');
     if (!nameEl) return;
     var ch = state.channels.filter(function (x) { return x.id === state.active; })[0];
     nameEl.textContent = ch ? (ch.name || ch.slug) : '请选择群组';
     if (descEl) descEl.textContent = ch ? (ch.description || '') : '';
+    if (embEl) embEl.innerHTML = ch ? emblemFor(ch) : '';
     var col = colorFor(ch);
     if (page) page.style.setProperty('--chat-accent', col);
-    if (window.chatFxSetColor) window.chatFxSetColor(col);
+    var fxMode = modeForChannel(ch);
+    if (window.chatFxBurst) window.chatFxBurst(col, fxMode);
+    else if (window.chatFxSetColor) window.chatFxSetColor(col, fxMode);
     if (animate) {
       nameEl.classList.remove('swap');
       void nameEl.offsetWidth;
@@ -313,7 +346,7 @@
   });
 
   // ---------- 背景特效（流场粒子 · 梵高星轨）----------
-  var fx = { raf: 0, ctx: null, canvas: null, w: 0, h: 0, parts: [], color: [214, 178, 96], running: false };
+  var fx = { raf: 0, ctx: null, canvas: null, w: 0, h: 0, parts: [], rings: [], color: [214, 178, 96], running: false, mode: 'flow', flash: 0 };
   function hexToRgb(h) {
     var m = /^#?([0-9a-f]{6})$/i.exec(h || '');
     if (!m) return [214, 178, 96];
@@ -331,46 +364,89 @@
     fx.ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
   }
   function fxSeed() {
-    var count = Math.max(60, Math.min(220, Math.round((fx.w * fx.h) / 16000)));
+    var count = Math.max(120, Math.min(440, Math.round((fx.w * fx.h) / 9000)));
     fx.parts = [];
     for (var i = 0; i < count; i++) {
-      fx.parts.push({ x: Math.random() * fx.w, y: Math.random() * fx.h, vx: 0, vy: 0, life: Math.random() * 220 });
+      fx.parts.push({ x: Math.random() * fx.w, y: Math.random() * fx.h, vx: (Math.random() - 0.5) * 1.2, vy: (Math.random() - 0.5) * 1.2, life: Math.random() * 260, r: 0.7 + Math.random() * 2.2 });
+    }
+  }
+  function fxBurst() {
+    var cx = fx.w / 2, cy = fx.h / 2;
+    fx.rings.push({ x: cx, y: cy, r: Math.max(fx.w, fx.h) * 0.04, max: Math.max(fx.w, fx.h) * 0.62, life: 1, w: 3 });
+    fx.flash = 1;
+    for (var i = 0; i < fx.parts.length; i++) {
+      var p = fx.parts[i]; var dx = p.x - cx, dy = p.y - cy; var d = Math.hypot(dx, dy) || 1;
+      p.vx += (dx / d) * 3.2; p.vy += (dy / d) * 3.2;
     }
   }
   function fxField(x, y, t) {
-    var s = 0.0016;
-    var a = Math.sin(x * s + t * 0.00022) + Math.cos(y * s * 1.3 - t * 0.00017);
-    var b = Math.cos(x * s * 1.1 - t * 0.00019) + Math.sin(y * s - t * 0.00024);
-    return { a: a * 0.9, b: b * 0.9 };
+    var s = 0.0018;
+    var a = Math.sin(x * s + t * 0.00024) + Math.cos(y * s * 1.3 - t * 0.00019);
+    var b = Math.cos(x * s * 1.1 - t * 0.00021) + Math.sin(y * s - t * 0.00026);
+    return { a: a, b: b };
+  }
+  function fxStep(p, t, cx, cy) {
+    var mode = fx.mode;
+    if (mode === 'pulse') {
+      var dx = p.x - cx, dy = p.y - cy; var d = Math.hypot(dx, dy) || 1;
+      var ang = Math.atan2(dy, dx);
+      var pulse = 0.5 + 0.5 * Math.sin(t * 0.0016 - d * 0.02);
+      p.vx += (dx / d) * 0.06 * pulse - (dy / d) * 0.07;
+      p.vy += (dy / d) * 0.06 * pulse + (dx / d) * 0.07;
+      if (d > Math.min(fx.w, fx.h) * 0.44) { p.x = cx + Math.cos(ang) * 6; p.y = cy + Math.sin(ang) * 6; p.vx = p.vy = 0; }
+    } else if (mode === 'wave') {
+      var dx2 = p.x - cx, dy2 = p.y - cy; var d2 = Math.hypot(dx2, dy2) || 1;
+      var wv = Math.sin(t * 0.0012 + d2 * 0.018);
+      p.vx += (dx2 / d2) * wv * 0.26;
+      p.vy += (dy2 / d2) * wv * 0.26;
+    } else if (mode === 'spark') {
+      p.vy -= 0.11 + Math.random() * 0.06;
+      p.vx += (Math.random() - 0.5) * 0.12;
+    } else {
+      var f = fxField(p.x, p.y, t);
+      p.vx = p.vx * 0.94 + f.a * 0.5;
+      p.vy = p.vy * 0.94 + f.b * 0.5;
+    }
+    p.vx *= 0.97; p.vy *= 0.97;
+    p.x += p.vx; p.y += p.vy;
+    if (p.x < -20 || p.x > fx.w + 20 || p.y < -20 || p.y > fx.h + 20 || --p.life < 0) {
+      p.x = Math.random() * fx.w; p.y = Math.random() * fx.h; p.vx = (Math.random() - 0.5) * 1.2; p.vy = (Math.random() - 0.5) * 1.2; p.life = 200 + Math.random() * 260;
+    }
   }
   function fxFrame(t) {
     if (!fx.running) return;
-    var ctx = fx.ctx, w = fx.w, h = fx.h;
+    var ctx = fx.ctx, w = fx.w, h = fx.h, c = fx.color, cx = w / 2, cy = h / 2;
     ctx.globalCompositeOperation = 'source-over';
-    ctx.fillStyle = 'rgba(10,8,18,0.10)';
+    ctx.fillStyle = 'rgba(10,8,18,0.16)';
     ctx.fillRect(0, 0, w, h);
     ctx.globalCompositeOperation = 'lighter';
-    var c = fx.color;
+    var grd = ctx.createRadialGradient(cx, cy, 0, cx, cy, Math.max(w, h) * 0.6);
+    grd.addColorStop(0, 'rgba(' + c[0] + ',' + c[1] + ',' + c[2] + ',0.10)');
+    grd.addColorStop(1, 'rgba(' + c[0] + ',' + c[1] + ',' + c[2] + ',0)');
+    ctx.fillStyle = grd; ctx.fillRect(0, 0, w, h);
     for (var i = 0; i < fx.parts.length; i++) {
       var p = fx.parts[i];
-      var f = fxField(p.x, p.y, t);
-      p.vx = p.vx * 0.94 + f.a * 0.35;
-      p.vy = p.vy * 0.94 + f.b * 0.35;
-      p.x += p.vx; p.y += p.vy;
-      if (p.x < -10 || p.x > w + 10 || p.y < -10 || p.y > h + 10 || --p.life < 0) {
-        p.x = Math.random() * w; p.y = Math.random() * h; p.vx = p.vy = 0; p.life = 160 + Math.random() * 220;
+      fxStep(p, t, cx, cy);
+      var spd = Math.min(1, Math.hypot(p.vx, p.vy) / 3.4);
+      ctx.fillStyle = 'rgba(' + c[0] + ',' + c[1] + ',' + c[2] + ',' + (0.26 + spd * 0.62) + ')';
+      ctx.beginPath(); ctx.arc(p.x, p.y, p.r + spd * 2.4, 0, 6.2832); ctx.fill();
+      ctx.strokeStyle = 'rgba(' + c[0] + ',' + c[1] + ',' + c[2] + ',' + (0.10 + spd * 0.34) + ')';
+      ctx.lineWidth = 1.1;
+      ctx.beginPath(); ctx.moveTo(p.x, p.y); ctx.lineTo(p.x - p.vx * 7, p.y - p.vy * 7); ctx.stroke();
+    }
+    if (fx.rings.length) {
+      for (var r = fx.rings.length - 1; r >= 0; r--) {
+        var g = fx.rings[r];
+        g.r += (g.max - g.r) * 0.045 + 1.2; g.life -= 0.014;
+        if (g.life <= 0) { fx.rings.splice(r, 1); continue; }
+        ctx.strokeStyle = 'rgba(' + c[0] + ',' + c[1] + ',' + c[2] + ',' + (g.life * 0.55) + ')';
+        ctx.lineWidth = g.w * g.life;
+        ctx.beginPath(); ctx.arc(g.x, g.y, g.r, 0, 6.2832); ctx.stroke();
       }
-      var spd = Math.min(1, Math.hypot(p.vx, p.vy) / 3.2);
-      ctx.fillStyle = 'rgba(' + c[0] + ',' + c[1] + ',' + c[2] + ',' + (0.18 + spd * 0.5) + ')';
-      ctx.beginPath();
-      ctx.arc(p.x, p.y, 1 + spd * 1.8, 0, 6.2832);
-      ctx.fill();
-      ctx.strokeStyle = 'rgba(' + c[0] + ',' + c[1] + ',' + c[2] + ',' + (0.08 + spd * 0.22) + ')';
-      ctx.lineWidth = 0.7;
-      ctx.beginPath();
-      ctx.moveTo(p.x, p.y);
-      ctx.lineTo(p.x - p.vx * 4.5, p.y - p.vy * 4.5);
-      ctx.stroke();
+    }
+    if (fx.flash > 0.01) {
+      ctx.fillStyle = 'rgba(' + c[0] + ',' + c[1] + ',' + c[2] + ',' + (fx.flash * 0.16) + ')';
+      ctx.fillRect(0, 0, w, h); fx.flash *= 0.9;
     }
     fx.raf = requestAnimationFrame(fxFrame);
   }
@@ -391,5 +467,13 @@
     if (fx.raf) cancelAnimationFrame(fx.raf);
     fx.raf = 0;
   };
-  window.chatFxSetColor = function (hex) { fx.color = hexToRgb(hex); };
+  window.chatFxSetColor = function (hex, mode) {
+    fx.color = hexToRgb(hex);
+    if (mode) fx.mode = mode;
+  };
+  window.chatFxBurst = function (hex, mode) {
+    fx.color = hexToRgb(hex);
+    if (mode) fx.mode = mode;
+    fxBurst();
+  };
 })();
