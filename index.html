@@ -618,10 +618,10 @@
     <style id="chatStyles">
 #chatFab{position:fixed;right:22px;bottom:96px;z-index:1200;border:1px solid rgba(214,178,96,.55);background:linear-gradient(180deg,#2a2233,#1a1522);color:#e9d9a8;font:600 14px/1 inherit;padding:12px 16px;border-radius:999px;box-shadow:0 8px 24px rgba(0,0,0,.45);cursor:pointer;letter-spacing:.08em}
 #chatFab:hover{color:#fff;border-color:rgba(214,178,96,.9)}
-.chat-page{position:fixed;inset:0;z-index:1300;display:none;background:#0a0812;overflow:hidden}
+.chat-page{position:fixed;inset:0;z-index:1300;display:none;background:#0a0812;overflow:hidden;height:100vh;height:100dvh}
 .chat-page.open{display:block}
 .chat-fx{position:absolute;inset:0;width:100%;height:100%;display:block}
-.chat-shell{position:relative;z-index:2;width:100%;height:100%;display:flex;background:linear-gradient(180deg,rgba(9,7,16,.42),rgba(7,5,13,.24))}
+.chat-shell{position:relative;z-index:2;width:100%;height:100vh;height:100dvh;display:flex;background:linear-gradient(180deg,rgba(9,7,16,.42),rgba(7,5,13,.24));overflow:hidden}
 .chat-nav{flex:0 0 92px;display:flex;flex-direction:column;gap:8px;padding:18px 8px;background:rgba(10,8,17,.70);border-right:1px solid rgba(214,178,96,.16);overflow-y:auto}
 .chat-tab{position:relative;display:flex;flex-direction:column;align-items:center;gap:4px;padding:12px 6px;border:1px solid transparent;border-radius:12px;background:transparent;color:#b7b0c9;font-size:13px;cursor:pointer;letter-spacing:.06em;transition:all .22s ease}
 .chat-tab:hover{background:rgba(214,178,96,.08);color:#fff}
@@ -646,7 +646,7 @@
 .chat-chan .cn-name{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .chat-chan .cn-kind{margin-left:auto;font-size:11px;color:#8b86a0;flex:0 0 auto}
 .chat-badge{min-width:18px;height:18px;padding:0 5px;border-radius:9px;background:#c8434f;color:#fff;font-size:11px;display:flex;align-items:center;justify-content:center;flex:0 0 auto}
-.chat-main{flex:1;display:flex;flex-direction:column;min-width:0}
+.chat-main{flex:1;display:flex;flex-direction:column;min-width:0;min-height:0}
 .chat-main-head{padding:14px 22px;border-bottom:1px solid rgba(214,178,96,.14);display:flex;align-items:center;gap:13px}
 .chat-main-headtext{min-width:0}
 .chat-cur-emblem{width:46px;height:46px;flex:0 0 46px;border-radius:50%;display:flex;align-items:center;justify-content:center;color:var(--chat-accent,#d6b260);background:radial-gradient(circle at 50% 36%,rgba(255,255,255,.12),rgba(0,0,0,.46) 74%);border:1px solid var(--chat-accent,#d6b260);box-shadow:0 0 18px -4px var(--chat-accent,#d6b260),inset 0 0 10px -4px var(--chat-accent,#d6b260)}
@@ -656,7 +656,7 @@
 .chat-cur-name.swap{animation:swapIn .45s ease}
 @keyframes swapIn{0%{opacity:0;transform:translateY(-6px);letter-spacing:.3em;filter:blur(4px)}100%{opacity:1;transform:none;letter-spacing:.04em;filter:none}}
 .chat-cur-desc{color:#8b86a0;font-size:12px;margin-top:4px}
-.chat-messages{flex:1;overflow-y:auto;padding:18px 22px;display:flex;flex-direction:column;gap:13px}
+.chat-messages{flex:1;overflow-y:auto;min-height:0;padding:18px 22px;display:flex;flex-direction:column;gap:13px}
 .chat-msg{display:flex;flex-direction:column;gap:4px;max-width:78%}
 .chat-msg.me{align-self:flex-end;align-items:flex-end}
 .chat-msg .who{font-size:12px;color:#9a93b0}
