@@ -897,40 +897,145 @@
       }
     },
 
-    // —— 虚无命途：磅礴黑洞吸积盘 + 光子环 + 吞噬物质流 ——
+    // —— 虚无命途：吞噬一切的黑洞深渊 + 虚空裂隙 ——
     nihility: {
       init: function (s) {
-        s.disk = [];
-        for (var i = 0; i < 420; i++) s.disk.push({ a: Math.random() * 6.283, r: rr(0.45, 1.0), sp: rr(0.004, 0.014), sz: rr(0.8, 2.4), hue: Math.random() });
+        // 被吸入的星尘（沿椭圆轨道螺旋坠向奇点）
+        s.dust = [];
+        for (var i = 0; i < 300; i++) s.dust.push({ a: Math.random() * 6.2832, r: rr(0.55, 1.7), sp: rr(0.003, 0.011), sz: rr(0.6, 2.1), lum: Math.random(), trail: rr(0.06, 0.22) });
+        // 暗物质涟漪
+        s.ripples = [];
+        for (var j = 0; j < 6; j++) s.ripples.push({ r: 0.2 + j * 0.26 });
+        // 暗蓝星云团
+        s.nebula = [];
+        for (var k = 0; k < 7; k++) s.nebula.push({ x: Math.random() * fx.w, y: Math.random() * fx.h, r: rr(fx.w * 0.22, fx.w * 0.55), vx: rr(-0.16, 0.16), vy: rr(-0.1, 0.1) });
+        // 虚空裂隙
+        s.rift = null; s.riftTimer = Math.floor(rr(120, 240));
+        // 边缘折射微光
+        s.lens = [];
+        for (var m = 0; m < 70; m++) s.lens.push({ a: Math.random() * 6.2832, sz: rr(0.5, 1.6), ph: rr(0, 6.283) });
       },
       draw: function (ctx, w, h, t, s) {
-        ctx.fillStyle = 'rgba(3,2,7,0.22)'; ctx.fillRect(0, 0, w, h);
-        var cx = w / 2, cy = h / 2, R = Math.min(w, h) * 0.24;
+        // 深黑紫宇宙背景（低频拖尾）
+        ctx.fillStyle = 'rgba(7,5,15,0.20)'; ctx.fillRect(0, 0, w, h);
+        var cx = w / 2, cy = h / 2, R = Math.min(w, h) * 0.15;   // 小型黑洞
+        var rot = t * 0.00016;                                    // 长周期自转，压迫缓慢
+
+        // —— 暗蓝星云 + 稀薄暗物质带 ——
+        for (var k = 0; k < s.nebula.length; k++) {
+          var nb = s.nebula[k]; nb.x += nb.vx; nb.y += nb.vy;
+          if (nb.x < -nb.r) nb.x = w + nb.r; if (nb.x > w + nb.r) nb.x = -nb.r;
+          if (nb.y < -nb.r) nb.y = h + nb.r; if (nb.y > h + nb.r) nb.y = -nb.r;
+          var ng = ctx.createRadialGradient(nb.x, nb.y, 0, nb.x, nb.y, nb.r);
+          ng.addColorStop(0, 'rgba(40,48,130,0.13)'); ng.addColorStop(0.55, 'rgba(28,24,86,0.06)'); ng.addColorStop(1, 'rgba(18,14,54,0)');
+          ctx.fillStyle = ng; ctx.beginPath(); ctx.arc(nb.x, nb.y, nb.r, 0, 6.2832); ctx.fill();
+        }
+
+        // —— 暗物质涟漪：一圈圈扩散 ——
+        for (var j = 0; j < s.ripples.length; j++) {
+          var rp = s.ripples[j]; rp.r += 0.0011; if (rp.r > 1.8) rp.r = 0.2;
+          var pra = Math.max(0, 1 - (rp.r - 0.2) / 1.6) * 0.18;
+          ctx.strokeStyle = 'rgba(122,112,204,' + pra + ')'; ctx.lineWidth = 1.3;
+          ctx.beginPath(); ctx.ellipse(cx, cy, R * rp.r * 2.7, R * rp.r * 1.08, 0, 0, 6.2832); ctx.stroke();
+        }
+
         ctx.globalCompositeOperation = 'lighter';
-        for (var i = 0; i < s.disk.length; i++) {
-          var p = s.disk[i];
-          p.a += p.sp * (1 + (1.05 - p.r) * 2.4);
-          p.r -= 0.0016 + (1.05 - p.r) * 0.004;
-          if (p.r < 0.42) { p.r = 1.0; p.a = Math.random() * 6.283; }
-          var x = cx + Math.cos(p.a) * R * p.r * 3.2;
-          var y = cy + Math.sin(p.a) * R * p.r * 1.1;
-          var a = Math.min(0.95, (1.05 - p.r) * 1.1 + 0.12);
-          var col = p.hue < 0.5 ? cc(a) : 'rgba(255,' + Math.floor(150 + p.hue * 90) + ',120,' + a + ')';
+
+        // —— 星尘被拉成弧线吸入中心 ——
+        for (var i = 0; i < s.dust.length; i++) {
+          var p = s.dust[i];
+          p.a += p.sp * (1 + (1.7 - p.r) * 2.0);
+          p.r -= 0.0012 + (1.7 - p.r) * 0.0022;
+          if (p.r < 0.32) { p.r = 1.7; p.a = Math.random() * 6.2832; p.lum = Math.random(); }
+          var x = cx + Math.cos(p.a) * R * p.r * 2.7;
+          var y = cy + Math.sin(p.a) * R * p.r * 1.08;
+          var aa = Math.min(0.95, (1.7 - p.r) * 0.55 + 0.1);
+          var col = p.lum < 0.55 ? 'rgba(158,128,255,' + aa + ')' : 'rgba(120,176,255,' + aa + ')';
+          var px = cx + Math.cos(p.a - p.trail) * R * (p.r + 0.05) * 2.7;
+          var py = cy + Math.sin(p.a - p.trail) * R * (p.r + 0.05) * 1.08;
+          ctx.strokeStyle = col; ctx.lineWidth = p.sz * 0.7;
+          ctx.beginPath(); ctx.moveTo(px, py); ctx.lineTo(x, y); ctx.stroke();
           ctx.fillStyle = col; ctx.beginPath(); ctx.arc(x, y, p.sz, 0, 6.2832); ctx.fill();
         }
-        for (var k = 0; k < 4; k++) {
-          ctx.strokeStyle = cc(0.32 - k * 0.06); ctx.lineWidth = 3 - k * 0.4;
-          ctx.beginPath(); ctx.ellipse(cx, cy, R * (1.5 + k * 0.28), R * (0.96 + k * 0.2), 0, 0, 6.2832); ctx.stroke();
+
+        // —— 黑洞自转吸积弧（暗蓝→紫白）——
+        for (var a2 = 0; a2 < 3; a2++) {
+          var ar = R * (1.2 + a2 * 0.36);
+          ctx.save(); ctx.translate(cx, cy); ctx.rotate(rot * (a2 % 2 ? -1 : 1));
+          var ag = ctx.createLinearGradient(-ar, 0, ar, 0);
+          ag.addColorStop(0, 'rgba(86,64,190,0)');
+          ag.addColorStop(0.5, 'rgba(160,132,255,' + (0.6 - a2 * 0.14) + ')');
+          ag.addColorStop(1, 'rgba(86,64,190,0)');
+          ctx.strokeStyle = ag; ctx.lineWidth = 3.2 - a2 * 0.6;
+          ctx.beginPath(); ctx.ellipse(0, 0, ar, ar * 0.36, 0, 0, 6.2832); ctx.stroke();
+          ctx.restore();
         }
-        ctx.strokeStyle = 'rgba(255,225,180,0.9)'; ctx.lineWidth = 3.2;
-        ctx.beginPath(); ctx.arc(cx, cy, R * 1.02, 0, 6.2832); ctx.stroke();
-        ctx.strokeStyle = cc(0.7); ctx.lineWidth = 8;
-        ctx.beginPath(); ctx.arc(cx, cy, R * 1.02, 0, 6.2832); ctx.stroke();
+
+        // —— 光子环（亮环）——
+        ctx.strokeStyle = 'rgba(214,190,255,0.85)'; ctx.lineWidth = 2.6;
+        ctx.beginPath(); ctx.arc(cx, cy, R * 1.0, 0, 6.2832); ctx.stroke();
+        ctx.strokeStyle = 'rgba(255,240,210,0.95)'; ctx.lineWidth = 1.1;
+        ctx.beginPath(); ctx.arc(cx, cy, R * 1.0, 0, 6.2832); ctx.stroke();
+
         ctx.globalCompositeOperation = 'source-over';
-        var bg = ctx.createRadialGradient(cx, cy, R * 0.3, cx, cy, R * 1.1);
-        bg.addColorStop(0, '#000'); bg.addColorStop(0.72, 'rgba(0,0,0,0.96)'); bg.addColorStop(1, 'rgba(0,0,0,0)');
-        ctx.fillStyle = bg; ctx.beginPath(); ctx.arc(cx, cy, R * 1.1, 0, 6.2832); ctx.fill();
-        ctx.fillStyle = '#000'; ctx.beginPath(); ctx.arc(cx, cy, R * 0.92, 0, 6.2832); ctx.fill();
+
+        // —— 事件视界：中央纯黑奇点 + 引力暗晕 ——
+        var bh = ctx.createRadialGradient(cx, cy, R * 0.25, cx, cy, R * 1.15);
+        bh.addColorStop(0, 'rgba(0,0,0,1)');
+        bh.addColorStop(0.55, 'rgba(0,0,0,0.98)');
+        bh.addColorStop(0.8, 'rgba(16,8,34,0.45)');
+        bh.addColorStop(1, 'rgba(0,0,0,0)');
+        ctx.fillStyle = bh; ctx.beginPath(); ctx.arc(cx, cy, R * 1.15, 0, 6.2832); ctx.fill();
+        ctx.fillStyle = '#000'; ctx.beginPath(); ctx.arc(cx, cy, R * 0.72, 0, 6.2832); ctx.fill();
+
+        // —— 边缘空间折射 ——
+        ctx.globalCompositeOperation = 'lighter';
+        for (var L = 0; L < 2; L++) {
+          var lr = R * (1.75 + L * 0.55);
+          var lg = ctx.createLinearGradient(cx - lr, cy - lr, cx + lr, cy + lr);
+          lg.addColorStop(0, 'rgba(120,110,220,0)');
+          lg.addColorStop(0.5, 'rgba(150,138,240,' + (0.12 - L * 0.04) + ')');
+          lg.addColorStop(1, 'rgba(120,110,220,0)');
+          ctx.strokeStyle = lg; ctx.lineWidth = 1.2;
+          ctx.beginPath(); ctx.arc(cx, cy, lr, 0, 6.2832); ctx.stroke();
+        }
+        for (var m2 = 0; m2 < s.lens.length; m2++) {
+          var ln = s.lens[m2];
+          var lr2 = R * (1.55 + Math.abs(Math.sin(ln.ph + t * 0.0006)) * 0.85);
+          var lx = cx + Math.cos(ln.a) * lr2, ly = cy + Math.sin(ln.a) * lr2 * 0.6;
+          var la = 0.18 + 0.16 * Math.abs(Math.sin(t * 0.002 + ln.ph));
+          ctx.fillStyle = 'rgba(170,150,255,' + la + ')';
+          ctx.beginPath(); ctx.arc(lx, ly, ln.sz, 0, 6.2832); ctx.fill();
+        }
+
+        // —— 虚空裂隙：偶发撕裂，露出内部紫白光芒 ——
+        if (!s.rift) {
+          s.riftTimer -= 1;
+          if (s.riftTimer <= 0) s.rift = { x: cx + rr(-R * 2.4, R * 2.4), y: cy + rr(-R * 1.5, R * 1.5), rot: rr(-0.5, 0.5), len: rr(R * 1.4, R * 2.6), life: 46, max: 46 };
+        } else {
+          s.rift.life -= 1;
+          if (s.rift.life <= 0) { s.rift = null; s.riftTimer = Math.floor(rr(150, 320)); }
+          else {
+            var rf = s.rift, open = Math.sin((1 - rf.life / rf.max) * Math.PI);
+            ctx.save(); ctx.translate(rf.x, rf.y); ctx.rotate(rf.rot);
+            var rl = rf.len * open, half = rl / 2;
+            var rg2 = ctx.createLinearGradient(-half, 0, half, 0);
+            rg2.addColorStop(0, 'rgba(180,150,255,0)');
+            rg2.addColorStop(0.5, 'rgba(240,232,255,' + (0.9 * open) + ')');
+            rg2.addColorStop(1, 'rgba(180,150,255,0)');
+            ctx.strokeStyle = rg2; ctx.lineWidth = 2.2;
+            ctx.beginPath();
+            for (var q = -half; q <= half; q += 5) { var yy = Math.sin(q * 0.13 + t * 0.01) * 3.4 + Math.sin(q * 0.5) * 1.2; if (q === -half) ctx.moveTo(q, yy); else ctx.lineTo(q, yy); }
+            ctx.stroke();
+            ctx.globalCompositeOperation = 'source-over';
+            ctx.strokeStyle = 'rgba(0,0,0,' + (0.92 * open) + ')'; ctx.lineWidth = 3.0;
+            ctx.beginPath();
+            for (var q2 = -half; q2 <= half; q2 += 5) { var yy2 = Math.sin(q2 * 0.13 + t * 0.01) * 3.4 + Math.sin(q2 * 0.5) * 1.2 - 2.6; if (q2 === -half) ctx.moveTo(q2, yy2); else ctx.lineTo(q2, yy2); }
+            ctx.stroke();
+            ctx.restore();
+          }
+        }
+        ctx.globalCompositeOperation = 'source-over';
       }
     },
 
