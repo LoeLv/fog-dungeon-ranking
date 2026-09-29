@@ -1,373 +1,373 @@
-<!DOCTYPE html>
-<html lang="zh-CN">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>诸神愚戏 · 祈愿试炼留存地</title>
-    <link rel="icon" href='data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"%3E%3Crect width="64" height="64" rx="14" fill="%23101218"/%3E%3Cpath d="M15 26c4-11 30-11 34 0v7c0 10-8 18-17 18S15 43 15 33z" fill="none" stroke="%23e7cf8a" stroke-width="4"/%3E%3Cpath d="M23 31c3-3 7-3 10 0M31 31c3-3 7-3 10 0M24 41c5 3 11 3 16 0" fill="none" stroke="%238fd8cf" stroke-width="3" stroke-linecap="round"/%3E%3Ccircle cx="47" cy="17" r="7" fill="%23e7cf8a"/%3E%3Ccircle cx="45" cy="15" r="1.5" fill="%23101218"/%3E%3Ccircle cx="49" cy="19" r="1.5" fill="%23101218"/%3E%3C/svg%3E'>
-    <script defer src="assets/vendor/supabase-js-2.110.2.js"></script>
-    <link rel="stylesheet" href="assets/app.css?v=20260827-promo-feedback1">
-    <link rel="stylesheet" href="assets/gods-theme.css?v=20260918-layout1">
-    <link rel="stylesheet" href="assets/stele-ritual.css?v=20260919-stele5" media="print" onload="this.media='all'">
-</head>
-<body>
-    <div class="boot-error" id="bootError" role="alert" aria-live="assertive">
-        <div class="boot-error-card">
-            <div class="boot-error-title">网站加载被当前浏览器或网络拦截</div>
-            <div class="boot-error-copy">请刷新页面，或换用系统浏览器打开；如果正在微信内，请点右上角选择在浏览器中打开。</div>
-        </div>
-    </div>
-    <script>
+
+
+
+    
+    
+    诸神愚戏 · 祈愿试炼留存地
+    
+    
+    
+    
+    
+
+
+    
+        
+            网站加载被当前浏览器或网络拦截
+            请刷新页面，或换用系统浏览器打开；如果正在微信内，请点右上角选择在浏览器中打开。
+        
+    
+    
         window.__fogDungeonBootStarted = false;
         window.setTimeout(function () {
             if (!window.__fogDungeonBootStarted) {
                 document.getElementById('bootError')?.classList.add('visible');
             }
         }, 4500);
-    </script>
-    <div class="edge-atmosphere" id="edgeAtmosphere" data-era="虚无" aria-hidden="true">
-        <div class="era-wall era-wall-left"></div>
-        <div class="era-wall era-wall-right"></div>
-        <div class="ambient-mask ambient-mask-left">◒</div>
-        <div class="ambient-mask ambient-mask-right">◈</div>
-        <div class="edge-silhouette tl"></div>
-        <div class="edge-silhouette tr"></div>
-        <div class="edge-silhouette bl"></div>
-        <div class="edge-silhouette br"></div>
-        <div class="edge-particle-stream left"></div>
-        <div class="edge-particle-stream right"></div>
-        <div class="edge-current-label left" id="edgeEraLabel"></div>
-        <div class="edge-current-label right" id="edgeGodLabel"></div>
-        <div class="edge-chronology-band" id="edgeChronologyBand"></div>
-    </div>
-    <header class="header">
-        <div class="logo">
-            <span class="brand-emblem" aria-hidden="true">
-                <svg viewBox="0 0 64 54" role="presentation">
-                    <path d="M9 22c4-10 14-15 23-12 9 2 14 8 16 17-1 12-8 18-20 18S10 39 9 22Z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>
-                    <path d="M19 26c3-3 6-3 9 0M34 26c3-3 6-3 9 0M22 36c5 3 10 3 15 0" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-                    <path d="m39 8 13 7v14l-13 7-13-7V15z" fill="rgba(231,207,138,0.08)" stroke="var(--path-exist)" stroke-width="1.6"/>
-                    <circle cx="34" cy="18" r="1.4" fill="currentColor"/><circle cx="44" cy="27" r="1.4" fill="currentColor"/>
-                </svg>
-            </span>
-            <span class="brand-copy">
-                <span>诸神愚戏<span class="sub">Folly of the Gods · 祈愿试炼神谕留存地</span></span>
-                <span class="brand-motto">凡骨入局，诸神设戏</span>
-                <span class="brand-era">现世纪元 · 虚无</span>
-            </span>
-        </div>
-        <nav class="path-nav" id="pathNav" aria-label="六大命途快速筛选"></nav>
-        <div class="header-actions">
-            <button type="button" class="role-badge" id="roleBadge" onclick="openProfilePage()">旁观者只读</button>
-            <button class="btn btn-outline header-action header-action-ledger" onclick="openLeaderboardPage()">◈ 觐见榜单</button>
-            <button class="btn btn-outline header-action header-action-stele" id="eternalSteleButton">◇ 永恒神碑</button>
-            <button class="btn btn-outline header-action" id="battleFieldButton" onclick="openBattlePage()">⚔ 神域战场</button>
-            <button class="btn btn-outline header-action header-action-score" id="scoreDeskButton" onclick="openScorePage()" style="display:none;">⚖ 分数结算</button>
-            <button class="btn btn-outline header-action" id="permissionDeskButton" onclick="openPermissionDesk()" style="display:none;">权限工作台</button>
-            <button class="btn btn-outline header-action" id="adminDeskButton" onclick="openAdminPage()" style="display:none;">▣ 馆主后台</button>
-            <button class="btn btn-outline header-action" id="authorPanelButton" onclick="openAuthorPanel()" style="display:none;">📊 作者数据</button>
-            <button class="btn btn-outline header-action" id="achievementButton" onclick="openAchievements()" style="display:none;">🏆 成就殿堂</button>
-            <button class="btn btn-outline header-action" id="faithLevelButton" onclick="openFaithLevels()" style="display:none;">🕊️ 信仰阶位</button>
-            <button class="btn btn-outline header-action header-action-invite" id="inviteButton" onclick="openInviteModal()">◇ 同契召引</button>
-            <button class="btn btn-primary btn-folly header-action header-action-build" id="submitEntryButton" onclick="openSubmitModal()">🎭 构筑愚戏</button>
-        </div>
-    </header>
+    
+    
+        
+        
+        ◒
+        ◈
+        
+        
+        
+        
+        
+        
+        
+        
+        
+    
+    
+        
+            
+                
+                    
+                    
+                    
+                    
+                
+            
+            
+                诸神愚戏Folly of the Gods · 祈愿试炼神谕留存地
+                凡骨入局，诸神设戏
+                现世纪元 · 虚无
+            
+        
+        
+        
+            旁观者只读
+            ◈ 觐见榜单
+            ◇ 永恒神碑
+            ⚔ 神域战场
+            ⚖ 分数结算
+            权限工作台
+            ▣ 馆主后台
+            📊 作者数据
+            🏆 成就殿堂
+            🕊️ 信仰阶位
+            ◇ 同契召引
+            🎭 构筑愚戏
+        
+    
 
-    <div class="container">
-        <section class="world-altar" aria-label="祈愿试炼主视觉">
-            <div class="world-altar-copy">
-                <div class="world-kicker">TRIAL ARCHIVE · 愚戏棋局</div>
-                <h1 class="world-title">祈愿试炼留存地</h1>
-            </div>
-            <div class="world-altar-symbols" aria-hidden="true">
-                <div class="void-constellation">
-                    <div class="void-constellation-orbit orbit-one"></div>
-                    <div class="void-constellation-orbit orbit-two"></div>
-                    <div class="void-constellation-sigil void-mask-sigil">
-                        <svg viewBox="0 0 80 80" role="presentation"><path d="M13 31c7-12 18-18 28-15 12 2 20 9 25 22-3 17-13 25-29 25S15 55 13 31Z" fill="none" stroke="currentColor" stroke-width="2"/><path d="M23 36c4-4 8-4 12 0M43 36c4-4 8-4 12 0M28 49c7 4 14 4 21 0" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M40 15v42" fill="none" stroke="currentColor" stroke-width="1" opacity="0.5"/></svg>
-                    </div>
-                    <div class="void-constellation-sigil void-dice-sigil">
-                        <svg viewBox="0 0 64 64" role="presentation"><path d="m32 7 22 13v25L32 58 10 45V20z" fill="rgba(122,174,194,0.08)" stroke="currentColor" stroke-width="2"/><path d="m11 20 21 13 22-13M32 33v25" fill="none" stroke="currentColor" stroke-width="1.6"/><circle cx="24" cy="20" r="2" fill="currentColor"/><circle cx="41" cy="43" r="2" fill="currentColor"/><circle cx="44" cy="24" r="1.6" fill="currentColor"/></svg>
-                    </div>
-                    <span class="void-constellation-caption">FOLLY · VOID ERA</span>
-                </div>
-            </div>
-        </section>
+    
+        
+            
+                TRIAL ARCHIVE · 愚戏棋局
+                祈愿试炼留存地
+            
+            
+                
+                    
+                    
+                    
+                        
+                    
+                    
+                        
+                    
+                    FOLLY · VOID ERA
+                
+            
+        
 
-        <div class="mobile-action-strip" id="mobileActionStrip" aria-label="手机端常用操作">
-            <button type="button" class="btn btn-outline btn-sm" onclick="openInviteModal()">入局谕令</button>
-            <button type="button" class="btn btn-primary btn-sm" onclick="openSubmitModal()">构筑试炼</button>
-            <button type="button" class="btn btn-outline btn-sm" onclick="openBattlePage()">神域战场</button>
-            <button type="button" class="btn btn-outline btn-sm" id="mobileEternalSteleButton">永恒神碑</button>
-            <button type="button" class="btn btn-outline btn-sm" id="mobileScoreButton" onclick="openScorePage()" hidden>分数结算</button>
-            <button type="button" class="btn btn-outline btn-sm" id="mobilePermissionButton" onclick="openPermissionDesk()" hidden>权限工作台</button>
-            <button type="button" class="btn btn-outline btn-sm" id="mobileAdminButton" onclick="openAdminPage()" hidden>馆主后台</button>
-            <button type="button" class="btn btn-outline btn-sm" id="mobileAuthorPanelButton" onclick="openAuthorPanel()" hidden>作者数据</button>
-            <button type="button" class="btn btn-outline btn-sm" id="mobileAchievementButton" onclick="openAchievements()" hidden>成就殿堂</button>
-            <button type="button" class="btn btn-outline btn-sm" id="mobileFaithLevelButton" onclick="openFaithLevels()" hidden>信仰阶位</button>
-        </div>
+        
+            入局谕令
+            构筑试炼
+            神域战场
+            永恒神碑
+            分数结算
+            权限工作台
+            馆主后台
+            作者数据
+            成就殿堂
+            信仰阶位
+        
 
-        <div class="controls">
-            <div class="control-topline">
-                <div class="sort-group">
-                    <button class="sort-btn active" data-sort="popular" onclick="setSort('popular', this)">试炼热度</button>
-                    <button class="sort-btn" data-sort="rating" onclick="setSort('rating', this)">神格判定</button>
-                    <button class="sort-btn" data-sort="newest" onclick="setSort('newest', this)">新降试炼</button>
-                    <button class="sort-btn" data-sort="comments" onclick="setSort('comments', this)">证言热度</button>
-                </div>
-                <label class="search-shell" for="searchInput"><span class="search-mark" aria-hidden="true">⌕</span><input type="text" class="search-input" placeholder="搜寻试炼切片、构筑信徒、神明命途" oninput="debounceSearch()" id="searchInput" autocomplete="off" autocapitalize="off" spellcheck="false"></label>
-                <button class="filter-toggle-btn" id="filterToggleBtn" onclick="toggleAdvancedFilters()" aria-expanded="false">
-                    <span>✦ 分途观览</span>
-                    <small id="filterSummaryText">全神席 · 全部难度</small>
-                </button>
-                <button class="filter-toggle-btn visual-toggle-btn" id="visualEffectsToggle" type="button" onclick="toggleVisualEffects()" aria-pressed="true">
-                    <span>✧ 视觉粒子</span>
-                    <small id="visualEffectsText">开启</small>
-                </button>
-            </div>
-            <div class="advanced-filters" id="advancedFilters" hidden>
-                <div class="god-filter-panel" aria-label="神明分区筛选">
-                    <div class="filter-heading">
-                        <span>✦ 六大命途</span>
-                    </div>
-                    <div class="god-filter-list" id="godFilterList"></div>
-                </div>
-                <div class="difficulty-filter" id="difficultyFilterList" aria-label="难度标签筛选"></div>
-            </div>
-            <div class="filter-status" id="filterStatus" hidden>
-                <span id="filterStatusText"></span>
-                <button type="button" class="filter-reset-btn" onclick="clearDiscoveryFilters()">显示全部试炼</button>
-            </div>
-        </div>
+        
+            
+                
+                    试炼热度
+                    神格判定
+                    新降试炼
+                    证言热度
+                
+                ⌕
+                
+                    ✦ 分途观览
+                    全神席 · 全部难度
+                
+                
+                    ✧ 视觉粒子
+                    开启
+                
+            
+            
+                
+                    
+                        ✦ 六大命途
+                    
+                    
+                
+                
+            
+            
+                
+                显示全部试炼
+            
+        
 
-        <section class="forum-feed is-collapsed" id="forumFeed" aria-label="全站最新证言">
-            <div class="forum-feed-head">
-                <div>
-                    <div class="forum-feed-kicker">ORACLE LOG · 神谕留存</div>
-                    <div class="forum-feed-title">试炼证言殿</div>
-                </div>
-                <div class="forum-feed-actions">
-                    <div class="feed-count-badge"><span>最近</span><strong>3</strong><span>则证言</span></div>
-                    <button class="feed-toggle-btn" id="forumFeedToggle" onclick="toggleForumFeed()" aria-expanded="false" aria-controls="latestCommentsFeed">展开</button>
-                </div>
-            </div>
-            <div class="latest-comments-feed" id="latestCommentsFeed" hidden>
-                <div class="feed-empty"><strong>正在听取众声……</strong><span>证言流加载中</span></div>
-            </div>
-        </section>
+        
+            
+                
+                    ORACLE LOG · 神谕留存
+                    试炼证言殿
+                
+                
+                    最近3则证言
+                    展开
+                
+            
+            
+                正在听取众声……证言流加载中
+            
+        
 
-        <div class="archive-layout">
-            <div class="dungeon-list" id="dungeonList">
-                    <div class="loading"><div class="spinner"></div><br>正在从切片宇宙中加载祈愿试炼...</div>
-            </div>
-            <aside class="oracle-sidebar" aria-label="神谕榜">
-                <section class="oracle-panel era-scroll-panel" aria-label="寰宇纪元更迭卷轴">
-                    <div id="eraScrollPanel">
-                        <div class="era-scroll-head">
-                            <div class="era-scroll-title">寰宇纪元更迭卷轴</div>
-                            <div class="era-scroll-note"></div>
-                        </div>
-                    </div>
-                </section>
-                <section class="oracle-panel oracle-panel-supreme">
-                    <div class="oracle-panel-title"><span>【诸神注目试炼名录】</span><small id="supremePanelMeta">TOP 6</small></div>
-                    <div class="oracle-list" id="supremeTrialList"><div class="oracle-item"><span>正在检索神格判定...</span></div></div>
-                </section>
-                <section class="oracle-panel oracle-panel-testimony">
-                    <div class="oracle-panel-title"><span>【信徒采信证言录】</span><small id="testimonyPanelMeta">LATEST 6</small></div>
-                    <div class="oracle-list" id="testimonyLedger"><div class="oracle-item"><span>正在听取证言...</span></div></div>
-                </section>
-                <section class="oracle-panel oracle-panel-architect">
-                    <div class="oracle-panel-title"><span>【新晋筑戏人】</span><small id="architectPanelMeta">NEWEST 6</small></div>
-                    <div class="oracle-list" id="architectLedger"><div class="oracle-item"><span>等待新的构筑者献祭试炼。</span></div></div>
-                </section>
-                <section class="oracle-panel oracle-panel-chronicle">
-                    <div class="oracle-panel-title"><span>【当前现世・<b id="chronicleEraName">虚无</b>愚戏记事】</span><small>ROTATING ORACLE</small></div>
-                    <div class="void-chronicle" id="voidChronicle"><span>假面垂落，骰定万命。</span></div>
-                </section>
-                <section class="oracle-panel oracle-panel-faith">
-                    <div class="oracle-panel-title"><span>【寰宇信仰流向】</span><small>PATH FLOW</small></div>
-                    <div id="faithFlowPanel"><div class="oracle-item"><span>正在观测试炼命途分布...</span></div></div>
-                </section>
-                <section class="oracle-panel oracle-panel-sigil">
-                    <div class="oracle-panel-title"><span>【十六神明索引】</span><small>QUICK FILTER</small></div>
-                    <div class="god-quick-index" id="godQuickIndex"><div class="oracle-item"><span>正在刻录神明徽记...</span></div></div>
-                </section>
-            </aside>
-        </div>
-    </div>
+        
+            
+                    正在从切片宇宙中加载祈愿试炼...
+            
+            
+                
+                    
+                        
+                            寰宇纪元更迭卷轴
+                            
+                        
+                    
+                
+                
+                    【诸神注目试炼名录】TOP 6
+                    正在检索神格判定...
+                
+                
+                    【信徒采信证言录】LATEST 6
+                    正在听取证言...
+                
+                
+                    【新晋筑戏人】NEWEST 6
+                    等待新的构筑者献祭试炼。
+                
+                
+                    【当前现世・虚无愚戏记事】ROTATING ORACLE
+                    假面垂落，骰定万命。
+                
+                
+                    【寰宇信仰流向】PATH FLOW
+                    正在观测试炼命途分布...
+                
+                
+                    【十六神明索引】QUICK FILTER
+                    正在刻录神明徽记...
+                
+            
+        
+    
 
-    <!-- 详情页 -->
-    <div class="detail-overlay" id="detailOverlay" style="display:none;">
-        <div class="detail-panel" id="detailPanel">
-            <div class="detail-toolbar">
-                <button class="detail-back" onclick="closeDetail()">← 返回试炼列表</button>
-                <div class="detail-window-title">TRIAL DOSSIER · 试炼详情页</div>
-                <button class="detail-close-icon" onclick="closeDetail()" title="返回试炼列表" aria-label="返回试炼列表">✕</button>
-            </div>
-            <div id="detailContent" class="detail-content"></div>
-            <div class="detail-footer" id="detailFooter">
-                <span class="detail-footer-note"></span>
-                <button class="btn btn-outline btn-sm detail-leave-btn" onclick="closeDetail()">返回试炼列表</button>
-            </div>
-        </div>
-    </div>
+    
+    
+        
+            
+                ← 返回试炼列表
+                TRIAL DOSSIER · 试炼详情页
+                ✕
+            
+            
+            
+                
+                返回试炼列表
+            
+        
+    
 
-    <!-- 个人档案独立页 -->
-    <main class="profile-page" id="profilePage" style="display:none;">
-        <div class="profile-shell">
-            <div class="profile-toolbar">
-                <button class="detail-back" onclick="closeProfilePage()">← 返回试炼列表</button>
-                <div class="detail-window-title">PILGRIM DOSSIER · 个人档案</div>
-                <button class="detail-close-icon" onclick="closeProfilePage()" title="返回试炼列表" aria-label="返回试炼列表">✕</button>
-            </div>
-            <div id="profileContent" class="profile-content">
-                <div class="loading"><div class="spinner"></div><br>正在读取信徒名录...</div>
-            </div>
-        </div>
-    </main>
+    
+    
+        
+            
+                ← 返回试炼列表
+                PILGRIM DOSSIER · 个人档案
+                ✕
+            
+            
+                正在读取信徒名录...
+            
+        
+    
 
-    <!-- 排行榜独立页 -->
-    <main class="profile-page" id="leaderboardPage" style="display:none;">
-        <div class="profile-shell">
-            <div class="profile-toolbar">
-                <button class="detail-back" onclick="closeLeaderboardPage()">← 返回试炼列表</button>
-                <div class="detail-window-title">ASCENSION LEDGER · 登神觐见榜</div>
-                <button class="detail-close-icon" onclick="closeLeaderboardPage()" title="返回试炼列表" aria-label="返回试炼列表">✕</button>
-            </div>
-            <div id="leaderboardContent" class="profile-content">
-                <div class="loading"><div class="spinner"></div><br>正在整理登神与觐见名录...</div>
-            </div>
-        </div>
-    </main>
+    
+    
+        
+            
+                ← 返回试炼列表
+                ASCENSION LEDGER · 登神觐见榜
+                ✕
+            
+            
+                正在整理登神与觐见名录...
+            
+        
+    
 
-    <!-- 永恒神碑独立页 -->
-    <main class="profile-page eternal-stele-page" id="eternalStelePage" style="display:none;">
-        <div class="profile-shell">
-            <div class="profile-toolbar stele-toolbar">
-                <button class="detail-back" onclick="closeEternalStelePage()">← 返回试炼列表</button>
-                <div class="detail-window-title">ETERNAL STELE · 永恒神碑</div>
-                <button class="detail-close-icon" onclick="closeEternalStelePage()" title="返回试炼列表" aria-label="返回试炼列表">✕</button>
-            </div>
-            <div id="eternalSteleContent" class="profile-content eternal-stele-content">
-                <div class="loading"><div class="spinner"></div><br>正在点亮永恒神碑...</div>
-            </div>
-        </div>
-    </main>
+    
+    
+        
+            
+                ← 返回试炼列表
+                ETERNAL STELE · 永恒神碑
+                ✕
+            
+            
+                正在点亮永恒神碑...
+            
+        
+    
 
-    <!-- 榜单公开档案弹窗 -->
-    <div class="modal-overlay" id="publicProfileModalOverlay" style="display:none;" onclick="closePublicProfileModal(event)">
-        <div class="modal public-profile-modal" id="publicProfileModal" onclick="event.stopPropagation()">
-            <button class="close-btn" style="position:absolute;top:16px;right:20px;z-index:2;" onclick="closePublicProfileModal()" title="关闭公开档案" aria-label="关闭公开档案">✕</button>
-            <div id="publicProfileModalContent" class="public-profile-content">
-                <div class="loading"><div class="spinner"></div><br>正在读取公开档案...</div>
-            </div>
-        </div>
-    </div>
+    
+    
+        
+            ✕
+            
+                正在读取公开档案...
+            
+        
+    
 
-    <!-- 神域战场独立页 -->
-    <main class="profile-page" id="matchPage" style="display:none;">
-        <div class="profile-shell">
-            <div class="profile-toolbar">
-                <button class="detail-back" onclick="closeMatchPage()">← 返回试炼列表</button>
-                <div class="detail-window-title">BATTLEFIELD · 神域战场</div>
-                <button class="detail-close-icon" onclick="closeMatchPage()" title="返回试炼列表" aria-label="返回试炼列表">✕</button>
-            </div>
-            <div id="matchContent" class="profile-content">
-                <div class="loading"><div class="spinner"></div><br>正在开启神域战场...</div>
-            </div>
-        </div>
-    </main>
+    
+    
+        
+            
+                ← 返回试炼列表
+                BATTLEFIELD · 神域战场
+                ✕
+            
+            
+                正在开启神域战场...
+            
+        
+    
 
-    <main class="profile-page" id="battleRoomPage" style="display:none;">
-        <div class="profile-shell battle-room-shell">
-            <div class="profile-toolbar">
-                <button class="detail-back" onclick="backToBattleLobby()">← 返回神域战场</button>
-                <div class="detail-window-title">BATTLE ROOM · 战场房间</div>
-                <button class="detail-close-icon" onclick="closeBattleRoomPage()" title="返回试炼列表" aria-label="返回试炼列表">✕</button>
-            </div>
-            <div id="battleRoomContent" class="profile-content">
-                <div class="loading"><div class="spinner"></div><br>正在进入战场房间...</div>
-            </div>
-        </div>
-    </main>
+    
+        
+            
+                ← 返回神域战场
+                BATTLE ROOM · 战场房间
+                ✕
+            
+            
+                正在进入战场房间...
+            
+        
+    
 
-    <!-- 审核员分数结算页 -->
-    <main class="profile-page" id="scorePage" style="display:none;">
-        <div class="profile-shell">
-            <div class="profile-toolbar">
-                <button class="detail-back" onclick="closeScorePage()">← 返回试炼列表</button>
-                <div class="detail-window-title">SCORE SANCTUM · 分数结算工作台</div>
-                <button class="detail-close-icon" onclick="closeScorePage()" title="返回试炼列表" aria-label="返回试炼列表">✕</button>
-            </div>
-            <div id="scoreContent" class="profile-content">
-                <div class="loading"><div class="spinner"></div><br>正在读取结算神谕...</div>
-            </div>
-        </div>
-    </main>
+    
+    
+        
+            
+                ← 返回试炼列表
+                SCORE SANCTUM · 分数结算工作台
+                ✕
+            
+            
+                正在读取结算神谕...
+            
+        
+    
 
-    <!-- 馆主后台独立页 -->
-    <main class="profile-page" id="adminPage" style="display:none;">
-        <div class="profile-shell">
-            <div class="profile-toolbar">
-                <button class="detail-back" onclick="closeAdminPage()">← 返回试炼列表</button>
-                <div class="detail-window-title">CURATOR CONSOLE · 神谕馆主后台</div>
-                <button class="detail-close-icon" onclick="closeAdminPage()" title="返回试炼列表" aria-label="返回试炼列表">✕</button>
-            </div>
-            <div id="adminContent" class="profile-content">
-                <div class="loading"><div class="spinner"></div><br>正在校验馆主权限...</div>
-            </div>
-        </div>
-    </main>
+    
+    
+        
+            
+                ← 返回试炼列表
+                CURATOR CONSOLE · 神谕馆主后台
+                ✕
+            
+            
+                正在校验馆主权限...
+            
+        
+    
 
-    <!-- 信仰阶位独立页 -->
-    <main class="profile-page" id="faithLevelPage" style="display:none;">
-        <div class="profile-shell">
-            <div class="profile-toolbar">
-                <button class="detail-back" onclick="closeFaithLevels()">← 返回试炼列表</button>
-                <div class="detail-window-title">FAITH ASCENSION · 信仰阶位</div>
-                <button class="detail-close-icon" onclick="closeFaithLevels()" title="返回试炼列表" aria-label="返回试炼列表">✕</button>
-            </div>
-            <div id="faithLevelContent" class="profile-content"></div>
-        </div>
-    </main>
+    
+    
+        
+            
+                ← 返回试炼列表
+                FAITH ASCENSION · 信仰阶位
+                ✕
+            
+            
+        
+    
 
-    <!-- 成就殿堂独立页 -->
-    <main class="profile-page" id="achievementPage" style="display:none;">
-        <div class="profile-shell">
-            <div class="profile-toolbar">
-                <button class="detail-back" onclick="closeAchievements()">← 返回试炼列表</button>
-                <div class="detail-window-title">ACHIEVEMENT HALL · 成就殿堂</div>
-                <button class="detail-close-icon" onclick="closeAchievements()" title="返回试炼列表" aria-label="返回试炼列表">✕</button>
-            </div>
-            <div id="achievementContent" class="profile-content"></div>
-        </div>
-    </main>
+    
+    
+        
+            
+                ← 返回试炼列表
+                ACHIEVEMENT HALL · 成就殿堂
+                ✕
+            
+            
+        
+    
 
-    <!-- 作者数据面板独立页 -->
-    <main class="profile-page" id="authorPanelPage" style="display:none;">
-        <div class="profile-shell">
-            <div class="profile-toolbar">
-                <button class="detail-back" onclick="closeAuthorPanel()">← 返回试炼列表</button>
-                <div class="detail-window-title">AUTHOR ANALYTICS · 作者数据面板</div>
-                <button class="detail-close-icon" onclick="closeAuthorPanel()" title="返回试炼列表" aria-label="返回试炼列表">✕</button>
-            </div>
-            <div id="authorPanelContent" class="profile-content"></div>
-        </div>
-    </main>
+    
+    
+        
+            
+                ← 返回试炼列表
+                AUTHOR ANALYTICS · 作者数据面板
+                ✕
+            
+            
+        
+    
 
-    <main class="profile-page" id="permissionPage" style="display:none;">
-        <div class="profile-shell">
-            <div class="profile-toolbar">
-                <button class="detail-back" onclick="closePermissionDesk()">← 返回试炼列表</button>
-                <div class="detail-window-title">权限工作台</div>
-                <button class="detail-close-icon" onclick="closePermissionDesk()" title="返回试炼列表" aria-label="返回试炼列表">✕</button>
-            </div>
-            <div id="permissionContent" class="profile-content"></div>
-        </div>
-    </main>
+    
+        
+            
+                ← 返回试炼列表
+                权限工作台
+                ✕
+            
+            
+        
+    
 
-    <style>
+    
     .invite-tabs{display:flex;gap:8px;margin:4px 0 14px;}
     .invite-tab{flex:1;padding:9px 10px;border:1px solid rgba(255,255,255,.18);background:transparent;color:inherit;border-radius:8px;cursor:pointer;font-size:14px;line-height:1.2;}
     .invite-tab-active{background:rgba(212,175,55,.18);border-color:rgba(212,175,55,.6);font-weight:600;}
@@ -375,247 +375,247 @@
     .invite-guide-title{font-weight:600;margin-bottom:4px;}
     .invite-guide b{color:#f0d98c;}
     .invite-guide .step{margin-top:3px;}
-    </style>
+    
 
-    <!-- 邀请弹窗 -->
-    <div class="modal-overlay" id="inviteModalOverlay" style="display:none;" onclick="closeInviteModal(event)">
-        <div class="modal" id="inviteModal" onclick="event.stopPropagation()">
-            <button class="close-btn" style="position:absolute;top:16px;right:20px;" onclick="closeInviteModal()">✕</button>
-            <h2>🎲 入局谕令</h2>
-            <p class="modal-note" id="inviteHint"></p>
-            <div class="invite-guide" id="inviteGuide">
-                <div class="invite-guide-title">📖 首次使用指引</div>
-                <div class="step">① <b>第一次使用</b>：切到「首次绑定 / 谕令入局」，填入你的谕令，并设置账号名与密码，点「绑定并进入」。此后就用<b>账号名 + 密码</b>登录。</div>
-                <div class="step">② <b>已有账号 / 换台设备</b>：在「账号登录」输入账号名与密码即可（换设备会校验一次）。</div>
-                <div class="step">③ <b>忘记密码</b>：请联系馆主重置。</div>
-            </div>
-            <div class="invite-tabs">
-                <button type="button" class="invite-tab" id="inviteTabAccount" onclick="switchInviteTab('account')">账号登录</button>
-                <button type="button" class="invite-tab" id="inviteTabBind" onclick="switchInviteTab('bind')">首次绑定 / 谕令入局</button>
-            </div>
-            <div id="invitePanelAccount">
-                <div class="form-group">
-                    <label>账号名</label>
-                    <input type="text" id="accountLoginUsername" placeholder="你的账号名" autocomplete="username" maxlength="32">
-                </div>
-                <div class="form-group">
-                    <label>密码</label>
-                    <input type="password" id="accountLoginPassword" placeholder="你的密码" autocomplete="current-password" maxlength="72">
-                </div>
-                <div class="form-actions">
-                    <button type="button" class="btn btn-primary" id="accountLoginButton" onclick="submitAccountLogin()">账号登录</button>
-                </div>
-                <div class="identity-help">换设备登录：直接输入账号名与密码。尚未设置过账号？请切到「首次绑定」页签自助创建。</div>
-            </div>
-            <div id="invitePanelBind" style="display:none;">
-                <div class="form-group">
-                    <label>入局谕令</label>
-                    <input type="password" id="inviteCodeInput" placeholder="输入你的同契谕令" autocomplete="off">
-                </div>
-                <div class="form-group">
-                    <label>设置账号名</label>
-                    <input type="text" id="accountBindUsername" placeholder="2-16 位，中文 / 字母 / 数字 / 下划线" autocomplete="username" maxlength="32">
-                </div>
-                <div class="form-group">
-                    <label>设置密码</label>
-                    <input type="password" id="accountBindPassword" placeholder="6-72 位" autocomplete="new-password" maxlength="72">
-                </div>
-                <div class="form-actions">
-                    <button type="button" class="btn btn-outline" id="inviteSubmitButton" onclick="submitInviteCode()">仅用谕令入局</button>
-                    <button type="button" class="btn btn-primary" id="accountBindButton" onclick="submitAccountBind()">绑定并进入</button>
-                </div>
-                <div class="identity-help">首次使用：填入谕令并设置账号名与密码，即可自助创建账号；之后就能用账号名登录。</div>
-            </div>
-            <div class="role-guide">
-                <div class="role-card" data-role="player" data-mark="信"><strong>入局信徒</strong><span>浏览、判定、证言、评分、登记通关。</span><small>不能构筑 / 不能结算</small></div>
-                <div class="role-card" data-role="author" data-mark="筑"><strong>试炼构筑者</strong><span>可构筑愚戏，也能参与判定与证言。</span><small>不能进入分数结算</small></div>
-                <div class="role-card" data-role="reviewer" data-mark="审"><strong>结算审核员</strong><span>拥有信徒、构筑者与结算权限。</span><small>显示构筑 / 显示结算</small></div>
-                <div class="role-card" data-role="admin" data-mark="馆"><strong>神谕馆主</strong><span>可管理试炼，并拥有结算权限。</span><small>完整管理席位</small></div>
-                <div class="role-card" data-role="god" data-mark="神"><strong>祈愿神明</strong><span>可祈愿创本，并以神名降下称号。</span><small>第零神席 / 不争信徒榜</small></div>
-            </div>
-            <div class="identity-card" id="identityCard">
-                <div class="identity-card-head">
-                    <div class="identity-card-title">入局铭牌</div>
-                    <div class="identity-card-role" id="identityRoleText">未入局</div>
-                </div>
-                <div class="identity-row">
-                    <input type="text" id="displayNameInput" maxlength="16" placeholder="绑定你的昵称，例如：无我">
-                    <button type="button" class="btn btn-primary btn-sm" id="displayNameButton" onclick="saveDisplayName()">保存昵称</button>
-                </div>
-            </div>
-            <div class="form-actions">
-                <button type="button" class="btn btn-outline" onclick="clearInviteSession()">退出身份</button>
-            </div>
-        </div>
-    </div>
+    
+    
+        
+            ✕
+            🎲 入局谕令
+            
+            
+                📖 首次使用指引
+                ① 第一次使用：切到「首次绑定 / 谕令入局」，填入你的谕令，并设置账号名与密码，点「绑定并进入」。此后就用账号名 + 密码登录。
+                ② 已有账号 / 换台设备：在「账号登录」输入账号名与密码即可（换设备会校验一次）。
+                ③ 忘记密码：请联系馆主重置。
+            
+            
+                账号登录
+                首次绑定 / 谕令入局
+            
+            
+                
+                    账号名
+                    
+                
+                
+                    密码
+                    
+                
+                
+                    账号登录
+                
+                换设备登录：直接输入账号名与密码。尚未设置过账号？请切到「首次绑定」页签自助创建。
+            
+            
+                
+                    入局谕令
+                    
+                
+                
+                    设置账号名
+                    
+                
+                
+                    设置密码
+                    
+                
+                
+                    仅用谕令入局
+                    绑定并进入
+                
+                首次使用：填入谕令并设置账号名与密码，即可自助创建账号；之后就能用账号名登录。
+            
+            
+                入局信徒浏览、判定、证言、评分、登记通关。不能构筑 / 不能结算
+                试炼构筑者可构筑愚戏，也能参与判定与证言。不能进入分数结算
+                结算审核员拥有信徒、构筑者与结算权限。显示构筑 / 显示结算
+                神谕馆主可管理试炼，并拥有结算权限。完整管理席位
+                祈愿神明可祈愿创本，并以神名降下称号。第零神席 / 不争信徒榜
+            
+            
+                
+                    入局铭牌
+                    未入局
+                
+                
+                    
+                    保存昵称
+                
+            
+            
+                退出身份
+            
+        
+    
 
-    <!-- 提交弹窗 -->
-    <div class="modal-overlay" id="submitModalOverlay" style="display:none;" onclick="closeSubmitModal(event)">
-        <div class="modal submit-modal" id="submitModal" onclick="event.stopPropagation()">
-            <button class="submit-modal-close" onclick="closeSubmitModal()" title="关闭构筑窗口" aria-label="关闭构筑窗口">✕</button>
-            <h2>🎭 《构筑你的试炼愚戏》</h2>
-            <form id="submitForm" onsubmit="submitDungeon(event)" novalidate>
-                <div class="form-grid">
-                    <div class="form-group"><label>试炼名 *</label><input type="text" id="dungeonName" placeholder="为这枚切片宇宙命名..." required maxlength="60"></div>
-                    <div class="form-group"><label>构筑者 *</label><input type="text" id="dungeonCreator" placeholder="你的神名或代号..." required maxlength="30"></div>
-                </div>
-                <div class="form-grid">
-                    <div class="form-group"><label>同契共筑者（可选）</label><input type="text" id="dungeonCoCreators" placeholder="多个昵称用顿号、逗号或换行分隔" maxlength="240"></div>
-                    <div class="form-group"><label>试炼归档</label><select id="dungeonMode"><option value="cycle" selected>轮回试炼 —— 可反复召集入局</option><option value="one_shot">绝响试炼 —— 被抽中参与后不可再入局</option></select></div>
-                </div>
-                <div class="form-group">
-                    <label>神明标签 *（可多选）</label>
-                    <select id="dungeonType" class="sr-only-select" multiple tabindex="-1" aria-hidden="true"></select>
-                    <div class="god-pick-panel" id="dungeonGodPicker"></div>
-                    <div class="god-pick-summary" id="dungeonGodSummary">未选择神明标签</div>
-                </div>
-                <div class="form-grid compact">
-                    <div class="form-group"><label>固定人数 *</label><input type="number" id="participantCount" min="1" max="99" value="6" required></div>
-                    <div class="form-group"><label>当前局数 *</label><input type="number" id="runCount" min="1" max="999" value="1" required></div>
-                    <div class="form-group"><label>难度标签</label><select id="dungeonDifficulty"><option value="新手">新手本 —— 第一次入场也能跑</option><option value="低">低难 —— 轻量机制与短流程</option><option value="中" selected>中难 —— 标准挑战强度</option><option value="高">高难 —— 需要配合或硬核机制</option></select></div>
-                </div>
-                <div class="form-group"><label>试炼简介 *</label><textarea id="dungeonDesc" placeholder="【写下这场试炼的谶语，供入局信徒见证】" required maxlength="1500"></textarea></div>
-                <div class="form-group"><label>构筑者置顶神谕（可选）</label><textarea id="pinnedNoteInput" placeholder="可以写开本时间、注意事项、车卡要求、构筑者补充神谕..." maxlength="800"></textarea></div>
-                <div class="form-actions"><button type="button" class="btn btn-outline" onclick="closeSubmitModal()">取消</button><button type="submit" class="btn btn-primary">献祭试炼至圣殿</button></div>
-            </form>
-        </div>
-    </div>
+    
+    
+        
+            ✕
+            🎭 《构筑你的试炼愚戏》
+            
+                
+                    试炼名 *
+                    构筑者 *
+                
+                
+                    同契共筑者（可选）
+                    试炼归档轮回试炼 —— 可反复召集入局绝响试炼 —— 被抽中参与后不可再入局
+                
+                
+                    神明标签 *（可多选）
+                    
+                    
+                    未选择神明标签
+                
+                
+                    固定人数 *
+                    当前局数 *
+                    难度标签新手本 —— 第一次入场也能跑低难 —— 轻量机制与短流程中难 —— 标准挑战强度高难 —— 需要配合或硬核机制
+                
+                试炼简介 *
+                构筑者置顶神谕（可选）
+                取消献祭试炼至圣殿
+            
+        
+    
 
-    <div class="modal-overlay" id="ratingModalOverlay" style="display:none;" onclick="closeRatingModal(event)">
-        <div class="modal judgement-modal ritual-modal" id="ratingModal" onclick="event.stopPropagation()">
-            <div class="ritual-modal-head">
-                <div id="ratingModalSigil"></div>
-                <div>
-                    <div class="ritual-modal-kicker">DIVINE JUDGEMENT · 神格评议</div>
-                    <h2>降下神格判定</h2>
-                    <div class="ritual-prayer" id="ratingModalPrayer">你将为这场愚戏试炼评定神格等级。</div>
-                </div>
-                <button class="ritual-close" onclick="closeRatingModal()" title="关闭神谕窗口" aria-label="关闭神谕窗口">✕</button>
-            </div>
-            <div class="ritual-scroll">
-                <div class="ritual-record" id="ratingModalDossier"></div>
-                <p class="modal-note">神格判定会封存为一次评议，同一枚谕令只可判定同一试炼一次。</p>
-                <div class="rating-choice-grid" id="ratingChoiceGrid"></div>
-            </div>
-            <div class="form-actions ritual-actions">
-                <button type="button" class="btn btn-outline" onclick="closeRatingModal()">暂不判定</button>
-                <button type="button" class="btn btn-primary" onclick="submitRatingJudgement()">封存你的神格评议</button>
-            </div>
-        </div>
-    </div>
+    
+        
+            
+                
+                
+                    DIVINE JUDGEMENT · 神格评议
+                    降下神格判定
+                    你将为这场愚戏试炼评定神格等级。
+                
+                ✕
+            
+            
+                
+                神格判定会封存为一次评议，同一枚谕令只可判定同一试炼一次。
+                
+            
+            
+                暂不判定
+                封存你的神格评议
+            
+        
+    
 
-    <div class="modal-overlay" id="testimonyModalOverlay" style="display:none;" onclick="closeTestimonyModal(event)">
-        <div class="modal ritual-modal" id="testimonyModal" onclick="event.stopPropagation()">
-            <div class="ritual-modal-head">
-                <div id="testimonyModalSigil"></div>
-                <div>
-                    <div class="ritual-modal-kicker">ORACLE RECORD · 神谕记录</div>
-                    <h2>递交试炼证言</h2>
-                    <div class="ritual-prayer" id="testimonyModalPrayer"></div>
-                </div>
-                <button class="ritual-close" onclick="closeTestimonyModal()" title="关闭神谕窗口" aria-label="关闭神谕窗口">✕</button>
-            </div>
-            <div class="ritual-scroll">
-                <div class="ritual-record" id="testimonyModalDossier"></div>
-                <div class="reply-context" id="testimonyReplyContext"><span id="testimonyReplyContextText"></span><button class="text-action" onclick="clearReplyTarget()">撤回回应</button></div>
-                <textarea id="testimonyContentInput" class="ritual-input" maxlength="800" placeholder="敬献你在这场愚戏中的证言……"></textarea>
-            </div>
-            <div class="ritual-actions">
-                <button type="button" class="btn btn-outline" onclick="closeTestimonyModal()">暂不证言</button>
-                <button type="button" class="btn btn-primary" onclick="submitComment(testimonyTargetId)">递交证言</button>
-            </div>
-        </div>
-    </div>
+    
+        
+            
+                
+                
+                    ORACLE RECORD · 神谕记录
+                    递交试炼证言
+                    
+                
+                ✕
+            
+            
+                
+                撤回回应
+                
+            
+            
+                暂不证言
+                递交证言
+            
+        
+    
 
-    <div class="modal-overlay" id="adminTalentEditModalOverlay" style="display:none;" onclick="closeAdminTalentEditModal(event)">
-        <div class="modal ritual-modal" id="adminTalentEditModal" onclick="event.stopPropagation()" style="max-width:760px;">
-            <div class="ritual-modal-head">
-                <div>
-                    <div class="ritual-modal-kicker">TALENT POOL · 天赋仓库</div>
-                    <h2 id="adminTalentEditModalTitle">编辑天赋</h2>
-                </div>
-                <button type="button" class="ritual-close" onclick="closeAdminTalentEditModal()" title="关闭天赋编辑" aria-label="关闭天赋编辑">✕</button>
-            </div>
-            <div class="ritual-scroll">
-                <div class="profile-form-grid">
-                    <div class="form-group"><label>天赋池</label><input id="adminTalentModalPoolKey" readonly></div>
-                    <div class="form-group"><label>编号</label><input id="adminTalentModalId" type="number" min="1" inputmode="numeric"></div>
-                    <div class="form-group"><label>名称</label><input id="adminTalentModalName" maxlength="80"></div>
-                    <div class="form-group"><label>等级</label><select id="adminTalentModalRank"><option value="S">S</option><option value="A">A</option><option value="B">B</option><option value="C">C</option></select></div>
-                    <div class="form-group"><label>冷却</label><input id="adminTalentModalCooldown" maxlength="80" placeholder="例如 3 回合 / 无"></div>
-                    <div class="form-group"><label>行动点</label><input id="adminTalentModalActionCost" type="number" min="0" step="1"></div>
-                    <div class="form-group full"><label>效果</label><textarea id="adminTalentModalEffect" rows="5" maxlength="1200"></textarea></div>
-                    <div class="form-group full"><label>备注</label><input id="adminTalentModalNote" maxlength="200"></div>
-                    <div class="form-group full"><label class="checkbox-label"><input id="adminTalentModalEnabled" type="checkbox" checked> 在抽取池中启用</label></div>
-                </div>
-            </div>
-            <div class="form-actions ritual-actions">
-                <button type="button" class="btn btn-outline" onclick="closeAdminTalentEditModal()">取消</button>
-                <button type="button" class="btn btn-primary" onclick="adminSaveTalentPoolItemFromModal()">保存修改</button>
-            </div>
-        </div>
-    </div>
+    
+        
+            
+                
+                    TALENT POOL · 天赋仓库
+                    编辑天赋
+                
+                ✕
+            
+            
+                
+                    天赋池
+                    编号
+                    名称
+                    等级SABC
+                    冷却
+                    行动点
+                    效果
+                    备注
+                     在抽取池中启用
+                
+            
+            
+                取消
+                保存修改
+            
+        
+    
 
-    <div class="modal-overlay" id="adminFaithTraitEditModalOverlay" style="display:none;" onclick="closeAdminFaithTraitEditModal(event)">
-        <div class="modal ritual-modal" id="adminFaithTraitEditModal" onclick="event.stopPropagation()" style="max-width:760px;">
-            <div class="ritual-modal-head">
-                <div>
-                    <div class="ritual-modal-kicker">FAITH TRAIT · 信仰特性</div>
-                    <h2 id="adminFaithTraitEditModalTitle">编辑信仰特性</h2>
-                </div>
-                <button type="button" class="ritual-close" onclick="closeAdminFaithTraitEditModal()" title="关闭信仰特性编辑" aria-label="关闭信仰特性编辑">✕</button>
-            </div>
-            <div class="ritual-scroll">
-                <div class="profile-form-grid">
-                    <div class="form-group"><label>神明</label><input id="adminFaithTraitModalGod" readonly></div>
-                    <div class="form-group"><label>命途</label><input id="adminFaithTraitModalPath" readonly></div>
-                    <div class="form-group full"><label>信仰特性</label><textarea id="adminFaithTraitModalTrait" rows="7" maxlength="1000"></textarea></div>
-                    <div class="form-group full"><label>馆主备注</label><input id="adminFaithTraitModalNote" maxlength="300" placeholder="可选，仅后台显示"></div>
-                </div>
-            </div>
-            <div class="form-actions ritual-actions">
-                <button type="button" class="btn btn-outline" onclick="closeAdminFaithTraitEditModal()">取消</button>
-                <button type="button" class="btn btn-primary" onclick="adminSaveFaithTraitFromModal()">保存特性</button>
-            </div>
-        </div>
-    </div>
+    
+        
+            
+                
+                    FAITH TRAIT · 信仰特性
+                    编辑信仰特性
+                
+                ✕
+            
+            
+                
+                    神明
+                    命途
+                    信仰特性
+                    馆主备注
+                
+            
+            
+                取消
+                保存特性
+            
+        
+    
 
-    <div id="toastContainer"></div>
+    
 
-    <nav class="mobile-bottom-nav" id="mobileBottomNav" aria-label="手机端主入口">
-        <button type="button" class="mobile-nav-item active" data-mobile-dest="dungeons" onclick="mobileNavigate('dungeons')"><span aria-hidden="true">◇</span>副本</button>
-        <button type="button" class="mobile-nav-item" data-mobile-dest="leaderboard" onclick="mobileNavigate('leaderboard')"><span aria-hidden="true">◈</span>榜单</button>
-        <button type="button" class="mobile-nav-item" data-mobile-dest="profile" onclick="mobileNavigate('profile')"><span aria-hidden="true">✦</span>档案</button>
-        <button type="button" class="mobile-nav-item" data-mobile-dest="talent" onclick="mobileNavigate('talent')"><span aria-hidden="true">✧</span>天赋</button>
-        <button type="button" class="mobile-nav-item" data-mobile-dest="messages" onclick="mobileNavigate('messages')"><span aria-hidden="true">□</span>消息</button>
-    </nav>
+    
+        ◇副本
+        ◈榜单
+        ✦档案
+        ✧天赋
+        □消息
+    
 
-    <div class="mobile-fab" id="mobileFab">
-        <div class="mobile-fab-actions">
-            <button type="button" class="mobile-fab-action" id="mobilePermissionFabButton" onclick="mobileQuickAction('permission')" hidden>权限工作台</button>
-            <button type="button" class="mobile-fab-action" onclick="mobileQuickAction('top')">回顶部</button>
-            <button type="button" class="mobile-fab-action" onclick="mobileQuickAction('refresh')">刷新</button>
-        </div>
-        <button type="button" class="mobile-fab-toggle" onclick="toggleMobileFab()" aria-label="展开快捷操作">✦</button>
-    </div>
+    
+        
+            权限工作台
+            回顶部
+            刷新
+        
+        ✦
+    
 
-    <div class="mobile-onboarding" id="mobileOnboarding" role="dialog" aria-modal="true" aria-labelledby="mobileOnboardingTitle">
-        <div class="mobile-onboarding-card">
-            <div class="mobile-onboarding-kicker">MOBILE GUIDE</div>
-            <div class="mobile-onboarding-title" id="mobileOnboardingTitle">手机端已改为分屏浏览</div>
-            <div class="mobile-onboarding-copy">底部五个入口就是五个页面；左右滑动也能切换，不用再从一整条长页面里找功能。</div>
-            <div class="mobile-onboarding-steps">
-                <div class="mobile-onboarding-step"><span>◇</span><div><strong>副本</strong><br>只看筛选和试炼列表。</div></div>
-                <div class="mobile-onboarding-step"><span>◈</span><div><strong>榜单</strong><br>进入登神觐见录，手机端先分段显示。</div></div>
-                <div class="mobile-onboarding-step"><span>✦</span><div><strong>档案 / 天赋 / 消息</strong><br>分别直达个人档案不同分区。</div></div>
-            </div>
-            <div class="mobile-onboarding-actions">
-                <button type="button" class="btn btn-outline btn-sm" onclick="dismissMobileOnboarding(false)">稍后再看</button>
-                <button type="button" class="btn btn-primary btn-sm" onclick="dismissMobileOnboarding(true)">知道了</button>
-            </div>
-        </div>
-    </div>
-    <style id="chatStyles">
+    
+        
+            MOBILE GUIDE
+            手机端已改为分屏浏览
+            底部五个入口就是五个页面；左右滑动也能切换，不用再从一整条长页面里找功能。
+            
+                ◇副本只看筛选和试炼列表。
+                ◈榜单进入登神觐见录，手机端先分段显示。
+                ✦档案 / 天赋 / 消息分别直达个人档案不同分区。
+            
+            
+                稍后再看
+                知道了
+            
+        
+    
+    
 #chatFab{position:fixed;right:22px;bottom:96px;z-index:1200;border:1px solid rgba(214,178,96,.55);background:linear-gradient(180deg,#2a2233,#1a1522);color:#e9d9a8;font:600 14px/1 inherit;padding:12px 16px;border-radius:999px;box-shadow:0 8px 24px rgba(0,0,0,.45);cursor:pointer;letter-spacing:.08em}
 #chatFab:hover{color:#fff;border-color:rgba(214,178,96,.9)}
 .chat-page{position:fixed;inset:0;z-index:1300;display:none;background:#0a0812;overflow:hidden}
@@ -672,73 +672,73 @@
 .chat-send:hover{color:#fff;border-color:var(--chat-accent,#d6b260);box-shadow:0 0 16px -4px var(--chat-accent,#d6b260)}
 body.chat-locked{overflow:hidden}
 @media (max-width:720px){.chat-shell{flex-direction:column}.chat-nav{flex:0 0 auto;flex-direction:row;border-right:none;border-bottom:1px solid rgba(214,178,96,.16);padding:10px 8px;overflow-x:auto}.chat-tab{flex:0 0 auto;flex-direction:row;gap:6px;padding:9px 14px}.chat-side{flex:0 0 34%;border-right:none;border-bottom:1px solid rgba(214,178,96,.16)}#chatFab{right:16px;bottom:84px;padding:11px 14px}}
-</style>
-<button type="button" id="chatFab" onclick="openChatPage()" title="聚议 · 社群" aria-label="打开社群聊天">聚议</button>
-<section id="chatPage" class="chat-page" role="dialog" aria-modal="true" aria-label="社群聊天">
-  <canvas id="chatFx" class="chat-fx" aria-hidden="true"></canvas>
-  <div class="chat-shell">
-    <nav class="chat-nav" id="chatNav" aria-label="频区分组"></nav>
-    <aside class="chat-side">
-      <div class="chat-side-head">
-        <span class="chat-title">聚议</span>
-        <button type="button" class="chat-close" onclick="closeChatPage()" aria-label="关闭">×</button>
-      </div>
-      <div class="chat-channels" id="chatChannels"></div>
-    </aside>
-    <section class="chat-main">
-      <div class="chat-main-head">
-        <span class="chat-cur-emblem" id="chatCurEmblem"></span>
-        <div class="chat-main-headtext">
-        <div class="chat-cur-name" id="chatCurName">请选择群组</div>
-        <div class="chat-cur-desc" id="chatCurDesc"></div>
-        </div>
-      </div>
-      <div class="chat-messages" id="chatMessages"></div>
-      <div class="chat-compose">
-        <input type="text" id="chatInput" class="chat-input" placeholder="说点什么…" maxlength="2000" onkeydown="chatOnInputKey(event)" />
-        <button type="button" class="chat-send" onclick="chatSend()">发送</button>
-      </div>
-    </section>
-  </div>
-</section>
-<script defer src="assets/js/foundation.js?v=20260810-loginrollback1"></script>
-    <script defer src="assets/js/world-data.js?v=20260812-faithtraits1"></script>
-<script defer src="assets/js/utils.js?v=20260918-gtconfirm2"></script>
-    <script defer src="assets/js/session.js?v=20260826-adminworkspace1"></script>
-    <script defer src="assets/js/state.js?v=20260810-battle6"></script>
-    <script defer src="assets/js/api.js?v=20260830-recovery1"></script>
-<script defer src="assets/js/profile-core.js?v=20260814-uiclean3"></script>
-    <script defer src="assets/js/profile-talent.js?v=20260918-gtconfirm1"></script>
-    <script defer src="assets/js/runtime.js?v=20260918-panels2"></script>
-<script defer src="assets/js/data-access.js?v=20260830-recovery1"></script>
-<script defer src="assets/js/detail.js?v=20260814-uiclean3"></script>
-<script defer src="assets/js/discovery.js?v=20260814-uiclean3"></script>
-    <script defer src="assets/js/pages/leaderboard.js?v=20260830-recovery1"></script>
-    <script defer src="assets/js/pages/archive-tools.js?v=20260814-uiclean2"></script>
-    <script defer src="assets/js/pages/archive.js?v=20260808-structure1"></script>
-    <script defer src="assets/js/pages/profile-data.js?v=20260830-recovery1"></script>
-    <script defer src="assets/js/pages/profile-panels.js?v=20260814-uiclean3"></script>
-    <script defer src="assets/js/pages/profile.js?v=20260828-promo1"></script>
-    <script defer src="assets/js/pages/score-tools.js?v=20260918-gtconfirm1"></script>
-    <script defer src="assets/js/pages/score.js?v=20260822-faithscore1"></script>
-    <script defer src="assets/js/pages/admin.js?v=20260918-gtconfirm2"></script>
-    <script defer src="assets/js/pages/author-panel.js?v=20260918-authorpanel1"></script>
-    <script defer src="assets/js/pages/achievements.js?v=20260918-achievements1"></script>
-    <script defer src="assets/js/pages/faith-levels.js?v=20260918-faithlevels1"></script>
-    <script defer src="assets/js/pages/admin-panel.js?v=20260918-gtconfirm1"></script>
-    <script defer src="assets/js/pages/admin-management.js?v=20260918-gtconfirm1"></script>
-    <script defer src="assets/js/pages/permission-desk.js?v=20260918-gtconfirm1"></script>
-    <script defer src="assets/js/pages/match-tools.js?v=20260810-battle6"></script>
-    <script defer src="assets/js/pages/match.js?v=20260918-gtconfirm1"></script>
-    <script defer src="assets/js/pages/public-profile.js?v=20260814-uiclean3"></script>
-    <script defer src="assets/js/pages/eternal-stele.js?v=20260919-stele9"></script>
-    <script defer src="assets/js/comment-ui.js?v=20260810-mobiletext1"></script>
-    <script defer src="assets/js/trial-detail-ui.js?v=20260814-uiclean2"></script>
-    <script defer src="assets/js/trial-actions.js?v=20260814-editfix1"></script>
-<script defer src="assets/app.js?v=20260808-structure1"></script>
-    <script defer src="assets/js/startup.js?v=20260920-perf1"></script>
-    <script defer src="assets/js/realtime.js?v=1"></script>
-	    <script defer src="assets/js/pages/chat.js?v=20260929-chat5"></script>
-	    <script defer src="assets/js/gods-theme.js?v=20260918-slotrank3"></script>
-</body>
-</html>
+
+聚议
+
+  
+  
+    
+    
+      
+        聚议
+        ×
+      
+      
+    
+    
+      
+        
+        
+        请选择群组
+        
+        
+      
+      
+      
+        
+        发送
+      
+    
+  
+
+
+    
+
+    
+    
+    
+
+    
+    
+
+
+
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+
+    
+    
+	    
+	    
+
+
