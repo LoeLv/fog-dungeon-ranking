@@ -1,15 +1,21 @@
 /* 社群聊天 · Phase 1.5（独立整页 + 导航栏 + 特效 + 神明/职业室）
-   复用全局 supabaseClient / invokeDungeonAction / inviteSession；纯叠加，默认隐藏，不影响既有功能。 */
+   复用全局 supabaseClient / invokeDungeonAction / inviteSession；纯叠加，不影响既有功能。 */
 (function () {
   'use strict';
 
-  var KIND_LABEL = { global: '大群', path: '命途', god: '神明', profession: '职业', devotee: '信徒', dm: '私聊', party: '小队' };
+  var KIND_LABEL = { global: '大群', path: '命途', god: '信仰', profession: '职业', devotee: '信徒', dm: '私聊', party: '小队' };
   var NAV_ORDER = [
-    { key: 'global', label: '总大群' },
-    { key: 'path', label: '命途' },
-    { key: 'god', label: '神明' },
-    { key: 'profession', label: '职业' }
+    { key: 'global', label: '总大群', icon: '❖' },
+    { key: 'path', label: '命途', icon: '✦' },
+    { key: 'god', label: '信仰', icon: '✧' },
+    { key: 'profession', label: '职业', icon: '⚒' }
   ];
+  var ICONS = {
+    global: '❖',
+    path: { '生命': '✦', '存在': '◇', '文明': '▣', '虚无': '◈', '混沌': '✺', '沉沦': '◒' },
+    god: { '诞育': '芽', '繁荣': '穗', '死亡': '眠', '记忆': '页', '时间': '沙', '秩序': '衡', '真理': '典', '战争': '矛', '欺诈': '面', '命运': '骰', '混乱': '涡', '沉默': '默', '痴愚': '眸', '污堕': '溻', '腐朽': '朽', '湮灭': '烬' },
+    profession: { '战士': '刃', '法师': '杖', '牧师': '愈', '刺客': '影', '猎人': '矢', '歌者': '谣' }
+  };
   var PATH_COLOR = {
     生命: '#7cd67c', 存在: '#7fd0e6', 文明: '#e7cf8a',
     虚无: '#b98fe8', 混沌: '#e07a8f', 沉沦: '#c0557a'
@@ -65,6 +71,16 @@
     return DEFAULT_COLOR;
   }
 
+  function iconFor(ch) {
+    if (!ch) return ICONS.global;
+    var g = ICONS[ch.kind];
+    if (typeof g === 'string') return g;
+    if (g) {
+      var k = ch.godKey || ch.god_key || ch.profKey || ch.prof_key || ch.pathKey || ch.path_key;
+      if (k && g[k]) return g[k];
+    }
+    return '•';
+  }
   async function loadChannels() {
     state.needLogin = false;
     var res = await invokeDungeonAction('listChatChannels', {});
@@ -74,7 +90,7 @@
       var c = client();
       if (c) {
         var r = await c.from('chat_channels')
-          .select('id,slug,name,kind,path_key,god_key,description,sort_order')
+          .select('id,slug,name,kind,path_key,god_key,prof_key,description,sort_order')
           .eq('is_active', true).order('sort_order', { ascending: true });
         state.channels = (r && r.data) || [];
         return;
@@ -116,7 +132,7 @@
     box.innerHTML = navs.map(function (n) {
       var count = state.channels.filter(function (c) { return c.kind === n.key; }).length;
       return '<button type="button" class="chat-tab' + (state.navKey === n.key ? ' active' : '') + '" onclick="chatNav(\'' + n.key + '\')">' +
-        esc(n.label) + '<span class="tab-count">' + count + '</span></button>';
+        '<span class="tab-ico">' + esc(n.icon || '•') + '</span>' + esc(n.label) + '<span class="tab-count">' + count + '</span></button>';
     }).join('');
   }
   window.chatNav = function (key) {
@@ -138,7 +154,7 @@
       var badge = n > 0 ? '<span class="chat-badge">' + (n > 99 ? '99+' : n) + '</span>' : '';
       var col = colorFor(ch);
       return '<div class="chat-chan' + (state.active === ch.id ? ' active' : '') + '" data-cid="' + esc(ch.id) + '" style="--chan-accent:' + col + '" onclick="openChatChannel(\'' + esc(ch.id) + '\')">' +
-        '<span class="cn-dot"></span>' +
+        '<span class="cn-ico">' + esc(iconFor(ch)) + '</span>' +
         '<span class="cn-name">' + esc(ch.name || ch.slug) + '</span>' + badge +
         '<span class="cn-kind">' + esc(KIND_LABEL[ch.kind] || ch.kind || '') + '</span></div>';
     }).join('');
