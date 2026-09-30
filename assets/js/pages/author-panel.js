@@ -117,13 +117,10 @@ function renderAuthorPanelDungeonList(authored) {
 
 async function renderAuthorPanelFeedback(authored) {
     const entries = [];
-    for (const dungeon of authored.slice(0, 30)) {
-        let comments = [];
-        try {
-            comments = await fetchComments(dungeon.id);
-        } catch (_) {
-            comments = [];
-        }
+    const panelDungeons = authored.slice(0, 30);
+    const commentsByDungeon = await fetchCommentsForDungeons(panelDungeons.map(dungeon => dungeon.id));
+    for (const dungeon of panelDungeons) {
+        const comments = commentsByDungeon.get(String(dungeon.id)) || [];
         (comments || [])
             .filter(comment => !comment.is_deleted && String(comment.content || '').trim())
             .forEach(comment => {
