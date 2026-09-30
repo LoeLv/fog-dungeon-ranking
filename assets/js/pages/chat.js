@@ -349,7 +349,14 @@
   }
 
   // ---------- 生命周期 ----------
-  window.openChatPage = async function () {
+  // 是否处于独立聊天标签页（通过 ?view=chat 打开）
+  function isStandaloneChat() {
+    try { return /[?&]view=chat(?:&|$)/.test(location.search); } catch (e) { return false; }
+  }
+  window.isStandaloneChat = isStandaloneChat;
+
+  // 在页面内展开聊天室（独立聊天页进入时调用，或弹窗被拦截时回退）
+  window.enterChatPage = async function () {
     var page = document.getElementById('chatPage');
     if (page) page.classList.add('open');
     document.body.classList.add('chat-locked');
@@ -364,7 +371,24 @@
     } catch (e) { toast(e.message || '打开聚议失败'); }
   };
 
+  // 首页点击「聚议」：新开一个标签页打开聊天室，而不是在首页上覆盖
+  window.openChatPage = function () {
+    var url = location.pathname + '?view=chat';
+    var win = null;
+    try { win = window.open(url, '_blank'); } catch (e) { win = null; }
+    // 被浏览器拦截弹窗时，退回为当前页内展开，保证功能可用
+    if (!win) window.enterChatPage();
+  };
+
   window.closeChatPage = function () {
+    // 独立聊天标签页：关闭标签页；若浏览器不允许关闭则返回首页
+    if (isStandaloneChat()) {
+      try { window.close(); } catch (e) {}
+      setTimeout(function () {
+        if (!document.hidden) location.href = location.pathname;
+      }, 120);
+      return;
+    }
     var page = document.getElementById('chatPage');
     if (page) page.classList.remove('open');
     document.body.classList.remove('chat-locked');
@@ -1921,4 +1945,13 @@
   // 兼容旧接口
   window.chatFxSetColor = window.chatFxSetScene;
   window.chatFxBurst = window.chatFxSetScene;
+
+  // 独立聊天页：加载后自动展开聊天室，使其成为一个专属页面
+  if (isStandaloneChat()) {
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', function () { window.enterChatPage(); });
+    } else {
+      window.enterChatPage();
+    }
+  }
 })();
