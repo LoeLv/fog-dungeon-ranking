@@ -55,7 +55,8 @@
     .pri-icon { font-size: 1.15rem; }
     .pri-text { display: flex; flex-direction: column; line-height: 1.3; }
     .pri-text small { font-size: 0.68rem; color: rgba(160,174,192,0.7); margin-top: 2px; }
-    .pilgrim-register-trigger { margin-left: auto; margin-right: 10px; }
+    .profile-toolbar-actions { display: flex; align-items: center; gap: 10px; justify-self: end; }
+    .profile-toolbar-actions .pilgrim-register-trigger { margin: 0; }
     @media (max-width: 600px) {
         .pilgrim-register-overlay { padding: 6vh 10px 10px; }
         .pilgrim-register-panel { padding: 16px 14px 20px; }
@@ -278,8 +279,10 @@
             <div class="profile-toolbar">
                 <button class="detail-back" onclick="closeProfilePage()">← 返回试炼列表</button>
                 <div class="detail-window-title">PILGRIM DOSSIER · 个人档案</div>
-                <button type="button" class="btn btn-primary btn-folly btn-sm pilgrim-register-trigger" onclick="togglePilgrimRegister(event)">📖 信徒神册</button>
-                <button class="detail-close-icon" onclick="closeProfilePage()" title="返回试炼列表" aria-label="返回试炼列表">✕</button>
+                <div class="profile-toolbar-actions">
+                    <button type="button" class="btn btn-primary btn-folly btn-sm pilgrim-register-trigger" onclick="togglePilgrimRegister(event)">📖 信徒神册</button>
+                    <button class="detail-close-icon" onclick="closeProfilePage()" title="返回试炼列表" aria-label="返回试炼列表">✕</button>
+                </div>
             </div>
             <div id="profileContent" class="profile-content">
                 <div class="loading"><div class="spinner"></div><br>正在读取信徒名录...</div>
