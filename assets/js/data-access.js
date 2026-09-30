@@ -131,6 +131,49 @@ async function fetchComments(dungeonId) {
     });
 }
 
+async function fetchCommentsForDungeons(dungeonIds) {
+    const ids = [...new Set((dungeonIds || []).map(id => String(id || '').trim()).filter(Boolean))];
+    const grouped = new Map();
+    ids.forEach(id => grouped.set(id, []));
+    if (!ids.length) return grouped;
+    if (USE_LOCAL_FALLBACK) {
+        const all = getLocalData('comments', []);
+        all.filter(c => grouped.has(String(c.dungeon_id)))
+            .forEach(c => grouped.get(String(c.dungeon_id)).push(c));
+        grouped.forEach(list => list.sort((a, b) => new Date(a.created_at) - new Date(b.created_at)));
+        return grouped;
+    }
+    // 单次批量查询替代逐副本请求，避免 N+1 与重复的荣誉请求。
+    const query = () => supabaseClient
+        .from('comments')
+        .select('id,dungeon_id,parent_comment_id,author,content,invite_name,is_deleted,created_at')
+        .in('dungeon_id', ids)
+        .order('created_at', { ascending: true });
+    let { data, error } = await query();
+    if (error) {
+        console.warn('批量读取楼中楼证言失败，使用旧字段兼容:', error);
+        const fallback = await supabaseClient
+            .from('comments')
+            .select('id,dungeon_id,author,content,invite_name,created_at')
+            .in('dungeon_id', ids)
+            .order('created_at', { ascending: true });
+        data = fallback.data || [];
+        error = fallback.error;
+    }
+    if (error) return grouped;
+    const rows = (data || []).map(c => ({
+        ...c,
+        parent_comment_id: c.parent_comment_id || c.parentCommentId || null,
+        is_deleted: !!c.is_deleted
+    }));
+    const enriched = await enrichCommentsWithHonors(rows);
+    (enriched || []).forEach(c => {
+        const key = String(c.dungeon_id);
+        if (grouped.has(key)) grouped.get(key).push(c);
+    });
+    return grouped;
+}
+
 async function fetchLatestComments(limit = 3) {
     if (USE_LOCAL_FALLBACK) {
         const dungeons = getLocalData('dungeons', []);
