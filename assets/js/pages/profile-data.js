@@ -87,8 +87,9 @@ async function getAuthorCommentNotices(dungeons = null) {
     const seenAt = getProfileNoticeSeenTime();
     const seenTime = seenAt ? new Date(seenAt).getTime() : 0;
     const notices = [];
+    const commentsByDungeon = await fetchCommentsForDungeons(authored.map(dungeon => dungeon.id));
     for (const dungeon of authored) {
-        const comments = await fetchComments(dungeon.id);
+        const comments = commentsByDungeon.get(String(dungeon.id)) || [];
         comments
             .filter(comment => !comment.is_deleted && !isSameProfileName(comment.invite_name) && !isSameProfileName(comment.author))
             .forEach(comment => {
