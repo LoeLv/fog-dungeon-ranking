@@ -928,5 +928,375 @@ function toggleChatSide(){
     document.addEventListener('DOMContentLoaded', function () { window.bootHomeProfile(); });
 })();
 </script>
+<!-- ===== 个人档案页 UI 整理层（单文件注入：样式 + 重排脚本） ===== -->
+<style id="gtProfileUiLayerStyles">
+/* ---- 桌面端：个人档案页两列网格 ---- */
+@media (min-width: 901px) {
+  #profileContent .profile-grid {
+    display: grid !important;
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    gap: 18px !important;
+    align-items: start;
+  }
+  #profileContent .profile-grid > .profile-mobile-section { display: contents !important; }
+  #profileContent .profile-grid .profile-panel { margin: 0 !important; }
+  #profileContent .profile-grid .profile-panel.gt-span2 { grid-column: 1 / -1 !important; }
+}
+/* ---- 顶部记事 ---- */
+#profileContent .profile-chronicle-card { margin: 0 0 18px !important; }
+/* ---- 折叠按钮 ---- */
+.gt-collapse-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.gt-collapse-toggle {
+  flex: 0 0 auto;
+  cursor: pointer;
+  border: 1px solid rgba(255,255,255,0.18);
+  background: rgba(255,255,255,0.05);
+  color: #e8dfc8;
+  border-radius: 999px;
+  font: 600 12px/1 inherit;
+  padding: 6px 12px;
+  letter-spacing: .06em;
+  transition: background .15s ease, border-color .15s ease;
+}
+.gt-collapse-toggle:hover { background: rgba(255,255,255,0.12); border-color: rgba(255,255,255,0.3); }
+.gt-collapse-panel.gt-collapsed > .gt-collapse-body { display: none; }
+/* ---- 分页 ---- */
+.gt-pager {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 12px;
+}
+.gt-pager button {
+  cursor: pointer;
+  border: 1px solid rgba(255,255,255,0.18);
+  background: rgba(255,255,255,0.05);
+  color: #e8dfc8;
+  border-radius: 8px;
+  font: 600 12px/1 inherit;
+  padding: 6px 12px;
+}
+.gt-pager button:hover:not(:disabled) { background: rgba(255,255,255,0.12); }
+.gt-pager button:disabled { opacity: .4; cursor: not-allowed; }
+.gt-pager-info { font-size: 12px; opacity: .72; letter-spacing: .04em; }
+.gt-page-hidden { display: none !important; }
+/* ---- 信徒神册按钮：随信仰主题变色（样式变量由脚本注入） ---- */
+#pilgrimRegisterButton,
+.pilgrim-register-trigger {
+  background: linear-gradient(135deg, var(--god-primary, #d5b25b), var(--god-secondary, #7a8cff)) !important;
+  border-color: var(--god-primary, #d5b25b) !important;
+  color: #17131f !important;
+  box-shadow: 0 6px 18px var(--god-glow, rgba(213,178,91,.25)) !important;
+  text-shadow: none !important;
+}
+#pilgrimRegisterButton:hover,
+.pilgrim-register-trigger:hover { filter: brightness(1.08); }
+/* ---- 神册内的「神灵讯」条目 ---- */
+.gt-oracle-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  text-align: left;
+  cursor: pointer;
+  border: 1px solid rgba(255,255,255,0.1);
+  background: rgba(255,255,255,0.04);
+  color: inherit;
+  border-radius: 12px;
+  padding: 12px 14px;
+  margin-top: 10px;
+  font: inherit;
+}
+.gt-oracle-item:hover { background: rgba(255,255,255,0.1); }
+.gt-oracle-item .gt-oracle-icon { font-size: 18px; }
+.gt-oracle-item .gt-oracle-text { display: flex; flex-direction: column; gap: 2px; }
+.gt-oracle-item .gt-oracle-title { font-weight: 600; }
+.gt-oracle-item .gt-oracle-desc { font-size: 12px; opacity: .7; }
+</style>
+<script id="gtProfileUiLayerScript">
+(function () {
+  'use strict';
+  if (window.__gtProfileUiLayer) return;
+  window.__gtProfileUiLayer = true;
+  var PAGE_SIZE = 3;
+
+  function norm(s) { return String(s || '').replace(/[\s\u3000]+/g, '').trim(); }
+  function titleSpan(panel) {
+    var t = panel.querySelector('.profile-panel-title > span');
+    return t ? t : null;
+  }
+  function titleText(panel) { var s = titleSpan(panel); return s ? norm(s.textContent) : ''; }
+  function isDesktop() { return window.innerWidth >= 901; }
+  function gridEl() {
+    var c = document.getElementById('profileContent');
+    return c ? c.querySelector('.profile-grid') : null;
+  }
+  // 顶层面板：父级是 .profile-grid 或直接父为 mobile-section 且该 section 直属 grid
+  function topPanels() {
+    var grid = gridEl();
+    if (!grid) return [];
+    var out = [];
+    grid.querySelectorAll('.profile-panel').forEach(function (p) {
+      var par = p.parentElement;
+      if (!par) return;
+      if (par === grid) out.push(p);
+      else if (par.classList && par.classList.contains('profile-mobile-section') && par.parentElement === grid) out.push(p);
+    });
+    return out;
+  }
+  function findByTitle(frag) {
+    var ps = topPanels();
+    for (var i = 0; i < ps.length; i++) if (titleText(ps[i]).indexOf(frag) >= 0) return ps[i];
+    return null;
+  }
+  function findAllByTitle(frag) {
+    return topPanels().filter(function (p) { return titleText(p).indexOf(frag) >= 0; });
+  }
+
+  /* ---------- 折叠 + 分页 ---------- */
+  function directChildCount(node) {
+    return Array.prototype.filter.call(node.children, function (n) { return n.nodeType === 1; }).length;
+  }
+  function findListContainer(body) {
+    var best = null, bestCount = 0;
+    var cands = [body].concat(Array.prototype.slice.call(body.querySelectorAll('div,ul,section')));
+    cands.forEach(function (c) {
+      var cnt = directChildCount(c);
+      if (cnt > bestCount) { bestCount = cnt; best = c; }
+    });
+    return bestCount >= 3 ? best : null;
+  }
+  function paginateList(container, pageSize) {
+    if (!container || container.dataset.gtPaged === '1') return;
+    var items = Array.prototype.filter.call(container.children, function (n) { return n.nodeType === 1; });
+    if (items.length <= pageSize) return;
+    container.dataset.gtPaged = '1';
+    var total = Math.ceil(items.length / pageSize), current = 1;
+    var pager = document.createElement('div');
+    pager.className = 'gt-pager';
+    var prev = document.createElement('button'); prev.type = 'button'; prev.textContent = '上一页';
+    var info = document.createElement('span'); info.className = 'gt-pager-info';
+    var next = document.createElement('button'); next.type = 'button'; next.textContent = '下一页';
+    pager.appendChild(prev); pager.appendChild(info); pager.appendChild(next);
+    container.parentNode.insertBefore(pager, container.nextSibling);
+    function render() {
+      items.forEach(function (it, idx) {
+        var page = Math.floor(idx / pageSize) + 1;
+        it.classList.toggle('gt-page-hidden', page !== current);
+      });
+      info.textContent = current + ' / ' + total + ' 页';
+      prev.disabled = current <= 1; next.disabled = current >= total;
+    }
+    prev.addEventListener('click', function () { if (current > 1) { current--; render(); } });
+    next.addEventListener('click', function () { if (current < total) { current++; render(); } });
+    render();
+  }
+  function makeCollapsible(panel) {
+    if (!panel || panel.dataset.gtCollapsible === '1') return;
+    panel.dataset.gtCollapsible = '1';
+    panel.classList.add('gt-collapse-panel');
+    var title = panel.querySelector('.profile-panel-title');
+    if (!title) return;
+
+    var body = document.createElement('div');
+    body.className = 'gt-collapse-body';
+    var moving = [], node = title.nextSibling;
+    while (node) { moving.push(node); node = node.nextSibling; }
+    moving.forEach(function (n) { body.appendChild(n); });
+    panel.appendChild(body);
+
+    var list = findListContainer(body);
+    if (list) paginateList(list, PAGE_SIZE);
+
+    var toggle = document.createElement('button');
+    toggle.type = 'button';
+    toggle.className = 'gt-collapse-toggle';
+    var span = titleSpan(panel);
+    var label = span ? span.textContent : (title.textContent || '');
+    title.innerHTML = '';
+    var head = document.createElement('div'); head.className = 'gt-collapse-head';
+    var lab = document.createElement('span'); lab.textContent = label;
+    head.appendChild(lab); head.appendChild(toggle);
+    title.appendChild(head);
+
+    var collapsed = true;
+    function apply() {
+      panel.classList.toggle('gt-collapsed', collapsed);
+      toggle.textContent = collapsed ? '展开 ▼' : '收起 ▲';
+    }
+    toggle.addEventListener('click', function (e) { e.stopPropagation(); collapsed = !collapsed; apply(); });
+    apply();
+  }
+
+  /* ---------- 神册按钮主题化 ---------- */
+  function applyFaithSkin() {
+    var host = document.querySelector('#profilePage[data-god]') || document.querySelector('#profileContent [data-god]');
+    var god = host ? host.getAttribute('data-god') : '';
+    if (!god || typeof window.getGodSkinStyle !== 'function') return;
+    var skin;
+    try { skin = window.getGodSkinStyle(god); } catch (e) { return; }
+    [document.getElementById('pilgrimRegisterButton')].forEach(function (el) {
+      if (!el) return;
+      var st = (el.getAttribute('style') || '').replace(/display:\s*none;?/i, '');
+      el.setAttribute('style', st + ';' + skin);
+    });
+    document.querySelectorAll('.pilgrim-register-trigger').forEach(function (el) {
+      el.setAttribute('style', (el.getAttribute('style') || '') + ';' + skin);
+    });
+  }
+
+  /* ---------- 神册抽屉：注入「神灵讯」 ---------- */
+  function injectOracle() {
+    var overlay = document.getElementById('pilgrimRegisterOverlay');
+    if (!overlay || overlay.dataset.gtOracle === '1') return;
+    overlay.dataset.gtOracle = '1';
+    var host = overlay.querySelector('.pilgrim-register-body')
+      || overlay.querySelector('.pilgrim-register-list')
+      || overlay.querySelector('[class*="register-body"]')
+      || overlay;
+    var btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'gt-oracle-item';
+    btn.innerHTML = '<span class="gt-oracle-icon">🔮</span><span class="gt-oracle-text">'
+      + '<span class="gt-oracle-title">神灵讯</span>'
+      + '<span class="gt-oracle-desc">进入社群聚议 · 与其他信徒交谈</span></span>';
+    btn.addEventListener('click', function () {
+      if (typeof window.closePilgrimRegister === 'function') window.closePilgrimRegister();
+      window.setTimeout(function () {
+        if (typeof window.openChatPage === 'function') window.openChatPage();
+        else location.href = './index.html?view=chat';
+      }, 120);
+    });
+    host.appendChild(btn);
+  }
+
+  function hideChatFab() {
+    var fab = document.getElementById('chatFab');
+    if (fab) fab.style.display = 'none';
+  }
+
+  /* ---------- 主重排 ---------- */
+  function reflow() {
+    hideChatFab();
+    applyFaithSkin();
+    injectOracle();
+    if (!isDesktop()) return;
+    var grid = gridEl();
+    if (!grid) return;
+
+    var base = findByTitle('基础信仰设定');
+    var nums = findByTitle('个人数值');
+    var battle = findByTitle('战斗面板');
+    var items = topPanels().filter(function (p) { return titleText(p) === '个人道具'; })[0] || null;
+    var trials = findByTitle('试炼履迹录');
+    var obs = findByTitle('信仰观测录');
+    var author = findByTitle('构筑者记录');
+    var msgs = findByTitle('结算信封');
+    var pool = document.getElementById('talentPoolPanel');
+    var sWare = findByTitle('S级天赋仓库');
+    var ware = topPanels().filter(function (p) { var t = titleText(p); return t === '天赋仓库'; })[0] || null;
+    var titles = topPanels().filter(function (p) { return titleText(p) === '当前称号'; })[0] || findByTitle('当前称号');
+
+    // 删除「个人数值」
+    if (nums && nums.parentNode) nums.parentNode.removeChild(nums);
+
+    // 楼主提醒去重：保留最后一个
+    var noticeAll = findAllByTitle('楼主提醒');
+    var notices = noticeAll.length ? noticeAll[noticeAll.length - 1] : null;
+    noticeAll.slice(0, -1).forEach(function (p) { p.parentNode && p.parentNode.removeChild(p); });
+
+    // 抽出「个人天赋」为独立面板（放入 base 所属分组，保持移动端）
+    var talentPanel = null;
+    if (base) {
+      var equip = document.getElementById('profileTalentEquipPanel');
+      if (equip && !document.getElementById('gtTalentPanel')) {
+        var group = equip.closest('.form-group') || equip;
+        talentPanel = document.createElement('section');
+        talentPanel.id = 'gtTalentPanel';
+        talentPanel.className = 'profile-panel';
+        var god = base.getAttribute('data-god') || '';
+        if (god) talentPanel.setAttribute('data-god', god);
+        var bs = base.getAttribute('style');
+        if (bs) talentPanel.setAttribute('style', bs);
+        var th = document.createElement('div'); th.className = 'profile-panel-title';
+        var ths = document.createElement('span'); ths.textContent = '个人天赋';
+        th.appendChild(ths); talentPanel.appendChild(th);
+        var tw = document.createElement('div'); tw.className = 'profile-form-grid';
+        tw.appendChild(group);
+        talentPanel.appendChild(tw);
+        // 放进 base 所在的移动分栏（或 grid）
+        var baseSec = base.parentElement;
+        if (baseSec && baseSec.classList && baseSec.classList.contains('profile-mobile-section')) baseSec.appendChild(talentPanel);
+        else grid.appendChild(talentPanel);
+      } else {
+        talentPanel = document.getElementById('gtTalentPanel');
+      }
+    }
+    // 移除「个人道具」文本域仍在 base 中的残留（表单组）——仅当已存在独立面板时
+    if (items && base) {
+      var leftover = base.querySelector('#profileItems');
+      if (leftover && leftover.closest('.profile-panel') === base) {
+        var lg = leftover.closest('.form-group');
+        if (lg) lg.parentNode.removeChild(lg);
+      }
+    }
+
+    // 顺序与整行
+    var seq = [base, talentPanel, titles, battle, items, trials, obs, author, notices, msgs, pool, sWare, ware];
+    seq.forEach(function (p, i) { if (p) p.style.order = String(i + 1); });
+    [titles, author, pool, sWare, ware].forEach(function (p) { if (p) p.classList.add('gt-span2'); });
+
+    // 顶部记事
+    var chronicle = document.getElementById('profileChronicleCard')
+      || (document.getElementById('profileContent') || document).querySelector('.profile-chronicle-card');
+    if (chronicle && chronicle.parentNode && chronicle.parentNode !== grid.parentNode) {
+      // 移到 grid 之前
+    }
+    if (chronicle && grid && chronicle.nextElementSibling !== grid) {
+      grid.parentNode.insertBefore(chronicle, grid);
+    }
+
+    // 折叠 + 分页
+    makeCollapsible(author);
+    makeCollapsible(msgs);
+    makeCollapsible(notices);
+  }
+
+  var timer = null;
+  function schedule() { if (timer) clearTimeout(timer); timer = setTimeout(function () { try { reflow(); } catch (e) {} }, 80); }
+
+  function wrapRender() {
+    if (typeof window.renderProfilePage !== 'function' || window.renderProfilePage.__gtWrapped) return;
+    var orig = window.renderProfilePage;
+    var wrapped = async function () {
+      var r = await orig.apply(this, arguments);
+      schedule();
+      return r;
+    };
+    wrapped.__gtWrapped = true;
+    window.renderProfilePage = wrapped;
+  }
+  function observe() {
+    var content = document.getElementById('profileContent');
+    if (content && !content.__gtObserved && window.MutationObserver) {
+      content.__gtObserved = true;
+      new MutationObserver(schedule).observe(content, { childList: true });
+    }
+  }
+  function boot() { wrapRender(); observe(); schedule(); }
+
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', function () { boot(); setTimeout(boot, 700); });
+  else boot();
+  window.addEventListener('load', function () { boot(); setTimeout(boot, 500); setTimeout(boot, 1400); });
+  window.addEventListener('resize', schedule);
+})();
+</script>
+
 </body>
 </html>
