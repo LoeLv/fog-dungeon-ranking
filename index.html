@@ -277,8 +277,8 @@
     <main class="profile-page" id="profilePage" style="display:none;">
         <div class="profile-shell">
             <div class="profile-toolbar">
-                <button class="detail-back" onclick="closeProfilePage()">← 返回试炼列表</button>
-                <div class="detail-window-title">PILGRIM DOSSIER · 个人档案</div>
+                <span class="profile-toolbar-spacer" aria-hidden="true"></span>
+                <div class="detail-window-title">FOLLY OF THE GODS · 诸神愚戏</div>
                 <div class="profile-toolbar-actions">
                     <button type="button" class="btn btn-primary btn-folly btn-sm pilgrim-register-trigger" onclick="togglePilgrimRegister(event)">📖 信徒神册</button>
                     <button class="detail-close-icon" onclick="closeProfilePage()" title="返回试炼列表" aria-label="返回试炼列表">✕</button>
@@ -308,6 +308,7 @@
                 <section class="pilgrim-register-group">
                     <div class="pilgrim-register-group-title">观览与殿堂</div>
                     <div class="pilgrim-register-grid">
+                        <button type="button" class="pilgrim-register-item" data-guard="public" onclick="pilgrimRegisterRun('closeProfilePage')"><span class="pri-icon">🏛️</span><span class="pri-text">试炼列表<small>返回主列表 · 全部试炼</small></span></button>
                         <button type="button" class="pilgrim-register-item" data-guard="public" onclick="pilgrimRegisterRun('openLeaderboardPage')"><span class="pri-icon">◈</span><span class="pri-text">觐见榜单<small>登神排行</small></span></button>
                         <button type="button" class="pilgrim-register-item" data-guard="public" onclick="pilgrimRegisterRun('openEternalStelePage')"><span class="pri-icon">◇</span><span class="pri-text">永恒神碑<small>英灵纪念</small></span></button>
                         <button type="button" class="pilgrim-register-item" data-guard="public" onclick="pilgrimRegisterRun('openBattlePage')"><span class="pri-icon">⚔</span><span class="pri-text">神域战场<small>对局匹配</small></span></button>
