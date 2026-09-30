@@ -1238,12 +1238,14 @@ function toggleChatSide(){
         talentPanel = document.getElementById('gtTalentPanel');
       }
     }
-    // 移除「个人道具」文本域仍在 base 中的残留（表单组）——仅当已存在独立面板时
-    if (items && base) {
-      var leftover = base.querySelector('#profileItems');
-      if (leftover && leftover.closest('.profile-panel') === base) {
-        var lg = leftover.closest('.form-group');
-        if (lg) lg.parentNode.removeChild(lg);
+    // 当前称号去重：合并到独立整行面板（保留「佩戴称号」开关）
+    if (base) {
+      var toggleInput = base.querySelector('#profileTitleVisibilityToggle');
+      var tGroup = toggleInput ? toggleInput.closest('.form-group') : null;
+      if (tGroup && titles) {
+        var toggleLabel = tGroup.querySelector('label[for="profileTitleVisibilityToggle"]');
+        if (toggleLabel && !titles.querySelector('#profileTitleVisibilityToggle')) titles.appendChild(toggleLabel);
+        tGroup.parentNode.removeChild(tGroup);
       }
     }
 
