@@ -1255,6 +1255,22 @@ function toggleChatSide(){
       }
     }
 
+    // 个人道具去重：把 base 内的编辑文本域并入独立「个人道具」面板
+    if (base && items && !items.dataset.gtItemsMerged) {
+      items.dataset.gtItemsMerged = '1';
+      var ig = null;
+      base.querySelectorAll('.form-group').forEach(function (g) {
+        if (ig) return;
+        var lab = g.querySelector(':scope > label');
+        if (lab && norm(lab.textContent) === '个人道具') ig = g;
+      });
+      if (ig) {
+        var igLab = ig.querySelector(':scope > label');
+        if (igLab) igLab.parentNode.removeChild(igLab);
+        items.appendChild(ig);
+      }
+    }
+
     // 顺序与整行
     var seq = [base, talentPanel, titles, battle, items, trials, obs, author, notices, msgs, pool, sWare, ware];
     seq.forEach(function (p, i) { if (p) p.style.order = String(i + 1); });
