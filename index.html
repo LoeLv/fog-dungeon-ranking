@@ -1228,6 +1228,8 @@ function toggleChatSide(){
         var ths = document.createElement('span'); ths.textContent = '个人天赋';
         th.appendChild(ths); talentPanel.appendChild(th);
         var tw = document.createElement('div'); tw.className = 'profile-form-grid';
+        var innerLabel = group.querySelector(':scope > label');
+        if (innerLabel) innerLabel.parentNode.removeChild(innerLabel);
         tw.appendChild(group);
         talentPanel.appendChild(tw);
         // 放进 base 所在的移动分栏（或 grid）
@@ -1238,10 +1240,14 @@ function toggleChatSide(){
         talentPanel = document.getElementById('gtTalentPanel');
       }
     }
-    // 当前称号去重：合并到独立整行面板（保留「佩戴称号」开关）
+    // 当前称号去重：移除 base 内联副本，保留「佩戴称号」开关到整行面板
     if (base) {
-      var toggleInput = base.querySelector('#profileTitleVisibilityToggle');
-      var tGroup = toggleInput ? toggleInput.closest('.form-group') : null;
+      var tGroup = null;
+      base.querySelectorAll('.form-group').forEach(function (g) {
+        if (tGroup) return;
+        var lab = g.querySelector(':scope > label');
+        if (lab && norm(lab.textContent).indexOf('当前称号') >= 0) tGroup = g;
+      });
       if (tGroup && titles) {
         var toggleLabel = tGroup.querySelector('label[for="profileTitleVisibilityToggle"]');
         if (toggleLabel && !titles.querySelector('#profileTitleVisibilityToggle')) titles.appendChild(toggleLabel);
