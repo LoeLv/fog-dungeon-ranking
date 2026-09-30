@@ -91,8 +91,8 @@
         '.fog-openrite{position:fixed;top:0;left:0;width:100vw;height:100vh;z-index:2147483000;background:#04050a;',
         'cursor:pointer;overflow:hidden;opacity:1;font-family:"Songti SC","STSong",Georgia,"Noto Serif SC",serif;}',
         '.fog-openrite.fr-out{opacity:0;transition:opacity .5s ease;}',
-        '.fog-openrite .fr-veil{position:absolute;inset:0;background:radial-gradient(120% 100% at 50% 46%,#0e131c 0%,#070a10 44%,#020307 100%);}',
-        '.fog-openrite .fr-canvas{position:absolute;inset:0;width:100%;height:100%;}',
+        '.fog-openrite .fr-veil{position:absolute;inset:0;z-index:0;background:radial-gradient(120% 100% at 50% 46%,#0e131c 0%,#070a10 44%,#020307 100%);}',
+        '.fog-openrite .fr-canvas{position:absolute;inset:0;z-index:1;width:100%;height:100%;}',
         '.fog-openrite .fr-gate{position:absolute;left:0;right:0;top:50%;transform:translateY(-50%);text-align:center;',
         'color:rgba(206,214,226,.7);font-size:clamp(13px,1.7vw,17px);letter-spacing:.52em;text-indent:.52em;opacity:1;',
         'transition:opacity .5s ease;animation:frgate 2.6s ease-in-out infinite;}',
@@ -120,8 +120,8 @@
     overlay.setAttribute('role', 'dialog');
     overlay.setAttribute('aria-label', faith.god + '之神 · 开卷仪式');
     overlay.innerHTML =
-      '<canvas class="fr-canvas" aria-hidden="true"></canvas>' +
       '<div class="fr-veil" aria-hidden="true"></div>' +
+      '<canvas class="fr-canvas" aria-hidden="true"></canvas>' +
       '<button class="fr-sound" type="button" aria-label="切换音效">🔇</button>' +
       '<div class="fr-day" aria-hidden="true">' + faith.god + ' · ' + title + '</div>' +
       '<div class="fr-gate" aria-hidden="true"><span>点击启封信仰之地</span></div>' +
