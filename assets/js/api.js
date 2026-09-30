@@ -2,8 +2,8 @@
 
 // Keep the large archive payload out of repeated page renders. The cache is
 // per invite identity and is cleared immediately after a write succeeds.
-const DUNGEON_LIST_CACHE_TTL_MS = 10 * 60 * 1000;
-const SHORT_READ_CACHE_TTL_MS = 5 * 60 * 1000;
+const DUNGEON_LIST_CACHE_TTL_MS = 30 * 60 * 1000;
+const SHORT_READ_CACHE_TTL_MS = 15 * 60 * 1000;
 const DUNGEON_LIST_CACHE_PREFIX = 'fog-dungeon-list-v4';
 const SHORT_READ_CACHE_PREFIX = 'fog-read-cache-v4';
 const UNCACHED_READ_MARKER = '__fogSkipShortReadCache';
