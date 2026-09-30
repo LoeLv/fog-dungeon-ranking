@@ -1,4 +1,4 @@
-/*! 诸神愚戏 · 十六信仰开卷仪式 (Opening Rite) v4
+/*! 诸神愚戏 · 十六信仰开卷仪式 (Opening Rite) v6 · 多信仰（诞育 / 繁荣）
  *  进入站点：不透明深黑帷幕 + 淡小字「点击启封信仰之地」（首页后台静默加载）。
  *  点击后播放四段式入场动画（严格按提示词，画布采用加色混合 lighter，粒子真正发光）：
  *    0–1s    全屏深黑，中心悬浮半透明发光「生命胚种」，微光缓慢搏动；
@@ -58,6 +58,15 @@
     沉默: '无声的归寂'
   };
 
+  // ===== 视觉 / 音效 profile（按信仰切换；诞育=第 1 日，繁荣=第 2 日）=====
+  var PROFILES = {
+    诞育: { pri: '#81c487', sec: '#d8ad64', accent: '255,246,220', mode: 'seed' },
+    繁荣: { pri: '#2f8f4e', sec: '#5fe0b0', accent: '180,255,214', mode: 'vine' }
+  };
+  function profileOf(god) {
+    return PROFILES[god] || { pri: '#81c487', sec: '#d8ad64', accent: '255,246,220', mode: 'seed' };
+  }
+
   function toUTC(s) {
     var m = /^(\d{4})-(\d{2})-(\d{2})/.exec(String(s));
     return m ? Date.UTC(+m[1], +m[2] - 1, +m[3]) : null;
@@ -72,7 +81,7 @@
   }
 
   // ================= 音效：Web Audio API 程序化合成 =================
-  function createRiteAudio() {
+  function createRiteAudio(name) {
     var AC = window.AudioContext || window.webkitAudioContext;
     if (!AC) return null;
     var ac;
@@ -192,6 +201,80 @@
       }
     }
 
+    // ---- \u7e41\u8363\uff08\u7b2c 2 \u65e5\uff09\u97f3\u8272\uff1a\u68ee\u6797\u5e95\u566a / \u7a7a\u7075\u6728\u7ba1 / \u53f6\u7247\u6c99\u6c99 / \u6d41\u4f53\u6d41\u6c34 ----
+    function forestBed(at, dur) {
+      var n = noise(dur);
+      var lp = ac.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 700; lp.Q.value = 0.6;
+      var g = ac.createGain();
+      var lfo = ac.createOscillator(); lfo.type = 'sine'; lfo.frequency.value = 0.15;
+      var lg = ac.createGain(); lg.gain.value = 0.01;
+      lfo.connect(lg); lg.connect(g.gain);
+      g.gain.setValueAtTime(0, at);
+      g.gain.linearRampToValueAtTime(0.028, at + dur * 0.4);
+      g.gain.linearRampToValueAtTime(0, at + dur);
+      n.connect(lp); lp.connect(g); g.connect(master);
+      n.start(at); lfo.start(at); lfo.stop(at + dur + 0.05);
+      keep(n); keep(lfo);
+    }
+    function woodwind(at, dur) {
+      var notes = [523.25, 659.25, 783.99];
+      for (var i = 0; i < notes.length; i++) {
+        var o = ac.createOscillator(); o.type = 'triangle'; o.frequency.value = notes[i];
+        var vib = ac.createOscillator(); vib.type = 'sine'; vib.frequency.value = 5.0 + i * 0.4;
+        var vg = ac.createGain(); vg.gain.value = 2.2;
+        vib.connect(vg); vg.connect(o.frequency);
+        var g = ac.createGain();
+        var to = at + i * 0.14;
+        g.gain.setValueAtTime(0, to);
+        g.gain.linearRampToValueAtTime(0.05 / (i + 1), to + 0.5);
+        g.gain.linearRampToValueAtTime(0, at + dur);
+        o.connect(g); g.connect(master);
+        o.start(to); o.stop(at + dur + 0.05);
+        vib.start(to); vib.stop(at + dur + 0.05);
+        keep(o); keep(vib);
+      }
+    }
+    function leafShiver(at, dur) {
+      var n = noise(dur);
+      var bp = ac.createBiquadFilter(); bp.type = 'bandpass'; bp.frequency.value = 5200; bp.Q.value = 0.7;
+      var g = ac.createGain();
+      var lfo = ac.createOscillator(); lfo.type = 'sine'; lfo.frequency.value = 11;
+      var lg = ac.createGain(); lg.gain.value = 0.02;
+      lfo.connect(lg); lg.connect(g.gain);
+      g.gain.setValueAtTime(0, at);
+      g.gain.linearRampToValueAtTime(0.032, at + dur * 0.35);
+      g.gain.linearRampToValueAtTime(0, at + dur);
+      n.connect(bp); bp.connect(g); g.connect(master);
+      n.start(at); lfo.start(at); lfo.stop(at + dur + 0.05);
+      keep(n); keep(lfo);
+    }
+    function water(at, dur) {
+      var n = noise(dur);
+      var bp = ac.createBiquadFilter(); bp.type = 'bandpass'; bp.frequency.value = 1400; bp.Q.value = 1.2;
+      var g = ac.createGain();
+      var lfo = ac.createOscillator(); lfo.type = 'sine'; lfo.frequency.value = 0.6;
+      var lg = ac.createGain(); lg.gain.value = 420;
+      lfo.connect(lg); lg.connect(bp.frequency);
+      g.gain.setValueAtTime(0, at);
+      g.gain.linearRampToValueAtTime(0.03, at + dur * 0.3);
+      g.gain.linearRampToValueAtTime(0, at + dur);
+      n.connect(bp); bp.connect(g); g.connect(master);
+      n.start(at); lfo.start(at); lfo.stop(at + dur + 0.05);
+      keep(n); keep(lfo);
+      for (var i = 0; i < 7; i++) {
+        var bt = at + Math.random() * dur * 0.8;
+        var o = ac.createOscillator(); o.type = 'sine';
+        o.frequency.setValueAtTime(400 + Math.random() * 500, bt);
+        o.frequency.exponentialRampToValueAtTime(900 + Math.random() * 600, bt + 0.06);
+        var bg = ac.createGain();
+        bg.gain.setValueAtTime(0, bt);
+        bg.gain.linearRampToValueAtTime(0.014, bt + 0.012);
+        bg.gain.exponentialRampToValueAtTime(0.0001, bt + 0.14);
+        o.connect(bg); bg.connect(master);
+        o.start(bt); o.stop(bt + 0.16); keep(o);
+      }
+    }
+
     return {
       start: function () {
         if (stopped || started) return;
@@ -200,15 +283,25 @@
         var T = ac.currentTime;
         master.gain.cancelScheduledValues(T);
         master.gain.setValueAtTime(vol, T);
-        subHum(T, 1.0);
-        heartbeat(T + 0.12, 0.16); heartbeat(T + 0.55, 0.12);
-        crystal(T + 1.0);
-        rustle(T + 1.05, 1.15);
-        harp(T + 1.05, 1.15);
-        heartbeat(T + 1.5, 0.09);
-        pad(T + 2.2, 2.3);
-        master.gain.setValueAtTime(vol, T + 3.0);
-        master.gain.linearRampToValueAtTime(0, T + 4.5);
+        if (name === '繁荣') {
+          forestBed(T, 1.0);
+          woodwind(T + 1.0, 1.25);
+          leafShiver(T + 1.05, 1.15);
+          water(T + 1.05, 1.15);
+          pad(T + 2.2, 2.3);
+          master.gain.setValueAtTime(vol, T + 3.0);
+          master.gain.linearRampToValueAtTime(0, T + 4.5);
+        } else {
+          subHum(T, 1.0);
+          heartbeat(T + 0.12, 0.16); heartbeat(T + 0.55, 0.12);
+          crystal(T + 1.0);
+          rustle(T + 1.05, 1.15);
+          harp(T + 1.05, 1.15);
+          heartbeat(T + 1.5, 0.09);
+          pad(T + 2.2, 2.3);
+          master.gain.setValueAtTime(vol, T + 3.0);
+          master.gain.linearRampToValueAtTime(0, T + 4.5);
+        }
       },
       mute: function (on) {                 // on=true 静音
         try { master.gain.cancelScheduledValues(ac.currentTime);
@@ -226,18 +319,24 @@
   function boot() {
     var now = new Date();
     var today = dayKey(now);
-    try { if (localStorage.getItem(LS_SHOWN) === today) return; } catch (e) {}
+    var forceGod = null;
+    try { forceGod = new URLSearchParams(location.search).get('rite'); } catch (e) {}
+    if (!forceGod) { try { if (localStorage.getItem(LS_SHOWN) === today) return; } catch (e) {} }
     if (document.querySelector('.fog-openrite')) return;
 
     var epochMs = toUTC(EPOCH), todayMs = toUTC(today);
     var totalDays = (epochMs != null && todayMs != null) ? Math.round((todayMs - epochMs) / 86400000) : 0;
     var idx = ((totalDays % CYCLE) + CYCLE) % CYCLE;
+    if (forceGod) { for (var fi = 0; fi < G.length; fi++) { if (G[fi].god === forceGod) { idx = fi; break; } } }
     var cycleNum = totalDays < 0 ? 0 : Math.floor(totalDays / CYCLE);
     var faith = G[idx];
     var title = TITLES[faith.god] || faith.god;
     var boost = Math.min(cycleNum * 12, 96);         // 第 17 天起粒子小幅增加
-    var priRgb = hex2rgb(faith.primary).join(',');
-    var secRgb = hex2rgb(faith.secondary).join(',');
+    var prof = profileOf(faith.god);
+    var priRgb = hex2rgb(prof.pri).join(',');
+    var secRgb = hex2rgb(prof.sec).join(',');
+    var accRgb = prof.accent;
+    var isVine = prof.mode === 'vine';
 
     // ---- 样式 ----
     if (!document.getElementById('fogOpenRiteStyles')) {
@@ -473,6 +572,151 @@
       glow(cx, cy, UNIT * 0.22, '255,246,220', 0.28 * p);
     }
 
+    // ==== \u7e41\u8363\uff08\u7b2c 2 \u65e5\uff09\u7ed8\u5236\uff1a\u85e4\u8513 / \u73af\u5f62\u51b2\u51fb\u6ce2 / \u53d1\u5149\u82b1\u53f6 / \u8367\u5149\u5b62\u5b50 ====
+    var vines2 = [], spores = [];
+    function burstVines() {
+      burst = true;
+      var K = 8;
+      for (var d = 0; d < K; d++) {
+        var v = {
+          a: d / K * 6.283 + (Math.random() - 0.5) * 0.3,
+          maxLen: MAXR * (0.72 + Math.random() * 0.5),
+          curl: (Math.random() - 0.5) * 0.6,
+          nodes: [], branch: null
+        };
+        var n = 5 + Math.floor(Math.random() * 5);
+        for (var b = 0; b < n; b++) v.nodes.push({ at: 0.18 + Math.random() * 0.78, born: 0, r: 1.6 + Math.random() * 2.8, side: Math.random() < 0.5 ? 1 : -1 });
+        v.branch = {
+          at: 0.34 + Math.random() * 0.4,
+          a: v.a + (Math.random() < 0.5 ? 1 : -1) * (0.45 + Math.random() * 0.4),
+          maxLen: MAXR * (0.3 + Math.random() * 0.35), nodes: []
+        };
+        for (var c = 0; c < 3; c++) v.branch.nodes.push({ at: 0.28 + Math.random() * 0.62, born: 0, r: 1.4 + Math.random() * 2 });
+        vines2.push(v);
+      }
+      var S = 150 + boost;
+      for (var sp = 0; sp < S; sp++) {
+        spores.push({
+          x: cx + (Math.random() - 0.5) * W * 0.92,
+          y: cy + (Math.random() - 0.5) * H * 0.5 + H * 0.22,
+          r: 1.2 + Math.random() * 2.6,
+          vy: -(0.5 + Math.random() * 1.6) * (UNIT / 1000),
+          vx: (Math.random() - 0.5) * 0.5 * (UNIT / 1000),
+          ph: Math.random() * 6.283, jade: Math.random() < 0.6
+        });
+      }
+    }
+    function drawEdgeVines(t) {
+      var a = 0.09 + 0.07 * Math.sin(t / 900);
+      ctx.lineWidth = 2;
+      for (var i = 0; i < 14; i++) {
+        var ang = i / 14 * 6.283;
+        var sx = cx + Math.cos(ang) * MAXR * 0.94, sy = cy + Math.sin(ang) * MAXR * 0.94;
+        var mx = cx + Math.cos(ang + 0.2) * MAXR * 0.6, my = cy + Math.sin(ang + 0.2) * MAXR * 0.6;
+        ctx.beginPath();
+        ctx.moveTo(sx, sy);
+        ctx.quadraticCurveTo(mx, my, cx + Math.cos(ang + 0.06) * MAXR * 0.34, cy + Math.sin(ang + 0.06) * MAXR * 0.34);
+        ctx.strokeStyle = rgba(priRgb, a);
+        ctx.stroke();
+      }
+    }
+    function drawBud(t) {
+      var pulse = 0.5 + 0.5 * Math.sin(t / 320);
+      var r = UNIT * (0.045 + 0.016 * pulse);
+      glow(cx, cy, r * 5.5, priRgb, 0.5 + 0.3 * pulse);
+      glow(cx, cy, r * 2.6, secRgb, 0.5 + 0.3 * pulse);
+      for (var s = -1; s <= 1; s += 2) {
+        ctx.save(); ctx.translate(cx, cy); ctx.rotate(s * 0.5 + Math.sin(t / 700) * 0.12);
+        ctx.beginPath(); ctx.ellipse(0, -r * (1.5 + 0.3 * pulse), r * 0.62, r * 1.5, 0, 0, 6.283);
+        ctx.fillStyle = rgba(secRgb, 0.55 + 0.3 * pulse); ctx.fill();
+        ctx.restore();
+      }
+      ctx.beginPath(); ctx.arc(cx, cy, r * 0.8, 0, 6.283);
+      ctx.fillStyle = rgba(accRgb, 0.75 + 0.25 * pulse); ctx.fill();
+    }
+    function drawRing(t) {
+      var p = Math.min(1, (t - T.A) / 820);
+      if (p <= 0) return;
+      var e = 1 - Math.pow(1 - p, 3);
+      var r = MAXR * (0.12 + 1.05 * e);
+      ctx.beginPath(); ctx.arc(cx, cy, r, 0, 6.283);
+      ctx.strokeStyle = rgba(secRgb, (1 - e) * 0.9);
+      ctx.lineWidth = 3 + 6 * (1 - e); ctx.stroke();
+      glow(cx, cy, r * 0.55, secRgb, (1 - e) * 0.55);
+    }
+    function drawVines(t) {
+      var p = Math.max(0, Math.min(1, (t - T.A) / 1150));
+      var grown = t < T.C ? p : 1;
+      var fade = t < T.C ? 1 : Math.max(0, 1 - (t - T.C) / 1000);
+      for (var i = 0; i < vines2.length; i++) {
+        var v = vines2[i];
+        var len = v.maxLen * grown;
+        var ex = cx + Math.cos(v.a + v.curl * 0.3) * len, ey = cy + Math.sin(v.a + v.curl * 0.3) * len;
+        var mx = cx + Math.cos(v.a + v.curl) * len * 0.55, my = cy + Math.sin(v.a + v.curl) * len * 0.55;
+        var lg = ctx.createLinearGradient(cx, cy, ex, ey);
+        lg.addColorStop(0, rgba(accRgb, 0.9 * fade));
+        lg.addColorStop(0.4, rgba(secRgb, 0.6 * fade));
+        lg.addColorStop(1, 'rgba(0,0,0,0)');
+        ctx.strokeStyle = lg; ctx.lineWidth = 3.4;
+        ctx.beginPath(); ctx.moveTo(cx, cy); ctx.quadraticCurveTo(mx, my, ex, ey); ctx.stroke();
+        for (var b = 0; b < v.nodes.length; b++) {
+          var nd = v.nodes[b];
+          if (grown >= nd.at) {
+            nd.born = Math.min(1, nd.born + 0.04);
+            var q = nd.at;
+            var nx = cx + (ex - cx) * q + Math.cos(v.a + v.curl) * Math.sin(q * 3.14) * len * 0.12;
+            var ny = cy + (ey - cy) * q + Math.sin(v.a + v.curl) * Math.sin(q * 3.14) * len * 0.12;
+            var pr = nd.r * nd.born * (1 + 0.6 * Math.abs(Math.sin(t / 260 + b)));
+            glow(nx, ny, pr * 5, secRgb, 0.5 * fade * nd.born);
+            ctx.save(); ctx.translate(nx, ny); ctx.rotate(v.a + nd.side * 0.9);
+            ctx.beginPath(); ctx.ellipse(0, 0, pr * 1.2, pr * 2.4, 0, 0, 6.283);
+            ctx.fillStyle = rgba(priRgb, 0.8 * fade * nd.born); ctx.fill();
+            ctx.restore();
+            glow(nx, ny, pr * 2, accRgb, 0.7 * fade * nd.born);
+          }
+        }
+        if (v.branch && grown >= v.branch.at) {
+          var bl = v.branch.maxLen * Math.min(1, (grown - v.branch.at) / 0.5);
+          var bx = cx + Math.cos(v.a + v.curl * 0.3) * len * v.branch.at;
+          var by = cy + Math.sin(v.a + v.curl * 0.3) * len * v.branch.at;
+          var bex = bx + Math.cos(v.branch.a) * bl, bey = by + Math.sin(v.branch.a) * bl;
+          ctx.beginPath(); ctx.moveTo(bx, by); ctx.lineTo(bex, bey);
+          ctx.strokeStyle = rgba(secRgb, 0.55 * fade); ctx.lineWidth = 2; ctx.stroke();
+          for (var cc = 0; cc < v.branch.nodes.length; cc++) {
+            var cn = v.branch.nodes[cc];
+            if (bl >= v.branch.maxLen * cn.at) {
+              cn.born = Math.min(1, cn.born + 0.04);
+              var tx = bx + (bex - bx) * cn.at, ty = by + (bey - by) * cn.at;
+              var tr = cn.r * cn.born * (1 + 0.5 * Math.abs(Math.sin(t / 300 + cc)));
+              glow(tx, ty, tr * 4, priRgb, 0.45 * fade * cn.born);
+              ctx.beginPath(); ctx.arc(tx, ty, tr, 0, 6.283);
+              ctx.fillStyle = rgba(secRgb, 0.8 * fade * cn.born); ctx.fill();
+            }
+          }
+        }
+      }
+    }
+    function drawSpores(dt, t) {
+      var fade = t < T.C ? 1 : Math.max(0, 1 - (t - T.C) / 1200);
+      for (var i = 0; i < spores.length; i++) {
+        var s = spores[i];
+        if (t >= T.C) { s.vy *= 0.985; s.vx *= 0.985; } else { s.vy -= 0.0006 * (UNIT / 1000); }
+        s.x += s.vx * dt * 0.06 + Math.sin(t / 700 + s.ph) * 0.25;
+        s.y += s.vy * dt * 0.06;
+        if (s.y < -20) { s.y = H + 10; s.x = cx + (Math.random() - 0.5) * W * 0.92; }
+        var col = s.jade ? secRgb : priRgb;
+        glow(s.x, s.y, s.r * 5, col, 0.7 * fade);
+        ctx.beginPath(); ctx.arc(s.x, s.y, s.r, 0, 6.283);
+        ctx.fillStyle = rgba(accRgb, 0.9 * fade); ctx.fill();
+      }
+    }
+    function drawSettle(t) {
+      if (t < T.C) return;
+      var p = Math.min(1, (t - T.C) / 1200);
+      glow(cx, cy, UNIT * 0.44, secRgb, 0.4 * (1 - p) + 0.15);
+      glow(cx, cy, UNIT * 0.22, accRgb, 0.25 * (1 - p) + 0.08);
+    }
+
     var raf = 0, lastT = 0, startT = 0, started = false;
     function frame(ts) {
       if (!lastT) lastT = ts;
@@ -481,10 +725,16 @@
       ctx.clearRect(0, 0, W, H);
       if (started) {
         var t = ts - startT;
-        if (!burst && t >= T.A) burstNow();
         ctx.globalCompositeOperation = 'lighter';
-        if (t < T.A) drawSeed(t);
-        else { drawFlash(t); drawVeins(t); drawSeeds(dt, t); drawPetals(dt, t); drawConverge(t); }
+        if (isVine) {
+          if (!burst && t >= T.A) burstVines();
+          if (t < T.A) { drawEdgeVines(t); drawBud(t); }
+          else { drawRing(t); drawVines(t); drawSpores(dt, t); drawSettle(t); }
+        } else {
+          if (!burst && t >= T.A) burstNow();
+          if (t < T.A) drawSeed(t);
+          else { drawFlash(t); drawVeins(t); drawSeeds(dt, t); drawPetals(dt, t); drawConverge(t); }
+        }
         ctx.globalCompositeOperation = 'source-over';
       }
       raf = window.requestAnimationFrame(frame);
@@ -515,7 +765,7 @@
       started = true; startT = performance.now();
       // 音效：在用户点击手势内创建并播放（满足自动播放策略）
       if (soundOn) {
-        riteAudio = createRiteAudio();
+        riteAudio = createRiteAudio(isVine ? '繁荣' : '诞育');
         if (riteAudio) riteAudio.start();
       }
       gate.classList.add('off');
