@@ -1,14 +1,19 @@
-/*! 诸神愚戏 · 十六信仰开卷仪式 (Opening Rite) v3
+/*! 诸神愚戏 · 十六信仰开卷仪式 (Opening Rite) v4
  *  进入站点：不透明深黑帷幕 + 淡小字「点击启封信仰之地」（首页后台静默加载）。
  *  点击后播放四段式入场动画（严格按提示词，画布采用加色混合 lighter，粒子真正发光）：
  *    0–1s    全屏深黑，中心悬浮半透明发光「生命胚种」，微光缓慢搏动；
  *    1–2.2s  胚种炸开，金色生命光核喷涌；种子粒子球形外喷并萌发发光胚芽；卵囊光纹由中心向四角蔓延，
  *            光脉持续生成微型发光花苞，花瓣碎片飘散（多层粒子叠加，华丽有层次）；
  *    2.2–3s  光核收敛；居中大字「欢迎来到信仰之地」带淡金呼吸光晕浮现；底部八字祷词淡入；
- *    3–3.5s  花苞光点消融、光脉褪去，平稳切入首页。
+ *    3–4.5s  花苞光点消融、光脉褪去，平稳切入首页（结尾较原设计延长 1s，观感更佳）。
+ *  音效：使用 Web Audio API 程序化合成（无需外部文件），与动画时间轴同步：
+ *    0–1s    地底微弱心跳式低频嗡鸣；
+ *    1–2.2s  空灵水晶碎裂声 + 舒展竖琴琶音 + 种子萌发沙沙声，隐约极轻生命搏动；
+ *    2.2–3s  柔和长音共鸣；
+ *    3–4.5s  尾音缓缓消散（与动画结尾同步延长 1s）。
  *  16 天一轮回，一天一个信仰；文案/神徽/主题色取自 assets/js/world-data.js。
- *  音效缺省时静默降级；右上角可开关音效（localStorage 记忆）。
- *  接入：在 index.html 的 </body> 前引入 <script defer src="assets/js/opening-rite.js"></script>
+ *  右上角可开关音效（localStorage 记忆）。
+ *  接入：在 index.html 的 </body> 前引入 <script defer src="assets/js/opening-rite.js?v=..."></script>
  */
 (function () {
   'use strict';
@@ -16,7 +21,7 @@
   try { if (window[NS] && typeof window[NS].destroy === 'function') window[NS].destroy(); } catch (e) {}
 
   // ===== CONFIG =====
-  var EPOCH = '2026-09-30';          // 轮回起点：该日 = 第 1 个信仰「诞育」（可按需修改）
+  var EPOCH = '2026-09-30';          // 轮回起点：该日 = 第 1 个信仰「诞育」（可修改）
   var LS_SHOWN = 'fog.openRite.lastShown';
   var LS_SOUND = 'fog.openRite.sound';
 
@@ -66,6 +71,158 @@
     return [parseInt(h.slice(0, 2), 16), parseInt(h.slice(2, 4), 16), parseInt(h.slice(4, 6), 16)];
   }
 
+  // ================= 音效：Web Audio API 程序化合成 =================
+  function createRiteAudio() {
+    var AC = window.AudioContext || window.webkitAudioContext;
+    if (!AC) return null;
+    var ac;
+    try { ac = new AC(); } catch (e) { return null; }
+    var master = ac.createGain();
+    master.gain.value = 0.0;
+    master.connect(ac.destination);
+    var vol = 0.9, stopped = false, started = false;
+    var killList = [];
+
+    function noise(dur) {
+      var len = Math.max(1, Math.floor(ac.sampleRate * dur));
+      var buf = ac.createBuffer(1, len, ac.sampleRate);
+      var d = buf.getChannelData(0);
+      for (var i = 0; i < len; i++) d[i] = Math.random() * 2 - 1;
+      var src = ac.createBufferSource(); src.buffer = buf; return src;
+    }
+    function keep(n) { killList.push(n); return n; }
+
+    // 0–1s：地底微弱心跳式低频嗡鸣
+    function subHum(t, dur) {
+      var o = ac.createOscillator(); o.type = 'sine'; o.frequency.value = 40;
+      var g = ac.createGain();
+      var lfo = ac.createOscillator(); lfo.type = 'sine'; lfo.frequency.value = 0.9;
+      var lg = ac.createGain(); lg.gain.value = 0.016;
+      lfo.connect(lg); lg.connect(g.gain);
+      o.connect(g); g.connect(master);
+      g.gain.setValueAtTime(0, t);
+      g.gain.linearRampToValueAtTime(0.05, t + 0.25);
+      g.gain.setValueAtTime(0.05, t + dur - 0.3);
+      g.gain.linearRampToValueAtTime(0, t + dur);
+      o.start(t); o.stop(t + dur + 0.05);
+      lfo.start(t); lfo.stop(t + dur + 0.05);
+      keep(o); keep(lfo);
+    }
+    // 心跳（lub-dub）
+    function heartbeat(at, amp) {
+      [0, 0.16].forEach(function (off, i) {
+        var o = ac.createOscillator(); o.type = 'sine';
+        o.frequency.setValueAtTime(64, at + off);
+        o.frequency.exponentialRampToValueAtTime(38, at + off + 0.13);
+        var g = ac.createGain();
+        g.gain.setValueAtTime(0, at + off);
+        g.gain.linearRampToValueAtTime(amp * (i ? 0.68 : 1), at + off + 0.014);
+        g.gain.exponentialRampToValueAtTime(0.0001, at + off + 0.17);
+        o.connect(g); g.connect(master);
+        o.start(at + off); o.stop(at + off + 0.22); keep(o);
+      });
+    }
+    // 1–2.2s 爆发：空灵水晶碎裂声
+    function crystal(at) {
+      var n = noise(0.55);
+      var hp = ac.createBiquadFilter(); hp.type = 'highpass'; hp.frequency.value = 2400;
+      var bp = ac.createBiquadFilter(); bp.type = 'bandpass'; bp.frequency.value = 6200; bp.Q.value = 0.8;
+      var g = ac.createGain();
+      g.gain.setValueAtTime(0, at);
+      g.gain.linearRampToValueAtTime(0.15, at + 0.008);
+      g.gain.exponentialRampToValueAtTime(0.0001, at + 0.55);
+      n.connect(hp); hp.connect(bp); bp.connect(g); g.connect(master);
+      n.start(at); keep(n);
+      for (var i = 0; i < 8; i++) {           // 空灵水晶泛音
+        var f = 1700 + Math.random() * 4400;
+        var o = ac.createOscillator(); o.type = 'sine'; o.frequency.value = f;
+        var pg = ac.createGain();
+        var to = at + i * 0.028;
+        pg.gain.setValueAtTime(0, to);
+        pg.gain.linearRampToValueAtTime(0.045, to + 0.004);
+        pg.gain.exponentialRampToValueAtTime(0.0001, to + 0.4);
+        o.connect(pg); pg.connect(master);
+        o.start(to); o.stop(to + 0.42); keep(o);
+      }
+    }
+    // 1–2.2s 舒展竖琴琶音（上行五声音阶，带泛音余韵）
+    function harp(at, dur) {
+      var scale = [0, 2, 4, 7, 9, 12, 14, 16, 19, 21, 24];
+      var base = 392, step = dur / scale.length;
+      for (var i = 0; i < scale.length; i++) {
+        var f = base * Math.pow(2, scale[i] / 12);
+        var to = at + i * step;
+        for (var h = 1; h <= 3; h++) {
+          var o = ac.createOscillator(); o.type = 'triangle'; o.frequency.value = f * h;
+          var g = ac.createGain(); var a = 0.055 / h;
+          g.gain.setValueAtTime(0, to);
+          g.gain.linearRampToValueAtTime(a, to + 0.008);
+          g.gain.exponentialRampToValueAtTime(0.0001, to + 0.95);
+          o.connect(g); g.connect(master);
+          o.start(to); o.stop(to + 1.0); keep(o);
+        }
+      }
+    }
+    // 1–2.2s 种子萌发沙沙声
+    function rustle(at, dur) {
+      var n = noise(dur);
+      var bp = ac.createBiquadFilter(); bp.type = 'bandpass'; bp.frequency.value = 3600; bp.Q.value = 0.6;
+      var g = ac.createGain();
+      var lfo = ac.createOscillator(); lfo.type = 'sine'; lfo.frequency.value = 8.5;
+      var lg = ac.createGain(); lg.gain.value = 0.018;
+      lfo.connect(lg); lg.connect(g.gain);
+      g.gain.setValueAtTime(0, at);
+      g.gain.linearRampToValueAtTime(0.03, at + dur * 0.4);
+      g.gain.linearRampToValueAtTime(0, at + dur);
+      n.connect(bp); bp.connect(g); g.connect(master);
+      n.start(at); lfo.start(at); lfo.stop(at + dur + 0.05);
+      keep(n); keep(lfo);
+    }
+    // 2.2–3s 柔和长音共鸣
+    function pad(at, dur) {
+      var freqs = [196, 261.6, 392];
+      for (var i = 0; i < freqs.length; i++) {
+        var o = ac.createOscillator(); o.type = 'sine'; o.frequency.value = freqs[i];
+        var g = ac.createGain();
+        g.gain.setValueAtTime(0, at);
+        g.gain.linearRampToValueAtTime(0.038 / (i + 1), at + 0.45);
+        g.gain.linearRampToValueAtTime(0, at + dur);
+        o.connect(g); g.connect(master);
+        o.start(at); o.stop(at + dur + 0.05); keep(o);
+      }
+    }
+
+    return {
+      start: function () {
+        if (stopped || started) return;
+        started = true;
+        try { if (ac.state === 'suspended') ac.resume(); } catch (e) {}
+        var T = ac.currentTime;
+        master.gain.cancelScheduledValues(T);
+        master.gain.setValueAtTime(vol, T);
+        subHum(T, 1.0);
+        heartbeat(T + 0.12, 0.16); heartbeat(T + 0.55, 0.12);
+        crystal(T + 1.0);
+        rustle(T + 1.05, 1.15);
+        harp(T + 1.05, 1.15);
+        heartbeat(T + 1.5, 0.09);
+        pad(T + 2.2, 2.3);
+        master.gain.setValueAtTime(vol, T + 3.0);
+        master.gain.linearRampToValueAtTime(0, T + 4.5);
+      },
+      mute: function (on) {                 // on=true 静音
+        try { master.gain.cancelScheduledValues(ac.currentTime);
+              master.gain.setValueAtTime(on ? 0 : vol, ac.currentTime); } catch (e) {}
+      },
+      state: function () { return ac.state; },
+      close: function () {
+        stopped = true;
+        try { for (var i = 0; i < killList.length; i++) { try { killList[i].stop(); } catch (e) {} } } catch (e) {}
+        try { ac.close(); } catch (e) {}
+      }
+    };
+  }
+
   function boot() {
     var now = new Date();
     var today = dayKey(now);
@@ -94,7 +251,7 @@
         '.fog-openrite .fr-canvas{position:absolute;inset:0;z-index:1;width:100%;height:100%;}',
         '.fog-openrite .fr-gate{position:absolute;left:0;right:0;top:50%;transform:translateY(-50%);text-align:center;',
         'color:rgba(206,214,226,.7);font-size:clamp(13px,1.7vw,17px);letter-spacing:.52em;text-indent:.52em;opacity:1;',
-        'transition:opacity .5s ease;animation:frgate 2.6s ease-in-out infinite;}',
+        'transition:opacity .5s ease;animation:frgate 2.6s ease-in-out infinite;z-index:2;}',
         '.fog-openrite .fr-gate.off{opacity:0;animation:none;}',
         '@keyframes frgate{0%,100%{opacity:.32;}50%{opacity:.92;}}',
         '.fog-openrite .fr-stage{position:absolute;left:0;right:0;top:50%;transform:translateY(-50%);text-align:center;pointer-events:none;z-index:2;}',
@@ -134,19 +291,21 @@
     var gate = q('.fr-gate'), welcome = q('.fr-welcome'), prayer = q('.fr-prayer'),
         dayEl = q('.fr-day'), soundBtn = q('.fr-sound'), cvs = q('.fr-canvas');
 
-    // ---- 音效 ----
-    var audio = document.createElement('audio');
-    audio.preload = 'auto';
-    audio.src = 'assets/audio/rite-' + ('0' + (idx + 1)).slice(-2) + '.mp3';
-    audio.volume = 0.85;
-    var soundOn = true, audioOk = true;
+    // ---- 音效（合成引擎）----
+    var soundOn = true;
     try { soundOn = (localStorage.getItem(LS_SOUND) || '1') === '1'; } catch (e) {}
-    audio.addEventListener('error', function () { audioOk = false; });
+    var riteAudio = null;
     function paint() { soundBtn.textContent = soundOn ? '🔊' : '🔇'; try { localStorage.setItem(LS_SOUND, soundOn ? '1' : '0'); } catch (e) {} }
-    function tryPlay() { if (!soundOn || !audioOk) return; try { var p = audio.play(); if (p && p.catch) p.catch(function () {}); } catch (e) {} }
     soundBtn.addEventListener('click', function (ev) {
-      ev.stopPropagation(); soundOn = !soundOn; paint();
-      if (soundOn) tryPlay(); else { try { audio.pause(); } catch (e) {} }
+      ev.stopPropagation();
+      soundOn = !soundOn; paint();
+      if (riteAudio) {
+        if (!soundOn) riteAudio.mute(true);
+        else {
+          // 若动画已开始则取消静音，否则等待 start()
+          if (started) riteAudio.mute(false);
+        }
+      }
     });
     paint();
 
@@ -171,7 +330,7 @@
     }
 
     var seeds = [], petals = [], veins = [], burst = false;
-    var T = { A: 1000, B: 2200, C: 3000, D: 3500 };
+    var T = { A: 1000, B: 2200, C: 3000, D: 4500 };  // 结尾较原设计延长 1s（观感更佳）
 
     function burstNow() {
       burst = true;
@@ -205,18 +364,14 @@
     function drawSeed(t) {
       var pulse = 0.5 + 0.5 * Math.sin(t / 300);
       var r = UNIT * (0.05 + 0.018 * pulse);
-      // 外层柔光
       glow(cx, cy, r * 5.2, priRgb, 0.5 + 0.28 * pulse);
       glow(cx, cy, r * 2.6, secRgb, 0.5 + 0.3 * pulse);
-      // 光晕环
       ctx.beginPath(); ctx.arc(cx, cy, r * 1.5, 0, 6.283);
       ctx.strokeStyle = rgba(secRgb, 0.5 + 0.3 * pulse); ctx.lineWidth = 1.4; ctx.stroke();
       ctx.beginPath(); ctx.arc(cx, cy, r * 2.1, 0, 6.283);
       ctx.strokeStyle = rgba(priRgb, 0.28 + 0.18 * pulse); ctx.lineWidth = 1; ctx.stroke();
-      // 胚种核心
       ctx.beginPath(); ctx.arc(cx, cy, r * 0.72, 0, 6.283);
       ctx.fillStyle = rgba('255,253,244', 0.6 + 0.4 * pulse); ctx.fill();
-      // 微光搏动的呼吸射线
       var rays = 8;
       for (var i = 0; i < rays; i++) {
         var ang = i / rays * 6.283 + t / 1400;
@@ -240,7 +395,7 @@
 
     function drawVeins(t) {
       var p = Math.max(0, Math.min(1, (t - T.A) / 1150));
-      var fade = t < T.C ? 1 : Math.max(0, 1 - (t - T.C) / 520);
+      var fade = t < T.C ? 1 : Math.max(0, 1 - (t - T.C) / 1000);
       for (var i = 0; i < veins.length; i++) {
         var v = veins[i];
         var len = MAXR * 1.0 * p;
@@ -266,7 +421,7 @@
     }
 
     function drawSeeds(dt, t) {
-      var fade = t < T.C ? 1 : Math.max(0, 1 - (t - T.C) / 620);
+      var fade = t < T.C ? 1 : Math.max(0, 1 - (t - T.C) / 1000);
       for (var i = 0; i < seeds.length; i++) {
         var s = seeds[i];
         if (t >= T.C) s.sp *= 0.94;
@@ -274,7 +429,6 @@
         s.bud = Math.min(1, s.bud + dt * 0.002);
         var x = cx + Math.cos(s.a) * s.d, y = cy + Math.sin(s.a) * s.d;
         var col = s.golden ? secRgb : priRgb;
-        // 飞行拖尾
         if (s.d > 1) {
           var tx = cx + Math.cos(s.a) * (s.d - s.size * 5), ty = cy + Math.sin(s.a) * (s.d - s.size * 5);
           var tg = ctx.createLinearGradient(tx, ty, x, y);
@@ -282,7 +436,6 @@
           ctx.strokeStyle = tg; ctx.lineWidth = s.size * 0.7; ctx.beginPath();
           ctx.moveTo(tx, ty); ctx.lineTo(x, y); ctx.stroke();
         }
-        // 发光胚芽
         var bl = s.bud * 12;
         if (bl > 0.5) {
           ctx.beginPath();
@@ -297,7 +450,7 @@
     }
 
     function drawPetals(dt, t) {
-      var fade = t < T.C ? 1 : Math.max(0, 1 - (t - T.C) / 620);
+      var fade = t < T.C ? 1 : Math.max(0, 1 - (t - T.C) / 1000);
       for (var i = 0; i < petals.length; i++) {
         var p = petals[i];
         p.x += p.vx * dt * 0.06; p.y += p.vy * dt * 0.06; p.rot += p.vr * dt * 0.06;
@@ -312,12 +465,10 @@
 
     function drawConverge(t) {
       if (t < T.C) return;
-      var p = Math.min(1, (t - T.C) / 780);
-      // 向内收敛的光环
+      var p = Math.min(1, (t - T.C) / 1200);
       var r = MAXR * 0.7 * (1 - p) + UNIT * 0.05;
       ctx.beginPath(); ctx.arc(cx, cy, r, 0, 6.283);
       ctx.strokeStyle = rgba(secRgb, (1 - p) * 0.7); ctx.lineWidth = 2.4; ctx.stroke();
-      // 收敛后的淡金光核（托住文字）
       glow(cx, cy, UNIT * 0.42, secRgb, 0.42 * p);
       glow(cx, cy, UNIT * 0.22, '255,246,220', 0.28 * p);
     }
@@ -348,8 +499,8 @@
     function clr() { for (var i = 0; i < timers.length; i++) clearTimeout(timers[i]); timers.length = 0; }
     function finish() {
       if (done) return; done = true; clr();
+      if (riteAudio) { try { riteAudio.close(); } catch (e) {} }
       overlay.classList.add('fr-out');
-      try { audio.pause(); } catch (e) {}
       timers.push(setTimeout(function () {
         window.cancelAnimationFrame(raf);
         window.removeEventListener('resize', resize);
@@ -362,12 +513,16 @@
     function start() {
       if (started) { finish(); return; }
       started = true; startT = performance.now();
+      // 音效：在用户点击手势内创建并播放（满足自动播放策略）
+      if (soundOn) {
+        riteAudio = createRiteAudio();
+        if (riteAudio) riteAudio.start();
+      }
       gate.classList.add('off');
-      tryPlay();
       timers.push(setTimeout(function () { dayEl.classList.add('on'); }, 200));
       timers.push(setTimeout(function () { welcome.classList.add('on'); }, T.B));
       timers.push(setTimeout(function () { prayer.classList.add('on'); }, T.B + 320));
-      timers.push(setTimeout(function () { overlay.classList.add('fr-out'); }, T.C));
+      timers.push(setTimeout(function () { overlay.classList.add('fr-out'); }, T.D - 500));
       timers.push(setTimeout(function () { finish(); }, T.D));
     }
     function onClick(e) { if (e.target === soundBtn || soundBtn.contains(e.target)) return; start(); }
@@ -378,13 +533,7 @@
     window[NS] = {
       destroy: function () { finish(); },
       finishNow: finish, start: start,
-      probe: function () {
-        try {
-          var d = ctx.getImageData(0, 0, cvs.width, cvs.height).data, n = 0, b = 0, m = 0, i;
-          for (i = 3; i < d.length; i += 4) { var a = d[i]; if (a > 12) n++; if (a > 120) b++; if (a > m) m = a; }
-          return { painted: n, bright: b, maxA: m };
-        } catch (e) { return { err: String(e) }; }
-      },
+      audioState: function () { return riteAudio ? riteAudio.state() : 'none'; },
       god: faith.god, day: idx + 1
     };
   }
