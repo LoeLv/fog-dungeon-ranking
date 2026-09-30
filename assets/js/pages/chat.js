@@ -371,13 +371,9 @@
     } catch (e) { toast(e.message || '打开聚议失败'); }
   };
 
-  // 首页点击「聚议」：新开一个标签页打开聊天室，而不是在首页上覆盖
+  // 首页点击「聚议」：直接在当前页面跳转到聊天室页面（不新开标签、不叠加覆盖、不多开网页）
   window.openChatPage = function () {
-    var url = location.pathname + '?view=chat';
-    var win = null;
-    try { win = window.open(url, '_blank'); } catch (e) { win = null; }
-    // 被浏览器拦截弹窗时，退回为当前页内展开，保证功能可用
-    if (!win) window.enterChatPage();
+    location.href = location.pathname + '?view=chat';
   };
 
   window.closeChatPage = function () {
@@ -1946,12 +1942,14 @@
   window.chatFxSetColor = window.chatFxSetScene;
   window.chatFxBurst = window.chatFxSetScene;
 
-  // 独立聊天页：加载后自动展开聊天室，使其成为一个专属页面
+  // 独立聊天页：隐藏首页外壳，把聊天室作为整页展示（不新开标签、不覆盖首页）
   if (isStandaloneChat()) {
-    if (document.readyState === 'loading') {
-      document.addEventListener('DOMContentLoaded', function () { window.enterChatPage(); });
-    } else {
-      window.enterChatPage();
-    }
+    var st = document.createElement('style');
+    st.textContent = '.chat-standalone .header,.chat-standalone .container,.chat-standalone .mobile-bottom-nav,.chat-standalone .mobile-fab,.chat-standalone .mobile-onboarding,.chat-standalone .edge-atmosphere{display:none !important;}.chat-standalone .chat-page{background:#0a0910 !important;backdrop-filter:none !important;}';
+    (document.head || document.documentElement).appendChild(st);
+    document.documentElement.classList.add('chat-standalone');
+    var startStandaloneChat = function () { window.enterChatPage(); };
+    if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', startStandaloneChat);
+    else startStandaloneChat();
   }
 })();
