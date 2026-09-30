@@ -389,13 +389,13 @@
     function burstNow() {
       burst = true;
       filaments.length = 0; nodes.length = 0;
-      var FN = 9;
+      var FN = 6;
       for (var i = 0; i < FN; i++) {
-        var base = (i / FN) * 6.283 + (Math.random() - 0.5) * 0.5;
+        var base = (i / FN) * 6.283 + (Math.random() - 0.5) * 0.9;
         filaments.push({
-          a: base, amp: 0.5 + Math.random() * 0.8,
-          freq: 1.1 + Math.random() * 1.7, phase: Math.random() * 6.283,
-          sway: 0.00035 + Math.random() * 0.0004, width: 1.0 + Math.random() * 1.1,
+          a: base, amp: 0.75 + Math.random() * 0.85,
+          freq: 0.85 + Math.random() * 1.15, phase: Math.random() * 6.283,
+          sway: 0.00028 + Math.random() * 0.00032, width: 0.9 + Math.random() * 0.9,
           col: Math.random() < 0.5 ? priSoft : secSoft
         });
       }
@@ -453,14 +453,14 @@
           var u = s / steps;
           if (u > reachEase) break;
           var along = reach * u;
-          var lateral = f.amp * Math.sin(u * f.freq * 3.1 + f.phase + t * f.sway) * UNIT * 0.045 * u;
+          var lateral = f.amp * Math.sin(u * f.freq * 2.7 + f.phase + t * f.sway) * along * 0.20;
           var x = cx + ca * along + (-sa) * lateral;
           var y = cy + sa * along + (ca) * lateral;
           ctx.beginPath();
           ctx.moveTo(px, py);
           ctx.lineTo(x, y);
-          ctx.lineWidth = Math.max(0.35, f.width * (1 - u) * (UNIT / 720));
-          ctx.strokeStyle = rgba(f.col, 0.20 * fade * (1 - u * 0.65));
+          ctx.lineWidth = Math.max(0.3, f.width * (1 - u) * (UNIT / 720));
+          ctx.strokeStyle = rgba(f.col, 0.15 * fade * (1 - u * 0.8));
           ctx.stroke();
           px = x; py = y;
         }
@@ -478,7 +478,7 @@
         if (!f || p < n.at) continue;
         n.born = Math.min(1, n.born + 0.045);
         var u = n.at, along = MAXR * 1.02 * easeOutCubic(p) * u;
-        var lateral = f.amp * Math.sin(u * f.freq * 3.1 + f.phase + t * f.sway) * UNIT * 0.045 * u;
+        var lateral = f.amp * Math.sin(u * f.freq * 2.7 + f.phase + t * f.sway) * along * 0.20;
         var ca = Math.cos(f.a), sa = Math.sin(f.a);
         var x = cx + ca * along + (-sa) * lateral;
         var y = cy + sa * along + (ca) * lateral;
