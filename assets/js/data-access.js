@@ -81,6 +81,15 @@ function normalizeHonorBuckets(response) {
 
 async function fetchCommentHonorBuckets(commentIds) {
     if (USE_LOCAL_FALLBACK || !commentIds.length) return {};
+    // 方案A：评论荣誉改走 PostgREST RPC（fog_comment_honors，不计入 Edge 调用量），失败自动回退 Edge。
+    if (typeof PUBLIC_READ_RPC_ENABLED !== 'undefined' && PUBLIC_READ_RPC_ENABLED && supabaseClient?.rpc) {
+        try {
+            const { data, error } = await supabaseClient.rpc('fog_comment_honors', { comment_ids: commentIds });
+            if (!error && data && typeof data === 'object') return data;
+        } catch (rpcError) {
+            console.warn('评论荣誉 RPC 读取失败，回退 Edge:', rpcError);
+        }
+    }
     const { data, error } = await invokeDungeonAction('getCommentHonors', { commentIds });
     return error ? {} : normalizeHonorBuckets(data);
 }
