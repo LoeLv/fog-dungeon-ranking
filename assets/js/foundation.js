@@ -55,7 +55,7 @@ function setLocalData(key, value) {
     try { sessionStorage.setItem(storageKey, raw); } catch {}
 }
 
-const INVITE_STORAGE_KEY = 'invite_session_v1';
+const INVITE_STORAGE_KEY = 'invite_session_v2';
 const PROFILE_STORAGE_KEY = 'personal_profiles_v1';
 const PROFILE_NOTICE_SEEN_KEY = 'profile_notice_seen_v1';
 const MOBILE_ONBOARDING_STORAGE_KEY = 'mobile_onboarding_seen_v1';
