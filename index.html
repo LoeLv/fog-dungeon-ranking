@@ -114,8 +114,9 @@
         </div>
         <nav class="path-nav" id="pathNav" aria-label="六大命途快速筛选"></nav>
         <div class="header-actions">
-            <button type="button" class="role-badge" id="roleBadge" onclick="openProfilePage()">旁观者只读</button>
-            <button type="button" class="btn btn-primary btn-folly header-action header-action-build" id="pilgrimRegisterButton" onclick="togglePilgrimRegister(event)">📖 信徒神册</button>
+            <button type="button" class="role-badge" id="roleBadge" onclick="openProfilePage()" style="display:none;">旁观者只读</button>
+            <button type="button" class="btn btn-primary btn-folly header-action header-action-build" id="pilgrimRegisterButton" onclick="togglePilgrimRegister(event)" style="display:none;">📖 信徒神册</button>
+            <button type="button" class="detail-close-icon header-home-close" onclick="openProfilePage()" title="返回个人档案" aria-label="返回个人档案">✕</button>
             <!-- 原功能按钮统一收纳进「信徒神册」，此处保留节点以维持既有事件绑定 -->
             <div class="header-action-legacy" id="headerActionLegacy" hidden>
                 <button class="btn btn-outline header-action header-action-ledger" onclick="openLeaderboardPage()">◈ 觐见榜单</button>
@@ -281,7 +282,6 @@
                 <div class="detail-window-title">FOLLY OF THE GODS · 诸神愚戏</div>
                 <div class="profile-toolbar-actions">
                     <button type="button" class="btn btn-primary btn-folly btn-sm pilgrim-register-trigger" onclick="togglePilgrimRegister(event)">📖 信徒神册</button>
-                    <button class="detail-close-icon" onclick="closeProfilePage()" title="返回试炼列表" aria-label="返回试炼列表">✕</button>
                 </div>
             </div>
             <div id="profileContent" class="profile-content">
