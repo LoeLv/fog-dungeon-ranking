@@ -67,6 +67,52 @@
     <link rel="stylesheet" href="assets/stele-ritual.css?v=20260919-stele5" media="print" onload="this.media='all'">
 </head>
 <body>
+<!-- fog-boot-veil: 首帧遮挡，避免「副本页/个人页」闪现，直达开场动画 -->
+<style id="fogBootVeilStyle">
+html.fog-booting{background:#030407 !important;}
+html.fog-booting body{background:#030407 !important;}
+#fogBootVeil{position:fixed;inset:0;z-index:2147483647;background:#030407;opacity:1;transition:opacity .5s ease;}
+#fogBootVeil.fog-boot-veil-out{opacity:0;pointer-events:none;}
+@media (prefers-reduced-motion: reduce){#fogBootVeil{transition-duration:.12s;}}
+</style>
+<div id="fogBootVeil" aria-hidden="true"></div>
+<script id="fogBootVeilScript">
+(function () {
+  var html = document.documentElement, revealed = false;
+  try { html.classList.add('fog-booting'); } catch (e) {}
+  function reveal() {
+    if (revealed) return; revealed = true;
+    var v = document.getElementById('fogBootVeil');
+    try { html.classList.remove('fog-booting'); } catch (e) {}
+    if (v) {
+      v.classList.add('fog-boot-veil-out');
+      window.setTimeout(function () { if (v && v.parentNode) v.parentNode.removeChild(v); }, 560);
+    }
+  }
+  window.__fogRevealBoot = reveal;
+  // 1) 开场动画帷幕挂载后立即揭示（帷幕不透明，遮住后方页面）
+  try {
+    var mo = new MutationObserver(function () {
+      if (document.querySelector('.fog-openrite')) { reveal(); mo.disconnect(); }
+    });
+    mo.observe(document.documentElement, { childList: true, subtree: true });
+  } catch (e) {}
+  // 2) 无开场动画时：个人档案页呈现后再揭示
+  document.addEventListener('DOMContentLoaded', function () {
+    var b = window.bootHomeProfile;
+    if (typeof b === 'function' && !b.__fogVeilWrapped) {
+      window.bootHomeProfile = function () {
+        var r; try { r = b.apply(this, arguments); } finally { reveal(); }
+        return r;
+      };
+      window.bootHomeProfile.__fogVeilWrapped = true;
+    }
+  });
+  // 3) 兜底：加载完成 / 超时
+  window.addEventListener('load', function () { window.setTimeout(reveal, 80); });
+  window.setTimeout(reveal, 7000);
+})();
+</script>
     <div class="boot-error" id="bootError" role="alert" aria-live="assertive">
         <div class="boot-error-card">
             <div class="boot-error-title">网站加载被当前浏览器或网络拦截</div>
