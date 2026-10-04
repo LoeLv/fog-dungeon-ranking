@@ -603,6 +603,17 @@ html.fog-booting body{background:#030407 !important;}
             <div class="form-actions">
                 <button type="button" class="btn btn-outline" onclick="clearInviteSession()">退出身份</button>
             </div>
+            <details class="account-security" style="margin-top:10px;">
+                <summary style="cursor:pointer;">修改登录密码</summary>
+                <div class="form-grid" style="margin-top:8px;">
+                    <div class="form-group"><label>当前密码</label><input type="password" id="changePasswordOld" autocomplete="current-password" maxlength="72" placeholder="请输入当前密码"></div>
+                    <div class="form-group"><label>新密码</label><input type="password" id="changePasswordNew" autocomplete="new-password" maxlength="72" placeholder="6-72 位"></div>
+                    <div class="form-group"><label>确认新密码</label><input type="password" id="changePasswordConfirm" autocomplete="new-password" maxlength="72" placeholder="再次输入新密码"></div>
+                </div>
+                <div class="form-actions">
+                    <button type="button" class="btn btn-primary btn-sm" id="changePasswordButton" onclick="submitChangePassword()">确认修改密码</button>
+                </div>
+            </details>
         </div>
     </div>
 
@@ -907,6 +918,7 @@ function toggleChatSide(){
     <script defer src="assets/js/trial-actions.js?v=20260814-editfix1"></script>
 <script defer src="assets/app.js?v=20260808-structure1"></script>
     <script defer src="assets/js/startup.js?v=20260920-perf1"></script>
+    <script defer src="assets/js/account-security.js?v=20261004-changepw1"></script>
     <script defer src="assets/js/realtime.js?v=1"></script>
 	    <script defer src="assets/js/pages/chat.js?v=20260929-chat11"></script>
 	    <script defer src="assets/js/gods-theme.js?v=20260918-slotrank3"></script>
