@@ -34,7 +34,7 @@ function cleanUsername(value: unknown): string {
   return USERNAME_RE.test(username) ? username : "";
 }
 
-function cleanPassword(value: unknown): string {
+export function cleanPassword(value: unknown): string {
   const password = String(value ?? "");
   return password.length >= 6 && password.length <= 72 ? password : "";
 }
@@ -46,13 +46,13 @@ async function derivePasswordBits(password: string, salt: Uint8Array): Promise<U
   return new Uint8Array(bits);
 }
 
-async function hashPassword(password: string): Promise<{ hash: string; salt: string }> {
+export async function hashPassword(password: string): Promise<{ hash: string; salt: string }> {
   const salt = crypto.getRandomValues(new Uint8Array(16));
   const bits = await derivePasswordBits(password, salt);
   return { hash: bytesToBase64(bits), salt: bytesToBase64(salt) };
 }
 
-async function verifyPassword(password: string, hashB64: unknown, saltB64: unknown): Promise<boolean> {
+export async function verifyPassword(password: string, hashB64: unknown, saltB64: unknown): Promise<boolean> {
   if (!password) return false;
   const hashText = cleanText(hashB64, 200);
   const saltText = cleanText(saltB64, 200);
@@ -221,4 +221,36 @@ export async function handleLoginAccount(ctx: Ctx) {
     deviceKind: session.deviceKind,
     inviteCode,
   });
+}
+
+// action: changePassword —— 玩家自助修改自己的登录密码（需校验当前密码，仅改密码）
+export async function handleChangePassword(ctx: Ctx) {
+  const { supabase, identity } = ctx;
+  if (!identity) return json({ error: "请先登录" }, 401);
+  const oldPassword = cleanPassword(ctx.payload.oldPassword);
+  const newPassword = cleanPassword(ctx.payload.newPassword);
+  if (!oldPassword) return json({ error: "请输入当前密码" }, 400);
+  if (!newPassword) return json({ error: "新密码需 6-72 位" }, 400);
+  if (oldPassword === newPassword) return json({ error: "新密码不能与当前密码相同" }, 400);
+
+  const result = await supabase
+    .from("invite_codes")
+    .select("code_hash, password_hash, password_salt")
+    .eq("code_hash", identity.codeHash)
+    .maybeSingle();
+  if (result.error) return json({ error: result.error.message }, 400);
+  const row = result.data;
+  if (!row || !row.password_hash || !row.password_salt) return json({ error: "账号凭据异常，请联系馆主重置" }, 400);
+
+  const ok = await verifyPassword(oldPassword, row.password_hash, row.password_salt);
+  if (!ok) return json({ error: "当前密码不正确" }, 401);
+
+  const { hash, salt } = await hashPassword(newPassword);
+  const updateResult = await supabase
+    .from("invite_codes")
+    .update({ password_hash: hash, password_salt: salt })
+    .eq("code_hash", identity.codeHash);
+  if (updateResult.error) return json({ error: updateResult.error.message }, 400);
+
+  return json({ role: identity.role, name: identity.displayName, data: { changed: true } });
 }
