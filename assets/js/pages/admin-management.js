@@ -151,6 +151,7 @@ function renderAdminMemberRows() {
             <div class="profile-tools">
                 <button class="btn btn-outline btn-sm" data-admin-member-action="inspect" data-target-hash="${memberHash}" data-display-name="${memberName}">查看档案</button>
                 <button class="btn btn-outline btn-sm" data-admin-member-action="rename" data-target-hash="${memberHash}" data-display-name="${memberName}">改名</button>
+                <button class="btn btn-outline btn-sm" data-admin-member-action="set-password" data-target-hash="${memberHash}" data-display-name="${memberName}">改密</button>
                 <button class="btn btn-outline btn-sm" data-admin-member-action="reset" data-target-hash="${memberHash}" data-display-name="${memberName}">重置</button>
                 <button class="btn btn-outline btn-sm" data-admin-member-action="delete" data-target-hash="${memberHash}" data-display-name="${memberName}">删除</button>
             </div>
@@ -997,6 +998,31 @@ async function adminSubmitRenameMember(targetHash) {
     }
 }
 
+async function adminSetMemberPassword(targetHash, displayName) {
+    const pwd = window.prompt(`为 ${displayName || '该玩家'} 设置新的登录密码（6-72 位）。仅重置密码，不会影响任何游戏数据。`);
+    if (pwd === null) return;
+    if (pwd.length < 6 || pwd.length > 72) { showToast('密码需 6-72 位'); return; }
+    const again = window.prompt('请再次输入新密码以确认：');
+    if (again !== pwd) { showToast('两次输入不一致，已取消'); return; }
+    setAdminManagementStatus('密码重置处理中...', 'pending');
+    try {
+        const { error } = await invokeDungeonAction('adminSetAccountPassword', { targetHash, password: pwd });
+        if (error) {
+            const message = `重置失败：${error.message || '后端未返回原因'}`;
+            setAdminManagementStatus(message, 'error');
+            showToast(`失败：${error.message || '重置失败'}`);
+            return;
+        }
+        setAdminManagementStatus('密码已重置', 'success');
+        showToast('密码已重置，请转达该玩家');
+        await refreshAdminOperationLogs();
+    } catch (error) {
+        const message = `重置失败：${error?.message || error || '未知错误'}`;
+        setAdminManagementStatus(message, 'error');
+        showToast(`失败：${error?.message || '重置失败'}`);
+    }
+}
+
 async function adminResetMember(targetHash, displayName) {
     if (!await gtConfirm(`确认重置 ${displayName || '该玩家'} 的个人状态？这会清空档案、分数、天赋、称号诅咒等个人数据，但保留账号。`)) return;
     if (!await gtConfirm(`再确认一次：真的要重置 ${displayName || '该玩家'} 吗？`)) return;
@@ -1444,6 +1470,10 @@ function bindAdminButtonFeedback() {
             void adminCancelRenameMember();
             return;
         }
+        if (action === 'set-password') {
+            void adminSetMemberPassword(hash, displayName);
+            return;
+        }
         if (action === 'reset') {
             void adminResetMember(hash, displayName);
             return;
@@ -1504,6 +1534,7 @@ Object.assign(window, {
     adminRenameMember,
     adminCancelRenameMember,
     adminSubmitRenameMember,
+    adminSetMemberPassword,
     adminResetMember,
     adminDeleteMember,
     adminLoadTalentWarehouse,
