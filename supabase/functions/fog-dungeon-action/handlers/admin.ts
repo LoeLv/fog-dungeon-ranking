@@ -7,6 +7,7 @@ import {
   resetTalentStateAfterIdentityChange, specialAccountRoles, writeAdminOperationLog, 
 } from "../_shared/core.ts";
 import type { Ctx, AuthCtx } from "../_shared/core.ts";
+import { cleanPassword, hashPassword } from "./account.ts";
 
 // action: adminLookupPlayer
 export async function handleAdminLookupPlayer(ctx: AuthCtx) {
@@ -201,6 +202,48 @@ export async function handleAdminResetAccount(ctx: AuthCtx) {
         afterState: { mode },
       });
       return json({ role, name: identity.displayName, data: { codeHash, displayName: beforeName, mode } });
+}
+
+// action: adminSetAccountPassword —— 馆主重置指定玩家的登录密码（仅改密码，绝不清空任何游戏数据）
+export async function handleAdminSetAccountPassword(ctx: AuthCtx) {
+  const { identity, payload, role, supabase } = ctx;
+  if (role !== "admin") return json({ error: "只有馆主可以重置玩家密码" }, 403);
+  const targetHash = cleanText(payload.targetHash, 64);
+  const targetName = cleanText(payload.targetName, 40);
+  if (!targetHash && !targetName) return json({ error: "请指定要重置密码的账号" }, 400);
+  if (targetHash && !/^[a-f0-9]{64}$/i.test(targetHash)) return json({ error: "目标账号标识不正确" }, 400);
+  const password = cleanPassword(payload.password);
+  if (!password) return json({ error: "密码需 6-72 位" }, 400);
+  let query = supabase
+    .from("invite_codes")
+    .select("code_hash, display_name, username, role, is_active");
+  query = targetHash ? query.eq("code_hash", targetHash) : query.eq("display_name", targetName);
+  const { data, error } = targetHash ? await query.maybeSingle() : await query.limit(2);
+  if (error) return json({ error: error.message || "目标账号读取失败" }, 400);
+  if (!targetHash && Array.isArray(data) && data.length > 1) return json({ error: "这个昵称对应多个账号，请联系馆主处理重名" }, 400);
+  const row = (Array.isArray(data) ? data[0] : data) as Record<string, unknown> | null | undefined;
+  if (!row) return json({ error: "没有找到这个账号" }, 404);
+  const codeHash = cleanText(row.code_hash, 64);
+  const name = cleanText(row.display_name, 40);
+  if (!codeHash) return json({ error: "目标账号不存在" }, 404);
+  if (codeHash === identity.codeHash) return json({ error: "请勿在此重置当前正在使用的馆主账号密码" }, 400);
+  if (!cleanText(row.username, 32)) return json({ error: "该成员尚未绑定账号，无法重置密码" }, 400);
+  const { hash, salt } = await hashPassword(password);
+  const updateResult = await supabase
+    .from("invite_codes")
+    .update({ password_hash: hash, password_salt: salt })
+    .eq("code_hash", codeHash);
+  if (updateResult.error) return json({ error: updateResult.error.message || "密码重置失败" }, 400);
+  await writeAdminOperationLog(supabase, identity, {
+    action: "account.password.reset",
+    targetCodeHash: codeHash,
+    targetName: name,
+    objectType: "invite_code",
+    summary: `馆主重置了 ${name} 的登录密码`,
+    beforeState: { displayName: name, passwordReset: false },
+    afterState: { passwordReset: true },
+  });
+  return json({ role, name: identity.displayName, data: { codeHash, displayName: name } });
 }
 
 // action: adminListTalentPoolItems
