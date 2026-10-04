@@ -6,8 +6,9 @@ import { handleGodChangeBelieverProfession, handleGodConvertBeliever, handleList
 import { handleDiscardOwnedTalent, handleDiscardOwnedTalents, handleDrawTalent, handleExchangeTalent, handleGetTalentState, handleResolveTalentOverflow, handleSetEquippedTalent } from "./handlers/talent.ts";
 import { handleCheckScorePreview, handleGetScoreSettlementDetail, handleListMyScoreMessages, handleListScoreSettlements, handleMarkScoreMessageRead, handleRevokeScoreSettlement, handleSubmitScoreBatch, handleSubmitScoreSingle } from "./handlers/score.ts";
 import { handleAddBattlePlayerStatus, handleApplyBattlePlayerAction, handleCancelMatchMuster, handleCancelMatchQueue, handleCreateBattleRoom, handleCreateBattleRoomFromMatchRoom, handleDeleteBattlePlayerStatus, handleDrawMatchMuster, handleExtendBattleRoom, handleFinishBattleRoom, handleGetBattleOverview, handleGetBattleRoom, handleGetMatchMuster, handleGetMatchState, handleJoinBattleRoom, handleJoinMatchMuster, handleJoinMatchQueue, handleListMatchDungeons, handleResolveBattleRoomAction, handleSearchMusterPlayers, handleStartMatchMuster, handleSubmitBattleRoomAction, handleUpdateBattleAbilityCooldown, handleUpdateBattlePlayerStatus, handleUpdateBattlePlayerTeam, handleUpdateBattleRoomRound } from "./handlers/battle.ts";
-import { handleAdminBatchDeleteTalentPoolItems, handleAdminBatchUpsertTalentPoolItems, handleAdminChangeMemberIdentity, handleAdminDeleteExclusiveTalent, handleAdminListExclusiveTalentWorkbench, handleAdminListMembers, handleAdminListOperationLogs, handleAdminListTalentPoolItems, handleAdminLookupPlayer, handleAdminRenameAccount, handleAdminRepairTalentState, handleAdminResetAccount, handleAdminScanTalentState, handleAdminSetAccountRole, handleAdminSetTalentPoolItemEnabled, handleAdminUpsertExclusiveTalent, handleAdminUpsertFaithTrait, handleAdminUpsertTalentPoolItem, handleListHonorOperationLogs } from "./handlers/admin.ts";
-import { handleLoginAccount, handleRegisterAccount } from "./handlers/account.ts";
+import { handleAdminBatchDeleteTalentPoolItems, handleAdminBatchUpsertTalentPoolItems, handleAdminChangeMemberIdentity, handleAdminDeleteExclusiveTalent, handleAdminListExclusiveTalentWorkbench, handleAdminListMembers, handleAdminListOperationLogs, handleAdminListTalentPoolItems, handleAdminLookupPlayer, handleAdminRenameAccount, handleAdminRepairTalentState, handleAdminResetAccount, handleAdminScanTalentState, handleAdminSetAccountRole, handleAdminSetAccountPassword, handleAdminSetTalentPoolItemEnabled, handleAdminUpsertExclusiveTalent, handleAdminUpsertFaithTrait, handleAdminUpsertTalentPoolItem, handleListHonorOperationLogs } from "./handlers/admin.ts";
+import { handleChangePassword, handleLoginAccount, handleRegisterAccount } from "./handlers/account.ts";
+import { handleGetChatMessages, handleJoinChatChannel, handleListChatChannels, handleMarkChatRead, handleSendChatMessage } from "./handlers/chat.ts";
 import {
   allowedBrowserOrigins, corsHeaders, cleanText, json, readRequestBody, isRecord,
   isPublicReadRateLimited, getInviteIdentity, inviteDeviceSessionEnforcement,
@@ -74,11 +75,13 @@ Deno.serve(async (req) => {
     // ================= authenticated actions =================
     if (action === "verifyInvite") return await handleVerifyInvite(authCtx);
     if (action === "getMyProfile") return await handleGetMyProfile(authCtx);
+    if (action === "changePassword") return await handleChangePassword(authCtx);
     if (action === "adminLookupPlayer") return await handleAdminLookupPlayer(authCtx);
     if (action === "adminListOperationLogs") return await handleAdminListOperationLogs(authCtx);
     if (action === "adminListMembers") return await handleAdminListMembers(authCtx);
     if (action === "adminSetAccountRole") return await handleAdminSetAccountRole(authCtx);
     if (action === "adminRenameAccount") return await handleAdminRenameAccount(authCtx);
+    if (action === "adminSetAccountPassword") return await handleAdminSetAccountPassword(authCtx);
     if (action === "adminChangeMemberIdentity") return await handleAdminChangeMemberIdentity(authCtx);
     if (action === "adminResetAccount") return await handleAdminResetAccount(authCtx);
     if (action === "adminDeleteAccount") return await handleAdminResetAccount(authCtx);
@@ -160,6 +163,13 @@ Deno.serve(async (req) => {
     if (action === "getCommentHonors") return await handleGetCommentHonors(authCtx);
     if (action === "updatePinnedNote") return await handleUpdatePinnedNote(authCtx);
     if (action === "deleteDungeon") return await handleDeleteDungeon(authCtx);
+
+    // —— 社群聊天（Phase 0）——
+    if (action === "listChatChannels") return await handleListChatChannels(authCtx);
+    if (action === "getChatMessages") return await handleGetChatMessages(authCtx);
+    if (action === "sendChatMessage") return await handleSendChatMessage(authCtx);
+    if (action === "joinChatChannel") return await handleJoinChatChannel(authCtx);
+    if (action === "markChatRead") return await handleMarkChatRead(authCtx);
 
     return json({ error: "未知操作" }, 400);
   } catch (error) {
